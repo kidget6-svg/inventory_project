@@ -7,59 +7,77 @@ use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+
+    // Display all suppliers
     public function index()
     {
-        //
+        $suppliers = Supplier::all();
+
+        return view('suppliers.index', compact('suppliers'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+
+    // Show create form
     public function create()
     {
-        //
+        return view('suppliers.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+
+    // Save supplier
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'name' => 'required',
+            'phone' => 'nullable',
+            'email' => 'nullable|email',
+            'address' => 'nullable'
+        ]);
+
+
+        Supplier::create([
+            'name' => $request->name,
+            'phone' => $request->phone,
+            'email' => $request->email,
+            'address' => $request->address,
+        ]);
+
+
+        return redirect('/suppliers')
+            ->with('success','Supplier added successfully');
     }
 
-    /**
-     * Display the specified resource.
-     */
+
+    // Show single supplier
     public function show(Supplier $supplier)
     {
-        //
+        return view('suppliers.show', compact('supplier'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+
+    // Edit supplier
     public function edit(Supplier $supplier)
     {
-        //
+        return view('suppliers.edit', compact('supplier'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+
+    // Update supplier
     public function update(Request $request, Supplier $supplier)
     {
-        //
+
+        $supplier->update($request->all());
+
+        return redirect('/suppliers');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+
+    // Delete supplier
     public function destroy(Supplier $supplier)
     {
-        //
+        $supplier->delete();
+
+        return redirect('/suppliers');
     }
+
 }
