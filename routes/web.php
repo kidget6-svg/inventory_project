@@ -11,6 +11,12 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\LowStockController;
 use App\Http\Controllers\ReportController;
+
+// Welcome Page
+Route::get('/welcome', function () {
+    return view('welcome');
+})->name('welcome');
+
 // Dashboard
 Route::get('/', [DashboardController::class, 'index'])
     ->name('dashboard');

@@ -144,34 +144,43 @@ No sales found.
 <table>
 
 <tr>
-<th>ID</th>
-<th>Date</th>
+    <th>ID</th>
+    <th>Purchase Date</th>
+    <th>Supplier</th>
+    <th>Total Amount</th>
+    <th>Status</th>
 </tr>
 
-@forelse($purchases as $purchase)
+@forelse($purchases as $order)
 
 <tr>
+    <td>{{ $loop->iteration }}</td>
 
-<td>{{ $purchase->id }}</td>
+    <td>
+        {{ $order->order_date
+            ? \Carbon\Carbon::parse($order->order_date)->format('d M Y')
+            : $order->created_at->format('d M Y') }}
+    </td>
 
-<td>{{ $purchase->created_at }}</td>
+    <td>{{ $order->supplier->name ?? 'No Supplier' }}</td>
+
+    <td>{{ number_format($order->total_amount, 2) }}</td>
+
+    <td>{{ ucfirst($order->status) }}</td>
 
 </tr>
 
 @empty
 
 <tr>
-
-<td colspan="2" class="empty">
-No purchase orders found.
-</td>
-
+    <td colspan="5" class="empty">
+        No purchase orders found.
+    </td>
 </tr>
 
 @endforelse
 
 </table>
-
 
 <h2>Low Stock Report</h2>
 
