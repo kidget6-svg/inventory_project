@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+    font-family: 'Figtree', 'Segoe UI', sans-serif;
+    background: #EBF5FB;
+    margin: 0;
+    padding: 0;
+}

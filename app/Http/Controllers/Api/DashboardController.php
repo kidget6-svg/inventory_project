@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Medicine;
 use App\Models\Sale;
 use App\Models\Supplier;
@@ -15,11 +16,9 @@ class DashboardController extends Controller
         if ($user->isAdmin()) {
             return $this->adminDashboard();
         }
-
         if ($user->isPharmacist()) {
             return $this->pharmacistDashboard();
         }
-
         return $this->cashierDashboard();
     }
 
@@ -30,30 +29,23 @@ class DashboardController extends Controller
         $totalSuppliers = Supplier::count();
 
         $lowStockMedicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
-            ->orderBy('quantity')
-            ->get();
+            ->orderBy('quantity')->get();
         $lowStockCount = $lowStockMedicines->count();
 
         $expiringMedicines = Medicine::whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [today(), today()->addDays(90)])
-            ->orderBy('expiry_date')
-            ->get();
+            ->orderBy('expiry_date')->get();
         $expiringCount = $expiringMedicines->count();
 
         $todaySalesCount = Sale::whereDate('sale_date', today())->count();
         $todayRevenue = Sale::whereDate('sale_date', today())->sum('total_amount');
 
-        return view('admin.dashboard', compact(
-            'totalProducts',
-            'totalStock',
-            'totalSuppliers',
-            'lowStockMedicines',
-            'lowStockCount',
-            'expiringMedicines',
-            'expiringCount',
-            'todaySalesCount',
-            'todayRevenue',
-        ));
+        return response()->json([
+            'totalProducts', 'totalStock', 'totalSuppliers',
+            'lowStockMedicines', 'lowStockCount',
+            'expiringMedicines', 'expiringCount',
+            'todaySalesCount', 'todayRevenue',
+        ]);
     }
 
     private function pharmacistDashboard()
@@ -62,24 +54,19 @@ class DashboardController extends Controller
         $totalStock = Medicine::sum('quantity');
 
         $lowStockMedicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
-            ->orderBy('quantity')
-            ->get();
+            ->orderBy('quantity')->get();
         $lowStockCount = $lowStockMedicines->count();
 
         $expiringMedicines = Medicine::whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [today(), today()->addDays(90)])
-            ->orderBy('expiry_date')
-            ->get();
+            ->orderBy('expiry_date')->get();
         $expiringCount = $expiringMedicines->count();
 
-        return view('pharmacist.dashboard', compact(
-            'totalProducts',
-            'totalStock',
-            'lowStockMedicines',
-            'lowStockCount',
-            'expiringMedicines',
-            'expiringCount',
-        ));
+        return response()->json([
+            'totalProducts', 'totalStock',
+            'lowStockMedicines', 'lowStockCount',
+            'expiringMedicines', 'expiringCount',
+        ]);
     }
 
     private function cashierDashboard()
@@ -89,11 +76,8 @@ class DashboardController extends Controller
         $totalProducts = Medicine::count();
         $recentSales = Sale::latest()->take(5)->get();
 
-        return view('cashier.dashboard', compact(
-            'todaySalesCount',
-            'todayRevenue',
-            'totalProducts',
-            'recentSales',
-        ));
+        return response()->json([
+            'todaySalesCount', 'todayRevenue', 'totalProducts', 'recentSales',
+        ]);
     }
 }
