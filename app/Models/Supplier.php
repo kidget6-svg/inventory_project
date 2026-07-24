@@ -8,8 +8,17 @@ class Supplier extends Model
 {
     protected $fillable = [
         'name',
+        'contact_person',
         'phone',
         'email',
         'address',
     ];
+
+    /**
+     * A supplier can have many purchase orders.
+     */
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
 }

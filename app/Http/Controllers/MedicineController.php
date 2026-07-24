@@ -8,14 +8,14 @@ use Illuminate\Http\Request;
 
 class MedicineController extends Controller
 {
-    public function index()
-    {
-        $medicines = Medicine::with('category')
-            ->latest()
-            ->get();
+   public function index()
+{
+    $medicines = Medicine::with('category')
+        ->latest()
+        ->get();
 
-        return view('medicines.index', compact('medicines'));
-    }
+    return view('medicines.index', compact('medicines'));
+}
 
 
     public function create()
@@ -58,15 +58,14 @@ class MedicineController extends Controller
     }
 
 
-    public function destroy(Medicine $medicine)
-    {
-        $medicine->delete();
+   public function destroy(Medicine $medicine)
+{
+    $medicine->delete();
 
-        return redirect()
-            ->route('medicines.index')
-            ->with('success', 'Medicine deleted successfully.');
-    }
-
+    return redirect()
+        ->route('medicines.index')
+        ->with('success','Medicine deleted successfully');
+}
 
     private function medicineRules(): array
     {

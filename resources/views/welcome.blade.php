@@ -4,195 +4,303 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pharmacy Inventory Management System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #1f4f3d;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        .hero {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        /* Header */
+        .header {
+            background: #1f7a5a;
             color: white;
-            padding: 100px 0;
-            min-height: 80vh;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .header .logo {
+            font-size: 24px;
+            font-weight: 700;
             display: flex;
             align-items: center;
+            gap: 10px;
         }
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
+
+        .header .logo .icon {
+            font-size: 28px;
         }
-        .feature-card {
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-            text-align: center;
-            background: white;
+
+        .header .nav-links a {
+            color: #e8f5e9;
+            text-decoration: none;
+            margin-left: 24px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: color 0.2s;
         }
-        .feature-card:hover {
-            transform: translateY(-10px);
-        }
-        .feature-icon {
-            font-size: 3rem;
-            color: #667eea;
-            margin-bottom: 20px;
-        }
-        .btn-custom {
-            padding: 12px 35px;
-            border-radius: 50px;
-            font-weight: 600;
-        }
-        .navbar-custom {
-            background: rgba(255,255,255,0.95);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .stats-section {
-            background: #f8f9fa;
-            padding: 60px 0;
-        }
-        .stat-number {
-            font-size: 3rem;
-            font-weight: 700;
-            color: #667eea;
-        }
-        .footer {
-            background: #2d3436;
+
+        .header .nav-links a:hover {
             color: white;
-            padding: 30px 0;
+        }
+
+        .header .nav-links .btn-dashboard {
+            background: #fff2f2;
+            color: #1f4f3d;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .header .nav-links .btn-dashboard:hover {
+            background: #ffe0e0;
+        }
+
+        /* Hero Section */
+        .hero {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 720px;
+        }
+
+        .hero h1 {
+            font-size: 42px;
+            color: #1f4f3d;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .hero h1 .highlight {
+            color: #1f7a5a;
+        }
+
+        .hero p {
+            font-size: 19px;
+            color: #4a6b5f;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .hero .btn-primary {
+            display: inline-block;
+            background: #1f7a5a;
+            color: white;
+            padding: 14px 36px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 600;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .hero .btn-primary:hover {
+            background: #14532d;
+            transform: translateY(-2px);
+        }
+
+        .hero .btn-secondary {
+            display: inline-block;
+            background: transparent;
+            color: #1f7a5a;
+            border: 2px solid #1f7a5a;
+            padding: 12px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            margin-left: 16px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .hero .btn-secondary:hover {
+            background: #1f7a5a;
+            color: white;
+        }
+
+        /* Features Section */
+        .features {
+            background: white;
+            padding: 60px 40px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .features-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 28px;
+            color: #1f4f3d;
+            margin-bottom: 8px;
+        }
+
+        .features p.subtitle {
+            text-align: center;
+            color: #6b8e7e;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: #f5f7fb;
+            border-radius: 12px;
+            padding: 28px 24px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .feature-card .feature-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 18px;
+            color: #1f4f3d;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            color: #5a7d6f;
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1f4f3d;
+            color: #c8e6c9;
+            text-align: center;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .hero .btn-secondary {
+                margin-left: 0;
+                margin-top: 12px;
+                display: block;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 12px;
+                padding: 14px 20px;
+            }
+
+            .features {
+                padding: 40px 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-custom fixed-top">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="#">
-                <i class="fas fa-prescription-bottle me-2 text-primary"></i>
-                PharmacyInventory
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
-                    @auth
-                        <li class="nav-item">
-                            <a class="btn btn-primary btn-sm ms-2" href="{{ route('dashboard') }}">
-                                <i class="fas fa-tachometer-alt me-1"></i> Dashboard
-                            </a>
-                        </li>
-                    @else
-                        <li class="nav-item">
-                            <a class="btn btn-outline-primary btn-sm ms-2" href="{{ route('login') }}">
-                                <i class="fas fa-sign-in-alt me-1"></i> Login
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-primary btn-sm ms-2" href="{{ route('register') }}">
-                                <i class="fas fa-user-plus me-1"></i> Register
-                            </a>
-                        </li>
-                    @endauth
-                </ul>
-            </div>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <span class="icon">🏥</span>
+            <span>Pharmacy Manager</span>
         </div>
-    </nav>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="{{ route('dashboard') }}" class="btn-dashboard">Go to Dashboard</a>
+        </div>
+    </header>
 
     <!-- Hero Section -->
-    <section class="hero" style="margin-top: 56px;">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6">
-                    <h1 class="mb-4">Pharmacy Inventory Management System</h1>
-                    <p class="lead mb-4">
-                        Streamline your pharmacy operations with real-time inventory tracking,
-                        batch management, and FEFO enforcement.
-                    </p>
-                    <div class="d-flex gap-3 flex-wrap">
-                        @auth
-                            <a href="{{ route('dashboard') }}" class="btn btn-light btn-custom">
-                                <i class="fas fa-tachometer-alt me-2"></i> Go to Dashboard
-                            </a>
-                        @else
-                            <a href="{{ route('login') }}" class="btn btn-light btn-custom">
-                                <i class="fas fa-sign-in-alt me-2"></i> Login
-                            </a>
-                            <a href="{{ route('register') }}" class="btn btn-outline-light btn-custom">
-                                <i class="fas fa-user-plus me-2"></i> Get Started
-                            </a>
-                        @endauth
-                    </div>
-                    <div class="mt-4">
-                        <span class="badge bg-light text-dark me-2 p-2">
-                            <i class="fas fa-check-circle text-success me-1"></i> FEFO Ready
-                        </span>
-                        <span class="badge bg-light text-dark me-2 p-2">
-                            <i class="fas fa-check-circle text-success me-1"></i> Batch Tracking
-                        </span>
-                        <span class="badge bg-light text-dark p-2">
-                            <i class="fas fa-check-circle text-success me-1"></i> Controlled Substances
-                        </span>
-                    </div>
-                </div>
-                <div class="col-lg-6 text-center d-none d-lg-block">
-                    <i class="fas fa-prescription-bottle-alt" style="font-size: 12rem; opacity: 0.8;"></i>
-                </div>
-            </div>
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Welcome to Your <span class="highlight">Pharmacy Inventory</span> Management System</h1>
+            <p>
+                Streamline your pharmacy operations with our comprehensive inventory management solution.
+                Track medicines, manage stock levels, monitor expiry dates, and handle purchase orders
+                all in one intuitive platform.
+            </p>
+            <a href="{{ route('dashboard') }}" class="btn-primary">Go to Dashboard</a>
+            <a href="#features" class="btn-secondary">Learn More</a>
         </div>
     </section>
 
-    <!-- Features -->
-    <section id="features" class="py-5">
-        <div class="container">
-            <h2 class="text-center mb-5 fw-bold">Key Features</h2>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fas fa-boxes"></i></div>
-                        <h5>Inventory Management</h5>
-                        <p class="text-muted">Track real-time stock, set reorder levels, and get low-stock alerts.</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fas fa-calendar-check"></i></div>
-                        <h5>Batch & Expiry Tracking</h5>
-                        <p class="text-muted">Monitor batch numbers, expiry dates, and enforce FEFO rotation.</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fas fa-shopping-cart"></i></div>
-                        <h5>Sales & POS</h5>
-                        <p class="text-muted">Process sales quickly with barcode scanning and prescription tracking.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="features-container">
+            <h2>Everything You Need to Manage Your Pharmacy</h2>
+            <p class="subtitle">A complete solution designed for modern pharmacies</p>
 
-    <!-- Stats -->
-    <section class="stats-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-3 col-6 text-center">
-                    <div class="stat-number">500+</div>
-                    <p class="text-muted">Products Managed</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">💊</div>
+                    <h3>Medicine Management</h3>
+                    <p>Add, edit, and organize all your medicine inventory with categories and detailed information.</p>
                 </div>
-                <div class="col-md-3 col-6 text-center">
-                    <div class="stat-number">1000+</div>
-                    <p class="text-muted">Transactions Daily</p>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>Purchase Orders</h3>
+                    <p>Create and track purchase orders from suppliers with automated stock updates.</p>
                 </div>
-                <div class="col-md-3 col-6 text-center">
-                    <div class="stat-number">99%</div>
-                    <p class="text-muted">Uptime Guaranteed</p>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Sales Tracking</h3>
+                    <p>Record sales transactions and automatically update stock quantities in real-time.</p>
                 </div>
-                <div class="col-md-3 col-6 text-center">
-                    <div class="stat-number">24/7</div>
-                    <p class="text-muted">Support Available</p>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚠️</div>
+                    <h3>Low Stock Alerts</h3>
+                    <p>Get notified when medicine stock falls below the reorder level to avoid shortages.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📅</div>
+                    <h3>Expiry Monitoring</h3>
+                    <p>Track expiry dates and receive alerts for medicines expiring within 90 days.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Reports & Analytics</h3>
+                    <p>Generate insightful reports on stock levels, sales, and purchase history.</p>
                 </div>
             </div>
         </div>
@@ -200,33 +308,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <h5><i class="fas fa-prescription-bottle me-2"></i>PharmacyInventory</h5>
-                    <p class="text-muted">Smart inventory management for modern pharmacies.</p>
-                </div>
-                <div class="col-md-4">
-                    <h5>Quick Links</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#features" class="text-muted text-decoration-none">Features</a></li>
-                        <li><a href="#about" class="text-muted text-decoration-none">About</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <h5>Contact</h5>
-                    <p class="text-muted">
-                        <i class="fas fa-envelope me-2"></i> support@pharmacyinventory.com
-                    </p>
-                </div>
-            </div>
-            <hr class="bg-secondary">
-            <div class="text-center text-muted">
-                &copy; 2026 Pharmacy Inventory Management System. All rights reserved.
-            </div>
-        </div>
+        <p>&copy; 2026 Pharmacy Inventory Management System. All rights reserved.</p>
     </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
