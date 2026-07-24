@@ -1,195 +1,272 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <title>Pharmacy Inventory</title>
 
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #f5f7fb; 
-            margin: 0; 
-            padding: 40px; 
-        }
+<title>Pharmacy Inventory</title>
 
-        .container { 
-            max-width: 1100px; 
-            margin: auto; 
-            background: white; 
-            padding: 30px; 
-            border-radius: 10px; 
-        }
+<style>
 
-        h1 { 
-            color: #1f4f3d; 
-        }
+body{
+    font-family: Arial;
+    background:#f5f7fb;
+    padding:40px;
+}
 
-        .button { 
-            background: #1f7a5a; 
-            color: white; 
-            padding: 10px 16px; 
-            text-decoration: none; 
-            border-radius: 6px; 
-        }
 
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 25px; 
-        }
+.container{
 
-        th, td { 
-            padding: 12px; 
-            border-bottom: 1px solid #ddd; 
-            text-align: left; 
-        }
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    width:90%;
+    margin:auto;
 
-        th { 
-            background: #e9f5ef; 
-        }
+}
 
-        .success { 
-            background: #d1fae5; 
-            padding: 12px; 
-            margin: 16px 0; 
-        }
 
-        .low-stock { 
-            color: #b91c1c; 
-            font-weight: bold; 
-        }
+h1{
 
-        .edit { 
-            color: #1d4ed8; 
-            text-decoration: none; 
-            margin-right: 10px; 
-        }
+    color:#14532d;
 
-        .delete { 
-            border: 0; 
-            background: none; 
-            color: #b91c1c; 
-            cursor: pointer; 
-            padding: 0; 
-        }
+}
 
-        .inline-form { 
-            display: inline; 
-        }
-    </style>
+
+.btn{
+
+    display:inline-block;
+    padding:10px 18px;
+    background:#1f7a5a;
+    color:white;
+    text-decoration:none;
+    border-radius:6px;
+    margin-bottom:20px;
+
+}
+
+
+table{
+
+    width:100%;
+    border-collapse:collapse;
+
+}
+
+
+th{
+
+    background:#e8f5ef;
+    padding:15px;
+    text-align:left;
+
+}
+
+
+td{
+
+    padding:15px;
+    border-bottom:1px solid #ddd;
+
+}
+
+
+/* Edit Button */
+
+.edit-btn{
+
+    background:#2563eb;
+    color:white;
+    padding:8px 15px;
+    border-radius:5px;
+    text-decoration:none;
+    margin-right:8px;
+    display:inline-block;
+
+}
+
+
+.edit-btn:hover{
+
+    background:#1d4ed8;
+
+}
+
+
+
+/* Delete Button */
+
+.delete-btn{
+
+    background:#dc2626;
+    color:white;
+    padding:8px 15px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+
+}
+
+
+.delete-btn:hover{
+
+    background:#b91c1c;
+
+}
+
+
+</style>
+
 </head>
+
 
 <body>
 
+
 <div class="container">
 
-    <h1>Pharmacy Inventory</h1>
 
-    <a class="button" href="{{ route('medicines.create') }}">
-        + Add Medicine
-    </a>
+<h1>Pharmacy Inventory</h1>
+@if(session('success'))
 
+<div style="
+background:#dcfce7;
+color:#166534;
+padding:12px;
+border-radius:6px;
+margin-bottom:20px;
+">
+{{ session('success') }}
+</div>
 
-    @if (session('success'))
-        <p class="success">
-            {{ session('success') }}
-        </p>
-    @endif
+@endif
 
-
-    <table>
-
-        <thead>
-            <tr>
-                <th>Medicine</th>
-                <th>Batch No.</th>
-                <th>Category</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Expiry Date</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
+<a href="{{ route('medicines.create') }}" class="btn">
++ Add Medicine
+</a>
 
 
-        <tbody>
 
-        @forelse ($medicines as $medicine)
-
-            <tr>
-
-                <td>
-                    {{ $medicine->name }}
-                </td>
+<table>
 
 
-                <td>
-                    {{ $medicine->batch_number ?? '—' }}
-                </td>
+<thead>
+
+<tr>
+
+<th>Medicine</th>
+<th>Batch No.</th>
+<th>Category</th>
+<th>Quantity</th>
+<th>Unit Price</th>
+<th>Expiry Date</th>
+<th>Actions</th>
+
+</tr>
+
+</thead>
 
 
-                <td>
-                    {{ $medicine->category?->name ?? '—' }}
-                </td>
+
+<tbody>
 
 
-                <td class="{{ $medicine->quantity <= $medicine->reorder_level ? 'low-stock' : '' }}">
-                    {{ $medicine->quantity }}
-                </td>
+@foreach($medicines as $medicine)
 
 
-                <td>
-                    {{ number_format($medicine->unit_price, 2) }}
-                </td>
+<tr>
 
 
-                <td>
-                    {{ $medicine->expiry_date?->format('d M Y') ?? '—' }}
-                </td>
+<td>
+{{ $medicine->name }}
+</td>
 
 
-                <td>
 
-                    <a class="edit" href="{{ route('medicines.edit', $medicine) }}">
-                        Edit
-                    </a>
-
-
-                    <form class="inline-form" 
-                          method="POST" 
-                          action="{{ route('medicines.destroy', $medicine) }}" 
-                          onsubmit="return confirm('Delete this medicine?');">
-
-                        @csrf
-                        @method('DELETE')
-
-                        <button class="delete" type="submit">
-                            Delete
-                        </button>
-
-                    </form>
-
-                </td>
-
-            </tr>
+<td>
+{{ $medicine->batch_number }}
+</td>
 
 
-        @empty
 
-            <tr>
-                <td colspan="7">
-                    No medicines added yet.
-                </td>
-            </tr>
-
-        @endforelse
+<td>
+{{ $medicine->category->name ?? 'No Category' }}
+</td>
 
 
-        </tbody>
 
-    </table>
+<td>
+{{ $medicine->quantity }}
+</td>
+
+
+
+<td>
+{{ number_format($medicine->unit_price,2) }}
+</td>
+
+
+
+<td>
+{{ $medicine->expiry_date->format('d M Y') }}
+</td>
+
+
+
+<td>
+
+
+<a href="{{ route('medicines.edit',$medicine->id) }}"
+class="edit-btn">
+
+Edit
+
+</a>
+
+
+
+<form action="{{ route('medicines.destroy',$medicine->id) }}"
+method="POST"
+style="display:inline;">
+
+
+@csrf
+
+@method('DELETE')
+
+
+<button type="submit"
+class="delete-btn"
+onclick="return confirm('Are you sure you want to delete this medicine?')">
+
+Delete
+
+</button>
+
+
+</form>
+
+
+</td>
+
+
+
+</tr>
+
+
+@endforeach
+
+
+
+</tbody>
+
+
+</table>
+
+
 
 </div>
 
+
 </body>
+
 </html>

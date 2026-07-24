@@ -16,14 +16,93 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
         th { background: #e9f5ef; }
+        .dashboard-buttons{
+
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+margin-bottom:25px;
+
+}
+
+
+.button{
+
+    background:#1f7a5a;
+    color:white;
+    padding:12px 18px;
+    text-decoration:none;
+    border-radius:6px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    min-width:130px;
+    height:45px;
+
+    white-space:nowrap;
+
+}
+
+
+.button:hover{
+
+    background:#14532d;
+
+}
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Pharmacy Dashboard</h1>
 
-        <a class="button" href="{{ route('medicines.index') }}">Manage Medicines</a>
+<div style="margin-bottom:25px;">
 
+    <a class="button" href="{{ route('medicines.index') }}">
+        Manage Medicines
+    </a>
+
+
+    <a class="button" href="{{ route('categories.index') }}">
+        Categories
+    </a>
+
+
+    <a class="button" href="{{ route('suppliers.index') }}">
+        Suppliers
+    </a>
+
+
+    <a class="button" href="{{ route('purchase-orders.index') }}">
+        Purchase Orders
+    </a>
+
+
+    <a class="button" href="{{ route('sales.index') }}">
+        Sales
+    </a>
+<a class="button" href="{{ route('stock-movements.index') }}">
+Stock Movements
+</a>
+
+
+<a class="button" href="{{ route('low-stock.index') }}">
+Low Stock Alert
+</a>
+
+
+<a class="button" href="#expiry">
+Expiring Medicines
+</a>
+
+
+<a class="button" href="{{ route('reports.index') }}">
+    Reports
+</a>
+
+
+</div>
         <div class="cards">
             <div class="card">
                 <p>Total Medicine Types</p>
@@ -46,8 +125,8 @@
             </div>
         </div>
 
-        <div class="section">
-            <h2>Low-Stock Medicines</h2>
+        <div class="section" id="low-stock">
+<h2>Low-Stock Medicines</h2>
 
             @if ($lowStockMedicines->isEmpty())
                 <p>No low-stock medicines.</p>
@@ -73,8 +152,8 @@
             @endif
         </div>
 
-        <div class="section">
-            <h2>Medicines Expiring Within 90 Days</h2>
+        <div class="section" id="expiry">
+<h2>Medicines Expiring Within 90 Days</h2>
 
             @if ($expiringMedicines->isEmpty())
                 <p>No medicines expiring soon.</p>
