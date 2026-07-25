@@ -41,10 +41,15 @@ class DashboardController extends Controller
         $todayRevenue = Sale::whereDate('sale_date', today())->sum('total_amount');
 
         return response()->json([
-            'totalProducts', 'totalStock', 'totalSuppliers',
-            'lowStockMedicines', 'lowStockCount',
-            'expiringMedicines', 'expiringCount',
-            'todaySalesCount', 'todayRevenue',
+            'totalProducts' => $totalProducts,
+            'totalStock' => $totalStock,
+            'totalSuppliers' => $totalSuppliers,
+            'lowStockMedicines' => $lowStockMedicines,
+            'lowStockCount' => $lowStockCount,
+            'expiringMedicines' => $expiringMedicines,
+            'expiringCount' => $expiringCount,
+            'todaySalesCount' => $todaySalesCount,
+            'todayRevenue' => $todayRevenue,
         ]);
     }
 
@@ -63,9 +68,12 @@ class DashboardController extends Controller
         $expiringCount = $expiringMedicines->count();
 
         return response()->json([
-            'totalProducts', 'totalStock',
-            'lowStockMedicines', 'lowStockCount',
-            'expiringMedicines', 'expiringCount',
+            'totalProducts' => $totalProducts,
+            'totalStock' => $totalStock,
+            'lowStockMedicines' => $lowStockMedicines,
+            'lowStockCount' => $lowStockCount,
+            'expiringMedicines' => $expiringMedicines,
+            'expiringCount' => $expiringCount,
         ]);
     }
 
@@ -77,7 +85,10 @@ class DashboardController extends Controller
         $recentSales = Sale::latest()->take(5)->get();
 
         return response()->json([
-            'todaySalesCount', 'todayRevenue', 'totalProducts', 'recentSales',
+            'todaySalesCount' => $todaySalesCount,
+            'todayRevenue' => $todayRevenue,
+            'totalProducts' => $totalProducts,
+            'recentSales' => $recentSales,
         ]);
     }
 }

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\UserController;
 
 // ============================================
 // PUBLIC AUTH ROUTES
@@ -21,7 +22,6 @@ Route::get('/csrf-token', function () {
 });
 
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
 
 // ============================================
 // PROTECTED ROUTES
@@ -34,6 +34,15 @@ Route::middleware('auth')->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    // User Management (admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/register', [AuthController::class, 'register']);
+        Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
+        Route::put('/users/{user}', [UserController::class, 'update']);
+        Route::delete('/users/{user}', [UserController::class, 'destroy']);
+    });
 
     // Categories (admin only)
     Route::middleware('role:admin')->group(function () {

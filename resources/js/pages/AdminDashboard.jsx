@@ -2,13 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../axios';
 import StatCard from '../components/StatCard';
+import LoadingSpinner from '../components/LoadingSpinner';
 import SidebarLayout from '../components/SidebarLayout';
 
 export default function AdminDashboard() {
     const [data, setData] = useState(null);
-    useEffect(() => { api.get('/dashboard').then(r => setData(r.data)); }, []);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
-    if (!data) return <SidebarLayout><div className="text-blue-500">Loading...</div></SidebarLayout>;
+    useEffect(() => {
+        api.get('/dashboard')
+            .then(r => {
+                setData(r.data);
+                setError('');
+            })
+            .catch(err => {
+                setError('Failed to load dashboard data');
+                console.error(err);
+            })
+            .finally(() => setLoading(false));
+    }, []);
+
+    if (loading) return <SidebarLayout><LoadingSpinner text="Loading dashboard..." /></SidebarLayout>;
+
+    if (error) return <SidebarLayout><div className="text-center py-12 text-red-500">{error}</div></SidebarLayout>;
 
     return (
         <SidebarLayout pageTitle="Admin Dashboard">

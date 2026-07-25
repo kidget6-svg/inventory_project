@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Pill, User, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function Register() {
     const { register } = useAuth();
@@ -8,6 +9,8 @@ export default function Register() {
     const [form, setForm] = useState({ name: '', email: '', password: '', password_confirmation: '', role: 'cashier' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -17,7 +20,7 @@ export default function Register() {
         setLoading(true);
         try {
             await register(form);
-            navigate('/dashboard');
+            navigate('/users');
         } catch (err) {
             const msgs = err.response?.data?.errors;
             setError(msgs ? Object.values(msgs).flat().join(' ') : 'Registration failed');
@@ -27,57 +30,208 @@ export default function Register() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200">
-            <div className="w-full max-w-md px-5">
-                <div className="text-center mb-6">
-                    <span className="text-4xl">{'\u{1F48A}'}</span>
-                    <h1 className="text-2xl font-bold text-blue-700 mt-2">PharmaSys</h1>
-                </div>
-                <div className="bg-white rounded-2xl shadow-lg p-8">
-                    <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">Create Account</h2>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-white to-blue-200 p-6">
 
-                    {error && <div className="bg-red-50 text-red-600 border-l-4 border-red-500 p-3 rounded mb-4 text-sm">{error}</div>}
+            <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-gray-600 mb-1">Name</label>
-                            <input type="text" name="name" value={form.name} onChange={handleChange}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-gray-600 mb-1">Email</label>
-                            <input type="email" name="email" value={form.email} onChange={handleChange}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-gray-600 mb-1">Role</label>
-                            <select name="role" value={form.role} onChange={handleChange}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required>
-                                <option value="cashier">Cashier</option>
-                                <option value="pharmacist">Pharmacist</option>
-                            </select>
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-gray-600 mb-1">Password</label>
-                            <input type="password" name="password" value={form.password} onChange={handleChange}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required />
-                        </div>
-                        <div className="mb-6">
-                            <label className="block text-sm font-semibold text-gray-600 mb-1">Confirm Password</label>
-                            <input type="password" name="password_confirmation" value={form.password_confirmation} onChange={handleChange}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required />
-                        </div>
-                        <button type="submit" disabled={loading}
-                            className="w-full py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50">
-                            {loading ? 'Creating account...' : 'Register'}
-                        </button>
-                    </form>
+                {/* Logo */}
+                <div className="flex flex-col items-center mb-8">
+                    <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center shadow-lg">
+                        <Pill className="text-white w-10 h-10" />
+                    </div>
 
-                    <p className="text-center text-sm text-gray-500 mt-5">
-                        Already have an account? <Link to="/login" className="text-blue-500 font-semibold hover:underline">Sign In</Link>
+                    <h1 className="text-3xl font-bold text-gray-800 mt-4">
+                        Add New User
+                    </h1>
+
+                    <p className="text-gray-500 mt-2 text-center">
+                        Create a new user account
                     </p>
                 </div>
+
+                {error && (
+                    <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+
+                    {/* Full Name */}
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">
+                            Full Name
+                        </label>
+
+                        <div className="relative mt-1">
+                            <User className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+
+                            <input
+                                type="text"
+                                name="name"
+                                value={form.name}
+                                onChange={handleChange}
+                                placeholder="Enter full name"
+                                className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">
+                            Email
+                        </label>
+
+                        <div className="relative mt-1">
+                            <Mail className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+
+                            <input
+                                type="email"
+                                name="email"
+                                value={form.email}
+                                onChange={handleChange}
+                                placeholder="example@email.com"
+                                className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {/* Role */}
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">
+                            Role
+                        </label>
+
+                        <div className="relative mt-1">
+                            <select
+                                name="role"
+                                value={form.role}
+                                onChange={handleChange}
+                                className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                                required
+                            >
+                                <option value="admin">Admin</option>
+                                <option value="pharmacist">Pharmacist</option>
+                                <option value="cashier">Cashier</option>
+                            </select>
+                            <User className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                        </div>
+                    </div>
+
+                    {/* Password */}
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">
+                            Password
+                        </label>
+
+                        <div className="relative mt-1">
+                            <Lock className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                value={form.password}
+                                onChange={handleChange}
+                                placeholder="Password (min 8 characters)"
+                                className="w-full pl-11 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                required
+                                minLength={8}
+                            />
+
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-3 text-gray-500"
+                            >
+                                {showPassword ? (
+                                    <EyeOff size={20} />
+                                ) : (
+                                    <Eye size={20} />
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">
+                            Confirm Password
+                        </label>
+
+                        <div className="relative mt-1">
+                            <Lock className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+
+                            <input
+                                type={showConfirm ? "text" : "password"}
+                                name="password_confirmation"
+                                value={form.password_confirmation}
+                                onChange={handleChange}
+                                placeholder="Confirm Password"
+                                className="w-full pl-11 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                required
+                                minLength={8}
+                            />
+
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirm(!showConfirm)}
+                                className="absolute right-3 top-3 text-gray-500"
+                            >
+                                {showConfirm ? (
+                                    <EyeOff size={20} />
+                                ) : (
+                                    <Eye size={20} />
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Terms */}
+                    <div className="flex items-center">
+                        <input
+                            type="checkbox"
+                            className="w-4 h-4 text-blue-600 rounded"
+                            required
+                        />
+
+                        <span className="ml-2 text-sm text-gray-600">
+                            I agree to the Terms & Conditions
+                        </span>
+                    </div>
+
+                    {/* Register Button */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 transition text-white rounded-xl font-semibold shadow-lg flex justify-center items-center gap-2 disabled:opacity-60"
+                    >
+                        {loading ? (
+                            <>
+                                <Loader2 size={18} className="animate-spin" />
+                                Creating Account...
+                            </>
+                        ) : (
+                            "Create User"
+                        )}
+                    </button>
+
+                    {/* Back to Users */}
+                    <p className="text-center text-sm text-gray-600">
+                        <Link
+                            to="/users"
+                            className="text-blue-600 font-semibold hover:underline"
+                        >
+                            Back to User Management
+                        </Link>
+                    </p>
+
+                </form>
+
             </div>
+
         </div>
     );
 }

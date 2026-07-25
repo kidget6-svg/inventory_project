@@ -146,14 +146,41 @@ npm run dev
 3. `SaleController::store()` should validate properly
 4. `resources/js/bootstrap.js` - remove old Alpine.js import if present
 
+---
+
+## ADMIN-ONLY REGISTRATION (Completed)
+Registration is now restricted to admin only. Regular users can no longer self-register.
+
+### Changes Made
+- **Backend:**
+  - `routes/web.php`: Moved `/register` route inside `auth` + `role:admin` middleware group
+  - `routes/web.php`: Added `/users` CRUD routes (index, store, update, destroy) under admin middleware
+  - `app/Http/Controllers/Api/AuthController.php`: Removed auto-login from `register()` method; added `admin` to allowed roles
+  - `app/Http/Controllers/Api/UserController.php`: New controller for user management (list, create, edit, delete)
+
+- **Frontend:**
+  - `resources/js/App.jsx`: `/register` route now requires admin role; added `/users` route (admin only); imported `Users` page
+  - `resources/js/pages/Login.jsx`: Removed "Register" link from login page
+  - `resources/js/pages/Register.jsx`: Updated for admin context (role dropdown includes Admin); navigates to `/users` after creation
+  - `resources/js/pages/Users.jsx`: New admin user management page (list users, add/edit form, delete with confirmation)
+  - `resources/js/components/SidebarLayout.jsx`: Added "Users" link to admin sidebar menu
+  - `resources/js/context/AuthContext.jsx`: Updated `register()` to not auto-login (admin stays logged in)
+
+### How It Works
+1. Only admin can access `/register` and `/users` pages (enforced by both frontend ProtectedRoute and backend middleware)
+2. Admin creates users via the Users page or the Register page
+3. The admin stays logged in after creating a user (no session switch)
+4. Admin can edit and delete existing users (except their own account)
+5. Regular users (pharmacist, cashier) cannot access registration at all
+
 ## FILES REFERENCE
 ```
-resources/js/pages/          (13 page components)
+resources/js/pages/          (14 page components, including new Users.jsx)
 resources/js/components/     (SidebarLayout, StatCard)
 resources/js/context/        (AuthContext)
 resources/js/App.jsx         (Router)
 resources/js/axios.js        (API client)
-app/Http/Controllers/Api/    (10 API controllers)
-routes/api.php               (all routes)
+app/Http/Controllers/Api/    (11 API controllers, including new UserController)
+routes/web.php               (all routes)
 database/seeders/            (user seeder)
 ```
