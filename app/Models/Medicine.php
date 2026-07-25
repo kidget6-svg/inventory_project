@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Medicine extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'generic_name',
@@ -21,13 +24,13 @@ class Medicine extends Model
         'expiry_date' => 'date',
     ];
 
-
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
+
     public function purchaseOrderItems()
-{
-    return $this->hasMany(PurchaseOrderItem::class);
-}
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
 }

@@ -22,10 +22,10 @@ return new class extends Migration
                   ->default(0);
 
             $table->enum('status',[
-                'Pending',
-                'Completed',
-                'Cancelled'
-            ])->default('Pending');
+                'pending',
+                'completed',
+                'cancelled'
+            ])->default('pending');
 
 
             $table->timestamps();

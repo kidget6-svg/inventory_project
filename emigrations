@@ -1,0 +1,128 @@
+[33mcommit 6fa91f90ee5b29a1c08b24e194b55d99da2627a6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmahlet[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/mahlet[m[33m, [m[1;31morigin/kidist[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Author: yabuti <yeabsragetachew6789@gmail.com>
+Date:   Fri Jul 24 03:57:55 2026 -0700
+
+    first work
+
+ TASKS.md                                           | 159 [32m++++++[m
+ app/Http/Controllers/Api/AuthController.php        |  67 [32m+++[m
+ app/Http/Controllers/Api/CategoryController.php    |  48 [32m++[m
+ app/Http/Controllers/Api/DashboardController.php   |  83 [32m+++[m
+ app/Http/Controllers/Api/LowStockController.php    |  18 [32m+[m
+ app/Http/Controllers/Api/MedicineController.php    |  62 [32m+++[m
+ .../Controllers/Api/PurchaseOrderController.php    |  74 [32m+++[m
+ app/Http/Controllers/Api/ReportController.php      |  32 [32m++[m
+ app/Http/Controllers/Api/SaleController.php        |  52 [32m++[m
+ .../Controllers/Api/StockMovementController.php    |  56 [32m++[m
+ app/Http/Controllers/Api/SupplierController.php    |  54 [32m++[m
+ .../Controllers/Auth/RegisteredUserController.php  |  10 [32m+[m[31m-[m
+ app/Http/Controllers/DashboardController.php       |  75 [32m++[m[31m-[m
+ app/Http/Middleware/EnsureUserHasRole.php          |  13 [32m+[m[31m-[m
+ app/Models/User.php                                |  33 [32m+[m[31m-[m
+ bootstrap/app.php                                  |   4 [32m+[m[31m-[m
+ composer.json                                      |   5 [32m+[m[31m-[m
+ config/cors.php                                    |  12 [32m+[m
+ .../2026_07_24_000000_add_role_to_users_table.php  |  22 [32m+[m
+ database/seeders/DatabaseSeeder.php                |  40 [32m+[m[31m-[m
+ package-lock.json                                  | 581 [32m+++++++++++++++++++[m[31m--[m
+ package.json                                       |   9 [32m+[m[31m-[m
+ resources/css/app.css                              |   7 [32m+[m
+ resources/js/app.js                                |   7 [31m-[m
+ resources/js/app.jsx                               |  93 [32m++++[m
+ resources/js/axios.js                              |  45 [32m++[m
+ resources/js/components/SidebarLayout.jsx          | 143 [32m+++++[m
+ resources/js/components/StatCard.jsx               |  24 [32m+[m
+ resources/js/context/AuthContext.jsx               |  44 [32m++[m
+ resources/js/index.css                             |   3 [32m+[m
+ resources/js/pages/AdminDashboard.jsx              |  69 [32m+++[m
+ resources/js/pages/CashierDashboard.jsx            |  54 [32m++[m
+ resources/js/pages/Categories.jsx                  |  85 [32m+++[m
+ resources/js/pages/Login.jsx                       |  63 [32m+++[m
+ resources/js/pages/LowStock.jsx                    |  49 [32m++[m
+ resources/js/pages/Medicines.jsx                   | 102 [32m++++[m
+ resources/js/pages/PharmacistDashboard.jsx         |  63 [32m+++[m
+ resources/js/pages/PurchaseOrders.jsx              |  95 [32m++++[m
+ resources/js/pages/Register.jsx                    |  83 [32m+++[m
+ resources/js/pages/Reports.jsx                     | 138 [32m+++++[m
+ resources/js/pages/Sales.jsx                       |  89 [32m++++[m
+ resources/js/pages/StockMovements.jsx              |  79 [32m+++[m
+ resources/js/pages/Suppliers.jsx                   |  92 [32m++++[m
+ resources/views/admin/dashboard.blade.php          | 301 [31m-----------[m
+ resources/views/app.blade.php                      |  14 [32m+[m
+ resources/views/auth/confirm-password.blade.php    |  27 [31m-[m
+ resources/views/auth/forgot-password.blade.php     |  25 [31m-[m
+ resources/views/auth/login.blade.php               |  47 [31m--[m
+ resources/views/auth/register.blade.php            |  52 [31m--[m
+ resources/views/auth/reset-password.blade.php      |  39 [31m--[m
+ resources/views/auth/verify-email.blade.php        |  31 [31m--[m
+ resources/views/categories/create.blade.php        |  38 [31m--[m
+ resources/views/categories/index.blade.php         |  38 [31m--[m
+ .../views/components/application-logo.blade.php    |   3 [31m-[m
+ .../views/components/auth-session-status.blade.php |   7 [31m-[m
+ resources/views/components/danger-button.blade.php |   3 [31m-[m
+ resources/views/components/dropdown-link.blade.php |   1 [31m-[m
+ resources/views/components/dropdown.blade.php      |  35 [31m--[m
+ resources/views/components/input-error.blade.php   |   9 [31m-[m
+ resources/views/components/input-label.blade.php   |   5 [31m-[m
+ resources/views/components/modal.blade.php         |  78 [31m---[m
+ resources/views/components/nav-link.blade.php      |  11 [31m-[m
+ .../views/components/primary-button.blade.php      |   3 [31m-[m
+ .../views/components/responsive-nav-link.blade.php |  11 [31m-[m
+ .../views/components/secondary-button.blade.php    |   3 [31m-[m
+ resources/views/components/text-input.blade.php    |   3 [31m-[m
+ resources/views/dashboard.blade.php                | 183 [31m-------[m
+ resources/views/layouts/app.blade.php              |  36 [31m--[m
+ resources/views/layouts/guest.blade.php            |  30 [31m--[m
+ resources/views/layouts/navigation.blade.php       | 100 [31m----[m
+ resources/views/low-stock/index.blade.php          | 125 [31m-----[m
+ resources/views/medicines/create.blade.php         | 159 [31m------[m
+ resources/views/medicines/edit.blade.php           |  64 [31m---[m
+ resources/views/medicines/index.blade.php          | 272 [31m----------[m
+ resources/views/profile/edit.blade.php             |  29 [31m-[m
+ .../profile/partials/delete-user-form.blade.php    |  55 [31m--[m
+ .../partials/update-password-form.blade.php        |  48 [31m--[m
+ .../update-profile-information-form.blade.php      |  64 [31m---[m
+ resources/views/purchase-orders/create.blade.php   | 198 [31m-------[m
+ resources/views/purchase-orders/index.blade.php    | 119 [31m-----[m
+ resources/views/reports/index.blade.php            | 259 [31m---------[m
+ resources/views/sales/create.blade.php             | 170 [31m------[m
+ resources/views/sales/index.blade.php              | 174 [31m------[m
+ resources/views/stock-movements/index.blade.php    | 117 [31m-----[m
+ resources/views/suppliers/create.blade.php         |  42 [31m--[m
+ resources/views/suppliers/index.blade.php          |  38 [31m--[m
+ resources/views/welcome.blade.php                  | 314 [31m-----------[m
+ routes/auth.php                                    |  58 [32m+[m[31m-[m
+ routes/web.php                                     | 115 [32m++[m[31m--[m
+ tailwind.config.js                                 |   1 [32m+[m
+ vite.config.js                                     |   4 [32m+[m[31m-[m
+ 91 files changed, 2918 insertions(+), 3576 deletions(-)
+
+[33mcommit 37202d984a0fddf612d774ec228787f0cbb82fed[m
+Merge: 9cb4f85 90f242b
+Author: yabuti <yeabsragetachew6789@gmail.com>
+Date:   Fri Jul 24 00:54:01 2026 -0700
+
+    Merge remote-tracking branch and resolve conflicts - accept incoming changes
+
+[33mcommit 90f242b5601274ac6c3733a8d233639ec239a916[m[33m ([m[1;31morigin/developer-3-purchasing-sales[m[33m)[m
+Author: mahiyimenu <mahiyim11@gmail.com>
+Date:   Fri Jul 24 10:41:21 2026 +0300
+
+    Updated reports and purchase orders display
+
+ app/Http/Controllers/ReportController.php |  24 [32m+[m[31m-[m
+ resources/views/reports/index.blade.php   |  31 [32m+[m[31m-[m
+ resources/views/welcome.blade.php         | 582 [32m++++++++++++++++[m[31m--------------[m
+ routes/web.php                            |   8 [32m+[m[31m-[m
+ 4 files changed, 352 insertions(+), 293 deletions(-)
+
+[33mcommit 8b1d151fa048010bdcc023767e830b4c16966bc6[m
+Author: mahiyimenu <mahiyim11@gmail.com>
+Date:   Thu Jul 23 23:49:32 2026 +0300
+
+    Added sales module and dashboard improvements
+
+ app/Http/Controllers/LowStockController.php        |  20 [32m++[m
+ app/Http/Controllers/MedicineController.php        |  29 [32m+[m[31m-[m
+ app/Http/Controllers/PurchaseOrderController.php   | 124 [32m+++++++[m
+ app/Http/Controllers/Report
