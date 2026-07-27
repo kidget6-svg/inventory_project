@@ -6,6 +6,7 @@ const adminMenu = [
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: '\u{1F4CA}' },
     { section: 'Management' },
+    { to: '/users', label: 'Users', icon: '\u{1F46B}' },
     { to: '/medicines', label: 'Medicines', icon: '\u{1F48A}' },
     { to: '/categories', label: 'Categories', icon: '\u{1F4C1}' },
     { to: '/suppliers', label: 'Suppliers', icon: '\u{1F4E6}' },

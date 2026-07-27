@@ -35,7 +35,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
             'password' => 'required|confirmed|min:8',
-            'role' => 'required|in:pharmacist,cashier',
+            'role' => 'required|in:admin,pharmacist,cashier',
         ]);
 
         $user = User::create([
@@ -45,10 +45,10 @@ class AuthController extends Controller
             'role' => $request->role,
         ]);
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        // Do NOT auto-login the newly created user.
+        // The admin who created the account stays logged in.
 
-        return response()->json($user);
+        return response()->json($user, 201);
     }
 
     public function logout(Request $request)

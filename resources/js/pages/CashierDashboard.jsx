@@ -2,13 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../axios';
 import StatCard from '../components/StatCard';
+import LoadingSpinner from '../components/LoadingSpinner';
 import SidebarLayout from '../components/SidebarLayout';
 
 export default function CashierDashboard() {
     const [data, setData] = useState(null);
-    useEffect(() => { api.get('/dashboard').then(r => setData(r.data)); }, []);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
-    if (!data) return <SidebarLayout><div className="text-blue-500">Loading...</div></SidebarLayout>;
+    useEffect(() => {
+        api.get('/dashboard')
+            .then(r => {
+                setData(r.data);
+                setError('');
+            })
+            .catch(err => {
+                setError('Failed to load dashboard data');
+                console.error(err);
+            })
+            .finally(() => setLoading(false));
+    }, []);
+
+    if (loading) return <SidebarLayout><LoadingSpinner text="Loading dashboard..." /></SidebarLayout>;
+
+    if (error) return <SidebarLayout><div className="text-center py-12 text-red-500">{error}</div></SidebarLayout>;
 
     return (
         <SidebarLayout pageTitle="Cashier Dashboard">
@@ -21,24 +38,26 @@ export default function CashierDashboard() {
             <div className="bg-white rounded-xl p-5 shadow-sm mb-5">
                 <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50">{'\u{1F4B0}'} Recent Sales</h3>
                 {data.recentSales?.length > 0 ? (
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-blue-50">
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Sale ID</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Date</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.recentSales.map(sale => (
-                                <tr key={sale.id} className="border-b border-gray-50 hover:bg-blue-50/30">
-                                    <td className="px-4 py-3 text-sm">#{sale.id}</td>
-                                    <td className="px-4 py-3 text-sm">{sale.sale_date}</td>
-                                    <td className="px-4 py-3 text-sm font-semibold">${Number(sale.total_amount).toFixed(2)}</td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-blue-50">
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Sale ID</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Date</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Amount</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {data.recentSales.map(sale => (
+                                    <tr key={sale.id} className="border-b border-gray-50 hover:bg-blue-50/30">
+                                        <td className="px-4 py-3 text-sm">#{sale.id}</td>
+                                        <td className="px-4 py-3 text-sm">{sale.sale_date}</td>
+                                        <td className="px-4 py-3 text-sm font-semibold">${Number(sale.total_amount).toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 ) : <p className="text-gray-400 text-center py-5">No sales recorded yet</p>}
             </div>
 

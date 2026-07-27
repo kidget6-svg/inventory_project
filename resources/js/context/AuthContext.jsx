@@ -22,9 +22,11 @@ export function AuthProvider({ children }) {
     };
 
     const register = async (data) => {
+        // Registration is admin-only. The admin stays logged in;
+        // the newly created user is returned but does NOT replace
+        // the current session.
         const res = await api.post('/register', data);
         await refreshCsrfToken();
-        setUser(res.data);
         return res.data;
     };
 

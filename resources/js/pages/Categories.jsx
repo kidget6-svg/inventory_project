@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
+import LoadingSpinner from '../components/LoadingSpinner';
 import SidebarLayout from '../components/SidebarLayout';
 
 export default function Categories() {
@@ -8,8 +9,18 @@ export default function Categories() {
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState({ name: '', description: '' });
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(true);
 
-    const load = () => api.get('/categories').then(r => setCategories(r.data));
+    const load = () => {
+        api.get('/categories')
+            .then(r => setCategories(r.data))
+            .catch(err => {
+                console.error(err);
+                setError('Failed to load categories');
+            })
+            .finally(() => setLoading(false));
+    };
+
     useEffect(() => { load(); }, []);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -21,8 +32,13 @@ export default function Categories() {
         e.preventDefault();
         setError('');
         try {
-            if (editId) { await api.put(`/categories/${editId}`, form); }
-            else { await api.post('/categories', form); }
+            if (editId) {
+                await api.put(`/categories/${editId}`, form);
+                window.showToast('Category updated successfully', 'success');
+            } else {
+                await api.post('/categories', form);
+                window.showToast('Category created successfully', 'success');
+            }
             setShowForm(false);
             load();
         } catch (err) {
@@ -33,8 +49,13 @@ export default function Categories() {
 
     const handleDelete = async (id) => {
         if (!confirm('Delete this category?')) return;
-        await api.delete(`/categories/${id}`);
-        load();
+        try {
+            await api.delete(`/categories/${id}`);
+            window.showToast('Category deleted successfully', 'success');
+            load();
+        } catch (err) {
+            window.showToast('Failed to delete category', 'error');
+        }
     };
 
     return (
@@ -56,30 +77,34 @@ export default function Categories() {
                 </div>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <table className="w-full">
-                    <thead>
-                        <tr className="bg-blue-50">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Name</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Description</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {categories.map(c => (
-                            <tr key={c.id} className="border-b border-gray-50 hover:bg-blue-50/30">
-                                <td className="px-4 py-3 text-sm font-medium">{c.name}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{c.description || '---'}</td>
-                                <td className="px-4 py-3 text-sm">
-                                    <button onClick={() => openEdit(c)} className="px-3 py-1 bg-blue-500 text-white rounded text-xs font-semibold hover:bg-blue-600 mr-2">Edit</button>
-                                    <button onClick={() => handleDelete(c.id)} className="px-3 py-1 bg-red-500 text-white rounded text-xs font-semibold hover:bg-red-600">Delete</button>
-                                </td>
+            {loading ? (
+                <LoadingSpinner text="Loading categories..." />
+            ) : (
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-blue-50">
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Name</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Description</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Actions</th>
                             </tr>
-                        ))}
-                        {categories.length === 0 && <tr><td colSpan="3" className="px-4 py-8 text-center text-gray-400">No categories found</td></tr>}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {categories.map(c => (
+                                <tr key={c.id} className="border-b border-gray-50 hover:bg-blue-50/30">
+                                    <td className="px-4 py-3 text-sm font-medium">{c.name}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-500">{c.description || '---'}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                        <button onClick={() => openEdit(c)} className="px-3 py-1 bg-blue-500 text-white rounded text-xs font-semibold hover:bg-blue-600 mr-2">Edit</button>
+                                        <button onClick={() => handleDelete(c.id)} className="px-3 py-1 bg-red-500 text-white rounded text-xs font-semibold hover:bg-red-600">Delete</button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {categories.length === 0 && <tr><td colSpan="3" className="px-4 py-8 text-center text-gray-400">No categories found</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </SidebarLayout>
     );
 }

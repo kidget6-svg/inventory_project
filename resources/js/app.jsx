@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import SidebarLayout from './components/SidebarLayout';
+import { ToastContainer } from './components/Toast';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Users from './pages/Users';
 import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
@@ -40,7 +42,16 @@ function App() {
     return (
         <Routes>
             <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
-            <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+
+            {/* Admin-only: Register new users (no public self-registration) */}
+            <Route path="/register" element={
+                <ProtectedRoute roles={['admin']}><Register /></ProtectedRoute>
+            } />
+
+            {/* Admin-only: User management */}
+            <Route path="/users" element={
+                <ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>
+            } />
 
             <Route path="/dashboard" element={
                 <ProtectedRoute><DashboardRouter /></ProtectedRoute>
@@ -82,6 +93,7 @@ function RootApp() {
             <BrowserRouter>
                 <App />
             </BrowserRouter>
+            <ToastContainer />
         </AuthProvider>
     );
 }
