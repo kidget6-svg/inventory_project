@@ -11,6 +11,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
 import Medicines from './pages/Medicines';
+import Inventory from './pages/Inventory';
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
@@ -43,10 +44,8 @@ function App() {
         <Routes>
             <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
 
-            {/* Admin-only: Register new users (no public self-registration) */}
-            <Route path="/register" element={
-                <ProtectedRoute roles={['admin']}><Register /></ProtectedRoute>
-            } />
+            {/* Public self-registration (pharmacist & cashier only) */}
+            <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
 
             {/* Admin-only: User management */}
             <Route path="/users" element={
@@ -59,6 +58,9 @@ function App() {
 
             <Route path="/medicines" element={
                 <ProtectedRoute roles={['admin','pharmacist']}><Medicines /></ProtectedRoute>
+            } />
+            <Route path="/inventory" element={
+                <ProtectedRoute roles={['admin','pharmacist']}><Inventory /></ProtectedRoute>
             } />
             <Route path="/categories" element={
                 <ProtectedRoute roles={['admin','pharmacist']}><Categories /></ProtectedRoute>

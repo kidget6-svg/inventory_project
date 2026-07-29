@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { User, Mail, Lock, Eye, EyeOff, Loader2, Trash2, Edit, Save, X } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Loader2, Trash2, Edit, Save, X, Phone, Calendar, MapPin, Upload, UserCheck, FileText, GraduationCap, Briefcase, IdCard, CheckCircle, XCircle } from 'lucide-react';
 
 const roleOptions = [
     { value: 'admin', label: 'Admin' },
@@ -18,15 +18,35 @@ export default function Users() {
     const [showForm, setShowForm] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [actionLoading, setActionLoading] = useState(null);
 
     const [form, setForm] = useState({
-        name: '',
+        first_name: '',
+        last_name: '',
         email: '',
+        phone_number: '',
         password: '',
         password_confirmation: '',
         role: 'cashier',
+        gender: '',
+        date_of_birth: '',
+        address: '',
+        license_number: '',
+        license_expiry_date: '',
+        professional_registration_number: '',
+        university: '',
+        degree: '',
+        years_of_experience: '',
+        national_id: '',
+        qualification: '',
     });
 
+    const [profilePhoto, setProfilePhoto] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState('');
+    const [licenseDoc, setLicenseDoc] = useState(null);
+    const [qualificationDoc, setQualificationDoc] = useState(null);
+    const [pharmacyLicense, setPharmacyLicense] = useState(null);
+    const [degreeCertificate, setDegreeCertificate] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
 
@@ -49,8 +69,21 @@ export default function Users() {
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+    const handleFileChange = (e, setter) => {
+        const file = e.target.files[0];
+        if (file) {
+            setter(file);
+        }
+    };
+
     const resetForm = () => {
-        setForm({ name: '', email: '', password: '', password_confirmation: '', role: 'cashier' });
+        setForm({ first_name: '', last_name: '', email: '', phone_number: '', password: '', password_confirmation: '', role: 'cashier', gender: '', date_of_birth: '', address: '', license_number: '', license_expiry_date: '', professional_registration_number: '', university: '', degree: '', years_of_experience: '', national_id: '', qualification: '' });
+        setProfilePhoto(null);
+        setPhotoPreview('');
+        setLicenseDoc(null);
+        setQualificationDoc(null);
+        setPharmacyLicense(null);
+        setDegreeCertificate(null);
         setShowPassword(false);
         setShowConfirm(false);
         setEditingUser(null);
@@ -62,7 +95,32 @@ export default function Users() {
     };
 
     const openEditForm = (u) => {
-        setForm({ name: u.name, email: u.email, password: '', password_confirmation: '', role: u.role });
+        setForm({
+            first_name: u.first_name || '',
+            last_name: u.last_name || '',
+            email: u.email || '',
+            phone_number: u.phone_number || '',
+            password: '',
+            password_confirmation: '',
+            role: u.role || 'cashier',
+            gender: u.gender || '',
+            date_of_birth: u.date_of_birth || '',
+            address: u.address || '',
+            license_number: u.license_number || '',
+            license_expiry_date: u.license_expiry_date || '',
+            professional_registration_number: u.professional_registration_number || '',
+            university: u.university || '',
+            degree: u.degree || '',
+            years_of_experience: u.years_of_experience || '',
+            national_id: u.national_id || '',
+            qualification: u.qualification || '',
+        });
+        setProfilePhoto(null);
+        setPhotoPreview(u.profile_photo ? u.profile_photo : '');
+        setLicenseDoc(null);
+        setQualificationDoc(null);
+        setPharmacyLicense(null);
+        setDegreeCertificate(null);
         setShowPassword(false);
         setShowConfirm(false);
         setEditingUser(u);
@@ -78,10 +136,42 @@ export default function Users() {
         e.preventDefault();
         setSubmitting(true);
         try {
+            const formData = new FormData();
+            formData.append('first_name', form.first_name);
+            formData.append('last_name', form.last_name);
+            formData.append('email', form.email);
+            formData.append('phone_number', form.phone_number);
+            formData.append('password', form.password);
+            formData.append('password_confirmation', form.password_confirmation);
+            formData.append('role', form.role);
+            formData.append('gender', form.gender);
+            formData.append('date_of_birth', form.date_of_birth);
+            formData.append('address', form.address);
+            if (profilePhoto) {
+                formData.append('profile_photo', profilePhoto);
+            }
+
+            if (form.role === 'pharmacist') {
+                formData.append('license_number', form.license_number);
+                formData.append('license_expiry_date', form.license_expiry_date);
+                formData.append('professional_registration_number', form.professional_registration_number);
+                formData.append('university', form.university);
+                formData.append('degree', form.degree);
+                formData.append('years_of_experience', form.years_of_experience);
+                formData.append('national_id', form.national_id);
+                formData.append('qualification', form.qualification);
+                if (licenseDoc) formData.append('license_document', licenseDoc);
+                if (qualificationDoc) formData.append('qualification_document', qualificationDoc);
+                if (pharmacyLicense) formData.append('pharmacy_license', pharmacyLicense);
+                if (degreeCertificate) formData.append('degree_certificate', degreeCertificate);
+            }
+
+            const config = { headers: { 'Content-Type': undefined } };
+
             if (editingUser) {
-                await api.put(`/users/${editingUser.id}`, form);
+                await api.put(`/users/${editingUser.id}`, formData, config);
             } else {
-                await api.post('/register', form);
+                await api.post('/users', formData, config);
             }
             await fetchUsers();
             closeForm();
@@ -103,6 +193,32 @@ export default function Users() {
         }
     };
 
+    const handleApprove = async (u) => {
+        setActionLoading(u.id);
+        try {
+            await api.post(`/users/${u.id}/approve`);
+            await fetchUsers();
+            window.showToast?.('User approved successfully. They can now log in.', 'success');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to approve user');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleReject = async (u) => {
+        setActionLoading(u.id);
+        try {
+            await api.post(`/users/${u.id}/reject`);
+            await fetchUsers();
+            window.showToast?.('User rejected successfully.', 'success');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to reject user');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
     const getRoleBadge = (role) => {
         const colors = {
             admin: 'bg-blue-100 text-blue-700',
@@ -114,6 +230,36 @@ export default function Users() {
                 {role}
             </span>
         );
+    };
+
+    const getStatusBadge = (status) => {
+        const colors = {
+            pending: 'bg-yellow-100 text-yellow-700',
+            approved: 'bg-green-100 text-green-700',
+            rejected: 'bg-red-100 text-red-700',
+        };
+        const labels = {
+            pending: 'Pending',
+            approved: 'Approved',
+            rejected: 'Rejected',
+        };
+        return (
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${colors[status] || 'bg-gray-100 text-gray-600'}`}>
+                {labels[status] || status}
+            </span>
+        );
+    };
+
+    const getUserDisplayName = (u) => {
+        if (u.first_name && u.last_name) {
+            return `${u.first_name} ${u.last_name}`;
+        }
+        return u.name || '';
+    };
+
+    const getUserInitial = (u) => {
+        const name = getUserDisplayName(u);
+        return name?.charAt(0) || '';
     };
 
     if (loading) return <LoadingSpinner text="Loading users..." />;
@@ -150,17 +296,34 @@ export default function Users() {
                     </div>
 
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {/* Full Name */}
+                        {/* First Name */}
                         <div>
-                            <label className="text-sm font-medium text-gray-700">Full Name</label>
+                            <label className="text-sm font-medium text-gray-700">First Name</label>
                             <div className="relative mt-1">
                                 <User className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
                                 <input
                                     type="text"
-                                    name="name"
-                                    value={form.name}
+                                    name="first_name"
+                                    value={form.first_name}
                                     onChange={handleChange}
-                                    placeholder="Enter full name"
+                                    placeholder="Enter first name"
+                                    className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Last Name */}
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Last Name</label>
+                            <div className="relative mt-1">
+                                <User className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                <input
+                                    type="text"
+                                    name="last_name"
+                                    value={form.last_name}
+                                    onChange={handleChange}
+                                    placeholder="Enter last name"
                                     className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                                     required
                                 />
@@ -184,6 +347,22 @@ export default function Users() {
                             </div>
                         </div>
 
+                        {/* Phone Number */}
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Phone Number</label>
+                            <div className="relative mt-1">
+                                <Phone className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                <input
+                                    type="tel"
+                                    name="phone_number"
+                                    value={form.phone_number}
+                                    onChange={handleChange}
+                                    placeholder="(555) 123-4567"
+                                    className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+                        </div>
+
                         {/* Role */}
                         <div>
                             <label className="text-sm font-medium text-gray-700">Role</label>
@@ -202,6 +381,324 @@ export default function Users() {
                                 <User className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
                             </div>
                         </div>
+
+                        {/* Gender */}
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Gender</label>
+                            <div className="relative mt-1">
+                                <UserCheck className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                <select
+                                    name="gender"
+                                    value={form.gender}
+                                    onChange={handleChange}
+                                    className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                                >
+                                    <option value="">Select gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Date of Birth */}
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Date of Birth</label>
+                            <div className="relative mt-1">
+                                <Calendar className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                <input
+                                    type="date"
+                                    name="date_of_birth"
+                                    value={form.date_of_birth}
+                                    onChange={handleChange}
+                                    className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Address */}
+                        <div className="md:col-span-2">
+                            <label className="text-sm font-medium text-gray-700">Address</label>
+                            <div className="relative mt-1">
+                                <MapPin className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                <textarea
+                                    name="address"
+                                    value={form.address}
+                                    onChange={handleChange}
+                                    placeholder="Enter full address"
+                                    rows={3}
+                                    className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Profile Photo */}
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Profile Photo</label>
+                            <div className="mt-1">
+                                {photoPreview ? (
+                                    <div className="flex items-center gap-4">
+                                        <img
+                                            src={photoPreview}
+                                            alt="Preview"
+                                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setProfilePhoto(null);
+                                                setPhotoPreview('');
+                                            }}
+                                            className="text-sm text-red-600 hover:text-red-700"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-blue-500 transition-colors">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    setProfilePhoto(file);
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setPhotoPreview(reader.result);
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                            className="hidden"
+                                            id="profile-photo-edit"
+                                        />
+                                        <label htmlFor="profile-photo-edit" className="cursor-pointer flex flex-col items-center">
+                                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                            <span className="text-sm text-gray-600">Click to upload</span>
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Pharmacist-Specific Fields (shown when role is pharmacist) */}
+                        {form.role === 'pharmacist' && (
+                            <>
+                                {/* License Number & Expiry */}
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">License Number</label>
+                                    <div className="relative mt-1">
+                                        <IdCard className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            name="license_number"
+                                            value={form.license_number}
+                                            onChange={handleChange}
+                                            placeholder="Enter license number"
+                                            className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">License Expiry Date</label>
+                                    <div className="relative mt-1">
+                                        <Calendar className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="date"
+                                            name="license_expiry_date"
+                                            value={form.license_expiry_date}
+                                            onChange={handleChange}
+                                            className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Professional Registration Number & National ID */}
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Professional Registration Number</label>
+                                    <div className="relative mt-1">
+                                        <IdCard className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            name="professional_registration_number"
+                                            value={form.professional_registration_number}
+                                            onChange={handleChange}
+                                            placeholder="Enter registration number"
+                                            className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">National ID</label>
+                                    <div className="relative mt-1">
+                                        <IdCard className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            name="national_id"
+                                            value={form.national_id}
+                                            onChange={handleChange}
+                                            placeholder="Enter national ID"
+                                            className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* University & Degree */}
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">University</label>
+                                    <div className="relative mt-1">
+                                        <GraduationCap className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            name="university"
+                                            value={form.university}
+                                            onChange={handleChange}
+                                            placeholder="Enter university name"
+                                            className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Degree</label>
+                                    <div className="relative mt-1">
+                                        <GraduationCap className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            name="degree"
+                                            value={form.degree}
+                                            onChange={handleChange}
+                                            placeholder="e.g. Pharmacy, B.Pharm"
+                                            className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Years of Experience & Qualification */}
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Years of Experience</label>
+                                    <div className="relative mt-1">
+                                        <Briefcase className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="number"
+                                            name="years_of_experience"
+                                            value={form.years_of_experience}
+                                            onChange={handleChange}
+                                            placeholder="0"
+                                            min="0"
+                                            className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Qualification</label>
+                                    <div className="relative mt-1">
+                                        <FileText className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            name="qualification"
+                                            value={form.qualification}
+                                            onChange={handleChange}
+                                            placeholder="Enter qualification"
+                                            className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* File Uploads */}
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Upload License Document</label>
+                                    <div className="mt-1">
+                                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-blue-500 transition-colors">
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => handleFileChange(e, setLicenseDoc)}
+                                                className="hidden"
+                                                id="license-doc-edit"
+                                                required
+                                            />
+                                            <label htmlFor="license-doc-edit" className="cursor-pointer flex flex-col items-center">
+                                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                                <span className="text-sm text-gray-600">License Document</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Upload Qualification Document</label>
+                                    <div className="mt-1">
+                                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-blue-500 transition-colors">
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => handleFileChange(e, setQualificationDoc)}
+                                                className="hidden"
+                                                id="qualification-doc-edit"
+                                                required
+                                            />
+                                            <label htmlFor="qualification-doc-edit" className="cursor-pointer flex flex-col items-center">
+                                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                                <span className="text-sm text-gray-600">Qualification Document</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Upload Pharmacy License</label>
+                                    <div className="mt-1">
+                                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-blue-500 transition-colors">
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => handleFileChange(e, setPharmacyLicense)}
+                                                className="hidden"
+                                                id="pharmacy-license-edit"
+                                                required
+                                            />
+                                            <label htmlFor="pharmacy-license-edit" className="cursor-pointer flex flex-col items-center">
+                                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                                <span className="text-sm text-gray-600">Pharmacy License</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Upload Degree Certificate</label>
+                                    <div className="mt-1">
+                                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-blue-500 transition-colors">
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => handleFileChange(e, setDegreeCertificate)}
+                                                className="hidden"
+                                                id="degree-certificate-edit"
+                                                required
+                                            />
+                                            <label htmlFor="degree-certificate-edit" className="cursor-pointer flex flex-col items-center">
+                                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                                <span className="text-sm text-gray-600">Degree Certificate</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         {/* Password */}
                         <div>
@@ -292,6 +789,7 @@ export default function Users() {
                             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
                             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
                             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
                             <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -302,18 +800,47 @@ export default function Users() {
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm">
-                                            {u.name?.charAt(0)}
+                                            {getUserInitial(u)}
                                         </div>
-                                        <span className="font-medium text-gray-800">{u.name}</span>
+                                        <span className="font-medium text-gray-800">{getUserDisplayName(u)}</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-600">{u.email}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">{getRoleBadge(u.role)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(u.status)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">
                                     {new Date(u.created_at).toLocaleDateString()}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                     <div className="flex justify-end gap-2">
+                                        {u.status === 'pending' && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleApprove(u)}
+                                                    disabled={actionLoading === u.id}
+                                                    className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                                                    title="Approve"
+                                                >
+                                                    {actionLoading === u.id ? (
+                                                        <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                                                    ) : (
+                                                        <CheckCircle size={16} />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReject(u)}
+                                                    disabled={actionLoading === u.id}
+                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                                    title="Reject"
+                                                >
+                                                    {actionLoading === u.id ? (
+                                                        <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                                    ) : (
+                                                        <XCircle size={16} />
+                                                    )}
+                                                </button>
+                                            </>
+                                        )}
                                         <button
                                             onClick={() => openEditForm(u)}
                                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -335,7 +862,7 @@ export default function Users() {
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan="5" className="px-6 py-8 text-center text-gray-400">
+                                <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
                                     No users found
                                 </td>
                             </tr>

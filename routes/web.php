@@ -20,14 +20,24 @@ use App\Http\Controllers\Api\UserController;
 Route::get('/csrf-token', function () {
     return response()->json(['token' => csrf_token()]);
 });
+Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/login', [AuthController::class, 'login']);
+
+// ============================================
+// PUBLIC REGISTRATION (Pharmacist & Cashier only)
+// ============================================
+// Public self-registration. Only pharmacists and cashiers may
+// self-register. Admin accounts cannot be self-registered.
+// New accounts are created with a "pending" status and must be
+// approved by an admin before they can log in.
+
 
 // ============================================
 // PROTECTED ROUTES
 // ============================================
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'approved'])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
@@ -37,11 +47,12 @@ Route::middleware('auth')->group(function () {
 
     // User Management (admin only)
     Route::middleware('role:admin')->group(function () {
-        Route::post('/register', [AuthController::class, 'register']);
         Route::get('/users', [UserController::class, 'index']);
         Route::post('/users', [UserController::class, 'store']);
         Route::put('/users/{user}', [UserController::class, 'update']);
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
+        Route::post('/users/{user}/approve', [UserController::class, 'approve']);
+        Route::post('/users/{user}/reject', [UserController::class, 'reject']);
     });
 
     // Categories (admin only)

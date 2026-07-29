@@ -22,10 +22,11 @@ export function AuthProvider({ children }) {
     };
 
     const register = async (data) => {
-        // Registration is admin-only. The admin stays logged in;
-        // the newly created user is returned but does NOT replace
-        // the current session.
-        const res = await api.post('/register', data);
+        // Public self-registration (pharmacist & cashier only).
+        // The newly created user is returned but does NOT replace
+        // the current session — they must wait for admin approval.
+        const config = data instanceof FormData ? { headers: { 'Content-Type': undefined } } : {};
+        const res = await api.post('/register', data, config);
         await refreshCsrfToken();
         return res.data;
     };

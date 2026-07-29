@@ -4,52 +4,29 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\AdminApprovalRequired;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Notification;
 
-class AuthController extends Controller
+class RegisterController extends Controller
 {
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
-        ]);
-
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials do not match our records.'],
-            ]);
-        }
-
-        $user = Auth::user();
-
-        // Only approved users may log in
-        if (!$user->isApproved()) {
-            Auth::guard('web')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            throw ValidationException::withMessages([
-                'email' => ['Your account is pending approval or has been rejected. Please contact an administrator.'],
-            ]);
-        }
-
-        $request->session()->regenerate();
-
-        return response()->json($user);
-    }
-
     /**
-     * Public self-registration.
+     * Handle a public self-registration request.
      *
-     * Only pharmacists and cashiers may self-register.
-     * Admin accounts cannot be self-registered.
-     * New accounts are created with a "pending" status and must be
-     * approved by an admin before they can log in.
-     * Pharmacists must provide license and qualification documents.
+     * Only pharmacists and cashiers may self-register. Admin accounts
+     * cannot be self-registered. New accounts are created with a
+     * "pending" status and must be approved by an admin before they
+     * can log in.
+     *
+     * After saving the user the Registered event is dispatched so
+     * that Laravel's built-in email verification notification runs
+     * automatically (the User model implements MustVerifyEmail).
+     *
+     * An AdminApprovalRequired notification is then sent to every
+     * admin user via both the mail and database channels so they
+     * can review and approve the new account.
      */
     public function register(Request $request)
     {
@@ -126,23 +103,20 @@ class AuthController extends Controller
 
         $user = User::create($data);
 
+        // Dispatch the Registered event so that Laravel's built-in
+        // email verification notification is sent automatically.
+        // The User model implements MustVerifyEmail, so the
+        // SendEmailVerificationNotification listener will fire.
+        event(new Registered($user));
+
+        // Notify all admin users that a new account requires approval.
+        // Laravel notifications support both mail and database channels.
+        $admins = User::where('role', 'admin')->get();
+        Notification::send($admins, new AdminApprovalRequired($user));
+
         // Do NOT auto-login the newly created user.
         // New users must wait for admin approval before they can log in.
 
         return response()->json($user, 201);
-    }
-
-    public function logout(Request $request)
-    {
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return response()->json(['message' => 'Logged out']);
-    }
-
-    public function user(Request $request)
-    {
-        return response()->json($request->user());
     }
 }

@@ -6,6 +6,9 @@ export default function StatCard({ value, label, color = 'blue' }) {
         green: 'border-l-green-500',
         orange: 'border-l-orange-500',
         red: 'border-l-red-500',
+        yellow: 'border-l-yellow-500',
+        purple: 'border-l-purple-500',
+        indigo: 'border-l-indigo-500',
     };
 
     const textColors = {
@@ -13,6 +16,9 @@ export default function StatCard({ value, label, color = 'blue' }) {
         green: 'text-green-700',
         orange: 'text-orange-600',
         red: 'text-red-600',
+        yellow: 'text-yellow-700',
+        purple: 'text-purple-700',
+        indigo: 'text-indigo-700',
     };
 
     return (

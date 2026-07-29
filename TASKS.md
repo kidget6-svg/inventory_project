@@ -13,7 +13,7 @@ npm run dev
 ## Default Login
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@pharmacy.com | password |
+| Admin |admin@pharmacy.com  | password |
 | Pharmacist | pharmacist@pharmacy.com | password |
 | Cashier | cashier@pharmacy.com | password |
 
@@ -119,7 +119,7 @@ npm run dev
 - `resources/js/components/SidebarLayout.jsx`
 - `resources/js/components/StatCard.jsx`
 - `resources/js/App.jsx`
-- `resources/css/app.css`
+- `resources/js/css/app.css`
 
 ### API Controllers
 - `app/Http/Controllers/Api/SaleController.php`
@@ -148,36 +148,49 @@ npm run dev
 
 ---
 
-## ADMIN-ONLY REGISTRATION (Completed)
-Registration is now restricted to admin only. Regular users can no longer self-register.
+## ACCOUNT APPROVAL WORKFLOW (Completed)
+New accounts are created with a Pending status by default. Pharmacists must provide license and qualification documents. Admins review submitted information, then Approve or Reject the application. Only Approved users can sign in and access the system.
 
 ### Changes Made
 - **Backend:**
-  - `routes/web.php`: Moved `/register` route inside `auth` + `role:admin` middleware group
-  - `routes/web.php`: Added `/users` CRUD routes (index, store, update, destroy) under admin middleware
-  - `app/Http/Controllers/Api/AuthController.php`: Removed auto-login from `register()` method; added `admin` to allowed roles
-  - `app/Http/Controllers/Api/UserController.php`: New controller for user management (list, create, edit, delete)
+  - `app/Models/User.php`: Added status constants (pending, approved, rejected), status helper methods (isPending, isApproved, isRejected), and all pharmacist fields to fillable
+  - `app/Http/Controllers/Api/AuthController.php`: Login checks for approval status; register creates pending users; no auto-login after registration
+  - `app/Http/Controllers/Api/UserController.php`: Added approve() and reject() methods for admin review; store() creates approved users (admin-created users are pre-approved)
+  - `app/Http/Middleware/EnsureUserApproved.php`: Middleware that blocks non-approved users from accessing protected routes
+  - `bootstrap/app.php`: Registered `approved` middleware alias
+  - `routes/web.php`: Added approve/reject routes under admin middleware; applied `approved` middleware to all protected routes
+  - `app/Http/Controllers/Api/DashboardController.php`: Added pending user count to admin dashboard data
+  - `database/migrations/`: Three migrations adding approval fields, registration fields, and pharmacist-specific fields to users table
+  - `database/seeders/DatabaseSeeder.php`: Seeds approved admin, pharmacist, and cashier users
 
 - **Frontend:**
-  - `resources/js/App.jsx`: `/register` route now requires admin role; added `/users` route (admin only); imported `Users` page
-  - `resources/js/pages/Login.jsx`: Removed "Register" link from login page
-  - `resources/js/pages/Register.jsx`: Updated for admin context (role dropdown includes Admin); navigates to `/users` after creation
-  - `resources/js/pages/Users.jsx`: New admin user management page (list users, add/edit form, delete with confirmation)
-  - `resources/js/components/SidebarLayout.jsx`: Added "Users" link to admin sidebar menu
-  - `resources/js/context/AuthContext.jsx`: Updated `register()` to not auto-login (admin stays logged in)
+  - `resources/js/context/AuthContext.jsx`: register() does not auto-login the newly created user
+  - `resources/js/pages/Login.jsx`: Removed "Register" link (registration is admin-only); improved error display for pending/rejected accounts
+  - `resources/js/pages/Register.jsx`: Removed "Admin" from role dropdown (public registration only allows pharmacist & cashier)
+  - `resources/js/pages/Users.jsx`: Added status column with color-coded badges; added Approve/Reject buttons for pending users; added status field to edit form
+  - `resources/js/pages/AdminDashboard.jsx`: Added pending users stat card and quick action to review pending applications
+  - `resources/js/components/SidebarLayout.jsx`: Fixed syntax error (removed stray line); added "Users" link to admin sidebar menu
 
 ### How It Works
-1. Only admin can access `/register` and `/users` pages (enforced by both frontend ProtectedRoute and backend middleware)
-2. Admin creates users via the Users page or the Register page
-3. The admin stays logged in after creating a user (no session switch)
-4. Admin can edit and delete existing users (except their own account)
-5. Regular users (pharmacist, cashier) cannot access registration at all
+1. New users self-register as pharmacist or cashier → account created with "pending" status
+2. Pharmacists must provide license number, expiry, professional registration, university, degree, years of experience, national ID, and upload license/qualification/pharmacy license/degree certificate documents
+3. Admin reviews pending applications via the Users page (status column shows pending users)
+4. Admin clicks "Approve" or "Reject" → user status updated; approver and approval timestamp recorded
+5. Only "approved" users can log in (login blocked for pending/rejected users)
+6. The `approved` middleware also protects all authenticated routes, preventing access if status changes after login
+7. Admin-created users (via Users page) are approved immediately
 
 ## FILES REFERENCE
 ```
 resources/js/pages/          (14 page components, including new Users.jsx)
 resources/js/components/     (SidebarLayout, StatCard)
 resources/js/context/        (AuthContext)
+resources/js/App.jsx         (Router)
+resources/js/axios.js        (API client)
+app/Http/Controllers/Api/    (11 API controllers, including new UserController)
+routes/web.php               (all routes)
+database/seeders/            (user seeder)
+```
 resources/js/App.jsx         (Router)
 resources/js/axios.js        (API client)
 app/Http/Controllers/Api/    (11 API controllers, including new UserController)

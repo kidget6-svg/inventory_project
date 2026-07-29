@@ -37,23 +37,23 @@ export default function Login() {
                 <div className="hidden lg:flex flex-col justify-center items-center bg-gradient-to-br from-blue-600 to-cyan-600 text-white p-12">
 
                     <div className="bg-white/20 p-6 rounded-full">
-                        <Pill size={70} />
+                        <Pill size={40} />
                     </div>
 
-                    <h1 className="text-4xl font-bold mt-8">
+                    <h1 className="text-2xl font-bold mt-4">
                         Pharmacy Inventory
                     </h1>
 
-                    <p className="mt-5 text-blue-100 text-center leading-relaxed">
+                    <p className="mt-2 text-blue-10 text-center leading-relaxed">
                         Manage medicines, suppliers, purchases,
                         sales and inventory with a secure,
                         fast and modern dashboard.
                     </p>
 
                     <img
-                        src="/images/pharmacy.svg"
-                        alt="Pharmacy"
-                        className="w-80 mt-10"
+                        src="/C:\Users\rukn alzmarad\Downloads\pharmacy-logos-set/pharmacy-logo.jpg"
+                        alt="Pharmacy Logo"
+                        className="w-40mt-10 object-contain"
                     />
 
                 </div>
@@ -65,14 +65,11 @@ export default function Login() {
 
                         <div className="text-center mb-8">
 
-                            <div className="inline-flex bg-blue-100 p-4 rounded-full">
-
-                                <Pill
-                                    className="text-blue-600"
-                                    size={35}
-                                />
-
-                            </div>
+                            <img
+                                src="/images/pharmacy-logo.svg"
+                                alt="PharmaSys Logo"
+                                className="h-16 w-auto mx-auto mb-4 object-contain"
+                            />
 
                             <h2 className="text-3xl font-bold mt-4">
                                 Welcome Back
@@ -180,11 +177,11 @@ export default function Login() {
                                 ) : (
                                     "Sign In"
                                 )}
-                            </button>
+                             </button>
 
-                        </form>
+                         </form>
 
-                    </div>
+                     </div>
 
                 </div>
 

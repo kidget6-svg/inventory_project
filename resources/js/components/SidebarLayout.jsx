@@ -3,35 +3,43 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const adminMenu = [
-    { section: 'Main' },
+    { section: 'Dashboard' },
     { to: '/dashboard', label: 'Dashboard', icon: '\u{1F4CA}' },
-    { section: 'Management' },
-    { to: '/users', label: 'Users', icon: '\u{1F46B}' },
+    { section: 'Medicines' },
     { to: '/medicines', label: 'Medicines', icon: '\u{1F48A}' },
+    { to: '/inventory', label: 'Inventory', icon: '\u{1F3E5}' },
     { to: '/categories', label: 'Categories', icon: '\u{1F4C1}' },
-    { to: '/suppliers', label: 'Suppliers', icon: '\u{1F4E6}' },
-    { section: 'Operations' },
-    { to: '/purchase-orders', label: 'Purchase Orders', icon: '\u{1F4C4}' },
-    { to: '/sales', label: 'Sales', icon: '\u{1F4B0}' },
+    { section: 'Inventory' },
     { to: '/stock-movements', label: 'Stock Movements', icon: '\u{1F4CB}' },
+    { to: '/low-stock', label: 'Low Stock Alert', icon: '\u26A0' },
+    { section: 'Suppliers' },
+    { to: '/suppliers', label: 'Suppliers', icon: '\u{1F4E6}' },
+    { section: 'Sales' },
+    { to: '/sales', label: 'Sales', icon: '\u{1F4B0}' },
+    { section: 'Purchases' },
+    { to: '/purchase-orders', label: 'Purchase Orders', icon: '\u{1F4C4}' },
+    { section: 'Users & Roles' },
+    { to: '/users', label: 'Users & Roles', icon: '\u{1F46B}' },
     { section: 'Reports' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: '\u{26A0}' },
     { to: '/reports', label: 'Reports', icon: '\u{1F4C8}' },
+    { section: 'System' },
+    { to: '/settings', label: 'Settings', icon: '\u2699' },
 ];
 
 const pharmacistMenu = [
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: '\u{1F4CA}' },
-    { section: 'Inventory' },
+    { section: 'Medicines' },
     { to: '/medicines', label: 'Medicines', icon: '\u{1F48A}' },
+    { to: '/inventory', label: 'Inventory', icon: '\u{1F3E5}' },
     { to: '/categories', label: 'Categories', icon: '\u{1F4C1}' },
+    { section: 'Inventory' },
     { to: '/stock-movements', label: 'Stock Movements', icon: '\u{1F4CB}' },
     { section: 'Alerts' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: '\u{26A0}' },
+    { to: '/low-stock', label: 'Low Stock Alert', icon: '\u26A0' },
     { section: 'Reports' },
     { to: '/reports', label: 'Reports', icon: '\u{1F4C8}' },
 ];
-
 const cashierMenu = [
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: '\u{1F4CA}' },
@@ -75,7 +83,7 @@ export default function SidebarLayout({ children, pageTitle }) {
             <aside className={`fixed top-0 left-0 w-64 h-screen bg-white shadow-md z-40 flex flex-col overflow-hidden transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
                 <div className="p-5 border-b border-blue-100 text-center">
                     <div className="text-xl font-bold text-blue-700 flex items-center justify-center gap-2">
-                        <span className="text-2xl">{'\u{1F48A}'}</span>
+                        <img src="/images/pharmacy-logo.jpg" alt="PharmaSys Logo" className="h-8 w-auto object-contain" />
                         <span>PharmaSys</span>
                     </div>
                     {user && (
