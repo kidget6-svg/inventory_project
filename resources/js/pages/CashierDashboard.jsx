@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import api from '../axios';
 import StatCard from '../components/StatCard';
 import LoadingSpinner from '../components/LoadingSpinner';
-import SidebarLayout from '../components/SidebarLayout';
 
 export default function CashierDashboard() {
     const [data, setData] = useState(null);
@@ -23,13 +22,13 @@ export default function CashierDashboard() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <SidebarLayout><LoadingSpinner text="Loading dashboard..." /></SidebarLayout>;
+    if (loading) return <LoadingSpinner text="Loading dashboard..." />;
 
-    if (error) return <SidebarLayout><div className="text-center py-12 text-red-500">{error}</div></SidebarLayout>;
+    if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
 
     return (
-        <SidebarLayout pageTitle="Cashier Dashboard">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-6">
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <StatCard value={data.todaySalesCount} label="Today's Sales" color="green" />
                 <StatCard value={`$${Number(data.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="blue" />
                 <StatCard value={data.totalProducts} label="Available Medicines" color="orange" />
@@ -68,6 +67,6 @@ export default function CashierDashboard() {
                     <Link to="/medicines" className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm font-semibold hover:bg-blue-50">Browse Medicines</Link>
                 </div>
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

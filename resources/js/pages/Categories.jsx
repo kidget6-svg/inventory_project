@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import SidebarLayout from '../components/SidebarLayout';
+import { Edit, Trash2 } from 'lucide-react';
 
 export default function Categories() {
     const [categories, setCategories] = useState([]);
@@ -59,20 +59,23 @@ export default function Categories() {
     };
 
     return (
-        <SidebarLayout pageTitle="Categories">
-            <div className="flex justify-between items-center mb-5">
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-700">All Categories ({categories.length})</h3>
                 <button onClick={openCreate} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600">+ Add Category</button>
             </div>
 
             {showForm && (
-                <div className="bg-white rounded-xl p-5 shadow-sm mb-5">
+                <div className="bg-white rounded-xl p-5 shadow-sm">
                     <h4 className="font-semibold text-gray-700 mb-3">{editId ? 'Edit Category' : 'Add Category'}</h4>
                     {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-3 text-sm">{error}</div>}
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div><label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label><input name="name" value={form.name} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none" required /></div>
                         <div><label className="block text-xs font-semibold text-gray-600 mb-1">Description</label><input name="description" value={form.description} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none" /></div>
-                        <div className="md:col-span-2 flex gap-3"><button type="submit" className="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600">{editId ? 'Update' : 'Create'}</button><button type="button" onClick={() => setShowForm(false)} className="px-5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button></div>
+                        <div className="md:col-span-2 flex justify-end gap-3">
+                            <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button>
+                            <button type="submit" className="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600">{editId ? 'Update' : 'Create'}</button>
+                        </div>
                     </form>
                 </div>
             )}
@@ -86,7 +89,7 @@ export default function Categories() {
                             <tr className="bg-blue-50">
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Name</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Description</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Actions</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -95,8 +98,22 @@ export default function Categories() {
                                     <td className="px-4 py-3 text-sm font-medium">{c.name}</td>
                                     <td className="px-4 py-3 text-sm text-gray-500">{c.description || '---'}</td>
                                     <td className="px-4 py-3 text-sm">
-                                        <button onClick={() => openEdit(c)} className="px-3 py-1 bg-blue-500 text-white rounded text-xs font-semibold hover:bg-blue-600 mr-2">Edit</button>
-                                        <button onClick={() => handleDelete(c.id)} className="px-3 py-1 bg-red-500 text-white rounded text-xs font-semibold hover:bg-red-600">Delete</button>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => openEdit(c)}
+                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(c.id)}
+                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -105,6 +122,6 @@ export default function Categories() {
                     </table>
                 </div>
             )}
-        </SidebarLayout>
+        </div>
     );
 }

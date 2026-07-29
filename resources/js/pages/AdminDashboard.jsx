@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import api from '../axios';
 import StatCard from '../components/StatCard';
 import LoadingSpinner from '../components/LoadingSpinner';
-import SidebarLayout from '../components/SidebarLayout';
 
 export default function AdminDashboard() {
     const [data, setData] = useState(null);
@@ -23,19 +22,19 @@ export default function AdminDashboard() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <SidebarLayout><LoadingSpinner text="Loading dashboard..." /></SidebarLayout>;
+    if (loading) return <LoadingSpinner text="Loading dashboard..." />;
 
-    if (error) return <SidebarLayout><div className="text-center py-12 text-red-500">{error}</div></SidebarLayout>;
+    if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
 
     return (
-        <SidebarLayout pageTitle="Admin Dashboard">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <StatCard value={data.totalProducts} label="Total Medicine Types" color="blue" />
                 <StatCard value={data.totalStock} label="Total Stock Units" color="green" />
                 <StatCard value={data.lowStockCount} label="Low-Stock Medicines" color="red" />
                 <StatCard value={data.expiringCount} label="Expiring Within 90 Days" color="orange" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <StatCard value={data.todaySalesCount} label="Today's Sales" color="green" />
                 <StatCard value={`$${Number(data.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="blue" />
                 <StatCard value={data.totalSuppliers} label="Suppliers" color="orange" />
@@ -72,7 +71,7 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm mt-5">
+            <div className="bg-white rounded-xl p-5 shadow-sm">
                 <h3 className="text-base font-semibold text-gray-700 mb-3">Quick Actions</h3>
                 <div className="flex flex-wrap gap-3">
                     <Link to="/medicines" className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors">+ Add Medicine</Link>
@@ -81,6 +80,6 @@ export default function AdminDashboard() {
                     <Link to="/reports" className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors">View Reports</Link>
                 </div>
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
-import SidebarLayout from '../components/SidebarLayout';
 
 export default function LowStock() {
     const [medicines, setMedicines] = useState([]);
     useEffect(() => { api.get('/low-stock').then(r => setMedicines(r.data)); }, []);
 
     return (
-        <SidebarLayout pageTitle="Low Stock Alert">
-            <div className="bg-white rounded-xl p-5 shadow-sm mb-5">
+        <div className="space-y-6">
+            <div className="bg-white rounded-xl p-5 shadow-sm">
                 <h3 className="text-base font-semibold text-gray-700 mb-1">Low-Stock Medicines</h3>
                 <p className="text-sm text-gray-400 mb-4">Medicines at or below their reorder level</p>
             </div>
@@ -44,6 +43,6 @@ export default function LowStock() {
                     </tbody>
                 </table>
             </div>
-        </SidebarLayout>
+        </div>
     );
 }
