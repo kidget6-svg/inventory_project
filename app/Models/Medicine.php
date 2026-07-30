@@ -28,6 +28,7 @@ class Medicine extends Model
         'name',
         'generic_name',
         'batch_number',
+        'barcode',
         'category_id',
         'supplier_id',
         'quantity',

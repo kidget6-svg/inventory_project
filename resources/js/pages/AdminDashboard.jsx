@@ -5,8 +5,7 @@ import StatCard from '../components/StatCard';
 import BarChart from '../components/BarChart';
 import PieChart from '../components/PieChart';
 import LoadingSpinner from '../components/LoadingSpinner';
-import SidebarLayout from '../components/SidebarLayout';
-import { CheckCircle, XCircle, UserCheck, Clock, Trash2, AlertTriangle, Calendar } from 'lucide-react';
+import { CheckCircle, XCircle, UserCheck, Clock, Trash2, AlertTriangle, Calendar, Pill, Truck, ShoppingCart, BarChart3, DollarSign, PlusCircle } from 'lucide-react';
 
 export default function AdminDashboard() {
     const [data, setData] = useState(null);
@@ -18,21 +17,12 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         api.get('/dashboard')
-            .then(r => {
-                setData(r.data);
-                setError('');
-            })
-            .catch(err => {
-                setError('Failed to load dashboard data');
-                console.error(err);
-            })
+            .then(r => { setData(r.data); setError(''); })
+            .catch(err => { setError('Failed to load dashboard data'); console.error(err); })
             .finally(() => setLoading(false));
     }, []);
 
-    // Fetch pending users for approval
-    useEffect(() => {
-        fetchPendingUsers();
-    }, []);
+    useEffect(() => { fetchPendingUsers(); }, []);
 
     const fetchPendingUsers = async () => {
         try {
@@ -51,7 +41,7 @@ export default function AdminDashboard() {
         try {
             await api.post(`/users/${user.id}/approve`);
             setPendingUsers(prev => prev.filter(u => u.id !== user.id));
-            window.showToast?.('User approved successfully. They can now log in.', 'success');
+            window.showToast?.('User approved successfully.', 'success');
         } catch (err) {
             window.showToast?.(err.response?.data?.message || 'Failed to approve user', 'error');
         } finally {
@@ -98,181 +88,128 @@ export default function AdminDashboard() {
 
     const getRoleBadge = (role) => {
         const colors = {
-            admin: 'bg-blue-100 text-blue-700',
-            pharmacist: 'bg-green-100 text-green-700',
-            cashier: 'bg-orange-100 text-orange-600',
+            admin: 'bg-sky-100 text-sky-700',
+            pharmacist: 'bg-emerald-100 text-emerald-700',
+            cashier: 'bg-amber-100 text-amber-600',
         };
-        return (
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${colors[role] || 'bg-gray-100 text-gray-600'}`}>
-                {role}
-            </span>
-        );
+        return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${colors[role] || 'bg-gray-100 text-gray-600'}`}>{role}</span>;
     };
 
-    // Prepare inventory chart data
     const inventoryLabels = data?.inventoryChartData?.map(c => c.category) || [];
     const inventoryStockValues = data?.inventoryChartData?.map(c => c.total_stock) || [];
     const inventoryMedicineValues = data?.inventoryChartData?.map(c => c.medicine_count) || [];
 
-    const pieColors = [
-        'bg-blue-500', 'bg-green-500', 'bg-orange-400', 'bg-red-400',
-        'bg-purple-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
-    ];
+    const pieColors = ['bg-sky-500', 'bg-emerald-500', 'bg-amber-400', 'bg-red-400', 'bg-purple-500', 'bg-cyan-500', 'bg-pink-500', 'bg-teal-500'];
 
-    if (loading) return <SidebarLayout><LoadingSpinner text="Loading dashboard..." /></SidebarLayout>;
-
-    if (error) return <SidebarLayout><div className="text-center py-12 text-red-500">{error}</div></SidebarLayout>;
+    if (loading) return <LoadingSpinner text="Loading dashboard..." />;
+    if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
 
     return (
-        <SidebarLayout pageTitle="Admin Dashboard">
-            {/* ── Summary Cards ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                <StatCard value={data.totalProducts} label="Total Medicines" color="blue" />
+        <div className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <StatCard value={data.totalProducts} label="Total Medicines" color="sky" />
                 <StatCard value={data.totalStock} label="Total Stock Units" color="green" />
                 <StatCard value={data.lowStockCount} label="Low Stock" color="red" />
                 <StatCard value={data.expiredCount} label="Expired Medicines" color="orange" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <StatCard value={data.todaySalesCount} label="Today's Sales" color="green" />
-                <StatCard value={`$${Number(data.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="blue" />
+                <StatCard value={`$${Number(data.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="sky" />
                 <StatCard value={`$${Number(data.totalRevenue || 0).toFixed(2)}`} label="Total Revenue" color="purple" />
                 <StatCard value={data.totalSuppliers} label="Suppliers" color="orange" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                <StatCard value={data.totalUsers} label="Total Users" color="indigo" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <StatCard value={data.totalUsers} label="Total Users" color="sky" />
                 <StatCard value={data.pharmacistCount} label="Pharmacists" color="green" />
                 <StatCard value={data.cashierCount} label="Cashiers" color="orange" />
                 <StatCard value={data.pendingUsersCount} label="Pending Approvals" color="yellow" />
             </div>
 
-            {/* ── Charts: Sales & Revenue ───────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-                <BarChart
-                    title="Sales (Last 7 Days)"
-                    labels={data.salesChartData?.labels || []}
-                    values={data.salesChartData?.counts || []}
-                    color="green"
-                    valueSuffix=" sales"
-                />
-                <BarChart
-                    title="Revenue (Last 7 Days)"
-                    labels={data.salesChartData?.labels || []}
-                    values={data.salesChartData?.revenue || []}
-                    color="blue"
-                    currency={true}
-                />
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <BarChart title="Sales (Last 7 Days)" labels={data.salesChartData?.labels || []} values={data.salesChartData?.counts || []} color="green" valueSuffix=" sales" />
+                <BarChart title="Revenue (Last 7 Days)" labels={data.salesChartData?.labels || []} values={data.salesChartData?.revenue || []} color="sky" currency />
             </div>
 
-            {/* ── Inventory Status Chart ────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-                <PieChart
-                    title="Inventory by Category"
-                    labels={inventoryLabels}
-                    values={inventoryStockValues}
-                    colors={pieColors}
-                />
-                <BarChart
-                    title="Medicines per Category"
-                    labels={inventoryLabels}
-                    values={inventoryMedicineValues}
-                    color="indigo"
-                    valueSuffix=" medicines"
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <PieChart title="Inventory by Category" labels={inventoryLabels} values={inventoryStockValues} colors={pieColors} />
+                <BarChart title="Medicines per Category" labels={inventoryLabels} values={inventoryMedicineValues} color="sky" valueSuffix=" medicines" />
             </div>
 
-            {/* ── Notifications ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-                {/* Low Stock Notifications */}
-                <div className="bg-white rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
-                        <AlertTriangle size={18} className="text-red-500" />
-                        Low Stock Alerts ({data.lowStockCount})
-                    </h3>
+            {/* Notifications */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="card p-5">
+                    <h3 className="card-header flex items-center gap-2"><AlertTriangle size={18} className="text-red-500" /> Low Stock Alerts ({data.lowStockCount})</h3>
                     {data.lowStockMedicines?.length > 0 ? (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                             {data.lowStockMedicines.map(m => (
-                                <div key={m.id} className="flex justify-between items-center p-3 bg-red-50 border-l-3 border-red-400 rounded-md">
+                                <div key={m.id} className="flex justify-between items-center p-3.5 bg-red-50 border-l-4 border-red-400 rounded-xl">
                                     <div>
-                                        <div className="font-semibold text-sm">{m.name}</div>
-                                        <div className="text-xs text-gray-400">{m.category?.name || 'No Category'}</div>
+                                        <div className="font-semibold text-sm text-gray-800">{m.name}</div>
+                                        <div className="text-xs text-gray-500 mt-0.5">{m.category?.name || 'No Category'}</div>
                                     </div>
                                     <div className="text-right">
-                                        <span className="bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">Stock: {m.quantity}</span>
+                                        <span className="badge-red">Stock: {m.quantity}</span>
                                         <div className="text-xs text-gray-400 mt-1">Reorder: {m.reorder_level}</div>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <p className="text-gray-400 text-center py-5">✓ No low-stock medicines</p>
-                    )}
+                    ) : <p className="text-gray-400 text-center py-5 text-sm">No low-stock medicines</p>}
                 </div>
 
-                {/* Expired Medicines Notifications */}
-                <div className="bg-white rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
-                        <AlertTriangle size={18} className="text-orange-500" />
-                        Expired Medicines ({data.expiredCount})
-                    </h3>
+                <div className="card p-5">
+                    <h3 className="card-header flex items-center gap-2"><AlertTriangle size={18} className="text-orange-500" /> Expired Medicines ({data.expiredCount})</h3>
                     {data.expiredMedicines?.length > 0 ? (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                             {data.expiredMedicines.map(m => (
-                                <div key={m.id} className="flex justify-between items-center p-3 bg-orange-50 border-l-3 border-orange-400 rounded-md">
+                                <div key={m.id} className="flex justify-between items-center p-3.5 bg-orange-50 border-l-4 border-orange-400 rounded-xl">
                                     <div>
-                                        <div className="font-semibold text-sm">{m.name}</div>
-                                        <div className="text-xs text-gray-400">Batch: {m.batch_number || '---'}</div>
+                                        <div className="font-semibold text-sm text-gray-800">{m.name}</div>
+                                        <div className="text-xs text-gray-500 mt-0.5">Batch: {m.batch_number || '---'}</div>
                                     </div>
-                                    <span className="bg-orange-100 text-orange-600 text-xs font-semibold px-2.5 py-1 rounded-full">Expired: {m.expiry_date}</span>
+                                    <span className="badge bg-orange-100 text-orange-700">Expired: {m.expiry_date}</span>
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <p className="text-gray-400 text-center py-5">✓ No expired medicines</p>
-                    )}
+                    ) : <p className="text-gray-400 text-center py-5 text-sm">No expired medicines</p>}
                 </div>
             </div>
 
-            {/* Expiring Soon (within 90 days) */}
+            {/* Expiring Soon */}
             {data.expiringMedicines?.length > 0 && (
-                <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
-                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
-                        <Calendar size={18} className="text-yellow-500" />
-                        Expiring Within 90 Days ({data.expiringCount})
-                    </h3>
+                <div className="card p-5">
+                    <h3 className="card-header flex items-center gap-2"><Calendar size={18} className="text-yellow-500" /> Expiring Within 90 Days ({data.expiringCount})</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {data.expiringMedicines.map(m => (
-                            <div key={m.id} className="flex justify-between items-center p-3 bg-yellow-50 border-l-3 border-yellow-400 rounded-md">
+                            <div key={m.id} className="flex justify-between items-center p-3.5 bg-yellow-50 border-l-4 border-yellow-400 rounded-xl">
                                 <div>
-                                    <div className="font-semibold text-sm">{m.name}</div>
-                                    <div className="text-xs text-gray-400">Batch: {m.batch_number || '---'}</div>
+                                    <div className="font-semibold text-sm text-gray-800">{m.name}</div>
+                                    <div className="text-xs text-gray-500 mt-0.5">Batch: {m.batch_number || '---'}</div>
                                 </div>
-                                <span className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-2.5 py-1 rounded-full">Expires: {m.expiry_date}</span>
+                                <span className="badge bg-yellow-100 text-yellow-700">Expires: {m.expiry_date}</span>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* ── Recent Activities ─────────────────────────────────────── */}
-            <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
-                <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
-                    <Clock size={18} className="text-blue-500" />
-                    Recent Activities
-                </h3>
+            {/* Recent Activities */}
+            <div className="card p-5">
+                <h3 className="card-header flex items-center gap-2"><Clock size={18} className="text-sky-500" /> Recent Activities</h3>
                 {data.recentActivities?.length > 0 ? (
                     <div className="space-y-3">
                         {data.recentActivities.map((activity, i) => (
-                            <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm ${
-                                    activity.color === 'green' ? 'bg-green-100 text-green-600' :
-                                    activity.color === 'blue' ? 'bg-blue-100 text-blue-600' :
-                                    activity.color === 'orange' ? 'bg-orange-100 text-orange-600' :
+                            <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm ${
+                                    activity.color === 'green' ? 'bg-emerald-100 text-emerald-600' :
+                                    activity.color === 'blue' ? 'bg-sky-100 text-sky-600' :
+                                    activity.color === 'orange' ? 'bg-amber-100 text-amber-600' :
                                     'bg-gray-100 text-gray-600'
-                                }`}>
-                                    {activity.icon}
-                                </div>
+                                }`}>{activity.icon}</div>
                                 <div className="flex-1 min-w-0">
                                     <div className="font-semibold text-sm text-gray-800">{activity.title}</div>
                                     <div className="text-xs text-gray-500 truncate">{activity.subtitle}</div>
@@ -281,46 +218,29 @@ export default function AdminDashboard() {
                             </div>
                         ))}
                     </div>
-                ) : (
-                    <p className="text-gray-400 text-center py-5">No recent activities</p>
-                )}
+                ) : <p className="text-gray-400 text-center py-5 text-sm">No recent activities</p>}
             </div>
 
-            {/* ── Quick Actions ─────────────────────────────────────────── */}
-            <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
-                <h3 className="text-base font-semibold text-gray-700 mb-3">Quick Actions</h3>
+            {/* Quick Actions */}
+            <div className="card p-5">
+                <h3 className="card-header">Quick Actions</h3>
                 <div className="flex flex-wrap gap-3">
-                    <Link to="/medicines" className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors flex items-center gap-1">
-                        + Add Medicine
-                    </Link>
-                    <Link to="/suppliers" className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors flex items-center gap-1">
-                        + Add Supplier
-                    </Link>
-                    <Link to="/purchase-orders" className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 transition-colors flex items-center gap-1">
-                        + New Purchase Order
-                    </Link>
-                    <Link to="/reports" className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1">
-                        📊 Generate Report
-                    </Link>
-                    <Link to="/sales" className="px-4 py-2 border border-green-500 text-green-600 rounded-lg text-sm font-semibold hover:bg-green-50 transition-colors flex items-center gap-1">
-                        + New Sale
-                    </Link>
+                    <Link to="/medicines" className="btn-primary"><Pill size={16} /> Add Medicine</Link>
+                    <Link to="/suppliers" className="btn-primary"><Truck size={16} /> Add Supplier</Link>
+                    <Link to="/purchase-orders" className="btn-primary"><ShoppingCart size={16} /> New Purchase Order</Link>
+                    <Link to="/reports" className="btn-secondary"><BarChart3 size={16} /> Generate Report</Link>
+                    <Link to="/sales" className="btn-secondary"><DollarSign size={16} /> New Sale</Link>
                 </div>
             </div>
 
-            {/* ── Pending User Registrations ───────────────────────────── */}
-            <div className="bg-white rounded-xl p-5 shadow-sm">
+            {/* Pending User Registrations */}
+            <div className="card p-5">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold text-gray-700 flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-gray-800 flex items-center gap-2">
                         <Clock size={18} className="text-yellow-500" />
                         Pending User Registrations ({pendingUsers.length})
                     </h3>
-                    <Link
-                        to="/users"
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                        View all users →
-                    </Link>
+                    <Link to="/users" className="text-sm text-sky-600 hover:text-sky-700 font-medium">View all users &rarr;</Link>
                 </div>
 
                 {pendingLoading ? (
@@ -330,66 +250,35 @@ export default function AdminDashboard() {
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Registered</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th className="table-header">User</th>
+                                    <th className="table-header">Email</th>
+                                    <th className="table-header">Role</th>
+                                    <th className="table-header">Registered</th>
+                                    <th className="table-header text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-100">
                                 {pendingUsers.map(u => (
-                                    <tr key={u.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 whitespace-nowrap">
+                                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="table-cell whitespace-nowrap">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm">
-                                                    {getUserInitial(u)}
-                                                </div>
+                                                <div className="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">{getUserInitial(u)}</div>
                                                 <span className="font-medium text-gray-800">{getUserDisplayName(u)}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-gray-600 text-sm">{u.email}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap">{getRoleBadge(u.role)}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-gray-500 text-sm">
-                                            {new Date(u.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleApprove(u)}
-                                                    disabled={actionLoading === u.id}
-                                                    className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
-                                                    title="Approve"
-                                                >
-                                                    {actionLoading === u.id ? (
-                                                        <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-                                                    ) : (
-                                                        <CheckCircle size={18} />
-                                                    )}
+                                        <td className="table-cell text-gray-500">{u.email}</td>
+                                        <td className="table-cell">{getRoleBadge(u.role)}</td>
+                                        <td className="table-cell text-gray-500">{new Date(u.created_at).toLocaleDateString()}</td>
+                                        <td className="table-cell text-right">
+                                            <div className="flex justify-end gap-1">
+                                                <button onClick={() => handleApprove(u)} disabled={actionLoading === u.id} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors disabled:opacity-50" title="Approve">
+                                                    {actionLoading === u.id ? <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> : <CheckCircle size={18} />}
                                                 </button>
-                                                <button
-                                                    onClick={() => handleReject(u)}
-                                                    disabled={actionLoading === u.id}
-                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                                                    title="Reject"
-                                                >
-                                                    {actionLoading === u.id ? (
-                                                        <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                                    ) : (
-                                                        <XCircle size={18} />
-                                                    )}
+                                                <button onClick={() => handleReject(u)} disabled={actionLoading === u.id} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50" title="Reject">
+                                                    {actionLoading === u.id ? <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" /> : <XCircle size={18} />}
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDelete(u)}
-                                                    disabled={actionLoading === u.id}
-                                                    className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                                                    title="Remove"
-                                                >
-                                                    {actionLoading === u.id ? (
-                                                        <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
-                                                    ) : (
-                                                        <Trash2 size={18} />
-                                                    )}
+                                                <button onClick={() => handleDelete(u)} disabled={actionLoading === u.id} className="p-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-50" title="Remove">
+                                                    {actionLoading === u.id ? <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" /> : <Trash2 size={18} />}
                                                 </button>
                                             </div>
                                         </td>
@@ -406,6 +295,6 @@ export default function AdminDashboard() {
                     </div>
                 )}
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

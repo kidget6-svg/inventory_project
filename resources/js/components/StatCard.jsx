@@ -1,30 +1,22 @@
 import React from 'react';
 
-export default function StatCard({ value, label, color = 'blue' }) {
-    const colors = {
-        blue: 'border-l-blue-500',
-        green: 'border-l-green-500',
-        orange: 'border-l-orange-500',
-        red: 'border-l-red-500',
-        yellow: 'border-l-yellow-500',
-        purple: 'border-l-purple-500',
-        indigo: 'border-l-indigo-500',
-    };
+const colorMap = {
+    blue: { border: 'border-l-sky-500', text: 'text-sky-700' },
+    green: { border: 'border-l-emerald-500', text: 'text-emerald-700' },
+    orange: { border: 'border-l-amber-500', text: 'text-amber-600' },
+    red: { border: 'border-l-red-500', text: 'text-red-600' },
+    yellow: { border: 'border-l-yellow-500', text: 'text-yellow-700' },
+    purple: { border: 'border-l-purple-500', text: 'text-purple-700' },
+    sky: { border: 'border-l-sky-500', text: 'text-sky-700' },
+};
 
-    const textColors = {
-        blue: 'text-blue-700',
-        green: 'text-green-700',
-        orange: 'text-orange-600',
-        red: 'text-red-600',
-        yellow: 'text-yellow-700',
-        purple: 'text-purple-700',
-        indigo: 'text-indigo-700',
-    };
+export default function StatCard({ value, label, color = 'sky' }) {
+    const c = colorMap[color] || colorMap.sky;
 
     return (
-        <div className={`bg-white rounded-xl p-5 shadow-sm border-l-4 ${colors[color]} hover:-translate-y-0.5 transition-transform`}>
-            <div className={`text-3xl font-bold ${textColors[color]}`}>{value}</div>
-            <div className="text-sm text-gray-500 mt-1">{label}</div>
+        <div className={`bg-white rounded-2xl p-5 shadow-sm border border-sky-100/80 border-l-4 ${c.border} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}>
+            <div className={`text-3xl font-bold tracking-tight ${c.text}`}>{value}</div>
+            <div className="text-sm text-gray-500 mt-1 font-medium">{label}</div>
         </div>
     );
 }

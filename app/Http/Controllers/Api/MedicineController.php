@@ -14,12 +14,13 @@ class MedicineController extends Controller
     {
         $query = Medicine::with(['category', 'supplier']);
 
-        // Search by name, generic name, or batch number
+        // Search by name, generic name, batch number, or barcode
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('batch_number', 'like', "%{$search}%");
+                  ->orWhere('batch_number', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
             });
         }
 
@@ -49,6 +50,7 @@ class MedicineController extends Controller
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:100|unique:medicines,barcode',
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'quantity' => 'required|integer|min:0',
@@ -75,6 +77,7 @@ class MedicineController extends Controller
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:100|unique:medicines,barcode,' . $medicine->id,
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'quantity' => 'required|integer|min:0',

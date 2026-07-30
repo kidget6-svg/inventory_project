@@ -214,7 +214,7 @@ export default function PurchaseOrders() {
         const colors={
 
             pending:
-            'bg-blue-100 text-blue-700',
+            'bg-sky-100 text-sky-700',
 
             approved:
             'bg-purple-100 text-purple-700',
@@ -254,7 +254,7 @@ All Purchase Orders ({orders.length})
 
 <button
 onClick={openCreate}
-className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600"
+className="btn-primary px-4 py-2 text-sm"
 >
 + New Order
 </button>
@@ -263,7 +263,7 @@ className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hov
 </div>
 {showForm && (
 
-<div className="bg-white rounded-xl p-5 shadow-sm">
+<div className="card p-5">
 
 <h4 className="font-semibold text-gray-700 mb-3">
 {editId ? 'Edit Purchase Order' : 'Create Purchase Order'}
@@ -434,7 +434,7 @@ Cancel
 
 <button
 type="submit"
-className="px-5 py-2 bg-blue-500 text-white rounded-lg"
+className="px-5 py-2 bg-sky-500 text-white rounded-lg"
 >
 {editId ? 'Update Order' : 'Create Order'}
 </button>
@@ -456,7 +456,7 @@ className="px-5 py-2 bg-blue-500 text-white rounded-lg"
 
 
 
-<div className="bg-white rounded-xl shadow-sm overflow-hidden">
+<div className="card overflow-hidden">
 
 
 <table className="w-full">
@@ -464,35 +464,35 @@ className="px-5 py-2 bg-blue-500 text-white rounded-lg"
 
 <thead>
 
-<tr className="bg-blue-50">
+<tr className="bg-sky-50">
 
 
-<th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
 ID
 </th>
 
 
-<th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
 Supplier
 </th>
 
 
-<th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
 Date
 </th>
 
 
-<th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
 Status
 </th>
 
 
-<th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
 Amount
 </th>
 
 
-<th className="px-4 py-3 text-right text-xs font-semibold text-blue-700">
+<th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">
 Actions
 </th>
 
@@ -514,7 +514,7 @@ Actions
 
         <tr
             key={o.id}
-            className="border-b hover:bg-blue-50/30"
+            className="border-b hover:bg-sky-50/30"
         >
 
             <td className="px-4 py-3 text-sm">
@@ -559,7 +559,7 @@ Actions
                             onClick={() =>
                                 handleAction(o.id,"approve")
                             }
-                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                            className="px-2 py-1 bg-sky-500 text-white rounded text-xs"
                         >
                             Approve
                         </button>
@@ -624,7 +624,7 @@ Actions
 
                     <button
                         onClick={() => openEdit(o)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                        className="p-1.5 text-sky-600 hover:bg-sky-50 rounded"
                     >
                         <Edit size={16}/>
                     </button>
