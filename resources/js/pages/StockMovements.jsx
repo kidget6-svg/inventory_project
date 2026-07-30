@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
-import SidebarLayout from '../components/SidebarLayout';
 
 export default function StockMovements() {
     const [medicines, setMedicines] = useState([]);
@@ -28,14 +27,14 @@ export default function StockMovements() {
     };
 
     return (
-        <SidebarLayout pageTitle="Stock Movements">
-            <div className="flex justify-between items-center mb-5">
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-700">Stock Movements ({movements.length})</h3>
                 <button onClick={() => { setShowForm(true); setError(''); }} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600">+ Record Movement</button>
             </div>
 
             {showForm && (
-                <div className="bg-white rounded-xl p-5 shadow-sm mb-5">
+                <div className="bg-white rounded-xl p-5 shadow-sm">
                     <h4 className="font-semibold text-gray-700 mb-3">Record Stock Movement</h4>
                     {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-3 text-sm">{error}</div>}
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -74,6 +73,6 @@ export default function StockMovements() {
                     </tbody>
                 </table>
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

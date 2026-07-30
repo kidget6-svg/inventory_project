@@ -23,7 +23,6 @@ class PurchaseOrderController extends Controller
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'order_date' => 'required|date',
-            'status' => 'nullable|string',
             'medicine_id' => 'required|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric|min:0',
@@ -37,7 +36,7 @@ class PurchaseOrderController extends Controller
             $order = PurchaseOrder::create([
                 'supplier_id' => $validated['supplier_id'],
                 'order_date' => $validated['order_date'],
-                'status' => $validated['status'] ?? 'pending',
+                'status' => 'pending',
                 'total_amount' => $subtotal,
             ]);
 
@@ -48,9 +47,6 @@ class PurchaseOrderController extends Controller
                 'unit_price' => $validated['unit_price'],
                 'subtotal' => $subtotal,
             ]);
-
-            Medicine::where('id', $validated['medicine_id'])
-                ->increment('quantity', $validated['quantity']);
 
             DB::commit();
 
@@ -68,10 +64,16 @@ class PurchaseOrderController extends Controller
 
     public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
+        // Only allow editing when status is pending or approved
+        if (! $purchaseOrder->canEdit()) {
+            return response()->json([
+                'message' => 'Cannot edit order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'order_date' => 'required|date',
-            'status' => 'nullable|string',
             'medicine_id' => 'required|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric|min:0',
@@ -82,11 +84,10 @@ class PurchaseOrderController extends Controller
         try {
             $subtotal = $validated['quantity'] * $validated['unit_price'];
 
-            // Update the order header
+            // Update the order header (status is NOT changed here — it's workflow-driven)
             $purchaseOrder->update([
                 'supplier_id' => $validated['supplier_id'],
                 'order_date' => $validated['order_date'],
-                'status' => $validated['status'] ?? 'pending',
                 'total_amount' => $subtotal,
             ]);
 
@@ -94,27 +95,8 @@ class PurchaseOrderController extends Controller
             $item = $purchaseOrder->items()->first();
 
             if ($item) {
-                // Handle stock adjustment
-                $oldQuantity = $item->quantity;
-                $oldMedicineId = $item->medicine_id;
-                $newQuantity = $validated['quantity'];
-                $newMedicineId = $validated['medicine_id'];
-
-                if ($oldMedicineId != $newMedicineId) {
-                    // Medicine changed: revert old medicine stock, add new medicine stock
-                    Medicine::where('id', $oldMedicineId)->decrement('quantity', $oldQuantity);
-                    Medicine::where('id', $newMedicineId)->increment('quantity', $newQuantity);
-                } else {
-                    // Same medicine: adjust by difference
-                    $diff = $newQuantity - $oldQuantity;
-                    if ($diff > 0) {
-                        Medicine::where('id', $newMedicineId)->increment('quantity', $diff);
-                    } elseif ($diff < 0) {
-                        Medicine::where('id', $newMedicineId)->decrement('quantity', abs($diff));
-                    }
-                }
-
-                // Update the item
+                // Update the item — stock is NOT adjusted here because
+                // stock is only added when the order is completed
                 $item->update([
                     'medicine_id' => $validated['medicine_id'],
                     'quantity' => $validated['quantity'],
@@ -122,7 +104,7 @@ class PurchaseOrderController extends Controller
                     'subtotal' => $subtotal,
                 ]);
             } else {
-                // No existing item — create one and increment stock
+                // No existing item — create one (stock will be added on completion)
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $purchaseOrder->id,
                     'medicine_id' => $validated['medicine_id'],
@@ -130,9 +112,6 @@ class PurchaseOrderController extends Controller
                     'unit_price' => $validated['unit_price'],
                     'subtotal' => $subtotal,
                 ]);
-
-                Medicine::where('id', $validated['medicine_id'])
-                    ->increment('quantity', $validated['quantity']);
             }
 
             DB::commit();
@@ -146,15 +125,17 @@ class PurchaseOrderController extends Controller
 
     public function destroy(PurchaseOrder $purchaseOrder)
     {
+        // Only allow deletion when status is pending
+        if (! $purchaseOrder->canDelete()) {
+            return response()->json([
+                'message' => 'Cannot delete order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
         DB::beginTransaction();
 
         try {
-            // Reverse stock for each item before deleting
-            foreach ($purchaseOrder->items as $item) {
-                Medicine::where('id', $item->medicine_id)
-                    ->decrement('quantity', $item->quantity);
-            }
-
+            // No stock to reverse since stock is only added on completion
             $purchaseOrder->delete();
 
             DB::commit();
@@ -164,5 +145,76 @@ class PurchaseOrderController extends Controller
             DB::rollBack();
             return response()->json(['message' => 'Error deleting order: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Approve a purchase order (pending → approved).
+     */
+    public function approve(PurchaseOrder $purchaseOrder)
+{
+    dd('Approve route reached');
+
+    if (! $purchaseOrder->canApprove()) {
+        return response()->json([
+            'message' => 'Cannot approve order'
+        ], 422);
+    }
+
+    $purchaseOrder->approve();
+
+    return response()->json($purchaseOrder);
+}
+
+    /**
+     * Process a purchase order (approved → processing).
+     */
+    public function process(PurchaseOrder $purchaseOrder)
+    {
+        if (! $purchaseOrder->canProcess()) {
+            return response()->json([
+                'message' => 'Cannot process order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        $purchaseOrder->process();
+
+        return response()->json($purchaseOrder->load('supplier', 'items.medicine'));
+    }
+
+    /**
+     * Complete a purchase order (approved/processing → completed).
+     * Updates medicine stock and creates stock movement records.
+     */
+    public function complete(PurchaseOrder $purchaseOrder)
+    {
+        if (! $purchaseOrder->canComplete()) {
+            return response()->json([
+                'message' => 'Cannot complete order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        $result = $purchaseOrder->complete();
+
+        if (! $result) {
+            return response()->json(['message' => 'Error completing order'], 500);
+        }
+
+        return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
+    }
+
+    /**
+     * Cancel a purchase order (pending/approved/processing → cancelled).
+     */
+    public function cancel(PurchaseOrder $purchaseOrder)
+    {
+        if (! $purchaseOrder->canCancel()) {
+            return response()->json([
+                'message' => 'Cannot cancel order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        $purchaseOrder->cancel();
+
+        return response()->json($purchaseOrder->load('supplier', 'items.medicine'));
     }
 }

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
-import SidebarLayout from '../components/SidebarLayout';
 
 export default function Reports() {
     const [data, setData] = useState(null);
@@ -87,52 +86,48 @@ export default function Reports() {
     );
 
    const inventoryData = useMemo(
-    () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
-    [data, searchTerm, sortKey, sortDirection]
-);
+     () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
+     [data, searchTerm, sortKey, sortDirection]
+   );
 
-const salesData = useMemo(
-    () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
-    [data, searchTerm, sortKey, sortDirection]
-);
+   const salesData = useMemo(
+     () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
+     [data, searchTerm, sortKey, sortDirection]
+   );
 
-const purchasesData = useMemo(
-    () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
-    [data, searchTerm, sortKey, sortDirection]
-);
+   const purchasesData = useMemo(
+     () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
+     [data, searchTerm, sortKey, sortDirection]
+   );
 
-const lowStockData = useMemo(
-    () => filterAndSort(data?.lowStock || [], ['name']),
-    [data, searchTerm, sortKey, sortDirection]
-);
+   const lowStockData = useMemo(
+     () => filterAndSort(data?.lowStock || [], ['name']),
+     [data, searchTerm, sortKey, sortDirection]
+   );
 
-const expiringData = useMemo(
-    () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
-    [data, searchTerm, sortKey, sortDirection]
-);
+   const expiringData = useMemo(
+     () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
+     [data, searchTerm, sortKey, sortDirection]
+   );
 
-if (!data) {
-    return (
-        <SidebarLayout pageTitle="Reports">
+    if (!data) {
+        return (
             <div className="text-blue-500 p-6">
                 Loading reports...
             </div>
-        </SidebarLayout>
-    );
-}
+        );
+    }
 
-const tabs = [
-    { key: 'inventory', label: 'Inventory' },
-    { key: 'sales', label: 'Sales' },
-    { key: 'purchases', label: 'Purchases' },
-    { key: 'lowStock', label: 'Low Stock' },
-    { key: 'expiring', label: 'Expiring' },
-];
-
-    
+    const tabs = [
+        { key: 'inventory', label: 'Inventory' },
+        { key: 'sales', label: 'Sales' },
+        { key: 'purchases', label: 'Purchases' },
+        { key: 'lowStock', label: 'Low Stock' },
+        { key: 'expiring', label: 'Expiring' },
+    ];
 
     return (
-        <SidebarLayout pageTitle="Reports">
+        <div className="space-y-6">
             <div className="flex gap-2 mb-5 flex-wrap">
                 {tabs.map(t => (
                     <button key={t.key} onClick={() => setActiveTab(t.key)}
@@ -270,6 +265,6 @@ const tabs = [
                     </table>
                 </div>
             )}
-        </SidebarLayout>
+        </div>
     );
 }
