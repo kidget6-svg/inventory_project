@@ -18,6 +18,10 @@ return new class extends Migration
             $table->decimal('unit_price', 10, 2);
             $table->unsignedInteger('reorder_level')->default(10);
             $table->date('expiry_date')->nullable();
+            $table->foreignId('shelf_id')
+      ->nullable()
+      ->constrained()
+      ->cascadeOnDelete();
             $table->timestamps();
         });
     }
