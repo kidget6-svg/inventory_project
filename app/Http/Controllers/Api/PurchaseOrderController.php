@@ -151,19 +151,21 @@ class PurchaseOrderController extends Controller
      * Approve a purchase order (pending → approved).
      */
     public function approve(PurchaseOrder $purchaseOrder)
-{
-    dd('Approve route reached');
+    {
+        if (! $purchaseOrder->canApprove()) {
+            return response()->json([
+                'message' => 'Cannot approve order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
 
-    if (! $purchaseOrder->canApprove()) {
-        return response()->json([
-            'message' => 'Cannot approve order'
-        ], 422);
+        $result = $purchaseOrder->approve();
+
+        if (! $result) {
+            return response()->json(['message' => 'Error approving order'], 500);
+        }
+
+        return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
     }
-
-    $purchaseOrder->approve();
-
-    return response()->json($purchaseOrder);
-}
 
     /**
      * Process a purchase order (approved → processing).

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Medicine;
+use App\Models\StockMovement;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +25,15 @@ class PurchaseOrder extends Model
     public static function statuses(): array
     {
         return ['pending', 'approved', 'processing', 'completed', 'cancelled'];
+    }
+
+    /**
+     * Always expose status as lowercase so checks are reliable
+     * even if existing DB values have different casing.
+     */
+    public function getStatusAttribute($value): string
+    {
+        return is_string($value) ? strtolower($value) : $value;
     }
 
     public function supplier()
@@ -92,7 +103,40 @@ class PurchaseOrder extends Model
             return false;
         }
 
-        return $this->update(['status' => 'approved']);
+        return DB::transaction(function () {
+            $updated = $this->update(['status' => 'approved']);
+
+            if (! $updated) {
+                return false;
+            }
+
+            foreach ($this->items as $item) {
+                $medicine = Medicine::lockForUpdate()->find($item->medicine_id);
+
+                if (! $medicine) {
+                    continue;
+                }
+
+                $existingMovement = StockMovement::where('medicine_id', $medicine->id)
+                    ->where('reference', 'PO-' . $this->id)
+                    ->where('type', 'in')
+                    ->exists();
+
+                if (! $existingMovement) {
+                    $medicine->increment('quantity', $item->quantity);
+
+                    StockMovement::create([
+                        'medicine_id' => $medicine->id,
+                        'type' => 'in',
+                        'quantity' => $item->quantity,
+                        'reference' => 'PO-' . $this->id,
+                        'notes' => 'Stock added via purchase order #' . $this->id,
+                    ]);
+                }
+            }
+
+            return true;
+        });
     }
 
     /**
