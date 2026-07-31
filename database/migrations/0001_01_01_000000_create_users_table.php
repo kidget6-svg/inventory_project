@@ -1,4 +1,5 @@
 <?php
+// database/migrations/0001_01_01_000000_create_users_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -6,9 +7,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
@@ -17,8 +15,38 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            
+            // Role & Status (for pharmacy system)
+            $table->enum('role', ['admin', 'pharmacist', 'cashier'])->default('cashier');
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            
+            // Pharmacist specific fields
+            $table->string('license_number')->nullable();
+            $table->date('license_expiry_date')->nullable();
+            $table->string('professional_registration_number')->nullable();
+            $table->string('university')->nullable();
+            $table->string('degree')->nullable();
+            $table->integer('years_of_experience')->nullable();
+            $table->string('national_id')->nullable();
+            
+            // Document uploads
+            $table->string('license_document')->nullable();
+            $table->string('qualification_document')->nullable();
+            $table->string('pharmacy_license')->nullable();
+            $table->string('degree_certificate')->nullable();
+            
+            // Approval tracking
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
+            $table->text('rejection_reason')->nullable();
+            
             $table->rememberToken();
             $table->timestamps();
+            
+            // Indexes
+            $table->index('email');
+            $table->index('role');
+            $table->index('status');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -37,9 +65,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('users');

@@ -2,27 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Medicine extends Model
 {
     use HasFactory;
-
-    const STATUS_ACTIVE = 'active';
-    const STATUS_INACTIVE = 'inactive';
-    const STATUS_EXPIRED = 'expired';
-    const STATUS_DISCONTINUED = 'discontinued';
-
-    public static function statuses(): array
-    {
-        return [
-            self::STATUS_ACTIVE => 'Active',
-            self::STATUS_INACTIVE => 'Inactive',
-            self::STATUS_EXPIRED => 'Expired',
-            self::STATUS_DISCONTINUED => 'Discontinued',
-        ];
-    }
 
     protected $fillable = [
         'name',
@@ -31,6 +18,10 @@ class Medicine extends Model
         'barcode',
         'category_id',
         'supplier_id',
+        'description',
+        'shelf_location',
+        'manufacturer',
+        'image',
         'quantity',
         'unit_price',
         'purchase_price',
@@ -41,37 +32,78 @@ class Medicine extends Model
     ];
 
     protected $casts = [
-        'expiry_date' => 'date',
         'quantity' => 'integer',
-        'reorder_level' => 'integer',
         'unit_price' => 'decimal:2',
         'purchase_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
+        'reorder_level' => 'integer',
+        'expiry_date' => 'date',
     ];
 
-    public function category()
+    // Relationships
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function supplier()
+    public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
-    public function purchaseOrderItems()
+    public function stockMovements(): HasMany
     {
-        return $this->hasMany(PurchaseOrderItem::class);
+        return $this->hasMany(StockMovement::class);
     }
 
-    public function getStatusBadgeClass(): string
+    public function saleItems(): HasMany
     {
-        return match ($this->status) {
-            self::STATUS_ACTIVE => 'bg-green-100 text-green-700',
-            self::STATUS_INACTIVE => 'bg-gray-100 text-gray-700',
-            self::STATUS_EXPIRED => 'bg-red-100 text-red-700',
-            self::STATUS_DISCONTINUED => 'bg-orange-100 text-orange-700',
-            default => 'bg-gray-100 text-gray-600',
-        };
+        return $this->hasMany(SaleItem::class);
+    }
+
+    // Accessors
+    public function getImageUrlAttribute(): string
+    {
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+        return asset('images/medicine-placeholder.svg');
+    }
+
+    public function getIsLowStockAttribute(): bool
+    {
+        return $this->quantity <= $this->reorder_level;
+    }
+
+    public function getIsExpiredAttribute(): bool
+    {
+        return $this->expiry_date && $this->expiry_date->isPast();
+    }
+
+    public function getIsExpiringSoonAttribute(): bool
+    {
+        return $this->expiry_date && $this->expiry_date->diffInDays(now()) <= 90 && !$this->is_expired;
+    }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeLowStock($query)
+    {
+        return $query->whereColumn('quantity', '<=', 'reorder_level');
+    }
+
+    public function scopeExpiringWithin($query, $days = 90)
+    {
+        return $query->whereDate('expiry_date', '<=', now()->addDays($days))
+                     ->whereDate('expiry_date', '>=', now());
+    }
+
+    public function scopeExpired($query)
+    {
+        return $query->whereDate('expiry_date', '<', now());
     }
 }
