@@ -20,6 +20,8 @@ import Sales from './pages/Sales';
 import StockMovements from './pages/StockMovements';
 import LowStock from './pages/LowStock';
 import Reports from './pages/Reports';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 
 function ProtectedRoute({ children, roles }) {
     const { user, loading } = useAuth();
@@ -58,6 +60,14 @@ function App() {
 
             <Route path="/dashboard" element={
                 <ProtectedRoute><DashboardRouter /></ProtectedRoute>
+            } />
+
+            {/* Account pages - available to any logged-in user */}
+            <Route path="/profile" element={
+                <ProtectedRoute><Profile /></ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+                <ProtectedRoute><Settings /></ProtectedRoute>
             } />
 
             <Route path="/medicines" element={
