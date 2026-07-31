@@ -50,9 +50,9 @@ function getMenu(role) {
 }
 
 const roleBadgeStyle = {
-    admin: 'bg-sky-100 text-sky-800',
-    pharmacist: 'bg-emerald-100 text-emerald-800',
-    cashier: 'bg-amber-100 text-amber-800',
+    admin: 'bg-sky-500/20 text-sky-300',
+    pharmacist: 'bg-emerald-500/20 text-emerald-300',
+    cashier: 'bg-amber-500/20 text-amber-300',
 };
 
 export default function SidebarLayout({ children, pageTitle }) {
@@ -75,23 +75,23 @@ export default function SidebarLayout({ children, pageTitle }) {
                 {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
-            <aside className={`fixed top-0 left-0 w-64 h-screen bg-white shadow-md z-40 flex flex-col overflow-hidden transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-                <div className="p-5 border-b border-sky-200">
+            <aside className={`fixed top-0 left-0 w-64 h-screen bg-sidebar z-40 flex flex-col overflow-hidden transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+                <div className="p-5 border-b border-sidebar-border">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg bg-sky-500/20 flex items-center justify-center">
-                            <Pill size={20} className="text-sky-500" />
+                            <Pill size={20} className="text-sky-400" />
                         </div>
                         <div>
-                            <div className="text-base font-bold text-gray-900 tracking-tight">PharmaSys</div>
-                            <div className="text-[10px] text-gray-500 font-medium">Inventory Management</div>
+                            <div className="text-base font-bold text-white tracking-tight">PharmaSys</div>
+                            <div className="text-[10px] text-sidebar-text font-medium">Inventory Management</div>
                         </div>
                     </div>
                 </div>
 
-                <nav className="flex-1 py-3 overflow-y-auto">
+                <nav className="flex-1 py-3 overflow-y-auto scrollbar-thin">
                     {menu.map((item, i) =>
                         item.section ? (
-                            <div key={i} className="px-5 pt-4 pb-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+                            <div key={i} className="px-5 pt-4 pb-1.5 text-[11px] font-semibold text-sidebar-text uppercase tracking-widest">
                                 {item.section}
                             </div>
                         ) : (
@@ -102,8 +102,8 @@ export default function SidebarLayout({ children, pageTitle }) {
                                 className={({ isActive }) =>
                                     `flex items-center gap-3 mx-2 px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-150 ${
                                         isActive
-                                            ? 'bg-sky-100 text-sky-700 shadow-sm'
-                                            : 'text-gray-600 hover:bg-gray-50'
+                                            ? 'bg-sidebar-active text-sidebar-text-active shadow-sm'
+                                            : 'text-sidebar-text hover:bg-sidebar-hover hover:text-white'
                                     }`
                                 }
                             >
@@ -114,21 +114,21 @@ export default function SidebarLayout({ children, pageTitle }) {
                     )}
                 </nav>
 
-                <div className="p-4 border-t border-sky-200">
+                <div className="p-4 border-t border-sidebar-border">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                             {user?.name?.charAt(0)?.toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <div className="text-sm font-semibold text-gray-900 truncate">{user?.name}</div>
-                            <div className={`inline-block mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${roleBadgeStyle[user?.role] || 'bg-gray-100 text-gray-600'}`}>
+                            <div className="text-sm font-semibold text-white truncate">{user?.name}</div>
+                            <div className={`inline-block mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${roleBadgeStyle[user?.role] || 'bg-gray-500/20 text-gray-400'}`}>
                                 {user?.role}
                             </div>
                         </div>
                     </div>
                     <button
                         onClick={handleLogout}
-                        className="w-full py-2.5 bg-red-50 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-2.5 bg-red-500/10 text-red-400 rounded-xl text-sm font-semibold hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
                     >
                         <LogOut size={16} />
                         Logout

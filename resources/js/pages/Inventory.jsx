@@ -131,24 +131,24 @@ export default function Inventory() {
     };
 
     const renderMedicineTable = (data, showExpiry = true) => (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="card overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[1000px]">
                     <thead>
-                        <tr className="bg-blue-50 border-b border-blue-100">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Medicine</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Category</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Batch</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Quantity</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Reorder Level</th>
-                            {showExpiry && <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Expiry Date</th>}
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Status</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 uppercase">Actions</th>
+                        <tr className="bg-sky-50 border-b border-sky-100">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Medicine</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Category</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Batch</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Quantity</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Reorder Level</th>
+                            {showExpiry && <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Expiry Date</th>}
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Status</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700 uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {data.length > 0 ? data.map(m => (
-                            <tr key={m.id} className="border-b border-gray-50 hover:bg-blue-50/30">
+                            <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                 <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{m.category?.name || 'No Category'}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{m.batch_number || '---'}</td>
@@ -163,7 +163,7 @@ export default function Inventory() {
                                 <td className="px-4 py-3 text-right">
                                     <button
                                         onClick={() => { setRestockMedicine(m); setRestockQty(''); setRestockNotes(''); }}
-                                        className="px-3 py-1 bg-blue-500 text-white rounded text-xs font-semibold hover:bg-blue-600"
+                                        className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
                                     >
                                         Restock
                                     </button>
@@ -197,7 +197,7 @@ export default function Inventory() {
                             placeholder="Search medicines..."
                             value={filters.search}
                             onChange={handleFilterChange}
-                            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                         />
                     </div>
                     <div className="relative w-full md:w-48">
@@ -206,7 +206,7 @@ export default function Inventory() {
                             name="category_id"
                             value={filters.category_id}
                             onChange={handleFilterChange}
-                            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
+                            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none appearance-none"
                         >
                             <option value="">All Categories</option>
                             {categories.map(c => (
@@ -237,7 +237,7 @@ export default function Inventory() {
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-all whitespace-nowrap ${
                                     isActive
-                                        ? 'bg-blue-500 text-white'
+                                        ? 'bg-sky-500 text-white'
                                         : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                             >
@@ -254,10 +254,10 @@ export default function Inventory() {
                 <div className="space-y-6">
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-white rounded-xl p-5 shadow-sm">
+                        <div className="card p-5">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 rounded-lg">
-                                    <Package className="w-6 h-6 text-blue-600" />
+                                <div className="p-2 bg-sky-100 rounded-lg">
+                                    <Package className="w-6 h-6 text-sky-600" />
                                 </div>
                                 <div>
                                     <p className="text-2xl font-bold text-gray-800">{medicines.length}</p>
@@ -265,7 +265,7 @@ export default function Inventory() {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white rounded-xl p-5 shadow-sm">
+                        <div className="card p-5">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-green-100 rounded-lg">
                                     <TrendingDown className="w-6 h-6 text-green-600" />
@@ -276,7 +276,7 @@ export default function Inventory() {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white rounded-xl p-5 shadow-sm">
+                        <div className="card p-5">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-orange-100 rounded-lg">
                                     <AlertTriangle className="w-6 h-6 text-orange-600" />
@@ -287,7 +287,7 @@ export default function Inventory() {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white rounded-xl p-5 shadow-sm">
+                        <div className="card p-5">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-red-100 rounded-lg">
                                     <Calendar className="w-6 h-6 text-red-600" />
@@ -301,7 +301,7 @@ export default function Inventory() {
                     </div>
 
                     {/* Stock Value */}
-                    <div className="bg-white rounded-xl p-5 shadow-sm">
+                    <div className="card p-5">
                         <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Stock Value</h3>
                         <p className="text-2xl font-bold text-gray-800">${totalStockValue.toFixed(2)}</p>
                     </div>
@@ -319,7 +319,7 @@ export default function Inventory() {
                                         </div>
                                         <button
                                             onClick={() => { setRestockMedicine(m); setRestockQty(''); setRestockNotes(''); setActiveTab('all'); }}
-                                            className="px-3 py-1 bg-blue-500 text-white rounded text-xs font-semibold hover:bg-blue-600"
+                                            className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
                                         >
                                             Restock
                                         </button>
@@ -371,29 +371,29 @@ export default function Inventory() {
             {activeTab === 'expiring' && renderMedicineTable(expiringSoonMedicines)}
 
             {activeTab === 'movements' && (
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="card overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[900px]">
                             <thead>
-                                <tr className="bg-blue-50 border-b border-blue-100">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Medicine</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Type</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Quantity</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Reference</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase">Notes</th>
+                                <tr className="bg-sky-50 border-b border-sky-100">
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Date</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Medicine</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Quantity</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Reference</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Notes</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {movements.length > 0 ? movements.map(m => (
-                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-blue-50/30">
+                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                         <td className="px-4 py-3 text-sm text-gray-500">
                                             {new Date(m.created_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-4 py-3 text-sm font-medium">{m.medicine?.name || 'Unknown'}</td>
                                         <td className="px-4 py-3 text-sm">
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                m.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                                m.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-sky-100 text-sky-700'
                                             }`}>
                                                 {m.type === 'in' ? 'Stock In' : 'Stock Out'}
                                             </span>
@@ -445,7 +445,7 @@ export default function Inventory() {
                                     onChange={(e) => setRestockQty(e.target.value)}
                                     placeholder="Enter quantity"
                                     min="1"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                     required
                                 />
                             </div>
@@ -456,21 +456,21 @@ export default function Inventory() {
                                     value={restockNotes}
                                     onChange={(e) => setRestockNotes(e.target.value)}
                                     placeholder="e.g. New shipment from supplier"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                 />
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
                                 <button
                                     type="button"
                                     onClick={() => setRestockMedicine(null)}
-                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                                    className="btn-secondary"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 flex items-center gap-2 disabled:opacity-60"
+                                    className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60"
                                 >
                                     {submitting ? (
                                         <>

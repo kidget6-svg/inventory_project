@@ -1,17 +1,8 @@
 import React from 'react';
 
-/**
- * A lightweight, dependency-free pie/donut chart using CSS conic-gradient.
- *
- * @param {string} title       - Chart heading
- * @param {string[]} labels    - Category labels
- * @param {number[]} values    - Values for each slice
- * @param {string[]} colors    - Tailwind color classes for each slice (e.g. 'bg-blue-500')
- */
 export default function PieChart({ title, labels = [], values = [], colors = [] }) {
     const total = values.reduce((sum, v) => sum + Number(v), 0);
 
-    // Build conic-gradient segments
     const segments = [];
     let cumulative = 0;
     const colorPalette = [
@@ -28,7 +19,6 @@ export default function PieChart({ title, labels = [], values = [], colors = [] 
         segments.push(`${colorHex} 0% ${pct === 0 ? 0 : cumulative - pct}%`);
     });
 
-    // If only one non-zero slice, make it a full circle
     const nonZeroCount = values.filter(v => Number(v) > 0).length;
     let gradient;
     if (nonZeroCount <= 1) {
@@ -40,24 +30,16 @@ export default function PieChart({ title, labels = [], values = [], colors = [] 
     }
 
     return (
-        <div className="bg-white rounded-xl p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-700 mb-4">{title}</h3>
-
+        <div className="card p-5">
+            <h3 className="card-header">{title}</h3>
             <div className="flex items-center gap-6 flex-wrap">
-                {/* Donut chart */}
                 <div className="relative">
-                    <div
-                        className="w-32 h-32 rounded-full"
-                        style={{ background: gradient }}
-                    />
-                    {/* Center label */}
+                    <div className="w-32 h-32 rounded-full" style={{ background: gradient }} />
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                         <span className="text-2xl font-bold text-gray-700">{total}</span>
-                        <span className="text-xs text-gray-500">total units</span>
+                        <span className="text-xs text-gray-500">total</span>
                     </div>
                 </div>
-
-                {/* Legend */}
                 <div className="flex flex-col gap-2 min-w-[140px]">
                     {labels.map((label, i) => {
                         const val = Number(values[i]);
@@ -65,10 +47,10 @@ export default function PieChart({ title, labels = [], values = [], colors = [] 
                         const color = colors[i] || colorPalette[i % colorPalette.length];
                         return (
                             <div key={i} className="flex items-center gap-2">
-                                <span className={`w-3 h-3 rounded-full ${color}`}></span>
+                                <span className={`w-3 h-3 rounded-full ${color}`} />
                                 <div className="flex flex-col">
                                     <span className="text-xs font-medium text-gray-700 truncate max-w-[120px]">{label}</span>
-                                    <span className="text-xs text-gray-400">{val} units ({pct}%)</span>
+                                    <span className="text-xs text-gray-400">{val} ({pct}%)</span>
                                 </div>
                             </div>
                         );
@@ -79,7 +61,6 @@ export default function PieChart({ title, labels = [], values = [], colors = [] 
     );
 }
 
-// Map common Tailwind bg colors to hex for conic-gradient
 const tailwindToHex = (cls) => {
     const map = {
         'bg-sky-500': '#0ea5e9', 'bg-sky-400': '#38bdf8',
@@ -91,8 +72,6 @@ const tailwindToHex = (cls) => {
         'bg-green-500': '#22c55e',
         'bg-orange-400': '#fb9225', 'bg-red-500': '#ef4444',
         'bg-orange-500': '#f97316',
-        'bg-blue-500': '#3b82f6',
-        'bg-amber-500': '#f59e0b',
     };
     return map[cls] || '#94a3b8';
 };
