@@ -15,15 +15,28 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
 
 
-// ============================================
-// PUBLIC AUTH ROUTES
-// ============================================
+
+/*
+|--------------------------------------------------------------------------
+| CSRF TOKEN
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/csrf-token', function () {
+
     return response()->json([
         'token' => csrf_token()
     ]);
+
 });
+
+
+
+/*
+|--------------------------------------------------------------------------
+| AUTH
+|--------------------------------------------------------------------------
+*/
 
 
 Route::post('/login', [
@@ -33,14 +46,16 @@ Route::post('/login', [
 
 
 
-// ============================================
-// PROTECTED ROUTES
-// ============================================
 
 Route::middleware('auth')->group(function () {
 
 
-    // Authentication
+
+    /*
+    |--------------------------------------------------------------------------
+    | USER AUTH
+    |--------------------------------------------------------------------------
+    */
 
     Route::post('/logout', [
         AuthController::class,
@@ -55,7 +70,13 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // Dashboard
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DASHBOARD
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/dashboard', [
         DashboardController::class,
@@ -64,11 +85,17 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // ========================================
-    // USERS
-    // ========================================
 
-    Route::middleware('role:admin')->group(function () {
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | USERS (ADMIN ONLY)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:admin')->group(function(){
 
 
         Route::post('/register', [
@@ -77,28 +104,10 @@ Route::middleware('auth')->group(function () {
         ]);
 
 
-        Route::get('/users', [
-            UserController::class,
-            'index'
-        ]);
-
-
-        Route::post('/users', [
-            UserController::class,
-            'store'
-        ]);
-
-
-        Route::put('/users/{user}', [
-            UserController::class,
-            'update'
-        ]);
-
-
-        Route::delete('/users/{user}', [
-            UserController::class,
-            'destroy'
-        ]);
+        Route::apiResource(
+            'users',
+            UserController::class
+        );
 
 
     });
@@ -107,17 +116,23 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // ========================================
-    // CATEGORIES
-    // ========================================
 
-    Route::middleware('role:admin')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | CATEGORIES
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:admin')->group(function(){
+
 
         Route::apiResource(
             'categories',
             CategoryController::class
         );
 
+
     });
 
 
@@ -125,17 +140,23 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // ========================================
-    // SUPPLIERS
-    // ========================================
 
-    Route::middleware('role:admin')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | SUPPLIERS
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:admin')->group(function(){
+
 
         Route::apiResource(
             'suppliers',
             SupplierController::class
         );
 
+
     });
 
 
@@ -144,11 +165,17 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // ========================================
-    // PURCHASE ORDERS
-    // ========================================
 
-    Route::middleware('role:admin')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | PURCHASE ORDERS
+    |--------------------------------------------------------------------------
+    */
+
+
+    Route::middleware('role:admin')->group(function(){
+
 
 
         Route::apiResource(
@@ -158,8 +185,6 @@ Route::middleware('auth')->group(function () {
 
 
 
-        // Workflow actions
-
         Route::post(
             'purchase-orders/{purchaseOrder}/approve',
             [
@@ -167,7 +192,6 @@ Route::middleware('auth')->group(function () {
                 'approve'
             ]
         );
-
 
 
         Route::post(
@@ -179,7 +203,6 @@ Route::middleware('auth')->group(function () {
         );
 
 
-
         Route::post(
             'purchase-orders/{purchaseOrder}/complete',
             [
@@ -187,7 +210,6 @@ Route::middleware('auth')->group(function () {
                 'complete'
             ]
         );
-
 
 
         Route::post(
@@ -209,33 +231,15 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // ========================================
-    // REPORTS
-    // ========================================
 
-    Route::middleware('role:admin,pharmacist')->group(function () {
-
-
-        Route::get('/reports', [
-            ReportController::class,
-            'index'
-        ]);
+    /*
+    |--------------------------------------------------------------------------
+    | MEDICINES
+    |--------------------------------------------------------------------------
+    */
 
 
-    });
-
-
-
-
-
-
-
-
-    // ========================================
-    // MEDICINES
-    // ========================================
-
-    Route::middleware('role:admin,pharmacist')->group(function () {
+    Route::middleware('role:admin,pharmacist')->group(function(){
 
 
         Route::apiResource(
@@ -253,28 +257,20 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // ========================================
-    // STOCK MOVEMENTS
-    // ========================================
 
-    Route::middleware('role:admin,pharmacist')->group(function () {
-
-
-        Route::get(
-            '/stock-movements',
-            [
-                StockMovementController::class,
-                'index'
-            ]
-        );
+    /*
+    |--------------------------------------------------------------------------
+    | STOCK MOVEMENTS
+    |--------------------------------------------------------------------------
+    */
 
 
-        Route::post(
-            '/stock-movements',
-            [
-                StockMovementController::class,
-                'store'
-            ]
+    Route::middleware('role:admin,pharmacist')->group(function(){
+
+
+        Route::apiResource(
+            'stock-movements',
+            StockMovementController::class
         );
 
 
@@ -287,11 +283,16 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // ========================================
-    // LOW STOCK
-    // ========================================
 
-    Route::middleware('role:admin,pharmacist')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOW STOCK
+    |--------------------------------------------------------------------------
+    */
+
+
+    Route::middleware('role:admin,pharmacist')->group(function(){
 
 
         Route::get(
@@ -312,16 +313,50 @@ Route::middleware('auth')->group(function () {
 
 
 
-    // ========================================
-    // SALES
-    // ========================================
 
-    Route::middleware('role:admin,cashier')->group(function () {
+    /*
+    |--------------------------------------------------------------------------
+    | SALES
+    |--------------------------------------------------------------------------
+    */
+
+
+    Route::middleware('role:admin,cashier')->group(function(){
 
 
         Route::apiResource(
             'sales',
             SaleController::class
+        );
+
+
+    });
+
+
+
+
+
+
+
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | REPORTS
+    |--------------------------------------------------------------------------
+    */
+
+
+    Route::middleware('role:admin,pharmacist')->group(function(){
+
+
+        Route::get(
+            '/reports',
+            [
+                ReportController::class,
+                'index'
+            ]
         );
 
 
@@ -336,13 +371,18 @@ Route::middleware('auth')->group(function () {
 
 
 
-// ============================================
-// REACT FRONTEND CATCH ALL
-// MUST BE LAST
-// ============================================
 
-Route::get('/{any}', function () {
+/*
+|--------------------------------------------------------------------------
+| REACT FRONTEND
+|--------------------------------------------------------------------------
+| Keep this LAST
+|--------------------------------------------------------------------------
+*/
+
+
+Route::get('/{any}', function(){
 
     return view('app');
 
-})->where('any', '.*');
+})->where('any','.*');

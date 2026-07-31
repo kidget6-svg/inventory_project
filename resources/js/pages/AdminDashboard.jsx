@@ -1,85 +1,546 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+
 import api from '../axios';
-import StatCard from '../components/StatCard';
+
 import LoadingSpinner from '../components/LoadingSpinner';
 
+import StatCard from '../components/StatCard';
+import ChartCard from '../components/ChartCard';
+
+import SalesChart from '../components/SalesChart';
+import PurchaseVsSalesChart from '../components/PurchaseVsSalesChart';
+import InventoryStatusChart from '../components/InventoryStatusChart';
+
+import RecentActivity from '../components/RecentActivity';
+import LowStockAlert from '../components/LowStockAlert';
+import ExpiryAlert from '../components/ExpiryAlert';
+
+import PurchaseOrderStats from '../components/PurchaseOrderStats';
+import QuickActions from '../components/QuickActions';
+
+
+
 export default function AdminDashboard() {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
 
-    useEffect(() => {
+
+    const [data,setData] = useState(null);
+    const [loading,setLoading] = useState(true);
+    const [error,setError] = useState('');
+
+
+
+    useEffect(()=>{
+
+
         api.get('/dashboard')
-            .then(r => {
-                setData(r.data);
-                setError('');
-            })
-            .catch(err => {
-                setError('Failed to load dashboard data');
-                console.error(err);
-            })
-            .finally(() => setLoading(false));
-    }, []);
 
-    if (loading) return <LoadingSpinner text="Loading dashboard..." />;
+        .then(response=>{
 
-    if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
+            setData(response.data);
+            setError('');
 
-    return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <StatCard value={data.totalProducts} label="Total Medicine Types" color="blue" />
-                <StatCard value={data.totalStock} label="Total Stock Units" color="green" />
-                <StatCard value={data.lowStockCount} label="Low-Stock Medicines" color="red" />
-                <StatCard value={data.expiringCount} label="Expiring Within 90 Days" color="orange" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <StatCard value={data.todaySalesCount} label="Today's Sales" color="green" />
-                <StatCard value={`$${Number(data.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="blue" />
-                <StatCard value={data.totalSuppliers} label="Suppliers" color="orange" />
-            </div>
+        })
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div className="bg-white rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50">{'\u26A0'} Low-Stock Medicines</h3>
-                    {data.lowStockMedicines?.length > 0 ? data.lowStockMedicines.map(m => (
-                        <div key={m.id} className="flex justify-between items-center p-3 bg-orange-50 border-l-3 border-orange-400 rounded-md mb-2">
-                            <div>
-                                <div className="font-semibold text-sm">{m.name}</div>
-                                <div className="text-xs text-gray-400">{m.category?.name || 'No Category'}</div>
-                            </div>
-                            <div className="text-right">
-                                <span className="bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">Stock: {m.quantity}</span>
-                                <div className="text-xs text-gray-400 mt-1">Reorder: {m.reorder_level}</div>
-                            </div>
-                        </div>
-                    )) : <p className="text-gray-400 text-center py-5">No low-stock medicines</p>}
-                </div>
+        .catch(error=>{
 
-                <div className="bg-white rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50">{'\u{1F4C5}'} Expiring Within 90 Days</h3>
-                    {data.expiringMedicines?.length > 0 ? data.expiringMedicines.map(m => (
-                        <div key={m.id} className="flex justify-between items-center p-3 bg-red-50 border-l-3 border-red-400 rounded-md mb-2">
-                            <div>
-                                <div className="font-semibold text-sm">{m.name}</div>
-                                <div className="text-xs text-gray-400">Batch: {m.batch_number || '---'}</div>
-                            </div>
-                            <span className="bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-1 rounded-full">Expires: {m.expiry_date}</span>
-                        </div>
-                    )) : <p className="text-gray-400 text-center py-5">No medicines expiring soon</p>}
-                </div>
+            console.error(error);
+            setError('Failed to load dashboard data');
+
+        })
+
+        .finally(()=>{
+
+            setLoading(false);
+
+        });
+
+
+    },[]);
+
+
+
+
+
+    if(loading){
+
+        return (
+            <LoadingSpinner text="Loading dashboard..." />
+        );
+
+    }
+
+
+
+
+
+    if(error){
+
+        return(
+
+            <div className="
+                text-center
+                py-12
+                text-red-500
+                font-medium
+            ">
+                {error}
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm">
-                <h3 className="text-base font-semibold text-gray-700 mb-3">Quick Actions</h3>
-                <div className="flex flex-wrap gap-3">
-                    <Link to="/medicines" className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors">+ Add Medicine</Link>
-                    <Link to="/sales" className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors">+ New Sale</Link>
-                    <Link to="/purchase-orders" className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors">+ Purchase Order</Link>
-                    <Link to="/reports" className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors">View Reports</Link>
-                </div>
-            </div>
-        </div>
+        );
+
+    }
+
+
+
+
+
+    const todayRevenue =
+        Number(data.todayRevenue || 0);
+
+
+    const todaySales =
+        Number(data.todaySalesCount || 0);
+
+
+
+
+
+
+    return(
+
+        <div className="
+            space-y-8
+            min-h-screen
+            pb-10
+        ">
+
+
+
+
+
+{/* ================= HEADER ================= */}
+
+
+<div
+className="
+rounded-3xl
+bg-gradient-to-r
+from-blue-700
+via-blue-600
+to-cyan-500
+p-8
+md:p-10
+text-white
+shadow-xl
+"
+>
+
+
+<div className="
+flex
+flex-col
+md:flex-row
+justify-between
+items-center
+gap-6
+">
+
+
+<div>
+
+
+<h1 className="
+text-3xl
+md:text-4xl
+font-bold
+">
+
+Pharmacy Dashboard
+
+</h1>
+
+
+
+<p className="
+mt-3
+text-blue-100
+">
+
+Welcome back, Administrator
+
+</p>
+
+
+
+<p className="
+text-sm
+text-blue-200
+mt-1
+">
+
+Manage medicines, inventory, sales and suppliers.
+
+</p>
+
+
+</div>
+
+
+
+
+
+<div className="
+text-center
+bg-white/10
+rounded-2xl
+px-6
+py-4
+">
+
+
+<div className="text-6xl">
+
+💊
+
+</div>
+
+
+<p className="
+mt-2
+text-sm
+text-blue-100
+">
+
+{new Date().toLocaleDateString()}
+
+</p>
+
+
+</div>
+
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= STAT CARDS ================= */}
+
+
+
+<div
+className="
+grid
+grid-cols-1
+sm:grid-cols-2
+md:grid-cols-3
+lg:grid-cols-4
+xl:grid-cols-7
+gap-5
+"
+>
+
+
+<StatCard
+value={data.totalMedicines}
+label="Total Medicines"
+icon="package"
+color="blue"
+/>
+
+
+
+<StatCard
+value={data.totalStock}
+label="Total Stock"
+icon="boxes"
+color="green"
+/>
+
+
+
+<StatCard
+value={data.lowStockCount}
+label="Low Stock"
+icon="alert"
+color="orange"
+/>
+
+
+
+<StatCard
+value={data.expiredCount}
+label="Expired"
+icon="calendar"
+color="red"
+/>
+
+
+
+<StatCard
+value={data.pendingPurchaseOrders}
+label="Pending Orders"
+icon="shopping-cart"
+color="orange"
+/>
+
+
+
+<StatCard
+value={`$${todayRevenue.toFixed(2)}`}
+label="Today's Sales"
+icon="banknote"
+color="green"
+subValue={`${todaySales} transactions`}
+/>
+
+
+
+<StatCard
+value={data.totalUsers}
+label="Users"
+icon="users"
+color="purple"
+/>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= SALES ANALYTICS ================= */}
+
+
+
+<ChartCard
+
+title="Sales Analytics"
+
+description="Daily, weekly and monthly sales performance"
+
+>
+
+
+<SalesChart
+
+data={data.salesAnalytics}
+
+/>
+
+
+</ChartCard>
+
+
+
+
+
+
+
+
+
+{/* ================= PURCHASE VS INVENTORY ================= */}
+
+
+
+<div
+className="
+grid
+grid-cols-1
+xl:grid-cols-2
+gap-6
+"
+>
+
+
+
+<ChartCard
+
+title="Purchase vs Sales"
+
+description="Compare purchasing and selling"
+
+>
+
+
+<div className="h-72">
+
+
+<PurchaseVsSalesChart
+
+data={data.purchaseVsSales}
+
+/>
+
+
+</div>
+
+
+</ChartCard>
+
+
+
+
+
+
+
+<ChartCard
+
+title="Inventory Status"
+
+description="Current medicine stock condition"
+
+>
+
+
+<div className="h-72">
+
+
+<InventoryStatusChart
+
+data={data.inventoryStatus}
+
+/>
+
+
+</div>
+
+
+</ChartCard>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= PURCHASE ORDERS ================= */}
+
+
+
+<PurchaseOrderStats
+
+stats={data.purchaseOrderStats}
+
+/>
+
+
+
+
+
+
+
+
+
+{/* ================= ALERT SECTION ================= */}
+
+
+
+<div
+className="
+grid
+grid-cols-1
+xl:grid-cols-2
+gap-6
+"
+>
+
+
+<LowStockAlert
+
+medicines={data.lowStockMedicines}
+
+/>
+
+
+
+<ExpiryAlert
+
+expiringSoon={data.expiringSoon}
+
+/>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= ACTIVITY ================= */}
+
+
+
+<ChartCard
+
+title="Recent Activity"
+
+description="Latest pharmacy system activities"
+
+>
+
+
+<RecentActivity
+
+activities={data.recentActivities}
+
+/>
+
+
+</ChartCard>
+
+
+
+
+
+
+
+
+
+{/* ================= QUICK ACTION ================= */}
+
+
+
+<QuickActions
+
+role="admin"
+
+/>
+
+
+
+
+
+</div>
+
+
     );
+
 }

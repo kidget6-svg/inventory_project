@@ -1,24 +1,203 @@
 import React from 'react';
+import {
+    Package,
+    Boxes,
+    AlertTriangle,
+    CalendarX,
+    ShoppingCart,
+    Banknote,
+    Users,
+    Activity,
+    TrendingUp,
+    TrendingDown,
+    Pill,
+    ClipboardList,
+} from 'lucide-react';
 
-export default function StatCard({ value, label, color = 'blue' }) {
-    const colors = {
-        blue: 'border-l-blue-500',
-        green: 'border-l-green-500',
-        orange: 'border-l-orange-500',
-        red: 'border-l-red-500',
-    };
+const iconMap = {
+    package: Package,
+    boxes: Boxes,
+    alert: AlertTriangle,
+    calendar: CalendarX,
+    'shopping-cart': ShoppingCart,
+    banknote: Banknote,
+    users: Users,
+    activity: Activity,
+    'trending-up': TrendingUp,
+    'trending-down': TrendingDown,
+    pill: Pill,
+    'clipboard-list': ClipboardList,
+};
 
-    const textColors = {
-        blue: 'text-blue-700',
-        green: 'text-green-700',
-        orange: 'text-orange-600',
-        red: 'text-red-600',
-    };
+const colorClasses = {
+    blue: {
+        bg: 'bg-blue-50',
+        border: 'border-blue-500',
+        text: 'text-blue-600',
+        icon: 'text-blue-500',
+        ring: 'ring-blue-200',
+    },
+    green: {
+        bg: 'bg-green-50',
+        border: 'border-green-500',
+        text: 'text-green-600',
+        icon: 'text-green-500',
+        ring: 'ring-green-200',
+    },
+    orange: {
+        bg: 'bg-orange-50',
+        border: 'border-orange-500',
+        text: 'text-orange-600',
+        icon: 'text-orange-500',
+        ring: 'ring-orange-200',
+    },
+    red: {
+        bg: 'bg-red-50',
+        border: 'border-red-500',
+        text: 'text-red-600',
+        icon: 'text-red-500',
+        ring: 'ring-red-200',
+    },
+    purple: {
+        bg: 'bg-purple-50',
+        border: 'border-purple-500',
+        text: 'text-purple-600',
+        icon: 'text-purple-500',
+        ring: 'ring-purple-200',
+    },
+    teal: {
+        bg: 'bg-teal-50',
+        border: 'border-teal-500',
+        text: 'text-teal-600',
+        icon: 'text-teal-500',
+        ring: 'ring-teal-200',
+    },
+};
 
-    return (
-        <div className={`bg-white rounded-xl p-5 shadow-sm border-l-4 ${colors[color]} hover:-translate-y-0.5 transition-transform`}>
-            <div className={`text-3xl font-bold ${textColors[color]}`}>{value}</div>
-            <div className="text-sm text-gray-500 mt-1">{label}</div>
+export default function StatCard({
+    value,
+    label,
+    icon = 'package',
+    color = 'blue',
+    trend,
+    subValue,
+    loading = false,
+}) {
+    const Icon = iconMap[icon] || Package;
+    const colors = colorClasses[color] || colorClasses.blue;
+return (
+   <div
+    className={`
+       relative overflow-hidden rounded-2xl
+       border border-gray-200
+      
+        bg-white
+        shadow-lg
+        shadow-gray-200/50
+        hover:shadow-lg
+        transition-all duration-300
+        hover:-translate-y-2
+        hover:shadow-xl
+        hover:shadow-blue-100
+        group
+    `}
+>
+        {/* Colored top bar */}
+       <div className={`absolute top-0 left-0 right-0 h-1 ${colors.border.replace('border','bg')}`}></div>
+
+        <div className="p-8">
+
+            <div className="flex justify-between items-start">
+
+                <div>
+
+                    {loading ? (
+                        <div className="h-10 w-24 bg-gray-200 rounded animate-pulse"></div>
+                    ) : (
+                        <h2 className={`text-5xl font-extrabold ${colors.text}`}>
+                            {value}
+                        </h2>
+                    )}
+
+                    <p className="mt-2 text-gray-700 font-medium">
+                        {label}
+                    </p>
+
+                    {subValue && (
+                        <p className="text-sm text-gray-500 mt-1">
+                            {subValue}
+                        </p>
+                    )}
+
+                </div>
+
+               <div
+    
+    className={`
+        h-16 w-16
+        rounded-2xl
+        flex items-center justify-center
+        bg-gray-100/50
+        hover:ring-2 hover:ring-blue-100
+        group-hover:rotate-12
+        group-hover:scale-110
+        transition-all duration-300
+    `}
+>
+                    <Icon
+                        size={34}
+                        className={colors.icon}
+                    />
+                </div>
+
+            </div>
+
+            {trend && (
+                <div className="mt-5 flex items-center">
+
+                    {trend.direction === 'up' ? (
+                        <TrendingUp
+                            size={16}
+                            className="text-green-600"
+                        />
+                    ) : (
+                        <TrendingDown
+                            size={16}
+                            className="text-red-600"
+                        />
+                    )}
+
+                    <span
+                        className={`ml-2 text-sm font-semibold ${
+                            trend.direction === 'up'
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                        }`}
+                    >
+                        {trend.value}
+                    </span>
+
+                </div>
+            )}
+
         </div>
-    );
+
+        <div
+            className="
+                absolute
+                top-0
+                right-0
+                w-32
+                h-32
+                rounded-full
+                bg-white
+               opacity-5 blur-xl
+                translate-x-10
+                -translate-y-10
+            "
+        ></div>
+
+    </div>
+);
+  
 }

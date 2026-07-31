@@ -24,6 +24,7 @@ class MedicineFactory extends Factory
             'unit_price' => fake()->randomFloat(2, 1, 500),
             'reorder_level' => fake()->numberBetween(5, 50),
             'expiry_date' => fake()->dateTimeBetween('+1 month', '+2 years'),
+            'image' => null,
         ];
     }
 }

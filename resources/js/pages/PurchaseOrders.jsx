@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, CheckCircle, Clock, Check, XCircle } from 'lucide-react';
 
 export default function PurchaseOrders() {
 
@@ -162,6 +162,8 @@ export default function PurchaseOrders() {
 
     const handleDelete = async(id)=>{
 
+        setError('');
+
         if(!confirm('Delete this purchase order?'))
             return;
 
@@ -174,6 +176,7 @@ export default function PurchaseOrders() {
 
         }catch(err){
 
+            console.error('Delete purchase order error:', err);
             setError(
                 err.response?.data?.message ||
                 'Failed to delete order'
@@ -188,6 +191,8 @@ export default function PurchaseOrders() {
 
     const handleAction = async(id,action)=>{
 
+        setError('');
+
         try{
 
             await api.post(
@@ -198,6 +203,7 @@ export default function PurchaseOrders() {
 
         }catch(err){
 
+            console.error(`Purchase order ${action} error:`, err);
             setError(
                 err.response?.data?.message ||
                 `Failed to ${action}`
@@ -261,6 +267,11 @@ className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hov
 
 
 </div>
+{error && (
+<div className="bg-red-50 text-red-600 p-3 rounded mb-3 text-sm">
+    {error}
+</div>
+)}
 {showForm && (
 
 <div className="bg-white rounded-xl p-5 shadow-sm">
@@ -556,12 +567,12 @@ Actions
                     {status === "pending" && (
 
                         <button
-                            onClick={() =>
-                                handleAction(o.id,"approve")
-                            }
-                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                            onClick={() => handleAction(o.id, "approve")}
+                            title="Approve"
+                            aria-label="Approve"
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
                         >
-                            Approve
+                            <CheckCircle size={16} />
                         </button>
 
                     )}
@@ -573,12 +584,12 @@ Actions
                     {status === "approved" && (
 
                         <button
-                            onClick={() =>
-                                handleAction(o.id,"process")
-                            }
-                            className="px-2 py-1 bg-yellow-500 text-white rounded text-xs"
+                            onClick={() => handleAction(o.id, "process")}
+                            title="Process"
+                            aria-label="Process"
+                            className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
                         >
-                            Process
+                            <Clock size={16} />
                         </button>
 
                     )}
@@ -591,12 +602,12 @@ Actions
                     {["approved","processing"].includes(status) && (
 
                         <button
-                            onClick={() =>
-                                handleAction(o.id,"complete")
-                            }
-                            className="px-2 py-1 bg-green-500 text-white rounded text-xs"
+                            onClick={() => handleAction(o.id, "complete")}
+                            title="Complete"
+                            aria-label="Complete"
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         >
-                            Complete
+                            <Check size={16} />
                         </button>
 
                     )}
@@ -609,12 +620,12 @@ Actions
                     {["pending","approved","processing"].includes(status) && (
 
                         <button
-                            onClick={() =>
-                                handleAction(o.id,"cancel")
-                            }
-                            className="px-2 py-1 bg-red-500 text-white rounded text-xs"
+                            onClick={() => handleAction(o.id, "cancel")}
+                            title="Cancel"
+                            aria-label="Cancel"
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                         >
-                            Cancel
+                            <XCircle size={16} />
                         </button>
 
                     )}

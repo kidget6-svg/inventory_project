@@ -11,6 +11,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
 import Medicines from './pages/Medicines';
+import MedicineDetails from './pages/MedicineDetails';
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
@@ -59,6 +60,9 @@ function App() {
 
             <Route path="/medicines" element={
                 <ProtectedRoute roles={['admin','pharmacist']}><Medicines /></ProtectedRoute>
+            } />
+            <Route path="/medicines/:id" element={
+                <ProtectedRoute roles={['admin','pharmacist']}><MedicineDetails /></ProtectedRoute>
             } />
             <Route path="/categories" element={
                 <ProtectedRoute roles={['admin','pharmacist']}><Categories /></ProtectedRoute>

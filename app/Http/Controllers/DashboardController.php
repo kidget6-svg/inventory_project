@@ -1,10 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Medicine;
 use App\Models\Sale;
-use App\Models\Supplier;
+use App\Models\User;
+use App\Models\PurchaseOrder;
+use App\Models\StockMovement;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -13,87 +17,283 @@ class DashboardController extends Controller
         $user = auth()->user();
 
         if ($user->isAdmin()) {
-            return $this->adminDashboard();
+            return response()->json(
+                $this->adminDashboard()
+            );
         }
 
         if ($user->isPharmacist()) {
-            return $this->pharmacistDashboard();
+            return response()->json(
+                $this->pharmacistDashboard()
+            );
         }
 
-        return $this->cashierDashboard();
+        return response()->json(
+            $this->cashierDashboard()
+        );
     }
+
+
 
     private function adminDashboard()
     {
-        $totalProducts = Medicine::count();
-        $totalStock = Medicine::sum('quantity');
-        $totalSuppliers = Supplier::count();
 
-        $lowStockMedicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
-            ->orderBy('quantity')
-            ->get();
-        $lowStockCount = $lowStockMedicines->count();
+        return [
 
-        $expiringMedicines = Medicine::whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [today(), today()->addDays(90)])
-            ->orderBy('expiry_date')
-            ->get();
-        $expiringCount = $expiringMedicines->count();
+            // Cards
+            'totalMedicines' => Medicine::count(),
 
-        $todaySalesCount = Sale::whereDate('sale_date', today())->count();
-        $todayRevenue = Sale::whereDate('sale_date', today())->sum('total_amount');
+            'totalStock' => Medicine::sum('quantity'),
 
-        return view('admin.dashboard', compact(
-            'totalProducts',
-            'totalStock',
-            'totalSuppliers',
-            'lowStockMedicines',
-            'lowStockCount',
-            'expiringMedicines',
-            'expiringCount',
-            'todaySalesCount',
-            'todayRevenue',
-        ));
+
+            'lowStockCount' =>
+                Medicine::whereColumn(
+                    'quantity',
+                    '<=',
+                    'reorder_level'
+                )->count(),
+
+
+            'expiredCount' =>
+                Medicine::whereDate(
+                    'expiry_date',
+                    '<',
+                    today()
+                )->count(),
+
+
+
+            'pendingPurchaseOrders' =>
+                PurchaseOrder::where(
+                    'status',
+                    'pending'
+                )->count(),
+
+
+
+            'totalUsers' =>
+                User::count(),
+
+
+
+
+            // Today's sales
+
+            'todayRevenue' =>
+                Sale::whereDate(
+                    'sale_date',
+                    today()
+                )->sum('total_amount'),
+
+
+
+            'todaySalesCount' =>
+                Sale::whereDate(
+                    'sale_date',
+                    today()
+                )->count(),
+
+
+
+
+
+            // Purchase vs Sales
+
+            'purchaseVsSales' => [
+
+                'totalPurchases' =>
+                    PurchaseOrder::sum('total_amount'),
+
+
+                'totalSales' =>
+                    Sale::sum('total_amount'),
+
+
+                'purchaseCount' =>
+                    PurchaseOrder::count(),
+
+
+                'salesCount' =>
+                    Sale::count(),
+
+            ],
+
+
+
+
+            // Inventory chart
+
+            'inventoryStatus' => [
+
+                'inStock' =>
+                    Medicine::where(
+                        'quantity',
+                        '>',
+                        0
+                    )->count(),
+
+
+                'lowStock' =>
+                    Medicine::whereColumn(
+                        'quantity',
+                        '<=',
+                        'reorder_level'
+                    )->count(),
+
+
+
+                'outOfStock' =>
+                    Medicine::where(
+                        'quantity',
+                        0
+                    )->count(),
+
+
+
+                'expired' =>
+                    Medicine::whereDate(
+                        'expiry_date',
+                        '<',
+                        today()
+                    )->count(),
+
+            ],
+
+
+
+
+
+            // Low stock list
+
+            'lowStockMedicines' =>
+
+                Medicine::whereColumn(
+                    'quantity',
+                    '<=',
+                    'reorder_level'
+                )
+                ->with('category')
+                ->limit(5)
+                ->get(),
+
+
+
+
+
+
+            // Expiry
+
+            'expiringSoon' => [
+
+                '30_days' =>
+                    Medicine::whereBetween(
+                        'expiry_date',
+                        [
+                            today(),
+                            today()->addDays(30)
+                        ]
+                    )->get(),
+
+
+                '60_days' =>
+                    Medicine::whereBetween(
+                        'expiry_date',
+                        [
+                            today(),
+                            today()->addDays(60)
+                        ]
+                    )->get(),
+
+
+                '90_days' =>
+                    Medicine::whereBetween(
+                        'expiry_date',
+                        [
+                            today(),
+                            today()->addDays(90)
+                        ]
+                    )->get(),
+
+            ],
+
+
+
+
+            // Activity
+
+            'recentActivities' => [
+
+                [
+                    'id'=>1,
+                    'action'=>'Dashboard loaded',
+                    'user'=>auth()->user()->name,
+                    'icon'=>'activity',
+                    'date'=>now()->format('Y-m-d'),
+                    'time'=>now()->format('H:i')
+                ]
+
+            ],
+
+
+
+
+            // Sales chart
+
+            'salesAnalytics'=>[
+
+                'daily'=>[],
+
+                'weekly'=>[],
+
+                'monthly'=>[]
+
+            ],
+
+
+        ];
+
     }
+
+
+
+
 
     private function pharmacistDashboard()
     {
-        $totalProducts = Medicine::count();
-        $totalStock = Medicine::sum('quantity');
+        return [
+            'totalMedicines'=>Medicine::count(),
+            'totalStock'=>Medicine::sum('quantity'),
 
-        $lowStockMedicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
-            ->orderBy('quantity')
-            ->get();
-        $lowStockCount = $lowStockMedicines->count();
-
-        $expiringMedicines = Medicine::whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [today(), today()->addDays(90)])
-            ->orderBy('expiry_date')
-            ->get();
-        $expiringCount = $expiringMedicines->count();
-
-        return view('pharmacist.dashboard', compact(
-            'totalProducts',
-            'totalStock',
-            'lowStockMedicines',
-            'lowStockCount',
-            'expiringMedicines',
-            'expiringCount',
-        ));
+            'lowStockCount'=>
+                Medicine::whereColumn(
+                    'quantity',
+                    '<=',
+                    'reorder_level'
+                )->count()
+        ];
     }
+
+
+
+
 
     private function cashierDashboard()
     {
-        $todaySalesCount = Sale::whereDate('sale_date', today())->count();
-        $todayRevenue = Sale::whereDate('sale_date', today())->sum('total_amount');
-        $totalProducts = Medicine::count();
-        $recentSales = Sale::latest()->take(5)->get();
+        return [
 
-        return view('cashier.dashboard', compact(
-            'todaySalesCount',
-            'todayRevenue',
-            'totalProducts',
-            'recentSales',
-        ));
+            'todayRevenue'=>
+                Sale::whereDate(
+                    'sale_date',
+                    today()
+                )->sum('total_amount'),
+
+
+            'todaySalesCount'=>
+                Sale::whereDate(
+                    'sale_date',
+                    today()
+                )->count(),
+
+        ];
     }
 }

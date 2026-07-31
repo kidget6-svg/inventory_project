@@ -14,10 +14,12 @@ class Medicine extends Model
         'generic_name',
         'batch_number',
         'category_id',
+        'supplier_id',
         'quantity',
         'unit_price',
         'reorder_level',
         'expiry_date',
+        'image',
     ];
 
     protected $casts = [
@@ -27,6 +29,11 @@ class Medicine extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     public function purchaseOrderItems()

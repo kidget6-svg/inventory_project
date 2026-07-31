@@ -27,6 +27,15 @@ class PurchaseOrder extends Model
         return ['pending', 'approved', 'processing', 'completed', 'cancelled'];
     }
 
+    /**
+     * Always expose status as lowercase so checks are reliable
+     * even if existing DB values have different casing.
+     */
+    public function getStatusAttribute($value): string
+    {
+        return is_string($value) ? strtolower($value) : $value;
+    }
+
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
