@@ -9,8 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('medicines', function (Blueprint $table) {
-            if (! Schema::hasColumn('medicines', 'category_id')) {
-                $table->unsignedBigInteger('category_id')->nullable()->after('batch_number');
+            if (! Schema::hasColumn('medicines', 'supplier_id')) {
+                $table->unsignedBigInteger('supplier_id')->nullable()->after('category_id');
+                $table->foreign('supplier_id')->references('id')->on('suppliers')->nullOnDelete();
             }
         });
     }
@@ -18,8 +19,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('medicines', function (Blueprint $table) {
-            if (Schema::hasColumn('medicines', 'category_id')) {
-                $table->dropColumn('category_id');
+            if (Schema::hasColumn('medicines', 'supplier_id')) {
+                $table->dropForeign(['supplier_id']);
+                $table->dropColumn('supplier_id');
             }
         });
     }

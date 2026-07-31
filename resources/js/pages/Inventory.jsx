@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import SidebarLayout from '../components/SidebarLayout';
 import { Package, AlertTriangle, TrendingDown, Calendar, History, RefreshCw, Search, Filter, X, Save, Tag } from 'lucide-react';
 
 const TABS = [
@@ -186,7 +185,7 @@ export default function Inventory() {
     if (loading) return <LoadingSpinner text="Loading inventory..." />;
 
     return (
-        <SidebarLayout pageTitle="Inventory">
+        <>
             {/* Filters */}
             <div className="mb-6">
                 <div className="flex flex-col md:flex-row gap-4">
@@ -490,6 +489,6 @@ export default function Inventory() {
                     </div>
                 </div>
             )}
-        </SidebarLayout>
+        </>
     );
 }

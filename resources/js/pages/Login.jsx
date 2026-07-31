@@ -29,6 +29,7 @@ export default function Login() {
     };
 
     return (
+<<<<<<< HEAD
         <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-cyan-100 flex items-center justify-center px-4">
 
             <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden grid lg:grid-cols-2">
@@ -79,14 +80,64 @@ export default function Login() {
                                 Login to your account
                             </p>
 
+=======
+        <div className="min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 to-white flex items-center justify-center px-4 py-8">
+            <div className="w-full max-w-md">
+                <div className="bg-white rounded-2xl shadow-xl p-8">
+                    {/* Logo */}
+                    <div className="text-center mb-8">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                            <Pill size={32} className="text-blue-600" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome Back</h2>
+                        <p className="text-gray-500 mt-1.5 text-sm">Sign in to your account</p>
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 border border-red-100">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                            <div className="relative">
+                                <Mail className="absolute left-3.5 top-3.5 text-gray-400" size={18} />
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={form.email}
+                                    onChange={handleChange}
+                                    className="input-field pl-11"
+                                    placeholder="you@example.com"
+                                    required
+                                />
+                            </div>
+>>>>>>> b5b4dd71dff8a8a3ca4a27d244782027fdec4668
                         </div>
 
-                        {error && (
-                            <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-                                {error}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                            <div className="relative">
+                                <Lock className="absolute left-3.5 top-3.5 text-gray-400" size={18} />
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    value={form.password}
+                                    onChange={handleChange}
+                                    className="input-field pl-11 pr-11"
+                                    placeholder="Enter your password"
+                                    required
+                                />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600">
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
                             </div>
-                        )}
+                        </div>
 
+<<<<<<< HEAD
                         <form onSubmit={handleSubmit} className="space-y-6">
 
                             {/* Email */}
@@ -182,11 +233,25 @@ export default function Login() {
                          </form>
 
                      </div>
+=======
+                        <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+                            {loading ? (
+                                <><Loader2 size={18} className="animate-spin" /> Signing In...</>
+                            ) : (
+                                'Sign In'
+                            )}
+                        </button>
+                    </form>
+>>>>>>> b5b4dd71dff8a8a3ca4a27d244782027fdec4668
 
+                    <p className="text-center text-sm text-gray-500 mt-6">
+                        Don't have an account?{' '}
+                        <Link to="/register" className="text-blue-600 font-semibold hover:text-blue-700 transition-colors">
+                            Register here
+                        </Link>
+                    </p>
                 </div>
-
             </div>
-
         </div>
     );
 }

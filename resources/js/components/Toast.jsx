@@ -13,45 +13,32 @@ export default function Toast({ message, type = 'success', duration = 4000, onCl
     }, [duration, onClose]);
 
     const icons = {
-        success: <CheckCircle size={20} className="text-green-500" />,
+        success: <CheckCircle size={20} className="text-emerald-500" />,
         error: <AlertCircle size={20} className="text-red-500" />,
-        info: <Info size={20} className="text-blue-500" />,
+        info: <Info size={20} className="text-sky-500" />,
     };
 
-    const bgColors = {
-        success: 'bg-green-50 border-green-200',
-        error: 'bg-red-50 border-red-200',
-        info: 'bg-blue-50 border-blue-200',
+    const styles = {
+        success: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-800' },
+        error: { bg: 'bg-red-50 border-red-200', text: 'text-red-800' },
+        info: { bg: 'bg-sky-50 border-sky-200', text: 'text-sky-800' },
     };
 
-    const textColors = {
-        success: 'text-green-800',
-        error: 'text-red-800',
-        info: 'text-blue-800',
-    };
+    const s = styles[type] || styles.success;
 
     return (
-        <div
-            className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg transition-all duration-300 ${bgColors[type]} ${textColors[type]} ${
-                visible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
-            }`}
-        >
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg transition-all duration-300 ${s.bg} ${s.text} ${
+            visible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        }`}>
             {icons[type]}
             <span className="text-sm font-medium">{message}</span>
-            <button
-                onClick={() => {
-                    setVisible(false);
-                    setTimeout(() => onClose && onClose(), 300);
-                }}
-                className="ml-2 hover:opacity-70 transition-opacity"
-            >
+            <button onClick={() => { setVisible(false); setTimeout(() => onClose && onClose(), 300); }} className="ml-2 hover:opacity-70 transition-opacity">
                 <X size={16} />
             </button>
         </div>
     );
 }
 
-// Toast container for managing multiple toasts
 export function ToastContainer() {
     const [toasts, setToasts] = useState([]);
 
@@ -60,25 +47,14 @@ export function ToastContainer() {
         setToasts(prev => [...prev, { id, message, type, duration }]);
     };
 
-    const removeToast = (id) => {
-        setToasts(prev => prev.filter(t => t.id !== id));
-    };
+    const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
 
-    // Expose globally
-    useEffect(() => {
-        window.showToast = addToast;
-    }, []);
+    useEffect(() => { window.showToast = addToast; }, []);
 
     return (
         <>
             {toasts.map(toast => (
-                <Toast
-                    key={toast.id}
-                    message={toast.message}
-                    type={toast.type}
-                    duration={toast.duration}
-                    onClose={() => removeToast(toast.id)}
-                />
+                <Toast key={toast.id} message={toast.message} type={toast.type} duration={toast.duration} onClose={() => removeToast(toast.id)} />
             ))}
         </>
     );

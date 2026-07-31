@@ -7,16 +7,12 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up(): void
-
-
-{
-    Schema::table('suppliers', function (Blueprint $table) {
-        //
-    });
-
-        // Schema::table('suppliers', function (Blueprint $table) {
-        //     $table->string('contact_person')->nullable()->after('name');
-        
+    {
+        Schema::table('suppliers', function (Blueprint $table) {
+            if (! Schema::hasColumn('suppliers', 'contact_person')) {
+                $table->string('contact_person')->nullable()->after('name');
+            }
+        });
     }
 
     public function down(): void

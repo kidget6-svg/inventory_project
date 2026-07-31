@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import api from '../axios';
+import { Link } from 'react-router-dom';
 import StatCard from '../components/StatCard';
 import BarChart from '../components/BarChart';
 import PieChart from '../components/PieChart';
 import LoadingSpinner from '../components/LoadingSpinner';
-import SidebarLayout from '../components/SidebarLayout';
 import { CheckCircle, XCircle, UserCheck, Clock, Trash2, AlertTriangle, Calendar } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -18,15 +17,17 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         api.get('/dashboard')
-            .then(r => {
-                setData(r.data);
+            .then(response => {
+                setData(response.data);
                 setError('');
             })
-            .catch(err => {
+            .catch(error => {
+                console.error(error);
                 setError('Failed to load dashboard data');
-                console.error(err);
             })
-            .finally(() => setLoading(false));
+            .finally(() => {
+                setLoading(false);
+            });
     }, []);
 
     // Fetch pending users for approval
@@ -119,54 +120,52 @@ export default function AdminDashboard() {
         'bg-purple-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
     ];
 
-    if (loading) return <SidebarLayout><LoadingSpinner text="Loading dashboard..." /></SidebarLayout>;
-
-    if (error) return <SidebarLayout><div className="text-center py-12 text-red-500">{error}</div></SidebarLayout>;
+    if (loading) return <LoadingSpinner text="Loading dashboard..." />;
 
     return (
-        <SidebarLayout pageTitle="Admin Dashboard">
+        <div className="space-y-6">
             {/* ── Summary Cards ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                <StatCard value={data.totalProducts} label="Total Medicines" color="blue" />
-                <StatCard value={data.totalStock} label="Total Stock Units" color="green" />
-                <StatCard value={data.lowStockCount} label="Low Stock" color="red" />
-                <StatCard value={data.expiredCount} label="Expired Medicines" color="orange" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <StatCard value={data?.totalProducts} label="Total Medicines" color="blue" />
+                <StatCard value={data?.totalStock} label="Total Stock Units" color="green" />
+                <StatCard value={data?.lowStockCount} label="Low Stock" color="red" />
+                <StatCard value={data?.expiredCount} label="Expired Medicines" color="orange" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                <StatCard value={data.todaySalesCount} label="Today's Sales" color="green" />
-                <StatCard value={`$${Number(data.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="blue" />
-                <StatCard value={`$${Number(data.totalRevenue || 0).toFixed(2)}`} label="Total Revenue" color="purple" />
-                <StatCard value={data.totalSuppliers} label="Suppliers" color="orange" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <StatCard value={data?.todaySalesCount} label="Today's Sales" color="green" />
+                <StatCard value={`$${Number(data?.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="blue" />
+                <StatCard value={`$${Number(data?.totalRevenue || 0).toFixed(2)}`} label="Total Revenue" color="purple" />
+                <StatCard value={data?.totalSuppliers} label="Suppliers" color="orange" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                <StatCard value={data.totalUsers} label="Total Users" color="indigo" />
-                <StatCard value={data.pharmacistCount} label="Pharmacists" color="green" />
-                <StatCard value={data.cashierCount} label="Cashiers" color="orange" />
-                <StatCard value={data.pendingUsersCount} label="Pending Approvals" color="yellow" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <StatCard value={data?.totalUsers} label="Total Users" color="indigo" />
+                <StatCard value={data?.pharmacistCount} label="Pharmacists" color="green" />
+                <StatCard value={data?.cashierCount} label="Cashiers" color="orange" />
+                <StatCard value={data?.pendingUsersCount} label="Pending Approvals" color="yellow" />
             </div>
 
             {/* ── Charts: Sales & Revenue ───────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <BarChart
                     title="Sales (Last 7 Days)"
-                    labels={data.salesChartData?.labels || []}
-                    values={data.salesChartData?.counts || []}
+                    labels={data?.salesChartData?.labels || []}
+                    values={data?.salesChartData?.counts || []}
                     color="green"
                     valueSuffix=" sales"
                 />
                 <BarChart
                     title="Revenue (Last 7 Days)"
-                    labels={data.salesChartData?.labels || []}
-                    values={data.salesChartData?.revenue || []}
+                    labels={data?.salesChartData?.labels || []}
+                    values={data?.salesChartData?.revenue || []}
                     color="blue"
                     currency={true}
                 />
             </div>
 
             {/* ── Inventory Status Chart ────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <PieChart
                     title="Inventory by Category"
                     labels={inventoryLabels}
@@ -183,14 +182,14 @@ export default function AdminDashboard() {
             </div>
 
             {/* ── Notifications ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Low Stock Notifications */}
                 <div className="bg-white rounded-xl p-5 shadow-sm">
                     <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
                         <AlertTriangle size={18} className="text-red-500" />
-                        Low Stock Alerts ({data.lowStockCount})
+                        Low Stock Alerts ({data?.lowStockCount})
                     </h3>
-                    {data.lowStockMedicines?.length > 0 ? (
+                    {data?.lowStockMedicines?.length > 0 ? (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                             {data.lowStockMedicines.map(m => (
                                 <div key={m.id} className="flex justify-between items-center p-3 bg-red-50 border-l-3 border-red-400 rounded-md">
@@ -212,11 +211,11 @@ export default function AdminDashboard() {
 
                 {/* Expired Medicines Notifications */}
                 <div className="bg-white rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-orange-50 flex items-center gap-2">
                         <AlertTriangle size={18} className="text-orange-500" />
-                        Expired Medicines ({data.expiredCount})
+                        Expired Medicines ({data?.expiredCount})
                     </h3>
-                    {data.expiredMedicines?.length > 0 ? (
+                    {data?.expiredMedicines?.length > 0 ? (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                             {data.expiredMedicines.map(m => (
                                 <div key={m.id} className="flex justify-between items-center p-3 bg-orange-50 border-l-3 border-orange-400 rounded-md">
@@ -224,7 +223,7 @@ export default function AdminDashboard() {
                                         <div className="font-semibold text-sm">{m.name}</div>
                                         <div className="text-xs text-gray-400">Batch: {m.batch_number || '---'}</div>
                                     </div>
-                                    <span className="bg-orange-100 text-orange-600 text-xs font-semibold px-2.5 py-1 rounded-full">Expired: {m.expiry_date}</span>
+                                    <span className="bg-orange-100 text-orange-600 text-xs font-semibold px-2.5 py-1 rounded-full">Expired: {new Date(m.expiry_date).toLocaleDateString()}</span>
                                 </div>
                             ))}
                         </div>
@@ -235,11 +234,11 @@ export default function AdminDashboard() {
             </div>
 
             {/* Expiring Soon (within 90 days) */}
-            {data.expiringMedicines?.length > 0 && (
-                <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
-                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
+            {data?.expiringMedicines?.length > 0 && (
+                <div className="bg-white rounded-xl p-5 shadow-sm">
+                    <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-yellow-50 flex items-center gap-2">
                         <Calendar size={18} className="text-yellow-500" />
-                        Expiring Within 90 Days ({data.expiringCount})
+                        Expiring Within 90 Days ({data?.expiringCount})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {data.expiringMedicines.map(m => (
@@ -248,7 +247,7 @@ export default function AdminDashboard() {
                                     <div className="font-semibold text-sm">{m.name}</div>
                                     <div className="text-xs text-gray-400">Batch: {m.batch_number || '---'}</div>
                                 </div>
-                                <span className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-2.5 py-1 rounded-full">Expires: {m.expiry_date}</span>
+                                <span className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-2.5 py-1 rounded-full">Expires: {new Date(m.expiry_date).toLocaleDateString()}</span>
                             </div>
                         ))}
                     </div>
@@ -256,12 +255,12 @@ export default function AdminDashboard() {
             )}
 
             {/* ── Recent Activities ─────────────────────────────────────── */}
-            <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
+            <div className="bg-white rounded-xl p-5 shadow-sm">
                 <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
                     <Clock size={18} className="text-blue-500" />
                     Recent Activities
                 </h3>
-                {data.recentActivities?.length > 0 ? (
+                {data?.recentActivities?.length > 0 ? (
                     <div className="space-y-3">
                         {data.recentActivities.map((activity, i) => (
                             <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -406,6 +405,6 @@ export default function AdminDashboard() {
                     </div>
                 )}
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

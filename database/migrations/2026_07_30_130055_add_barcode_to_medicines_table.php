@@ -6,21 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::table('medicines', function (Blueprint $table) {
-            if (! Schema::hasColumn('medicines', 'category_id')) {
-                $table->unsignedBigInteger('category_id')->nullable()->after('batch_number');
-            }
+            $table->string('barcode', 100)->nullable()->unique()->after('batch_number');
         });
     }
 
     public function down(): void
     {
         Schema::table('medicines', function (Blueprint $table) {
-            if (Schema::hasColumn('medicines', 'category_id')) {
-                $table->dropColumn('category_id');
-            }
+            $table->dropColumn('barcode');
         });
     }
 };

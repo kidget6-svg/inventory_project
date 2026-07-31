@@ -15,17 +15,15 @@ export default function PieChart({ title, labels = [], values = [], colors = [] 
     const segments = [];
     let cumulative = 0;
     const colorPalette = [
-        'bg-blue-500', 'bg-green-500', 'bg-orange-400', 'bg-red-400',
-        'bg-purple-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
-        'bg-amber-500', 'bg-cyan-500',
+        'bg-sky-500', 'bg-emerald-500', 'bg-amber-400', 'bg-red-400',
+        'bg-purple-500', 'bg-cyan-500', 'bg-pink-500', 'bg-teal-500',
+        'bg-sky-400', 'bg-emerald-400',
     ];
 
     labels.forEach((label, i) => {
         const pct = total > 0 ? (Number(values[i]) / total) * 100 : 0;
         cumulative += pct;
         const color = colors[i] || colorPalette[i % colorPalette.length];
-        // Extract the hex/tailwind color — we'll use a data attribute approach
-        // For simplicity, use inline style with a predefined color map
         const colorHex = tailwindToHex(color);
         segments.push(`${colorHex} 0% ${pct === 0 ? 0 : cumulative - pct}%`);
     });
@@ -84,20 +82,17 @@ export default function PieChart({ title, labels = [], values = [], colors = [] 
 // Map common Tailwind bg colors to hex for conic-gradient
 const tailwindToHex = (cls) => {
     const map = {
-        'bg-blue-500': '#3b82f6',
+        'bg-sky-500': '#0ea5e9', 'bg-sky-400': '#38bdf8',
+        'bg-indigo-500': '#6366f1', 'bg-emerald-500': '#22c55e',
+        'bg-amber-400': '#fbbf24', 'bg-red-400': '#f87171',
+        'bg-purple-500': '#a855f7', 'bg-cyan-500': '#06b6d4',
+        'bg-pink-500': '#ec4899', 'bg-teal-500': '#14b8a3',
+        'bg-emerald-400': '#4ade80',
         'bg-green-500': '#22c55e',
-        'bg-orange-400': '#fb9225',
-        'bg-red-400': '#f87171',
-        'bg-purple-500': '#a855f7',
-        'bg-indigo-500': '#6366f1',
-        'bg-pink-500': '#ec4899',
-        'bg-teal-500': '#14b8a3',
-        'bg-amber-500': '#f59e0b',
-        'bg-cyan-500': '#06b6d4',
-        'bg-blue-400': '#60a5fa',
-        'bg-green-400': '#4ade80',
-        'bg-red-500': '#ef4444',
+        'bg-orange-400': '#fb9225', 'bg-red-500': '#ef4444',
         'bg-orange-500': '#f97316',
+        'bg-blue-500': '#3b82f6',
+        'bg-amber-500': '#f59e0b',
     };
-    return map[cls] || '#9ca3af';
+    return map[cls] || '#94a3b8';
 };

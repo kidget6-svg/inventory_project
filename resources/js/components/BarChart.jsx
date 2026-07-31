@@ -22,21 +22,20 @@ export default function BarChart({
     currency = false,
 }) {
     const colorMap = {
-        blue:   'bg-blue-500 hover:bg-blue-600',
-        green:  'bg-green-500 hover:bg-green-600',
-        orange: 'bg-orange-400 hover:bg-orange-500',
-        red:    'bg-red-400 hover:bg-red-500',
+        sky: 'bg-sky-500 hover:bg-sky-600',
+        indigo: 'bg-sky-500 hover:bg-sky-600',
+        blue: 'bg-sky-500 hover:bg-sky-600',
+        green: 'bg-emerald-500 hover:bg-emerald-600',
+        orange: 'bg-amber-400 hover:bg-amber-500',
+        red: 'bg-red-400 hover:bg-red-500',
         purple: 'bg-purple-500 hover:bg-purple-600',
-        indigo: 'bg-indigo-500 hover:bg-indigo-600',
     };
-    const barColor = colorMap[color] || colorMap.blue;
+    const barColor = colorMap[color] || colorMap.sky;
 
     const maxValue = Math.max(...values, 1);
 
     const formatValue = (val) => {
-        if (currency) {
-            return `$${Number(val).toFixed(2)}`;
-        }
+        if (currency) return `$${Number(val).toFixed(2)}`;
         return `${valuePrefix}${Number(val)}${valueSuffix}`;
     };
 
@@ -56,7 +55,7 @@ export default function BarChart({
                                     style={{ height: `${height}%`, minHeight: values[i] > 0 ? '4px' : '0' }}
                                 >
                                     {/* Tooltip */}
-                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
+                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap shadow-lg">
                                         {formatValue(values[i])}
                                     </div>
                                 </div>
@@ -70,7 +69,7 @@ export default function BarChart({
             <div className="flex justify-between gap-2 mt-3">
                 {labels.map((label, i) => (
                     <div key={i} className="flex-1 text-center">
-                        <span className="text-xs text-gray-500 truncate block">{label}</span>
+                        <span className="text-xs text-gray-500 truncate block font-medium">{label}</span>
                     </div>
                 ))}
             </div>

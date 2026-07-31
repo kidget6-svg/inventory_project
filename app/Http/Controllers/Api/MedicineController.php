@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
-use App\Models\Category;
-use App\Models\Supplier;
 use Illuminate\Http\Request;
 
 class MedicineController extends Controller
