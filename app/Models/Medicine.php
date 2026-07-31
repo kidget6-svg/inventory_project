@@ -28,8 +28,10 @@ class Medicine extends Model
         'name',
         'generic_name',
         'batch_number',
+        'barcode',
         'category_id',
         'supplier_id',
+        'shelf_id',
         'quantity',
         'unit_price',
         'purchase_price',
@@ -48,6 +50,11 @@ class Medicine extends Model
         'selling_price' => 'decimal:2',
     ];
 
+    public function shelf()
+    {
+        return $this->belongsTo(Shelf::class);
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -61,6 +68,11 @@ class Medicine extends Model
     public function purchaseOrderItems()
     {
         return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function saleItems()
+    {
+        return $this->hasMany(SaleItem::class);
     }
 
     public function getStatusBadgeClass(): string

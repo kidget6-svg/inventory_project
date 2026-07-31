@@ -129,7 +129,7 @@ const tabs = [
     { key: 'expiring', label: 'Expiring' },
 ];
 
-    
+
 
     return (
         <SidebarLayout pageTitle="Reports">

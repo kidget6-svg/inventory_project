@@ -5,10 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Medicine;
 use App\Models\Sale;
 use App\Models\Supplier;
+use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(): JsonResponse
     {
         $user = auth()->user();
 
@@ -23,7 +24,7 @@ class DashboardController extends Controller
         return $this->cashierDashboard();
     }
 
-    private function adminDashboard()
+    private function adminDashboard(): JsonResponse
     {
         $totalProducts = Medicine::count();
         $totalStock = Medicine::sum('quantity');
@@ -32,31 +33,30 @@ class DashboardController extends Controller
         $lowStockMedicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
             ->orderBy('quantity')
             ->get();
-        $lowStockCount = $lowStockMedicines->count();
 
         $expiringMedicines = Medicine::whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [today(), today()->addDays(90)])
             ->orderBy('expiry_date')
             ->get();
-        $expiringCount = $expiringMedicines->count();
 
         $todaySalesCount = Sale::whereDate('sale_date', today())->count();
         $todayRevenue = Sale::whereDate('sale_date', today())->sum('total_amount');
 
-        return view('admin.dashboard', compact(
-            'totalProducts',
-            'totalStock',
-            'totalSuppliers',
-            'lowStockMedicines',
-            'lowStockCount',
-            'expiringMedicines',
-            'expiringCount',
-            'todaySalesCount',
-            'todayRevenue',
-        ));
+        return response()->json([
+            'role' => 'admin',
+            'totalProducts' => $totalProducts,
+            'totalStock' => $totalStock,
+            'totalSuppliers' => $totalSuppliers,
+            'lowStockMedicines' => $lowStockMedicines,
+            'lowStockCount' => $lowStockMedicines->count(),
+            'expiringMedicines' => $expiringMedicines,
+            'expiringCount' => $expiringMedicines->count(),
+            'todaySalesCount' => $todaySalesCount,
+            'todayRevenue' => $todayRevenue,
+        ]);
     }
 
-    private function pharmacistDashboard()
+    private function pharmacistDashboard(): JsonResponse
     {
         $totalProducts = Medicine::count();
         $totalStock = Medicine::sum('quantity');
@@ -64,36 +64,39 @@ class DashboardController extends Controller
         $lowStockMedicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
             ->orderBy('quantity')
             ->get();
-        $lowStockCount = $lowStockMedicines->count();
 
         $expiringMedicines = Medicine::whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [today(), today()->addDays(90)])
             ->orderBy('expiry_date')
             ->get();
-        $expiringCount = $expiringMedicines->count();
 
-        return view('pharmacist.dashboard', compact(
-            'totalProducts',
-            'totalStock',
-            'lowStockMedicines',
-            'lowStockCount',
-            'expiringMedicines',
-            'expiringCount',
-        ));
+        return response()->json([
+            'role' => 'pharmacist',
+            'totalProducts' => $totalProducts,
+            'totalStock' => $totalStock,
+            'lowStockMedicines' => $lowStockMedicines,
+            'lowStockCount' => $lowStockMedicines->count(),
+            'expiringMedicines' => $expiringMedicines,
+            'expiringCount' => $expiringMedicines->count(),
+        ]);
     }
 
-    private function cashierDashboard()
+    private function cashierDashboard(): JsonResponse
     {
         $todaySalesCount = Sale::whereDate('sale_date', today())->count();
         $todayRevenue = Sale::whereDate('sale_date', today())->sum('total_amount');
         $totalProducts = Medicine::count();
-        $recentSales = Sale::latest()->take(5)->get();
 
-        return view('cashier.dashboard', compact(
-            'todaySalesCount',
-            'todayRevenue',
-            'totalProducts',
-            'recentSales',
-        ));
+        $recentSales = Sale::latest()
+            ->take(5)
+            ->get();
+
+        return response()->json([
+            'role' => 'cashier',
+            'todaySalesCount' => $todaySalesCount,
+            'todayRevenue' => $todayRevenue,
+            'totalProducts' => $totalProducts,
+            'recentSales' => $recentSales,
+        ]);
     }
 }

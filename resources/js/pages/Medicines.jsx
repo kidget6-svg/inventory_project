@@ -28,6 +28,7 @@ export default function Medicines() {
         name: '',
         generic_name: '',
         batch_number: '',
+        barcode: '',
         category_id: '',
         supplier_id: '',
         quantity: '',
@@ -114,6 +115,7 @@ export default function Medicines() {
             name: '',
             generic_name: '',
             batch_number: '',
+            barcode: '',
             category_id: '',
             supplier_id: '',
             quantity: '',
@@ -134,6 +136,7 @@ export default function Medicines() {
             name: m.name || '',
             generic_name: m.generic_name || '',
             batch_number: m.batch_number || '',
+            barcode: m.barcode || '',
             category_id: m.category_id || '',
             supplier_id: m.supplier_id || '',
             quantity: m.quantity || '',
@@ -215,7 +218,7 @@ export default function Medicines() {
                         <input
                             type="text"
                             name="search"
-                            placeholder="Search by medicine name, generic name, or batch number..."
+                            placeholder="Search by medicine name, generic name, batch number, or barcode..."
                             value={filters.search}
                             onChange={handleSearchChange}
                             className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
@@ -353,6 +356,19 @@ export default function Medicines() {
                                 value={form.batch_number}
                                 onChange={handleChange}
                                 placeholder="e.g. BATCH-001"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                            />
+                        </div>
+
+                        {/* Barcode */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
+                            <input
+                                type="text"
+                                name="barcode"
+                                value={form.barcode}
+                                onChange={handleChange}
+                                placeholder="e.g. 123456789012"
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
                             />
                         </div>
@@ -549,6 +565,7 @@ export default function Medicines() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Generic Name</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Category</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Batch Number</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Barcode</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Supplier</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Purchase Price</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Selling Price</th>
@@ -566,6 +583,7 @@ export default function Medicines() {
                                             <td className="px-4 py-3 text-sm text-gray-500">{m.generic_name || '---'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">{m.category?.name || 'No Category'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">{m.batch_number || '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.barcode || '---'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">{m.supplier?.name || 'No Supplier'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">
                                                 {m.purchase_price ? `$${Number(m.purchase_price).toFixed(2)}` : '---'}
@@ -609,7 +627,7 @@ export default function Medicines() {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="11" className="px-4 py-8 text-center text-gray-400">
+                                        <td colSpan="12" className="px-4 py-8 text-center text-gray-400">
                                             No medicines found
                                             {isFiltered && (
                                                 <button
@@ -657,6 +675,10 @@ export default function Medicines() {
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Batch Number</label>
                                 <p className="text-sm text-gray-600">{viewMedicine.batch_number || '---'}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Barcode</label>
+                                <p className="text-sm text-gray-600">{viewMedicine.barcode || '---'}</p>
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label>

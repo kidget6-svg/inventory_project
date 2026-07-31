@@ -10,6 +10,8 @@ class Sale extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
+        'customer_id',
         'sale_date',
         'total_amount',
     ];
@@ -17,5 +19,15 @@ class Sale extends Model
     public function items()
     {
         return $this->hasMany(SaleItem::class);
+    }
+
+    public function saleItems()
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

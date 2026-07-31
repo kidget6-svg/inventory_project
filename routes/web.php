@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\SupplierController;
@@ -11,12 +10,15 @@ use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\ShelfController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\DashboardController;
 
 // ============================================
 // PUBLIC AUTH ROUTES
 // ============================================
 
+Route::get('/reports/today-sales', [ReportController::class, 'todaySales']);
 Route::get('/csrf-token', function () {
     return response()->json(['token' => csrf_token()]);
 });
@@ -73,6 +75,16 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // Reports (admin + pharmacist)
     Route::middleware('role:admin,pharmacist')->group(function () {
         Route::get('/reports', [ReportController::class, 'index']);
+        Route::get('/reports/shelves/by-medicine-count', [ReportController::class, 'shelvesByMedicineCount']);
+        Route::get('/reports/medicines-sold-by-shelf', [ReportController::class, 'medicinesSoldByShelf']);
+        Route::get('/reports/shelf-revenue', [ReportController::class, 'shelfRevenue']);
+        Route::get('/reports/medicines-not-sold-this-week', [ReportController::class, 'medicinesNotSoldThisWeek']);
+        Route::get('/reports/shelves/low-stock', [ReportController::class, 'shelvesWithLowStock']);
+    });
+
+    // Shelves (admin + pharmacist)
+    Route::middleware('role:admin,pharmacist')->group(function () {
+        Route::get('/shelves', [ShelfController::class, 'index']);
     });
 
     // Medicines (admin + pharmacist)
