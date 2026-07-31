@@ -18,6 +18,14 @@ class Supplier extends Model
     ];
 
     /**
+     * A supplier can supply many medicines.
+     */
+    public function medicines()
+    {
+        return $this->hasMany(Medicine::class);
+    }
+
+    /**
      * A supplier can have many purchase orders.
      */
     public function purchaseOrders()

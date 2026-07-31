@@ -62,19 +62,19 @@ export default function Categories() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-700">All Categories ({categories.length})</h3>
-                <button onClick={openCreate} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600">+ Add Category</button>
+                <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm">+ Add Category</button>
             </div>
 
             {showForm && (
-                <div className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="card p-5">
                     <h4 className="font-semibold text-gray-700 mb-3">{editId ? 'Edit Category' : 'Add Category'}</h4>
                     {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-3 text-sm">{error}</div>}
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label><input name="name" value={form.name} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none" required /></div>
-                        <div><label className="block text-xs font-semibold text-gray-600 mb-1">Description</label><input name="description" value={form.description} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none" /></div>
+                        <div><label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label><input name="name" value={form.name} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required /></div>
+                        <div><label className="block text-xs font-semibold text-gray-600 mb-1">Description</label><input name="description" value={form.description} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" /></div>
                         <div className="md:col-span-2 flex justify-end gap-3">
-                            <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button>
-                            <button type="submit" className="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600">{editId ? 'Update' : 'Create'}</button>
+                            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+                            <button type="submit" className="btn-primary">{editId ? 'Update' : 'Create'}</button>
                         </div>
                     </form>
                 </div>
@@ -83,25 +83,25 @@ export default function Categories() {
             {loading ? (
                 <LoadingSpinner text="Loading categories..." />
             ) : (
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="card overflow-hidden">
                     <table className="w-full">
                         <thead>
-                            <tr className="bg-blue-50">
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Name</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">Description</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700">Actions</th>
+                            <tr className="bg-sky-50">
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Name</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Description</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {categories.map(c => (
-                                <tr key={c.id} className="border-b border-gray-50 hover:bg-blue-50/30">
+                                <tr key={c.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                     <td className="px-4 py-3 text-sm font-medium">{c.name}</td>
                                     <td className="px-4 py-3 text-sm text-gray-500">{c.description || '---'}</td>
                                     <td className="px-4 py-3 text-sm">
                                         <div className="flex justify-end gap-2">
                                             <button
                                                 onClick={() => openEdit(c)}
-                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
                                                 title="Edit"
                                             >
                                                 <Edit size={16} />

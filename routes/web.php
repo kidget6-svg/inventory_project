@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MedicineController;
@@ -14,375 +13,94 @@ use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
 
-
-
-/*
-|--------------------------------------------------------------------------
-| CSRF TOKEN
-|--------------------------------------------------------------------------
-*/
+// ============================================
+// PUBLIC AUTH ROUTES
+// ============================================
 
 Route::get('/csrf-token', function () {
+    return response()->json(['token' => csrf_token()]);
+});
+Route::post('/register', [AuthController::class, 'register']);
 
-    return response()->json([
-        'token' => csrf_token()
-    ]);
+Route::post('/login', [AuthController::class, 'login']);
 
+// ============================================
+// PUBLIC REGISTRATION (Pharmacist & Cashier only)
+// ============================================
+// Public self-registration. Only pharmacists and cashiers may
+// self-register. Admin accounts cannot be self-registered.
+// New accounts are created with a "pending" status and must be
+// approved by an admin before they can log in.
+
+
+// ============================================
+// PROTECTED ROUTES
+// ============================================
+
+Route::middleware(['auth', 'approved'])->group(function () {
+
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', [AuthController::class, 'user']);
+
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    // User Management (admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
+        Route::put('/users/{user}', [UserController::class, 'update']);
+        Route::delete('/users/{user}', [UserController::class, 'destroy']);
+        Route::post('/users/{user}/approve', [UserController::class, 'approve']);
+        Route::post('/users/{user}/reject', [UserController::class, 'reject']);
+    });
+
+    // Categories (admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::apiResource('categories', CategoryController::class);
+    });
+
+    // Suppliers (admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::apiResource('suppliers', SupplierController::class);
+    });
+
+    // Purchase Orders (admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::apiResource('purchase-orders', PurchaseOrderController::class);
+    });
+
+    // Reports (admin + pharmacist)
+    Route::middleware('role:admin,pharmacist')->group(function () {
+        Route::get('/reports', [ReportController::class, 'index']);
+    });
+
+    // Medicines (admin + pharmacist)
+    Route::middleware('role:admin,pharmacist')->group(function () {
+        Route::apiResource('medicines', MedicineController::class);
+    });
+
+    // Stock Movements (admin + pharmacist)
+    Route::middleware('role:admin,pharmacist')->group(function () {
+        Route::get('/stock-movements', [StockMovementController::class, 'index']);
+        Route::post('/stock-movements', [StockMovementController::class, 'store']);
+    });
+
+    // Low Stock (admin + pharmacist)
+    Route::middleware('role:admin,pharmacist')->group(function () {
+        Route::get('/low-stock', [LowStockController::class, 'index']);
+    });
+
+    // Sales (admin + cashier)
+    Route::middleware('role:admin,cashier')->group(function () {
+        Route::apiResource('sales', SaleController::class);
+    });
 });
 
-
-
-/*
-|--------------------------------------------------------------------------
-| AUTH
-|--------------------------------------------------------------------------
-*/
-
-
-Route::post('/login', [
-    AuthController::class,
-    'login'
-]);
-
-
-
-
-Route::middleware('auth')->group(function () {
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | USER AUTH
-    |--------------------------------------------------------------------------
-    */
-
-    Route::post('/logout', [
-        AuthController::class,
-        'logout'
-    ]);
-
-
-    Route::get('/user', [
-        AuthController::class,
-        'user'
-    ]);
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | DASHBOARD
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get('/dashboard', [
-        DashboardController::class,
-        'index'
-    ]);
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | USERS (ADMIN ONLY)
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:admin')->group(function(){
-
-
-        Route::post('/register', [
-            AuthController::class,
-            'register'
-        ]);
-
-
-        Route::apiResource(
-            'users',
-            UserController::class
-        );
-
-
-    });
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CATEGORIES
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:admin')->group(function(){
-
-
-        Route::apiResource(
-            'categories',
-            CategoryController::class
-        );
-
-
-    });
-
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SUPPLIERS
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:admin')->group(function(){
-
-
-        Route::apiResource(
-            'suppliers',
-            SupplierController::class
-        );
-
-
-    });
-
-
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | PURCHASE ORDERS
-    |--------------------------------------------------------------------------
-    */
-
-
-    Route::middleware('role:admin')->group(function(){
-
-
-
-        Route::apiResource(
-            'purchase-orders',
-            PurchaseOrderController::class
-        );
-
-
-
-        Route::post(
-            'purchase-orders/{purchaseOrder}/approve',
-            [
-                PurchaseOrderController::class,
-                'approve'
-            ]
-        );
-
-
-        Route::post(
-            'purchase-orders/{purchaseOrder}/process',
-            [
-                PurchaseOrderController::class,
-                'process'
-            ]
-        );
-
-
-        Route::post(
-            'purchase-orders/{purchaseOrder}/complete',
-            [
-                PurchaseOrderController::class,
-                'complete'
-            ]
-        );
-
-
-        Route::post(
-            'purchase-orders/{purchaseOrder}/cancel',
-            [
-                PurchaseOrderController::class,
-                'cancel'
-            ]
-        );
-
-
-    });
-
-
-
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | MEDICINES
-    |--------------------------------------------------------------------------
-    */
-
-
-    Route::middleware('role:admin,pharmacist')->group(function(){
-
-
-        Route::apiResource(
-            'medicines',
-            MedicineController::class
-        );
-
-
-    });
-
-
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | STOCK MOVEMENTS
-    |--------------------------------------------------------------------------
-    */
-
-
-    Route::middleware('role:admin,pharmacist')->group(function(){
-
-
-        Route::apiResource(
-            'stock-movements',
-            StockMovementController::class
-        );
-
-
-    });
-
-
-
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LOW STOCK
-    |--------------------------------------------------------------------------
-    */
-
-
-    Route::middleware('role:admin,pharmacist')->group(function(){
-
-
-        Route::get(
-            '/low-stock',
-            [
-                LowStockController::class,
-                'index'
-            ]
-        );
-
-
-    });
-
-
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SALES
-    |--------------------------------------------------------------------------
-    */
-
-
-    Route::middleware('role:admin,cashier')->group(function(){
-
-
-        Route::apiResource(
-            'sales',
-            SaleController::class
-        );
-
-
-    });
-
-
-
-
-
-
-
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | REPORTS
-    |--------------------------------------------------------------------------
-    */
-
-
-    Route::middleware('role:admin,pharmacist')->group(function(){
-
-
-        Route::get(
-            '/reports',
-            [
-                ReportController::class,
-                'index'
-            ]
-        );
-
-
-    });
-
-
-
-});
-
-
-
-
-
-
-
-/*
-|--------------------------------------------------------------------------
-| REACT FRONTEND
-|--------------------------------------------------------------------------
-| Keep this LAST
-|--------------------------------------------------------------------------
-*/
-
-
-Route::get('/{any}', function(){
-
+// ============================================
+// CATCH-ALL: Serve React App (must be last)
+// ============================================
+
+Route::get('/{any}', function () {
     return view('app');
-
-})->where('any','.*');
+})->where('any', '.*');

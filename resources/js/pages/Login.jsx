@@ -29,167 +29,78 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-cyan-100 flex items-center justify-center px-4">
-
-            <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden grid lg:grid-cols-2">
-
-                {/* LEFT SIDE */}
-                <div className="hidden lg:flex flex-col justify-center items-center bg-gradient-to-br from-blue-600 to-cyan-600 text-white p-12">
-
-                    <div className="bg-white/20 p-6 rounded-full">
-                        <Pill size={70} />
+        <div className="min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 to-white flex items-center justify-center px-4 py-8">
+            <div className="w-full max-w-md">
+                <div className="bg-white rounded-2xl shadow-xl p-8">
+                    {/* Logo */}
+                    <div className="text-center mb-8">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                            <Pill size={32} className="text-blue-600" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome Back</h2>
+                        <p className="text-gray-500 mt-1.5 text-sm">Sign in to your account</p>
                     </div>
 
-                    <h1 className="text-4xl font-bold mt-8">
-                        Pharmacy Inventory
-                    </h1>
+                    {error && (
+                        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 border border-red-100">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                            {error}
+                        </div>
+                    )}
 
-                    <p className="mt-5 text-blue-100 text-center leading-relaxed">
-                        Manage medicines, suppliers, purchases,
-                        sales and inventory with a secure,
-                        fast and modern dashboard.
-                    </p>
-
-                    <img
-                        src="/images/pharmacy.svg"
-                        alt="Pharmacy"
-                        className="w-80 mt-10"
-                    />
-
-                </div>
-
-                {/* RIGHT SIDE */}
-                <div className="p-8 md:p-12 flex items-center">
-
-                    <div className="w-full">
-
-                        <div className="text-center mb-8">
-
-                            <div className="inline-flex bg-blue-100 p-4 rounded-full">
-
-                                <Pill
-                                    className="text-blue-600"
-                                    size={35}
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                            <div className="relative">
+                                <Mail className="absolute left-3.5 top-3.5 text-gray-400" size={18} />
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={form.email}
+                                    onChange={handleChange}
+                                    className="input-field pl-11"
+                                    placeholder="you@example.com"
+                                    required
                                 />
-
                             </div>
-
-                            <h2 className="text-3xl font-bold mt-4">
-                                Welcome Back
-                            </h2>
-
-                            <p className="text-gray-500 mt-2">
-                                Login to your account
-                            </p>
-
                         </div>
 
-                        {error && (
-                            <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-                                {error}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                            <div className="relative">
+                                <Lock className="absolute left-3.5 top-3.5 text-gray-400" size={18} />
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    value={form.password}
+                                    onChange={handleChange}
+                                    className="input-field pl-11 pr-11"
+                                    placeholder="Enter your password"
+                                    required
+                                />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600">
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
                             </div>
-                        )}
+                        </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+                            {loading ? (
+                                <><Loader2 size={18} className="animate-spin" /> Signing In...</>
+                            ) : (
+                                'Sign In'
+                            )}
+                        </button>
+                    </form>
 
-                            {/* Email */}
-
-                            <div>
-
-                                <label className="block text-sm font-medium mb-2">
-                                    Email Address
-                                </label>
-
-                                <div className="relative">
-
-                                    <Mail
-                                        className="absolute left-4 top-3.5 text-gray-400"
-                                        size={18}
-                                    />
-
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={form.email}
-                                        onChange={handleChange}
-                                        className="w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                        placeholder="Enter email"
-                                        required
-                                    />
-
-                                </div>
-
-                            </div>
-
-                            {/* Password */}
-
-                            <div>
-
-                                <label className="block text-sm font-medium mb-2">
-                                    Password
-                                </label>
-
-                                <div className="relative">
-
-                                    <Lock
-                                        className="absolute left-4 top-3.5 text-gray-400"
-                                        size={18}
-                                    />
-
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        name="password"
-                                        value={form.password}
-                                        onChange={handleChange}
-                                        className="w-full pl-12 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                        placeholder="Enter password"
-                                        required
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-3"
-                                    >
-                                        {showPassword ? (
-                                            <EyeOff size={20} />
-                                        ) : (
-                                            <Eye size={20} />
-                                        )}
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                            {/* Button */}
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition flex justify-center items-center gap-2 disabled:opacity-60"
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2
-                                            size={18}
-                                            className="animate-spin"
-                                        />
-                                        Signing In...
-                                    </>
-                                ) : (
-                                    "Sign In"
-                                )}
-                            </button>
-
-                        </form>
-
-                    </div>
-
+                    <p className="text-center text-sm text-gray-500 mt-6">
+                        Don't have an account?{' '}
+                        <Link to="/register" className="text-blue-600 font-semibold hover:text-blue-700 transition-colors">
+                            Register here
+                        </Link>
+                    </p>
                 </div>
-
             </div>
-
         </div>
     );
 }

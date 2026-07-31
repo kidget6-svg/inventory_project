@@ -144,7 +144,7 @@ export default function Suppliers() {
                             placeholder="Search suppliers..."
                             value={search}
                             onChange={(e)=>setSearch(e.target.value)}
-                            className="w-full pl-10 pr-10 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full pl-10 pr-10 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none"
                         />
 
 
@@ -165,7 +165,7 @@ export default function Suppliers() {
 
                     <button
                         onClick={openCreate}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600"
+                        className="btn-primary px-4 py-2 text-sm"
                     >
                         + Add Supplier
                     </button>
@@ -181,7 +181,7 @@ export default function Suppliers() {
 
             {showForm && (
 
-                <div className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="card p-5">
 
                     <h4 className="font-semibold text-gray-700 mb-3">
                         {editId ? 'Edit Supplier' : 'Add Supplier'}
@@ -223,7 +223,7 @@ export default function Suppliers() {
                                     name={name}
                                     value={form[name]}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none"
+                                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-100 outline-none"
                                 />
 
                             </div>
@@ -245,7 +245,7 @@ export default function Suppliers() {
 
                             <button
                                 type="submit"
-                                className="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm"
+                                className="px-5 py-2 bg-sky-500 text-white rounded-lg text-sm"
                             >
                                 {editId ? 'Update' : 'Create'}
                             </button>
@@ -265,7 +265,7 @@ export default function Suppliers() {
 
 
 
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="card overflow-hidden">
 
 
                 <table className="w-full">
@@ -273,25 +273,25 @@ export default function Suppliers() {
 
                     <thead>
 
-                        <tr className="bg-blue-50">
+                        <tr className="bg-sky-50">
 
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
                                 Name
                             </th>
 
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
                                 Contact
                             </th>
 
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
                                 Phone
                             </th>
 
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
                                 Email
                             </th>
 
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700">
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">
                                 Actions
                             </th>
 
@@ -311,7 +311,7 @@ export default function Suppliers() {
 
                             <tr
                                 key={s.id}
-                                className="border-b hover:bg-blue-50/30"
+                                className="border-b hover:bg-sky-50/30"
                             >
 
                                 <td className="px-4 py-3 text-sm font-medium">
@@ -338,7 +338,7 @@ export default function Suppliers() {
 
                                         <button
                                             onClick={()=>openEdit(s)}
-                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                                            className="p-1.5 text-sky-600 hover:bg-sky-50 rounded"
                                         >
                                             <Edit size={16}/>
                                         </button>
