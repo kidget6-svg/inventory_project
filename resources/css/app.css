@@ -5,7 +5,7 @@
 @layer base {
     body {
         @apply font-sans antialiased text-gray-800;
-        background: #f0f7ff;
+        background: #f8fafc;
         margin: 0;
         padding: 0;
     }
@@ -13,7 +13,7 @@
 
 @layer components {
     .btn-primary {
-        @apply bg-sky-500 hover:bg-sky-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm hover:shadow-md active:scale-[0.98];
+        @apply bg-sky-500 hover:bg-sky-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-[0.98];
     }
 
     .btn-secondary {
@@ -25,11 +25,11 @@
     }
 
     .card {
-        @apply bg-white rounded-2xl shadow-sm border border-sky-100/80;
+        @apply bg-white rounded-2xl shadow-sm border border-gray-200;
     }
 
     .card-header {
-        @apply text-base font-semibold text-gray-800 mb-4 pb-3 border-b border-sky-100;
+        @apply text-base font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-200;
     }
 
     .input-field {
@@ -44,8 +44,12 @@
         @apply px-2.5 py-1 rounded-full text-xs font-semibold;
     }
 
+    .badge-blue {
+        @apply badge bg-sky-100 text-sky-700;
+    }
+
     .badge-green {
-        @apply badge bg-emerald-100 text-emerald-700;
+        @apply badge bg-sky-100 text-sky-700;
     }
 
     .badge-red {
@@ -53,15 +57,11 @@
     }
 
     .badge-yellow {
-        @apply badge bg-amber-100 text-amber-700;
+        @apply badge bg-sky-100 text-sky-700;
     }
 
     .badge-gray {
         @apply badge bg-gray-100 text-gray-600;
-    }
-
-    .badge-blue {
-        @apply badge bg-sky-100 text-sky-700;
     }
 
     .table-header {

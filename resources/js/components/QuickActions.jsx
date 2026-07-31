@@ -26,28 +26,28 @@ const adminActions = [
         label: 'Purchase Order',
         description: 'Order new stock',
         icon: ShoppingCart,
-        color: 'orange',
+        color: 'blue',
     },
     {
         to: '/sales',
         label: 'Create Sale',
         description: 'Process customer sale',
         icon: Package,
-        color: 'green',
+        color: 'blue',
     },
     {
         to: '/users',
         label: 'Manage Users',
         description: 'User permissions',
         icon: Users,
-        color: 'purple',
+        color: 'blue',
     },
     {
         to: '/reports',
         label: 'Reports',
         description: 'View analytics',
         icon: BarChart3,
-        color: 'teal',
+        color: 'blue',
     },
 ];
 
@@ -65,21 +65,21 @@ const pharmacistActions = [
         label: 'Stock Movement',
         description: 'Track stock',
         icon: Warehouse,
-        color: 'cyan',
+        color: 'blue',
     },
     {
         to: '/low-stock',
         label: 'Low Stock',
         description: 'Check alerts',
         icon: AlertTriangle,
-        color: 'orange',
+        color: 'blue',
     },
     {
         to: '/reports',
         label: 'Reports',
         description: 'Inventory reports',
         icon: BarChart3,
-        color: 'teal',
+        color: 'blue',
     },
 ];
 
@@ -90,7 +90,7 @@ const cashierActions = [
         label: 'New Sale',
         description: 'Sell medicine',
         icon: Plus,
-        color: 'green',
+        color: 'blue',
     },
     {
         to: '/medicines',
@@ -104,7 +104,7 @@ const cashierActions = [
         label: 'Reports',
         description: 'Sales reports',
         icon: BarChart3,
-        color: 'teal',
+        color: 'blue',
     },
 ];
 
@@ -120,39 +120,39 @@ const actionsByRole = {
 const colors = {
 
     blue: {
-        bg: 'bg-blue-50',
-        icon: 'bg-blue-100 text-blue-600',
-        hover: 'hover:border-blue-300',
+        bg: 'bg-sky-50',
+        icon: 'bg-sky-100 text-sky-600',
+        hover: 'hover:border-sky-300',
     },
 
     orange: {
-        bg: 'bg-orange-50',
-        icon: 'bg-orange-100 text-orange-600',
-        hover: 'hover:border-orange-300',
+        bg: 'bg-sky-50',
+        icon: 'bg-sky-100 text-sky-600',
+        hover: 'hover:border-sky-300',
     },
 
     green: {
-        bg: 'bg-green-50',
-        icon: 'bg-green-100 text-green-600',
-        hover: 'hover:border-green-300',
+        bg: 'bg-sky-50',
+        icon: 'bg-sky-100 text-sky-600',
+        hover: 'hover:border-sky-300',
     },
 
     purple: {
-        bg: 'bg-purple-50',
-        icon: 'bg-purple-100 text-purple-600',
-        hover: 'hover:border-purple-300',
+        bg: 'bg-sky-50',
+        icon: 'bg-sky-100 text-sky-600',
+        hover: 'hover:border-sky-300',
     },
 
     teal: {
-        bg: 'bg-teal-50',
-        icon: 'bg-teal-100 text-teal-600',
-        hover: 'hover:border-teal-300',
+        bg: 'bg-sky-50',
+        icon: 'bg-sky-100 text-sky-600',
+        hover: 'hover:border-sky-300',
     },
 
     cyan: {
-        bg: 'bg-cyan-50',
-        icon: 'bg-cyan-100 text-cyan-600',
-        hover: 'hover:border-cyan-300',
+        bg: 'bg-sky-50',
+        icon: 'bg-sky-100 text-sky-600',
+        hover: 'hover:border-sky-300',
     },
 
 };
@@ -174,7 +174,7 @@ export default function QuickActions({
         <div className="
             bg-white
             rounded-2xl
-            shadow-lg
+            shadow-sm
             border
             border-gray-200
             p-6
@@ -213,7 +213,6 @@ export default function QuickActions({
 
 
             </div>
-
 
 
 

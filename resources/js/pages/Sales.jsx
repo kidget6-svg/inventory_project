@@ -175,7 +175,7 @@ export default function Sales() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-700">
-                    All Sales ({sales.length}) | Total Revenue: <span className="text-green-600">${totalRevenue.toFixed(2)}</span>
+                    All Sales ({sales.length}) | Total Revenue: <span className="text-blue-500">${totalRevenue.toFixed(2)}</span>
                 </h3>
                 <button onClick={openCreate} className="btn-primary flex items-center gap-2"><Plus size={16} /> New Sale</button>
             </div>
@@ -251,7 +251,7 @@ export default function Sales() {
                                 {saleItems.length > 0 && (
                                     <tr className="bg-gray-50">
                                         <td colSpan="3" className="px-4 py-3 text-sm font-bold text-gray-700 text-right">Total:</td>
-                                        <td className="px-4 py-3 text-sm font-bold text-right text-green-600">${totalAmount.toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-sm font-bold text-right text-blue-500">${totalAmount.toFixed(2)}</td>
                                         <td></td>
                                     </tr>
                                 )}
@@ -285,7 +285,7 @@ export default function Sales() {
                                 <td className="px-4 py-3 text-sm font-medium">#{s.id}</td>
                                 <td className="px-4 py-3 text-sm">{s.sale_date}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{s.items_count || '---'}</td>
-                                <td className="px-4 py-3 text-sm font-semibold text-green-600 text-right">${Number(s.total_amount).toFixed(2)}</td>
+                                <td className="px-4 py-3 text-sm font-semibold text-blue-500 text-right">${Number(s.total_amount).toFixed(2)}</td>
                                 <td className="px-4 py-3 text-sm text-right">
                                     <button onClick={() => handleDelete(s.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
                                 </td>

@@ -117,10 +117,10 @@ export default function Inventory() {
 
     const getStatusBadge = (status) => {
         const config = {
-            active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' },
+            active: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Active' },
             inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' },
             expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' },
-            discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' },
+            discontinued: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Discontinued' },
         };
         const cfg = config[status] || config.active;
         return (
@@ -267,8 +267,8 @@ export default function Inventory() {
                         </div>
                         <div className="card p-5">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-100 rounded-lg">
-                                    <TrendingDown className="w-6 h-6 text-green-600" />
+                                <div className="p-2 bg-sky-100 rounded-lg">
+                                    <TrendingDown className="w-6 h-6 text-sky-600" />
                                 </div>
                                 <div>
                                     <p className="text-2xl font-bold text-gray-800">{medicines.reduce((sum, m) => sum + m.quantity, 0)}</p>
@@ -278,8 +278,8 @@ export default function Inventory() {
                         </div>
                         <div className="card p-5">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-orange-100 rounded-lg">
-                                    <AlertTriangle className="w-6 h-6 text-orange-600" />
+                                <div className="p-2 bg-sky-100 rounded-lg">
+                                    <AlertTriangle className="w-6 h-6 text-sky-600" />
                                 </div>
                                 <div>
                                     <p className="text-2xl font-bold text-gray-800">{lowStockMedicines.length}</p>
@@ -312,7 +312,7 @@ export default function Inventory() {
                             <h3 className="text-sm font-semibold text-gray-600 mb-3">Low Stock Alert</h3>
                             <div className="space-y-2">
                                 {lowStockMedicines.slice(0, 5).map(m => (
-                                    <div key={m.id} className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                                    <div key={m.id} className="flex justify-between items-center p-3 bg-sky-50 rounded-lg">
                                         <div>
                                             <p className="text-sm font-medium">{m.name}</p>
                                             <p className="text-xs text-gray-500">Qty: {m.quantity} / Reorder: {m.reorder_level}</p>
@@ -344,7 +344,7 @@ export default function Inventory() {
                                                 </p>
                                             </div>
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                daysLeft <= 30 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                                daysLeft <= 30 ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700'
                                             }`}>
                                                 {daysLeft <= 30 ? 'Urgent' : 'Soon'}
                                             </span>
@@ -393,7 +393,7 @@ export default function Inventory() {
                                         <td className="px-4 py-3 text-sm font-medium">{m.medicine?.name || 'Unknown'}</td>
                                         <td className="px-4 py-3 text-sm">
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                m.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-sky-100 text-sky-700'
+                                                m.type === 'in' ? 'bg-sky-100 text-sky-700' : 'bg-sky-100 text-sky-700'
                                             }`}>
                                                 {m.type === 'in' ? 'Stock In' : 'Stock Out'}
                                             </span>

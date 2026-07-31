@@ -34,7 +34,7 @@ export default function LowStock() {
                                     {m.quantity === 0 ? (
                                         <span className="px-2 py-1 bg-red-100 text-red-600 rounded-full text-xs font-semibold">Out of Stock</span>
                                     ) : (
-                                        <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded-full text-xs font-semibold">Low Stock</span>
+                                        <span className="px-2 py-1 bg-sky-100 text-sky-700 rounded-full text-xs font-semibold">Low Stock</span>
                                     )}
                                 </td>
                             </tr>

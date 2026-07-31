@@ -154,7 +154,7 @@ export default function Medicines() {
     useEffect(() => { return () => stopBarcodeScan(); }, []);
 
     const getStatusBadge = (status) => {
-        const config = { active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' }, inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' }, expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }, discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' } };
+        const config = { active: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Active' }, inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' }, expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }, discontinued: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Discontinued' } };
         const cfg = config[status] || config.active;
         return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>;
     };
@@ -323,14 +323,22 @@ export default function Medicines() {
             {loading ? <LoadingSpinner text="Loading medicines..." /> : (
                 <div className="card overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1200px]">
+                        <table className="w-full table-fixed">
+                            <colgroup>
+                                <col className="w-[22%]" />
+                                <col className="w-[11%]" />
+                                <col className="w-[14%]" />
+                                <col className="w-[6%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[13%]" />
+                            </colgroup>
                             <thead>
                                 <tr className="bg-sky-50 border-b border-sky-100">
                                     <th className="table-header">Medicine Name</th>
-                                    <th className="table-header">Generic Name</th>
                                     <th className="table-header">Category</th>
                                     <th className="table-header">Barcode</th>
-                                    <th className="table-header">Batch #</th>
                                     <th className="table-header">Qty</th>
                                     <th className="table-header">Selling Price</th>
                                     <th className="table-header">Expiry Date</th>
@@ -341,11 +349,9 @@ export default function Medicines() {
                             <tbody>
                                 {medicines.length > 0 ? medicines.map(m => (
                                     <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30 transition-colors">
-                                        <td className="px-4 py-3 text-sm font-medium text-gray-800">{m.name}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.generic_name || '---'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.category?.name || 'No Category'}</td>
-                                        <td className="px-4 py-3 text-sm font-mono text-gray-500">{m.barcode || '---'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.batch_number || '---'}</td>
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-800 truncate">{m.name}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || 'No Category'}</td>
+                                        <td className="px-4 py-3 text-sm font-mono text-gray-500 truncate">{m.barcode || '---'}</td>
                                         <td className="px-4 py-3 text-sm text-gray-900 font-medium">{m.quantity}</td>
                                         <td className="px-4 py-3 text-sm text-gray-500">{m.selling_price ? `$${Number(m.selling_price).toFixed(2)}` : '---'}</td>
                                         <td className="px-4 py-3 text-sm text-gray-500">{m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}</td>
@@ -359,7 +365,7 @@ export default function Medicines() {
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-400">
+                                    <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">
                                         No medicines found{isFiltered && <button onClick={resetFilters} className="ml-2 text-sky-600 hover:underline text-sm font-medium">Clear filters</button>}
                                     </td></tr>
                                 )}

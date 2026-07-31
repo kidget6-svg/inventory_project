@@ -1,6 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
-import { Edit, Trash2 } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Pencil, Trash2 } from 'lucide-react';
+
+const ActionIcon = ({ icon: Icon, tooltip, color = "sky", onClick, disabled = false }) => {
+    const colorClasses = {
+        sky: "text-sky-600 hover:bg-sky-50",
+        green: "text-green-600 hover:bg-green-50",
+        red: "text-red-600 hover:bg-red-50",
+    };
+    return (
+        <button
+            type="button"
+            title={disabled ? "Not implemented yet" : tooltip}
+            onClick={disabled ? undefined : onClick}
+            disabled={disabled}
+            className={`p-1.5 rounded transition-colors ${colorClasses[color]} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+        >
+            <Icon size={18} />
+        </button>
+    );
+};
+
 
 export default function PurchaseOrders() {
 
@@ -217,13 +237,13 @@ export default function PurchaseOrders() {
             'bg-sky-100 text-sky-700',
 
             approved:
-            'bg-purple-100 text-purple-700',
+            'bg-sky-100 text-sky-700',
 
             processing:
-            'bg-yellow-100 text-yellow-700',
+            'bg-sky-100 text-sky-700',
 
             completed:
-            'bg-green-100 text-green-700',
+            'bg-sky-100 text-sky-700',
 
             cancelled:
             'bg-red-100 text-red-700'
@@ -548,96 +568,48 @@ Actions
 
             <td className="px-4 py-3">
 
-                <div className="flex justify-end gap-2 flex-wrap">
+                <div className="flex justify-end gap-1">
 
+                    {/* View Details — always available (blue) */}
+                    <ActionIcon
+                        icon={Eye}
+                        tooltip="View Details"
+                        color="sky"
+                    />
 
-                    {/* Pending → Approve */}
-
-                    {status === "pending" && (
-
-                        <button
-                            onClick={() =>
-                                handleAction(o.id,"approve")
-                            }
-                            className="px-2 py-1 bg-sky-500 text-white rounded text-xs"
-                        >
-                            Approve
-                        </button>
-
+                    {/* Approve / Complete — pending, approved, processing (green) */}
+                    {["pending", "approved", "processing"].includes(status) && (
+                        <ActionIcon
+                            icon={CheckCircle}
+                            tooltip={status === "pending" ? "Approve" : "Complete"}
+                            color="green"
+                        />
                     )}
 
-
-
-                    {/* Approved → Process */}
-
-                    {status === "approved" && (
-
-                        <button
-                            onClick={() =>
-                                handleAction(o.id,"process")
-                            }
-                            className="px-2 py-1 bg-yellow-500 text-white rounded text-xs"
-                        >
-                            Process
-                        </button>
-
+                    {/* Cancel — pending, approved, processing (red) */}
+                    {["pending", "approved", "processing"].includes(status) && (
+                        <ActionIcon
+                            icon={XCircle}
+                            tooltip="Cancel"
+                            color="red"
+                        />
                     )}
 
-
-
-
-                    {/* Approved/Processing → Complete */}
-
-                    {["approved","processing"].includes(status) && (
-
-                        <button
-                            onClick={() =>
-                                handleAction(o.id,"complete")
-                            }
-                            className="px-2 py-1 bg-green-500 text-white rounded text-xs"
-                        >
-                            Complete
-                        </button>
-
-                    )}
-
-
-
-
-                    {/* Cancel */}
-
-                    {["pending","approved","processing"].includes(status) && (
-
-                        <button
-                            onClick={() =>
-                                handleAction(o.id,"cancel")
-                            }
-                            className="px-2 py-1 bg-red-500 text-white rounded text-xs"
-                        >
-                            Cancel
-                        </button>
-
-                    )}
-
-
-
-
-                    <button
+                    {/* Edit — always available (blue) */}
+                    <ActionIcon
+                        icon={Pencil}
+                        tooltip="Edit"
+                        color="sky"
                         onClick={() => openEdit(o)}
-                        className="p-1.5 text-sky-600 hover:bg-sky-50 rounded"
-                    >
-                        <Edit size={16}/>
-                    </button>
+                    />
 
-
-
-                    <button
+                    {/* Delete — always available (red) */}
+                    <ActionIcon
+                        icon={Trash2}
+                        tooltip="Delete"
+                        color="red"
                         onClick={() => handleDelete(o.id)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                    >
-                        <Trash2 size={16}/>
-                    </button>
-
+                    />
 
                 </div>
 

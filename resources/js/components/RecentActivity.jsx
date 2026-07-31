@@ -16,10 +16,10 @@ const iconMap = {
 };
 
 const iconColors = {
-    'shopping-cart': 'bg-green-100 text-green-600',
-    package: 'bg-orange-100 text-orange-600',
-    pill: 'bg-blue-100 text-blue-600',
-    activity: 'bg-purple-100 text-purple-600',
+    'shopping-cart': 'bg-sky-100 text-sky-600',
+    package: 'bg-sky-100 text-sky-600',
+    pill: 'bg-sky-100 text-sky-600',
+    activity: 'bg-sky-100 text-sky-600',
 };
 
 export default function RecentActivity({
@@ -95,7 +95,7 @@ export default function RecentActivity({
 
                 const color =
                     iconColors[activity.icon] ||
-                    'bg-gray-100 text-gray-600';
+                    'bg-sky-100 text-sky-600';
 
                 return (
 
@@ -114,8 +114,8 @@ export default function RecentActivity({
                             transition-all
                             duration-300
                             hover:-translate-y-1
-                            hover:shadow-lg
-                            hover:border-blue-200
+                            hover:shadow-md
+                            hover:border-sky-200
                             group
                         "
                     >
@@ -183,8 +183,8 @@ export default function RecentActivity({
                                     px-3
                                     py-1
                                     rounded-full
-                                    bg-blue-50
-                                    text-blue-600
+                                    bg-sky-50
+                                    text-sky-600
                                     text-xs
                                     font-semibold
                                 "

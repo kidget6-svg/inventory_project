@@ -31,46 +31,46 @@ const iconMap = {
 
 const colorClasses = {
     blue: {
-        bg: 'bg-blue-50',
+        bg: 'bg-sky-50',
         border: 'border-blue-500',
-        text: 'text-blue-600',
+        text: 'text-blue-500',
         icon: 'text-blue-500',
         ring: 'ring-blue-200',
     },
     green: {
-        bg: 'bg-green-50',
-        border: 'border-green-500',
-        text: 'text-green-600',
-        icon: 'text-green-500',
-        ring: 'ring-green-200',
+        bg: 'bg-sky-50',
+        border: 'border-blue-500',
+        text: 'text-blue-500',
+        icon: 'text-blue-500',
+        ring: 'ring-blue-200',
     },
     orange: {
-        bg: 'bg-orange-50',
-        border: 'border-orange-500',
-        text: 'text-orange-600',
-        icon: 'text-orange-500',
-        ring: 'ring-orange-200',
+        bg: 'bg-sky-50',
+        border: 'border-blue-500',
+        text: 'text-blue-500',
+        icon: 'text-blue-500',
+        ring: 'ring-blue-200',
     },
     red: {
-        bg: 'bg-red-50',
-        border: 'border-red-500',
-        text: 'text-red-600',
-        icon: 'text-red-500',
-        ring: 'ring-red-200',
+        bg: 'bg-sky-50',
+        border: 'border-blue-500',
+        text: 'text-blue-500',
+        icon: 'text-blue-500',
+        ring: 'ring-blue-200',
     },
     purple: {
-        bg: 'bg-purple-50',
-        border: 'border-purple-500',
-        text: 'text-purple-600',
-        icon: 'text-purple-500',
-        ring: 'ring-purple-200',
+        bg: 'bg-sky-50',
+        border: 'border-blue-500',
+        text: 'text-blue-500',
+        icon: 'text-blue-500',
+        ring: 'ring-blue-200',
     },
     teal: {
-        bg: 'bg-teal-50',
-        border: 'border-teal-500',
-        text: 'text-teal-600',
-        icon: 'text-teal-500',
-        ring: 'ring-teal-200',
+        bg: 'bg-sky-50',
+        border: 'border-blue-500',
+        text: 'text-blue-500',
+        icon: 'text-blue-500',
+        ring: 'ring-blue-200',
     },
 };
 
@@ -90,17 +90,12 @@ return (
     className={`
        relative overflow-hidden rounded-2xl
        border border-gray-200
-      
-        bg-white
-        shadow-lg
-        shadow-gray-200/50
-        hover:shadow-lg
-        transition-all duration-300
-        hover:-translate-y-2
-        hover:shadow-xl
-        hover:shadow-blue-100
-        group
-    `}
+       bg-white
+       shadow-sm
+       hover:shadow-md
+       transition-all duration-300
+       group
+   `}
 >
         {/* Colored top bar */}
        <div className={`absolute top-0 left-0 right-0 h-1 ${colors.border.replace('border','bg')}`}></div>
@@ -137,8 +132,8 @@ return (
         h-16 w-16
         rounded-2xl
         flex items-center justify-center
-        bg-gray-100/50
-        hover:ring-2 hover:ring-blue-100
+        bg-sky-50
+        hover:ring-2 hover:ring-sky-200
         group-hover:rotate-12
         group-hover:scale-110
         transition-all duration-300
@@ -158,21 +153,17 @@ return (
                     {trend.direction === 'up' ? (
                         <TrendingUp
                             size={16}
-                            className="text-green-600"
+                            className="text-sky-500"
                         />
                     ) : (
                         <TrendingDown
                             size={16}
-                            className="text-red-600"
+                            className="text-sky-500"
                         />
                     )}
 
                     <span
-                        className={`ml-2 text-sm font-semibold ${
-                            trend.direction === 'up'
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                        }`}
+                        className={`ml-2 text-sm font-semibold text-sky-600`}
                     >
                         {trend.value}
                     </span>

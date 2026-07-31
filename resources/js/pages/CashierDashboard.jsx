@@ -65,7 +65,7 @@ export default function CashierDashboard() {
                     </h3>
                     <Link
                         to="/sales"
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                        className="text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors"
                     >
                         View All
                     </Link>
@@ -95,7 +95,7 @@ export default function CashierDashboard() {
                                 {data.recentSales.map((sale) => (
                                     <tr
                                         key={sale.id}
-                                        className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors"
+                                        className="border-b border-gray-50 hover:bg-sky-50/30 transition-colors"
                                     >
                                         <td className="px-4 py-3 text-sm font-medium text-gray-800">
                                             #{sale.id}
@@ -103,7 +103,7 @@ export default function CashierDashboard() {
                                         <td className="px-4 py-3 text-sm text-gray-600">
                                             {sale.sale_date}
                                         </td>
-                                        <td className="px-4 py-3 text-sm font-semibold text-green-600 text-right">
+                                        <td className="px-4 py-3 text-sm font-semibold text-blue-500 text-right">
                                             ${Number(sale.total_amount).toFixed(2)}
                                         </td>
                                     </tr>

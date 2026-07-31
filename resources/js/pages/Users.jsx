@@ -405,13 +405,13 @@ export default function Users(){
         const styles={
 
             admin:
-            "bg-blue-100 text-blue-700",
+            "bg-sky-100 text-sky-700",
 
             pharmacist:
-            "bg-green-100 text-green-700",
+            "bg-sky-100 text-sky-700",
 
             cashier:
-            "bg-orange-100 text-orange-700"
+            "bg-sky-100 text-sky-700"
 
         };
 
@@ -534,13 +534,14 @@ className="
 flex
 items-center
 gap-2
-bg-blue-600
-hover:bg-blue-700
+bg-blue-500
+hover:bg-blue-600
 text-white
 px-5
 py-3
 rounded-xl
-shadow
+shadow-md
+hover:shadow-lg
 transition
 "
 
@@ -608,7 +609,7 @@ Total Users
 <h2 className="
 text-3xl
 font-bold
-text-blue-600
+text-blue-500
 mt-2
 ">
 
@@ -663,7 +664,7 @@ Admins
 <h2 className="
 text-3xl
 font-bold
-text-indigo-600
+text-blue-500
 mt-2
 ">
 
@@ -675,7 +676,7 @@ mt-2
 
 
 <ShieldCheck
-className="text-indigo-500"
+className="text-blue-500"
 size={35}
 />
 
@@ -719,7 +720,7 @@ Pharmacists
 <h2 className="
 text-3xl
 font-bold
-text-green-600
+text-blue-500
 mt-2
 ">
 
@@ -733,7 +734,7 @@ mt-2
 
 
 <Pill
-className="text-green-500"
+className="text-blue-500"
 size={35}
 />
 
@@ -775,7 +776,7 @@ Cashiers
 <h2 className="
 text-3xl
 font-bold
-text-orange-600
+text-blue-500
 mt-2
 ">
 
@@ -789,7 +790,7 @@ mt-2
 
 
 <WalletCards
-className="text-orange-500"
+className="text-blue-500"
 size={35}
 />
 

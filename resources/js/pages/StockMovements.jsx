@@ -63,7 +63,7 @@ export default function StockMovements() {
                         {movements.map(m => (
                             <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                 <td className="px-4 py-3 text-sm font-medium">{m.medicine?.name || '---'}</td>
-                                <td className="px-4 py-3 text-sm"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${m.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{m.type === 'in' ? 'In' : 'Out'}</span></td>
+                                <td className="px-4 py-3 text-sm"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${m.type === 'in' ? 'bg-sky-100 text-sky-700' : 'bg-red-100 text-red-600'}`}>{m.type === 'in' ? 'In' : 'Out'}</span></td>
                                 <td className="px-4 py-3 text-sm">{m.quantity}</td>
                                 <td className="px-4 py-3 text-sm">{m.reference || '---'}</td>
                                 <td className="px-4 py-3 text-sm">{m.created_at?.split('T')[0] || '---'}</td>

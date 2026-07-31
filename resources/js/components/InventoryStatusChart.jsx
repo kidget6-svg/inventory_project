@@ -39,10 +39,10 @@ expired
 ],
 
 backgroundColor:[
-'#22c55e',
-'#f97316',
-'#ef4444',
-'#991b1b'
+'#38bdf8',
+'#7dd3fc',
+'#93c5fd',
+'#bfdbfe'
 ],
 
 borderWidth:4,
@@ -87,7 +87,7 @@ if(loading){
 
 return(
 <div className="h-72 flex justify-center items-center">
-Loading...
+<div className="w-12 h-12 border-4 border-sky-100 border-t-sky-500 rounded-full animate-spin"/>
 </div>
 )
 

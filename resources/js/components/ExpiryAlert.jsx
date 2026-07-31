@@ -17,17 +17,17 @@ export default function ExpiryAlert({
         {
             key: '30_days',
             label: '30 Days',
-            color: 'text-red-600',
+            color: 'text-sky-600',
         },
         {
             key: '60_days',
             label: '60 Days',
-            color: 'text-orange-600',
+            color: 'text-sky-500',
         },
         {
             key: '90_days',
             label: '90 Days',
-            color: 'text-yellow-600',
+            color: 'text-sky-400',
         },
     ];
 
@@ -37,7 +37,7 @@ export default function ExpiryAlert({
 
     if (loading) {
         return (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
                 <div className="animate-pulse space-y-4">
 
                     <div className="h-8 bg-gray-200 rounded"></div>
@@ -61,7 +61,7 @@ export default function ExpiryAlert({
         <div className="
             bg-white
             rounded-2xl
-            shadow-lg
+            shadow-sm
             border border-gray-200
             overflow-hidden
         ">
@@ -76,20 +76,21 @@ export default function ExpiryAlert({
                 px-6
                 py-5
                 border-b
+                border-gray-200
             ">
 
                 <div className="
                     h-12
                     w-12
                     rounded-xl
-                    bg-red-100
+                    bg-sky-100
                     flex
                     items-center
                     justify-center
                 ">
                     <CalendarX
                         size={24}
-                        className="text-red-600"
+                        className="text-sky-600"
                     />
                 </div>
 
@@ -149,11 +150,11 @@ export default function ExpiryAlert({
                                 transition-all
 
                                 ${
-                                activeTab === tab.key
-                                ?
-                                `bg-white shadow text-red-600`
-                                :
-                                `text-gray-500 hover:text-gray-700`
+                                    activeTab === tab.key
+                                    ?
+                                    `bg-white shadow text-sky-600`
+                                    :
+                                    `text-gray-500 hover:text-gray-700`
                                 }
 
                             `}
@@ -162,7 +163,6 @@ export default function ExpiryAlert({
                             {tab.label}
 
                         </button>
-
 
                     ))}
 
@@ -187,7 +187,7 @@ export default function ExpiryAlert({
                             size={45}
                             className="
                                 mx-auto
-                                text-green-400
+                                text-sky-300
                                 mb-3
                             "
                         />
@@ -229,7 +229,7 @@ export default function ExpiryAlert({
                                 rounded-2xl
                                 border
                                 border-gray-200
-                                hover:border-red-300
+                                hover:border-sky-300
                                 hover:shadow-md
                                 transition-all
                             "
@@ -251,11 +251,12 @@ export default function ExpiryAlert({
                                 ">
 
 
+
                                     <div className="
                                         h-12
                                         w-12
                                         rounded-xl
-                                        bg-red-100
+                                        bg-sky-100
                                         flex
                                         items-center
                                         justify-center
@@ -263,7 +264,7 @@ export default function ExpiryAlert({
 
                                         <Pill
                                             size={22}
-                                            className="text-red-600"
+                                            className="text-sky-600"
                                         />
 
                                     </div>
@@ -293,8 +294,8 @@ export default function ExpiryAlert({
                                     </div>
 
 
-                                </div>
 
+                                </div>
 
 
 
@@ -308,8 +309,8 @@ export default function ExpiryAlert({
                                         inline-flex
                                         items-center
                                         gap-1
-                                        bg-red-100
-                                        text-red-600
+                                        bg-sky-100
+                                        text-sky-700
                                         px-3
                                         py-1
                                         rounded-full

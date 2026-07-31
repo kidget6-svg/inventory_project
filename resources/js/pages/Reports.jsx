@@ -76,7 +76,7 @@ export default function Reports() {
 
     const statusBadge = (status) => {
         const base = 'px-2 py-1 rounded-full text-xs font-semibold';
-        if (status === 'completed') return `${base} bg-green-100 text-green-700`;
+        if (status === 'completed') return `${base} bg-sky-100 text-sky-700`;
         if (status === 'cancelled') return `${base} bg-red-100 text-red-600`;
         return `${base} bg-sky-100 text-sky-700`;
     };

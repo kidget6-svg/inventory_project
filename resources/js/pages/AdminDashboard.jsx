@@ -125,9 +125,9 @@ export default function AdminDashboard() {
 className="
 rounded-3xl
 bg-gradient-to-r
-from-blue-700
-via-blue-600
-to-cyan-500
+from-sky-500
+via-sky-600
+to-sky-700
 p-8
 md:p-10
 text-white
