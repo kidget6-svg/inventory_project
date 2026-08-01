@@ -1,21 +1,28 @@
 <?php
+// app/Http/Controllers/Api/SaleController.php
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Medicine;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class SaleController extends Controller
 {
+    /**
+     * Display a listing of sales.
+     */
     public function index(Request $request)
     {
         $query = Sale::with(['user', 'items.medicine']);
 
+        // Filter by date
         if ($request->start_date) {
             $query->whereDate('sale_date', '>=', $request->start_date);
         }
@@ -23,14 +30,22 @@ class SaleController extends Controller
             $query->whereDate('sale_date', '<=', $request->end_date);
         }
 
+        // Filter by status
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+
         $sales = $query->latest()->get();
 
         return response()->json($sales);
     }
 
+    /**
+     * Store a newly created sale.
+     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.medicine_id' => 'required|exists:medicines,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -43,11 +58,15 @@ class SaleController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $sale = DB::transaction(function () use ($validated) {
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $sale = DB::transaction(function () use ($request) {
             $totalAmount = 0;
             $saleItems = [];
 
-            foreach ($validated['items'] as $item) {
+            foreach ($request->items as $item) {
                 $medicine = Medicine::lockForUpdate()->findOrFail($item['medicine_id']);
 
                 // Check stock
@@ -61,18 +80,19 @@ class SaleController extends Controller
                 $totalAmount += $subtotal;
 
                 // Decrease stock
+                $oldQuantity = $medicine->quantity;
                 $medicine->decrement('quantity', $item['quantity']);
 
                 // Record stock movement
                 StockMovement::create([
                     'medicine_id' => $medicine->id,
+                    'user_id' => auth()->id(),
                     'type' => 'out',
                     'quantity' => $item['quantity'],
-                    'reference' => 'Sale',
-                    'notes' => "Sale transaction",
-                    'user_id' => auth()->id(),
-                    'before_quantity' => $medicine->quantity + $item['quantity'],
+                    'before_quantity' => $oldQuantity,
                     'after_quantity' => $medicine->quantity,
+                    'reference' => 'Sale',
+                    'notes' => "Sale transaction for {$medicine->name}",
                 ]);
 
                 $saleItems[] = [
@@ -84,8 +104,8 @@ class SaleController extends Controller
             }
 
             // Apply discount and tax
-            $discount = $validated['discount'] ?? 0;
-            $tax = $validated['tax'] ?? 0;
+            $discount = $request->discount ?? 0;
+            $tax = $request->tax ?? 0;
             $netAmount = $totalAmount - $discount + $tax;
 
             // Create sale
@@ -95,12 +115,13 @@ class SaleController extends Controller
                 'discount' => $discount,
                 'tax' => $tax,
                 'net_amount' => $netAmount,
-                'customer_name' => $validated['customer_name'] ?? null,
-                'customer_phone' => $validated['customer_phone'] ?? null,
-                'payment_method' => $validated['payment_method'],
+                'customer_name' => $request->customer_name ?? null,
+                'customer_phone' => $request->customer_phone ?? null,
+                'payment_method' => $request->payment_method,
                 'status' => 'completed',
                 'user_id' => auth()->id(),
-                'notes' => $validated['notes'] ?? null,
+                'notes' => $request->notes ?? null,
+                'receipt_number' => 'REC-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
             ]);
 
             // Create sale items
@@ -117,12 +138,43 @@ class SaleController extends Controller
         ], 201);
     }
 
+    /**
+     * Display the specified sale.
+     */
     public function show($id)
     {
         $sale = Sale::with(['items.medicine', 'user'])->findOrFail($id);
         return response()->json($sale);
     }
 
+    /**
+     * Update the specified sale.
+     */
+    public function update(Request $request, $id)
+    {
+        $sale = Sale::findOrFail($id);
+        
+        $validator = Validator::make($request->all(), [
+            'status' => 'in:pending,completed,cancelled',
+            'payment_method' => 'in:cash,card,insurance,transfer',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $sale->update($request->only(['status', 'payment_method', 'notes']));
+
+        return response()->json([
+            'message' => 'Sale updated successfully',
+            'sale' => $sale
+        ]);
+    }
+
+    /**
+     * Remove the specified sale.
+     */
     public function destroy($id)
     {
         $sale = Sale::with('items')->findOrFail($id);
@@ -132,15 +184,18 @@ class SaleController extends Controller
             foreach ($sale->items as $item) {
                 $medicine = Medicine::find($item->medicine_id);
                 if ($medicine) {
+                    $oldQuantity = $medicine->quantity;
                     $medicine->increment('quantity', $item->quantity);
                     
                     StockMovement::create([
                         'medicine_id' => $medicine->id,
+                        'user_id' => auth()->id(),
                         'type' => 'return',
                         'quantity' => $item->quantity,
+                        'before_quantity' => $oldQuantity,
+                        'after_quantity' => $medicine->quantity,
                         'reference' => 'Sale reversal',
                         'notes' => "Reversed sale #{$sale->id}",
-                        'user_id' => auth()->id(),
                     ]);
                 }
             }
@@ -151,6 +206,9 @@ class SaleController extends Controller
         return response()->json(['message' => 'Sale deleted successfully']);
     }
 
+    /**
+     * Get today's sales.
+     */
     public function getTodaySales()
     {
         $today = now()->toDateString();
@@ -167,5 +225,24 @@ class SaleController extends Controller
             'total_revenue' => $totalRevenue,
             'total_sales' => $totalSales,
         ]);
+    }
+
+    /**
+     * Get sales statistics.
+     */
+    public function getStats()
+    {
+        $stats = [
+            'today_sales' => Sale::whereDate('sale_date', today())->count(),
+            'today_revenue' => Sale::whereDate('sale_date', today())->sum('net_amount'),
+            'this_week_sales' => Sale::whereBetween('sale_date', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+            'this_week_revenue' => Sale::whereBetween('sale_date', [now()->startOfWeek(), now()->endOfWeek()])->sum('net_amount'),
+            'this_month_sales' => Sale::whereMonth('sale_date', now()->month)->count(),
+            'this_month_revenue' => Sale::whereMonth('sale_date', now()->month)->sum('net_amount'),
+            'total_sales' => Sale::count(),
+            'total_revenue' => Sale::sum('net_amount'),
+        ];
+
+        return response()->json($stats);
     }
 }

@@ -1,9 +1,11 @@
+// resources/js/pages/Login.jsx
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff, Mail, Lock, Pill, Loader2 } from 'lucide-react';
 
-export default function Login() {
+export default function Login() {  // ← Make sure this is here
     const { login } = useAuth();
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
@@ -58,7 +60,7 @@ export default function Login() {
                                     name="email"
                                     value={form.email}
                                     onChange={handleChange}
-                                    className="input-field pl-11"
+                                    className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                                     placeholder="you@example.com"
                                     required
                                 />
@@ -74,17 +76,25 @@ export default function Login() {
                                     name="password"
                                     value={form.password}
                                     onChange={handleChange}
-                                    className="input-field pl-11 pr-11"
+                                    className="w-full pl-11 pr-11 py-3 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                                     placeholder="Enter your password"
                                     required
                                 />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowPassword(!showPassword)} 
+                                    className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                                >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
                         </div>
 
-                        <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+                        <button 
+                            type="submit" 
+                            disabled={loading} 
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
                             {loading ? (
                                 <><Loader2 size={18} className="animate-spin" /> Signing In...</>
                             ) : (

@@ -1,7 +1,9 @@
 <?php
+// app/Http/Controllers/Api/StockMovementController.php
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;  // ← ADD THIS LINE
 use App\Models\Medicine;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
@@ -32,7 +34,7 @@ class StockMovementController extends Controller
             $query->whereDate('created_at', '<=', $request->end_date);
         }
 
-        $movements = $query->latest()->limit(100)->get();
+        $movements = $query->latest()->paginate(50);
 
         return response()->json([
             'movements' => $movements,
@@ -52,6 +54,7 @@ class StockMovementController extends Controller
 
         $response = DB::transaction(function () use ($validated) {
             $medicine = Medicine::lockForUpdate()->findOrFail($validated['medicine_id']);
+            $oldQuantity = $medicine->quantity;
 
             // Check for stock out
             if (in_array($validated['type'], ['out', 'damaged'])) {
@@ -62,30 +65,28 @@ class StockMovementController extends Controller
                 }
             }
 
-            // Create movement record
-            $movement = StockMovement::create([
-                'medicine_id' => $validated['medicine_id'],
-                'type' => $validated['type'],
-                'quantity' => $validated['quantity'],
-                'reference' => $validated['reference'] ?? null,
-                'notes' => $validated['notes'] ?? null,
-                'user_id' => auth()->id(),
-                'before_quantity' => $medicine->quantity,
-                'after_quantity' => 0, // Will be updated
-            ]);
-
-            // Update medicine quantity
-            $newQuantity = $medicine->quantity;
+            // Calculate new quantity
+            $newQuantity = $oldQuantity;
             if (in_array($validated['type'], ['in', 'return'])) {
                 $newQuantity += $validated['quantity'];
             } else if (in_array($validated['type'], ['out', 'damaged', 'adjustment'])) {
                 $newQuantity -= $validated['quantity'];
             }
 
-            $medicine->update(['quantity' => $newQuantity]);
+            // Create movement record
+            $movement = StockMovement::create([
+                'medicine_id' => $validated['medicine_id'],
+                'user_id' => auth()->id(),
+                'type' => $validated['type'],
+                'quantity' => $validated['quantity'],
+                'before_quantity' => $oldQuantity,
+                'after_quantity' => $newQuantity,
+                'reference' => $validated['reference'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+            ]);
 
-            // Update movement with after quantity
-            $movement->update(['after_quantity' => $newQuantity]);
+            // Update medicine quantity
+            $medicine->update(['quantity' => $newQuantity]);
 
             return [
                 'movement' => $movement->load('medicine'),
@@ -96,7 +97,7 @@ class StockMovementController extends Controller
         return response()->json([
             'message' => 'Stock movement recorded successfully',
             'data' => $response
-        ]);
+        ], 201);
     }
 
     public function show($id)
@@ -109,11 +110,11 @@ class StockMovementController extends Controller
     {
         return response()->json([
             'types' => [
-                'in' => 'Stock In',
-                'out' => 'Stock Out',
-                'adjustment' => 'Adjustment',
-                'return' => 'Return',
-                'damaged' => 'Damaged'
+                ['value' => 'in', 'label' => 'Stock In', 'color' => 'green'],
+                ['value' => 'out', 'label' => 'Stock Out', 'color' => 'red'],
+                ['value' => 'adjustment', 'label' => 'Adjustment', 'color' => 'orange'],
+                ['value' => 'return', 'label' => 'Return', 'color' => 'blue'],
+                ['value' => 'damaged', 'label' => 'Damaged', 'color' => 'red'],
             ]
         ]);
     }

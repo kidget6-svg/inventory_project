@@ -1,3 +1,5 @@
+// resources/js/context/AuthContext.jsx
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api, { refreshCsrfToken } from '../axios';
 
@@ -8,6 +10,9 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        refreshCsrfToken();
+        
+        // Check if user is logged in
         api.get('/user')
             .then(res => setUser(res.data))
             .catch(() => setUser(null))
@@ -15,26 +20,53 @@ export function AuthProvider({ children }) {
     }, []);
 
     const login = async (email, password) => {
-        const res = await api.post('/login', { email, password });
-        await refreshCsrfToken();
-        setUser(res.data);
-        return res.data;
+        try {
+            await refreshCsrfToken();
+            
+            // Use '/login' NOT '/api/login'
+            const response = await api.post('/login', { email, password });
+            
+            // Store token if using Sanctum
+            if (response.data.access_token) {
+                localStorage.setItem('token', response.data.access_token);
+            }
+            
+            setUser(response.data.user || response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Login error:', error.response?.data || error.message);
+            throw error;
+        }
     };
 
     const register = async (data) => {
-        // Public self-registration (pharmacist & cashier only).
-        // The newly created user is returned but does NOT replace
-        // the current session — they must wait for admin approval.
-        const config = data instanceof FormData ? { headers: { 'Content-Type': undefined } } : {};
-        const res = await api.post('/register', data, config);
-        await refreshCsrfToken();
-        return res.data;
+        try {
+            await refreshCsrfToken();
+            
+            const config = data instanceof FormData 
+                ? { headers: { 'Content-Type': undefined } } 
+                : {};
+                
+            // Use '/register' NOT '/api/register'
+            const response = await api.post('/register', data, config);
+            return response.data;
+        } catch (error) {
+            console.error('Register error:', error.response?.data || error.message);
+            throw error;
+        }
     };
 
     const logout = async () => {
-        await api.post('/logout');
-        await refreshCsrfToken();
-        setUser(null);
+        try {
+            // Use '/logout' NOT '/api/logout'
+            await api.post('/logout');
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            localStorage.removeItem('token');
+            await refreshCsrfToken();
+            setUser(null);
+        }
     };
 
     return (
@@ -44,4 +76,10 @@ export function AuthProvider({ children }) {
     );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+};

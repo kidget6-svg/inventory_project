@@ -1,4 +1,5 @@
 <?php
+// app/Models/SaleItem.php
 
 namespace App\Models;
 
@@ -16,12 +17,14 @@ class SaleItem extends Model
         'quantity',
         'unit_price',
         'subtotal',
+        'discount',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        'discount' => 'decimal:2',
     ];
 
     public function sale(): BelongsTo
