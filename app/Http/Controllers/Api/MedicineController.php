@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
+use App\Models\Category;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class MedicineController extends Controller
 {
@@ -12,45 +15,56 @@ class MedicineController extends Controller
     {
         $query = Medicine::with(['category', 'supplier']);
 
-        if ($request->filled('search')) {
-            $search = $request->search;
+        // Search by name, generic name, or batch number
+        if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('batch_number', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
+                  ->orWhere('batch_number', 'like', "%{$search}%");
             });
         }
 
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+        // Filter by category
+        if ($categoryId = $request->input('category_id')) {
+            $query->where('category_id', $categoryId);
         }
 
-        if ($request->filled('supplier_id')) {
-            $query->where('supplier_id', $request->supplier_id);
+        // Filter by supplier
+        if ($supplierId = $request->input('supplier_id')) {
+            $query->where('supplier_id', $supplierId);
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        // Filter by status
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
         }
 
-        $perPage = $request->input('per_page', 10);
-        $medicines = $query->latest()->paginate($perPage);
+        $medicines = $query->latest()->get();
 
         return response()->json($medicines);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate($this->medicineRules());
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'generic_name' => 'nullable|string|max:255',
+            'batch_number' => 'nullable|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'quantity' => 'required|integer|min:0',
+            'unit_price' => 'nullable|numeric|min:0',
+            'purchase_price' => 'nullable|numeric|min:0',
+            'selling_price' => 'nullable|numeric|min:0',
+            'reorder_level' => 'required|integer|min:0',
+            'expiry_date' => 'nullable|date',
+            'status' => 'in:active,inactive,expired,discontinued',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
 
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('medicines', 'public');
-            $validated['image'] = $path;
-        }
+        $validated = $this->handleImageUpload($validated, null);
 
         $medicine = Medicine::create($validated);
-
         return response()->json($medicine->load(['category', 'supplier']), 201);
     }
 
@@ -61,31 +75,10 @@ class MedicineController extends Controller
 
     public function update(Request $request, Medicine $medicine)
     {
-        $validated = $request->validate($this->medicineRules($medicine->id));
-
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('medicines', 'public');
-            $validated['image'] = $path;
-        }
-
-        $medicine->update($validated);
-
-        return response()->json($medicine->load(['category', 'supplier']));
-    }
-
-    public function destroy(Medicine $medicine)
-    {
-        $medicine->delete();
-        return response()->json(['message' => 'Medicine deleted successfully']);
-    }
-
-    private function medicineRules(?int $id = null): array
-    {
-        return [
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
-            'barcode' => 'nullable|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'quantity' => 'required|integer|min:0',
@@ -94,12 +87,41 @@ class MedicineController extends Controller
             'selling_price' => 'nullable|numeric|min:0',
             'reorder_level' => 'required|integer|min:0',
             'expiry_date' => 'nullable|date',
-            'status' => 'nullable|string|in:active,inactive,expired,discontinued',
-            'shelf_location' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'manufacturer' => 'nullable|string|max:255',
-            'image' => 'nullable|image|max:2048',
-            'image_url' => 'nullable|url',
-        ];
+            'status' => 'in:active,inactive,expired,discontinued',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        $validated = $this->handleImageUpload($validated, $medicine);
+        $medicine->update($validated);
+        return response()->json($medicine->load(['category', 'supplier']));
+    }
+
+    /**
+     * Store an uploaded medicine image (if present) on the public disk.
+     * Deletes any previously stored image when updating.
+     */
+    protected function handleImageUpload(array $validated, ?Medicine $medicine = null): array
+    {
+        $request = request();
+
+        if (! $request->hasFile('image')) {
+            return $validated;
+        }
+
+        // Remove a previously stored image when updating
+        if ($medicine && $medicine->image && Storage::disk('public')->exists($medicine->image)) {
+            Storage::disk('public')->delete($medicine->image);
+        }
+
+        $path = $request->file('image')->store('medicine-images', 'public');
+        $validated['image'] = $path;
+
+        return $validated;
+    }
+
+    public function destroy(Medicine $medicine)
+    {
+        $medicine->delete();
+        return response()->json(['message' => 'Medicine deleted']);
     }
 }

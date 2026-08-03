@@ -1,14 +1,12 @@
-// resources/js/pages/Medicines.jsx
-
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import {
-    Search, Filter, Eye, Edit, Trash2, Plus,
-    Package, Calendar, Tag, DollarSign, Barcode,
-    Camera, Loader2, ChevronLeft, ChevronRight,
-    Upload, X, AlertCircle, MapPin, TrendingUp, Clock
-} from 'lucide-react';
+<<<<<<< Updated upstream
+import SidebarLayout from '../components/SidebarLayout';
+import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign } from 'lucide-react';
+=======
+import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight, Upload, MapPin } from 'lucide-react';
+>>>>>>> Stashed changes
 
 const statusOptions = [
     { value: '', label: 'All Statuses' },
@@ -18,39 +16,34 @@ const statusOptions = [
     { value: 'discontinued', label: 'Discontinued' },
 ];
 
+<<<<<<< Updated upstream
+=======
 const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
+const getImageUrl = (medicine) => {
+    if (medicine?.image_url) return medicine.image_url;
+    if (medicine?.image) return `/storage/${medicine.image}`;
+    return '/images/medicine-placeholder.svg';
+};
+
+>>>>>>> Stashed changes
 export default function Medicines() {
     const [medicines, setMedicines] = useState([]);
     const [categories, setCategories] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
-    const [showModal, setShowModal] = useState(false);
+    const [showForm, setShowForm] = useState(false);
     const [showViewModal, setShowViewModal] = useState(false);
     const [editId, setEditId] = useState(null);
     const [viewMedicine, setViewMedicine] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const [scanning, setScanning] = useState(false);
-    const [step, setStep] = useState(0);
-    const videoRef = useRef(null);
-    const fileInputRef = useRef(null);
-
-    // Table Pagination
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [totalItems, setTotalItems] = useState(0);
-
-    // Recently viewed medicines with pagination
-    const [recentlyViewed, setRecentlyViewed] = useState([]);
-    const [rvPage, setRvPage] = useState(1);
-    const rvItemsPerPage = 4;
+<<<<<<< Updated upstream
 
     const [form, setForm] = useState({
         name: '',
         generic_name: '',
         batch_number: '',
-        barcode: '',
         category_id: '',
         supplier_id: '',
         quantity: '',
@@ -60,12 +53,18 @@ export default function Medicines() {
         reorder_level: '',
         expiry_date: '',
         status: 'active',
-        shelf_location: '',
-        description: '',
-        manufacturer: '',
-        image: null,
-        image_url: '',
-        image_preview: null
+=======
+    const [scanning, setScanning] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
+    const videoRef = useRef(null);
+    const [step, setStep] = useState(0);
+
+    const [form, setForm] = useState({
+        name: '', generic_name: '', batch_number: '', barcode: '', category_id: '',
+        supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '',
+        reorder_level: '', expiry_date: '', status: 'active', image: '',
+>>>>>>> Stashed changes
     });
 
     const [filters, setFilters] = useState({
@@ -75,41 +74,21 @@ export default function Medicines() {
         status: '',
     });
 
+    // Debounced search
     const [searchTimeout, setSearchTimeout] = useState(null);
 
-    // Helper to resolve image paths (URL vs Uploaded file)
-    const getImageUrl = (item) => {
-        if (!item) return '/images/medicine-placeholder.svg';
-        if (item.image_preview) return item.image_preview;
-        if (item.image_url) return item.image_url;
-        if (item.image) return `/storage/${item.image}`;
-        return '/images/medicine-placeholder.svg';
-    };
-
-    // Load medicines with pagination
     const loadMedicines = () => {
         setLoading(true);
-        const params = {
-            page: currentPage,
-            per_page: itemsPerPage,
-        };
+        const params = {};
         if (filters.search) params.search = filters.search;
         if (filters.category_id) params.category_id = filters.category_id;
         if (filters.supplier_id) params.supplier_id = filters.supplier_id;
         if (filters.status) params.status = filters.status;
-        
+
         api.get('/medicines', { params })
-            .then(r => {
-                if (r.data.data) {
-                    setMedicines(r.data.data);
-                    setTotalItems(r.data.total || r.data.data.length);
-                } else {
-                    setMedicines(r.data);
-                    setTotalItems(r.data.length);
-                }
-            })
+            .then(r => setMedicines(r.data))
             .catch(err => {
-                console.error('Error loading medicines:', err);
+                console.error(err);
                 setError('Failed to load medicines');
             })
             .finally(() => setLoading(false));
@@ -118,32 +97,13 @@ export default function Medicines() {
     const loadCategories = () => {
         api.get('/categories')
             .then(r => setCategories(r.data))
-            .catch(err => console.error('Error loading categories:', err));
+            .catch(err => console.error(err));
     };
 
     const loadSuppliers = () => {
         api.get('/suppliers')
             .then(r => setSuppliers(r.data))
-            .catch(err => console.error('Error loading suppliers:', err));
-    };
-
-    // Load recently viewed from localStorage
-    useEffect(() => {
-        const saved = localStorage.getItem('recentlyViewedMedicines');
-        if (saved) {
-            try {
-                setRecentlyViewed(JSON.parse(saved));
-            } catch (e) {
-                setRecentlyViewed([]);
-            }
-        }
-    }, []);
-
-    // Save recently viewed to localStorage
-    const saveRecentlyViewed = (medicine) => {
-        const updated = [medicine, ...recentlyViewed.filter(m => m.id !== medicine.id)].slice(0, 12);
-        setRecentlyViewed(updated);
-        localStorage.setItem('recentlyViewedMedicines', JSON.stringify(updated));
+            .catch(err => console.error(err));
     };
 
     useEffect(() => {
@@ -151,63 +111,47 @@ export default function Medicines() {
         loadSuppliers();
     }, []);
 
+    // Load medicines when filters change
     useEffect(() => {
         loadMedicines();
-    }, [filters, currentPage, itemsPerPage]);
+    }, [filters]);
 
-    const handleChange = (e) => {
-        const { name, value, type, files } = e.target;
-        if (type === 'file' && files.length > 0) {
-            const file = files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setForm(prev => ({
-                    ...prev,
-                    image: file,
-                    image_preview: reader.result,
-                    image_url: ''
-                }));
-            };
-            reader.readAsDataURL(file);
-        } else {
-            setForm(prev => ({ ...prev, [name]: value }));
-        }
-    };
-
-    const handleImageUrl = (e) => {
-        const url = e.target.value;
-        setForm(prev => ({
-            ...prev,
-            image_url: url,
-            image_preview: url,
-            image: null
-        }));
-    };
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const handleFilterChange = (e) => {
-        setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
-        setCurrentPage(1);
+        const { name, value } = e.target;
+        setFilters(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSearchChange = (e) => {
         const value = e.target.value;
         setFilters(prev => ({ ...prev, search: value }));
-        setCurrentPage(1);
         if (searchTimeout) clearTimeout(searchTimeout);
-        setSearchTimeout(setTimeout(() => {}, 300));
+        const timeout = setTimeout(() => {
+            // search is already in filters state, which triggers the useEffect
+        }, 300);
+        setSearchTimeout(timeout);
     };
 
+<<<<<<< Updated upstream
     const resetFilters = () => {
         setFilters({ search: '', category_id: '', supplier_id: '', status: '' });
-        setCurrentPage(1);
-    };
+=======
+    const resetFilters = () => setFilters({ search: '', category_id: '', supplier_id: '', status: '' });
 
     const resetForm = () => {
+        setForm({ name: '', generic_name: '', batch_number: '', barcode: '', category_id: '', supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '', reorder_level: '', expiry_date: '', status: 'active', image: '' });
+        setSelectedImage(null);
+        setPreviewUrl('');
+        setEditId(null); setError(''); setStep(0);
+>>>>>>> Stashed changes
+    };
+
+    const openCreate = () => {
         setForm({
             name: '',
             generic_name: '',
             batch_number: '',
-            barcode: '',
             category_id: '',
             supplier_id: '',
             quantity: '',
@@ -217,21 +161,9 @@ export default function Medicines() {
             reorder_level: '',
             expiry_date: '',
             status: 'active',
-            shelf_location: '',
-            description: '',
-            manufacturer: '',
-            image: null,
-            image_url: '',
-            image_preview: null
         });
         setEditId(null);
-        setError('');
-        setStep(0);
-    };
-
-    const openCreate = () => {
-        resetForm();
-        setShowModal(true);
+        setShowForm(true);
         setError('');
     };
 
@@ -240,7 +172,6 @@ export default function Medicines() {
             name: m.name || '',
             generic_name: m.generic_name || '',
             batch_number: m.batch_number || '',
-            barcode: m.barcode || '',
             category_id: m.category_id || '',
             supplier_id: m.supplier_id || '',
             quantity: m.quantity || '',
@@ -249,98 +180,87 @@ export default function Medicines() {
             selling_price: m.selling_price || '',
             reorder_level: m.reorder_level || '',
             expiry_date: m.expiry_date ? new Date(m.expiry_date).toISOString().split('T')[0] : '',
-            status: m.status || 'active',
-            shelf_location: m.shelf_location || '',
-            description: m.description || '',
-            manufacturer: m.manufacturer || '',
-            image: null,
-            image_url: m.image_url || '',
-            image_preview: getImageUrl(m)
+            status: m.status || 'active', image: m.image || '',
         });
+<<<<<<< Updated upstream
         setEditId(m.id);
-        setShowModal(true);
+        setShowForm(true);
         setError('');
-        setStep(0);
+=======
+        setSelectedImage(null);
+        setPreviewUrl(getImageUrl(m));
+        setEditId(m.id); setShowModal(true); setError(''); setStep(0);
+>>>>>>> Stashed changes
     };
 
     const openView = (m) => {
         setViewMedicine(m);
         setShowViewModal(true);
-        saveRecentlyViewed(m);
     };
 
-    const nextStep = () => {
-        setStep(s => Math.min(s + 1, formSteps.length - 1));
+<<<<<<< Updated upstream
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSubmitting(true);
+        try {
+            if (editId) {
+                await api.put(`/medicines/${editId}`, form);
+                window.showToast('Medicine updated successfully', 'success');
+            } else {
+                await api.post('/medicines', form);
+                window.showToast('Medicine created successfully', 'success');
+            }
+            setShowForm(false);
+            loadMedicines();
+=======
+    const nextStep = () => { setStep(s => Math.min(s + 1, formSteps.length - 1)); };
+    const prevStep = () => { setStep(s => Math.max(s - 1, 0)); };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        setSelectedImage(file || null);
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => setPreviewUrl(ev.target.result);
+            reader.readAsDataURL(file);
+        } else {
+            setPreviewUrl(form.image ? getImageUrl({ image: form.image }) : '');
+        }
     };
 
-    const prevStep = () => {
-        setStep(s => Math.max(s - 1, 0));
+    const removeSelectedImage = () => {
+        setSelectedImage(null);
+        setPreviewUrl(form.image ? getImageUrl({ image: form.image }) : '');
     };
 
     const handleSubmit = async () => {
         setError('');
         setSubmitting(true);
-
         try {
-            if (!form.name) {
-                setError('Medicine name is required');
-                setSubmitting(false);
-                return;
-            }
-            if (!form.category_id) {
-                setError('Category is required');
-                setSubmitting(false);
-                return;
-            }
-            if (!form.quantity || form.quantity < 0) {
-                setError('Quantity is required and must be 0 or more');
-                setSubmitting(false);
-                return;
-            }
-            if (!form.reorder_level || form.reorder_level < 0) {
-                setError('Reorder level is required and must be 0 or more');
-                setSubmitting(false);
-                return;
-            }
+            if (selectedImage) {
+                const formData = new FormData();
+                Object.entries(form).forEach(([key, value]) => {
+                    if (key !== 'image') formData.append(key, value);
+                });
+                formData.append('image', selectedImage);
 
-            const formData = new FormData();
-            
-            Object.keys(form).forEach(key => {
-                if (key === 'image' && form[key] instanceof File) {
-                    formData.append('image', form[key]);
-                } else if (key === 'image_preview') {
-                    // Skip preview
-                } else if (form[key] !== null && form[key] !== undefined && form[key] !== '') {
-                    formData.append(key, form[key]);
+                if (editId) {
+                    await api.put(`/medicines/${editId}`, formData, { headers: { 'Content-Type': undefined } });
+                    window.showToast('Medicine updated successfully', 'success');
+                } else {
+                    await api.post('/medicines', formData, { headers: { 'Content-Type': undefined } });
+                    window.showToast('Medicine created successfully', 'success');
                 }
-            });
-
-            if (editId) {
-                formData.append('_method', 'PUT');
-                await api.post(`/medicines/${editId}`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-                window.showToast?.('Medicine updated successfully', 'success');
             } else {
-                await api.post('/medicines', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-                window.showToast?.('Medicine created successfully', 'success');
+                if (editId) { await api.put(`/medicines/${editId}`, form); window.showToast('Medicine updated successfully', 'success'); }
+                else { await api.post('/medicines', form); window.showToast('Medicine created successfully', 'success'); }
             }
-
-            setShowModal(false);
-            loadMedicines();
+            setShowModal(false); loadMedicines();
+>>>>>>> Stashed changes
         } catch (err) {
-            console.error('Error saving medicine:', err);
-            
-            if (err.response?.data?.errors) {
-                const msgs = Object.values(err.response.data.errors).flat().join(' ');
-                setError(msgs);
-            } else if (err.response?.data?.message) {
-                setError(err.response.data.message);
-            } else {
-                setError('Error saving medicine. Please check all fields and try again.');
-            }
+            const msgs = err.response?.data?.errors;
+            setError(msgs ? Object.values(msgs).flat().join(' ') : 'Error saving medicine');
         } finally {
             setSubmitting(false);
         }
@@ -350,75 +270,19 @@ export default function Medicines() {
         if (!window.confirm('Are you sure you want to delete this medicine?')) return;
         try {
             await api.delete(`/medicines/${id}`);
-            window.showToast?.('Medicine deleted successfully', 'success');
+            window.showToast('Medicine deleted successfully', 'success');
             loadMedicines();
         } catch (err) {
-            window.showToast?.('Failed to delete medicine', 'error');
+            window.showToast('Failed to delete medicine', 'error');
         }
     };
 
-    // Barcode scanning
-    const startBarcodeScan = async () => {
-        if (!('BarcodeDetector' in window)) {
-            window.showToast?.('Barcode scanning is not supported in this browser.', 'error');
-            return;
-        }
-        setScanning(true);
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
-            });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
-            }
-            scanLoop();
-        } catch (err) {
-            window.showToast?.('Could not access camera: ' + err.message, 'error');
-            setScanning(false);
-        }
-    };
-
-    const scanLoop = useCallback(async () => {
-        if (!scanning) return;
-        const detector = new BarcodeDetector({ 
-            formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] 
-        });
-        try {
-            if (videoRef.current) {
-                const barcodes = await detector.detect(videoRef.current);
-                if (barcodes.length > 0) {
-                    setForm(prev => ({ ...prev, barcode: barcodes[0].rawValue }));
-                    stopBarcodeScan();
-                    window.showToast?.('Barcode scanned: ' + barcodes[0].rawValue, 'success');
-                    return;
-                }
-            }
-            requestAnimationFrame(scanLoop);
-        } catch (err) {
-            requestAnimationFrame(scanLoop);
-        }
-    }, [scanning]);
-
-    const stopBarcodeScan = () => {
-        setScanning(false);
-        if (videoRef.current && videoRef.current.srcObject) {
-            videoRef.current.srcObject.getTracks().forEach(t => t.stop());
-            videoRef.current.srcObject = null;
-        }
-    };
-
-    useEffect(() => {
-        return () => stopBarcodeScan();
-    }, []);
-
-    // Status badge
     const getStatusBadge = (status) => {
         const config = {
             active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' },
             inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' },
             expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' },
-            discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' }
+            discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' },
         };
         const cfg = config[status] || config.active;
         return (
@@ -428,139 +292,122 @@ export default function Medicines() {
         );
     };
 
-    // Stock status
-    const getStockStatus = (medicine) => {
-        if (medicine.quantity === 0) {
-            return <span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Out of Stock</span>;
-        }
-        if (medicine.quantity <= medicine.reorder_level) {
-            return <span className="px-2.5 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">Low Stock</span>;
-        }
-        return <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">In Stock</span>;
-    };
-
     const isFiltered = filters.search || filters.category_id || filters.supplier_id || filters.status;
 
-    // Table Pagination logic
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    return (
+        <SidebarLayout pageTitle="Medicines">
+            {/* Search & Filter Bar */}
+            <div className="mb-6 space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                    {/* Search Bar */}
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <input
+                            type="text"
+                            name="search"
+                            placeholder="Search by medicine name, generic name, or batch number..."
+                            value={filters.search}
+                            onChange={handleSearchChange}
+                            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                        />
+                    </div>
 
-    const goToPage = (page) => {
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
-        }
-    };
+                    {/* Category Filter */}
+                    <div className="relative w-full md:w-48">
+                        <Tag className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <select
+                            name="category_id"
+                            value={filters.category_id}
+                            onChange={handleFilterChange}
+                            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
+                        >
+                            <option value="">All Categories</option>
+                            {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-    // Recently Viewed Pagination logic
-    const totalRvPages = Math.ceil(recentlyViewed.length / rvItemsPerPage);
-    const paginatedRecentlyViewed = recentlyViewed.slice(
-        (rvPage - 1) * rvItemsPerPage,
-        rvPage * rvItemsPerPage
-    );
+                    {/* Supplier Filter */}
+                    <div className="relative w-full md:w-48">
+                        <Package className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <select
+                            name="supplier_id"
+                            value={filters.supplier_id}
+                            onChange={handleFilterChange}
+                            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
+                        >
+                            <option value="">All Suppliers</option>
+                            {suppliers.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-    // Render step content for form
-    const renderStepContent = () => {
-        switch (step) {
-            case 0:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Barcode */}
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
-                            <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                    <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        name="barcode"
-                                        value={form.barcode}
-                                        onChange={handleChange}
-                                        placeholder="Scan or type barcode"
-                                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none font-mono"
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={startBarcodeScan}
-                                    disabled={scanning}
-                                    className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors flex items-center gap-1.5 disabled:opacity-60"
-                                >
-                                    {scanning ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                                    {scanning ? 'Scanning...' : 'Scan'}
-                                </button>
-                            </div>
-                            {scanning && (
-                                <div className="mt-2 relative">
-                                    <video ref={videoRef} className="w-full max-w-xs rounded-lg border-2 border-blue-400" />
-                                    <button
-                                        type="button"
-                                        onClick={stopBarcodeScan}
-                                        className="mt-1 text-xs text-red-600 hover:underline"
-                                    >
-                                        Cancel scan
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                    {/* Status Filter */}
+                    <div className="relative w-full md:w-48">
+                        <Filter className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <select
+                            name="status"
+                            value={filters.status}
+                            onChange={handleFilterChange}
+                            className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
+                        >
+                            {statusOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                        {/* Image Upload */}
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Image</label>
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex-1">
-                                    <div
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors relative overflow-hidden"
-                                    >
-                                        {form.image_preview ? (
-                                            <div className="relative">
-                                                <img
-                                                    src={form.image_preview}
-                                                    alt="Preview"
-                                                    className="max-h-32 mx-auto rounded-lg object-contain"
-                                                    onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setForm(prev => ({ ...prev, image_preview: null, image: null, image_url: '' }));
-                                                    }}
-                                                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <Upload className="w-8 h-8 mx-auto text-gray-400 mb-1" />
-                                                <p className="text-sm text-gray-500">Click to upload image</p>
-                                                <p className="text-xs text-gray-400">PNG, JPG, GIF up to 2MB</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleChange}
-                                        name="image"
-                                        className="hidden"
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="block text-xs text-gray-500 mb-1">Or enter image URL</label>
-                                    <input
-                                        type="url"
-                                        name="image_url"
-                                        value={form.image_url}
-                                        onChange={handleImageUrl}
-                                        placeholder="https://example.com/image.jpg"
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                    {/* Clear Filters */}
+                    {isFiltered && (
+                        <button
+                            onClick={resetFilters}
+                            className="px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                            Clear
+                        </button>
+                    )}
+                </div>
+            </div>
 
+            {/* Header with Add Button */}
+            <div className="flex justify-between items-center mb-5">
+                <h3 className="text-base font-semibold text-gray-700">
+                    All Medicines ({medicines.length})
+                </h3>
+                <button
+                    onClick={openCreate}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors flex items-center gap-2"
+                >
+                    <Package size={16} />
+                    Add New Medicine
+                </button>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>
+            )}
+
+            {/* Add/Edit Medicine Form */}
+            {showForm && (
+                <div className="bg-white rounded-xl p-5 shadow-sm mb-5">
+                    <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-semibold text-gray-700">
+                            {editId ? 'Edit Medicine' : 'Add New Medicine'}
+                        </h4>
+                        <button
+                            type="button"
+                            onClick={() => setShowForm(false)}
+                            className="text-gray-400 hover:text-gray-600"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {/* Medicine Name */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Name *</label>
                             <input
@@ -573,6 +420,8 @@ export default function Medicines() {
                                 required
                             />
                         </div>
+
+                        {/* Generic Name */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Generic Name</label>
                             <input
@@ -584,6 +433,8 @@ export default function Medicines() {
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
                             />
                         </div>
+
+                        {/* Batch Number */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Batch Number</label>
                             <input
@@ -595,6 +446,8 @@ export default function Medicines() {
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
                             />
                         </div>
+
+                        {/* Category */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
                             <select
@@ -610,44 +463,38 @@ export default function Medicines() {
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
-                            <input
-                                type="text"
-                                name="shelf_location"
-                                value={form.shelf_location}
-                                onChange={handleChange}
-                                placeholder="e.g. A-3-B"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
-                            <input
-                                type="text"
-                                name="manufacturer"
-                                value={form.manufacturer}
-                                onChange={handleChange}
-                                placeholder="e.g. ABC Pharma"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                            />
-                        </div>
+<<<<<<< Updated upstream
+
+                        {/* Supplier */}
+=======
                         <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                            <textarea
-                                name="description"
-                                value={form.description}
-                                onChange={handleChange}
-                                rows="2"
-                                placeholder="Medicine description"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
-                            />
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Picture</label>
+                            <div className="flex items-start gap-4">
+                                {(previewUrl || form.image) && (
+                                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200">
+                                        <img src={previewUrl || getImageUrl({ image: form.image })} alt="Preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }} />
+                                        {!selectedImage && form.image && (
+                                            <button type="button" onClick={removeSelectedImage} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                                                <X size={10} />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
+                                        <Upload size={16} /> Choose image
+                                        <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                                    </label>
+                                    <p className="mt-1 text-xs text-gray-400">PNG, JPG, GIF up to 2MB</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 );
             case 1:
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+>>>>>>> Stashed changes
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier</label>
                             <select
@@ -662,6 +509,8 @@ export default function Medicines() {
                                 ))}
                             </select>
                         </div>
+
+                        {/* Quantity */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
                             <input
@@ -675,10 +524,12 @@ export default function Medicines() {
                                 required
                             />
                         </div>
+
+                        {/* Unit Price */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Price</label>
                             <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <DollarSign className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                                 <input
                                     type="number"
                                     name="unit_price"
@@ -691,10 +542,12 @@ export default function Medicines() {
                                 />
                             </div>
                         </div>
+
+                        {/* Purchase Price */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Purchase Price</label>
                             <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <DollarSign className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                                 <input
                                     type="number"
                                     name="purchase_price"
@@ -707,10 +560,12 @@ export default function Medicines() {
                                 />
                             </div>
                         </div>
+
+                        {/* Selling Price */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Selling Price</label>
                             <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <DollarSign className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                                 <input
                                     type="number"
                                     name="selling_price"
@@ -723,6 +578,8 @@ export default function Medicines() {
                                 />
                             </div>
                         </div>
+
+                        {/* Reorder Level */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
                             <input
@@ -736,15 +593,12 @@ export default function Medicines() {
                                 required
                             />
                         </div>
-                    </div>
-                );
-            case 2:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        {/* Expiry Date */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date</label>
                             <div className="relative">
-                                <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <Calendar className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                                 <input
                                     type="date"
                                     name="expiry_date"
@@ -754,6 +608,8 @@ export default function Medicines() {
                                 />
                             </div>
                         </div>
+
+                        {/* Status */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
                             <select
@@ -768,532 +624,284 @@ export default function Medicines() {
                                 <option value="discontinued">Discontinued</option>
                             </select>
                         </div>
-                        <div className="md:col-span-2 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                            <h4 className="text-sm font-semibold text-blue-800 mb-2">📋 Review Summary</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+<<<<<<< Updated upstream
+
+                        {/* Form Buttons */}
+                        <div className="lg:col-span-3 flex justify-end gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="px-5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors flex items-center gap-2 disabled:opacity-60"
+                            >
+                                {submitting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        {editId ? 'Updating...' : 'Creating...'}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save size={16} />
+                                        {editId ? 'Update Medicine' : 'Create Medicine'}
+                                    </>
+                                )}
+                            </button>
+=======
+                        <div className="md:col-span-2 p-4 bg-sky-50 rounded-xl border border-sky-200">
+                            <h4 className="text-sm font-semibold text-sky-800 mb-2">Review Summary</h4>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div><span className="text-gray-500">Name:</span> <span className="font-medium">{form.name || '---'}</span></div>
                                 <div><span className="text-gray-500">Category:</span> <span className="font-medium">{categories.find(c => c.id == form.category_id)?.name || '---'}</span></div>
+                                <div><span className="text-gray-500">Shelf:</span> <span className="font-medium">{categories.find(c => c.id == form.category_id)?.shelf || '---'}</span></div>
                                 <div><span className="text-gray-500">Barcode:</span> <span className="font-medium">{form.barcode || '---'}</span></div>
                                 <div><span className="text-gray-500">Quantity:</span> <span className="font-medium">{form.quantity || '0'}</span></div>
                                 <div><span className="text-gray-500">Selling Price:</span> <span className="font-medium">{form.selling_price ? `$${form.selling_price}` : '---'}</span></div>
                                 <div><span className="text-gray-500">Status:</span> <span className="font-medium">{form.status}</span></div>
-                                <div><span className="text-gray-500">Shelf:</span> <span className="font-medium">{form.shelf_location || '---'}</span></div>
-                                <div><span className="text-gray-500">Reorder Level:</span> <span className="font-medium">{form.reorder_level || '---'}</span></div>
-                                <div><span className="text-gray-500">Expiry:</span> <span className="font-medium">{form.expiry_date || '---'}</span></div>
                             </div>
+>>>>>>> Stashed changes
                         </div>
-                    </div>
-                );
-            default:
-                return null;
-        }
-    };
-
-    return (
-        <div className="space-y-6">
-            {/* Recently Viewed 3D Interactive Cards with Pagination */}
-            {recentlyViewed.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <Clock size={18} className="text-blue-500" />
-                            <h3 className="text-sm font-semibold text-gray-700">Recently Viewed</h3>
-                        </div>
-                        {totalRvPages > 1 && (
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => setRvPage(p => Math.max(p - 1, 1))}
-                                    disabled={rvPage === 1}
-                                    className="p-1 rounded border border-gray-200 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                                >
-                                    <ChevronLeft size={14} />
-                                </button>
-                                <span className="text-xs text-gray-500 font-medium px-1">
-                                    {rvPage} / {totalRvPages}
-                                </span>
-                                <button
-                                    onClick={() => setRvPage(p => Math.min(p + 1, totalRvPages))}
-                                    disabled={rvPage === totalRvPages}
-                                    className="p-1 rounded border border-gray-200 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                                >
-                                    <ChevronRight size={14} />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                        {paginatedRecentlyViewed.map(medicine => (
-                            <div
-                                key={medicine.id}
-                                onClick={() => openView(medicine)}
-                                className="group relative cursor-pointer [perspective:1000px]"
-                            >
-                                <div className="p-3 bg-gradient-to-br from-blue-50/80 to-indigo-50/50 rounded-xl border border-blue-100 shadow-sm transition-all duration-300 transform-gpu [transform-style:preserve-3d] group-hover:[transform:rotateX(6deg)_rotateY(-10deg)_translateZ(10px)] group-hover:shadow-lg group-hover:border-blue-300">
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded-lg p-1 border border-gray-100 shadow-inner overflow-hidden">
-                                            <img
-                                                src={getImageUrl(medicine)}
-                                                alt={medicine.name}
-                                                className="w-full h-full object-cover rounded transition-transform duration-300 group-hover:scale-110"
-                                                onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
-                                            />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-blue-600 transition-colors">
-                                                {medicine.name}
-                                            </p>
-                                            <p className="text-xs text-gray-500 truncate">
-                                                {medicine.category?.name || 'Uncategorized'}
-                                            </p>
-                                            <p className="text-xs font-semibold text-blue-600 mt-0.5">
-                                                ${Number(medicine.selling_price || medicine.unit_price || 0).toFixed(2)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    </form>
                 </div>
             )}
 
-            {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                    <input
-                        type="text"
-                        name="search"
-                        placeholder="Search by medicine name, generic name, or batch..."
-                        value={filters.search}
-                        onChange={handleSearchChange}
-                        className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                    />
-                </div>
-                <div className="relative w-full md:w-48">
-                    <Tag className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                    <select
-                        name="category_id"
-                        value={filters.category_id}
-                        onChange={handleFilterChange}
-                        className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
-                    >
-                        <option value="">All Categories</option>
-                        {categories.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="relative w-full md:w-48">
-                    <Package className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                    <select
-                        name="supplier_id"
-                        value={filters.supplier_id}
-                        onChange={handleFilterChange}
-                        className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
-                    >
-                        <option value="">All Suppliers</option>
-                        {suppliers.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="relative w-full md:w-48">
-                    <Filter className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                    <select
-                        name="status"
-                        value={filters.status}
-                        onChange={handleFilterChange}
-                        className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none appearance-none"
-                    >
-                        {statusOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                    </select>
-                </div>
-                {isFiltered && (
-                    <button
-                        onClick={resetFilters}
-                        className="px-4 py-2.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
-                    >
-                        Clear All
-                    </button>
-                )}
-            </div>
-
-            {/* Header */}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h3 className="text-base font-semibold text-gray-700">All Medicines ({totalItems})</h3>
-                    <p className="text-sm text-gray-400">Manage your medicine inventory</p>
-                </div>
-                <button
-                    onClick={openCreate}
-                    className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2"
-                >
-                    <Plus size={18} />
-                    Add New Medicine
-                </button>
-            </div>
-
-            {/* Table */}
+            {/* Medicines Table */}
             {loading ? (
                 <LoadingSpinner text="Loading medicines..." />
             ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1000px]">
+<<<<<<< Updated upstream
+                        <table className="w-full min-w-[1200px]">
                             <thead>
                                 <tr className="bg-blue-50 border-b border-blue-100">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Medicine</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Medicine Name</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Generic Name</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Category</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Shelf</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Barcode</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider">Qty</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Stock</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Price</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Batch Number</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Supplier</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Purchase Price</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Selling Price</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Quantity</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Expiry Date</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Status</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {medicines.length > 0 ? medicines.map(m => (
-                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                <img
-                                                    src={getImageUrl(m)}
-                                                    alt={m.name}
-                                                    className="w-10 h-10 rounded-lg object-cover border border-gray-200 flex-shrink-0"
-                                                    onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
-                                                />
-                                                <div>
-                                                    <div className="text-sm font-medium text-gray-800">{m.name}</div>
-                                                    <div className="text-xs text-gray-400">{m.generic_name || 'No generic name'}</div>
+                                {medicines.length > 0 ? (
+                                    medicines.map(m => (
+                                        <tr key={m.id} className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
+                                            <td className="px-4 py-3 text-sm font-medium text-gray-800">{m.name}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.generic_name || '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.category?.name || 'No Category'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.batch_number || '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.supplier?.name || 'No Supplier'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">
+                                                {m.purchase_price ? `$${Number(m.purchase_price).toFixed(2)}` : '---'}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">
+                                                {m.selling_price ? `$${Number(m.selling_price).toFixed(2)}` : '---'}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-500 font-medium">{m.quantity}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">
+                                                {m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {getStatusBadge(m.status)}
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <button
+                                                        onClick={() => openView(m)}
+                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                        title="View"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openEdit(m)}
+                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <Edit size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(m.id)}
+                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">
-                                            {m.category?.name || 'No Category'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {m.shelf_location ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-mono">
-                                                    <MapPin size={12} />
-                                                    {m.shelf_location}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400 text-xs">Not set</span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="11" className="px-4 py-8 text-center text-gray-400">
+                                            No medicines found
+                                            {isFiltered && (
+                                                <button
+                                                    onClick={resetFilters}
+                                                    className="ml-2 text-blue-600 hover:underline text-sm font-medium"
+                                                >
+                                                    Clear filters
+                                                </button>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-sm font-mono text-gray-500">
-                                            {m.barcode || '---'}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-center font-medium text-gray-800">
-                                            {m.quantity}
-                                        </td>
+                                    </tr>
+=======
+                        <table className="w-full table-fixed">
+                            <colgroup>
+                                <col className="w-[6%]" />
+                                <col className="w-[17%]" />
+                                <col className="w-[11%]" />
+                                <col className="w-[8%]" />
+                                <col className="w-[13%]" />
+                                <col className="w-[6%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[8%]" />
+                                <col className="w-[8%]" />
+                            </colgroup>
+                            <thead>
+                                <tr className="bg-sky-50 border-b border-sky-100">
+                                    <th className="table-header">Image</th>
+                                    <th className="table-header">Medicine Name</th>
+                                    <th className="table-header">Category</th>
+                                    <th className="table-header">Shelf</th>
+                                    <th className="table-header">Barcode</th>
+                                    <th className="table-header">Qty</th>
+                                    <th className="table-header">Selling Price</th>
+                                    <th className="table-header">Expiry Date</th>
+                                    <th className="table-header">Status</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {medicines.length > 0 ? medicines.map(m => (
+                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30 transition-colors">
                                         <td className="px-4 py-3">
-                                            {getStockStatus(m)}
+                                            <img src={getImageUrl(m)} alt={m.name} className="w-10 h-10 rounded-lg object-cover border border-gray-200" onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }} />
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">
-                                            ${Number(m.selling_price || m.unit_price || 0).toFixed(2)}
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-800 truncate">{m.name}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || 'No Category'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500 truncate">
+                                            {m.category?.shelf ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sky-50 text-sky-700 rounded-lg">
+                                                    <MapPin size={13} />
+                                                    {m.category.shelf}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">—</span>
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3">
-                                            {getStatusBadge(m.status)}
-                                        </td>
+                                        <td className="px-4 py-3 text-sm font-mono text-gray-500 truncate">{m.barcode || '---'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{m.quantity}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{m.selling_price ? `$${Number(m.selling_price).toFixed(2)}` : '---'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}</td>
+                                        <td className="px-4 py-3">{getStatusBadge(m.status)}</td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-1">
-                                                <button
-                                                    onClick={() => openView(m)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                    title="View"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => openEdit(m)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(m.id)}
-                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <button onClick={() => openView(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
+                                                <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
+                                                <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
                                             </div>
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr>
-                                        <td colSpan="9" className="px-4 py-8 text-center text-gray-400">
-                                            {isFiltered ? (
-                                                <>
-                                                    No medicines match your filters
-                                                    <button
-                                                        onClick={resetFilters}
-                                                        className="ml-2 text-blue-600 hover:underline text-sm font-medium"
-                                                    >
-                                                        Clear filters
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                'No medicines found. Add your first medicine!'
-                                            )}
-                                        </td>
-                                    </tr>
+                                    <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-400">
+                                        No medicines found{isFiltered && <button onClick={resetFilters} className="ml-2 text-sky-600 hover:underline text-sm font-medium">Clear filters</button>}
+                                    </td></tr>
+>>>>>>> Stashed changes
                                 )}
                             </tbody>
                         </table>
                     </div>
-
-                    {/* Table Pagination */}
-                    {totalPages > 1 && (
-                        <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                            <div className="text-sm text-gray-500">
-                                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} items
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => goToPage(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <ChevronLeft size={16} />
-                                </button>
-                                <div className="flex gap-1">
-                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                        let page;
-                                        if (totalPages <= 5) {
-                                            page = i + 1;
-                                        } else if (currentPage <= 3) {
-                                            page = i + 1;
-                                        } else if (currentPage >= totalPages - 2) {
-                                            page = totalPages - 4 + i;
-                                        } else {
-                                            page = currentPage - 2 + i;
-                                        }
-                                        return (
-                                            <button
-                                                key={page}
-                                                onClick={() => goToPage(page)}
-                                                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                                                    currentPage === page
-                                                        ? 'bg-blue-500 text-white'
-                                                        : 'border border-gray-200 hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                {page}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                <button
-                                    onClick={() => goToPage(currentPage + 1)}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <ChevronRight size={16} />
-                                </button>
-                            </div>
-                            <div>
-                                <select
-                                    value={itemsPerPage}
-                                    onChange={(e) => {
-                                        setItemsPerPage(Number(e.target.value));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="px-2 py-1 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                >
-                                    <option value={5}>5</option>
-                                    <option value={10}>10</option>
-                                    <option value={25}>25</option>
-                                    <option value={50}>50</option>
-                                </select>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
-            {/* Add/Edit Modal */}
-            <div className={`fixed inset-0 z-50 ${showModal ? 'flex' : 'hidden'} items-center justify-center p-4 bg-black/50 backdrop-blur-sm`}>
-                <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                    <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                        <h3 className="text-lg font-semibold text-gray-800">
-                            {editId ? 'Edit Medicine' : 'Add New Medicine'}
-                        </h3>
-                        <button
-                            onClick={() => setShowModal(false)}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-
-                    <div className="p-6">
-                        {/* Stepper */}
-                        <div className="flex items-center gap-2 mb-6">
-                            {formSteps.map((label, idx) => (
-                                <React.Fragment key={idx}>
-                                    <div className={`flex items-center gap-2 ${idx <= step ? 'text-blue-600' : 'text-gray-400'}`}>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                                            idx < step ? 'bg-blue-600 text-white' :
-                                            idx === step ? 'bg-blue-100 text-blue-600 border-2 border-blue-600' :
-                                            'bg-gray-100 text-gray-400'
-                                        }`}>
-                                            {idx < step ? '✓' : idx + 1}
-                                        </div>
-                                        <span className={`text-sm ${idx === step ? 'font-semibold' : ''}`}>{label}</span>
-                                    </div>
-                                    {idx < formSteps.length - 1 && (
-                                        <div className={`flex-1 h-0.5 ${idx < step ? 'bg-blue-600' : 'bg-gray-200'}`} />
-                                    )}
-                                </React.Fragment>
-                            ))}
-                        </div>
-
-                        {error && (
-                            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100 flex items-start gap-2">
-                                <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
-                                <span>{error}</span>
-                            </div>
-                        )}
-
-                        <form onSubmit={(e) => { e.preventDefault(); if (step === formSteps.length - 1) handleSubmit(); else nextStep(); }}>
-                            {renderStepContent()}
-
-                            <div className="flex justify-between mt-6 pt-4 border-t border-gray-200">
-                                <button
-                                    type="button"
-                                    onClick={step === 0 ? () => setShowModal(false) : prevStep}
-                                    className="btn-secondary flex items-center gap-1.5"
-                                >
-                                    <ChevronLeft size={16} />
-                                    {step === 0 ? 'Cancel' : 'Back'}
-                                </button>
-                                {step < formSteps.length - 1 ? (
-                                    <button type="submit" className="btn-primary flex items-center gap-1.5">
-                                        Next <ChevronRight size={16} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="submit"
-                                        disabled={submitting}
-                                        className="btn-primary flex items-center gap-2 disabled:opacity-60"
-                                    >
-                                        {submitting ? (
-                                            <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
-                                        ) : (
-                                            <><Package size={16} /> {editId ? 'Update Medicine' : 'Create Medicine'}</>
-                                        )}
-                                    </button>
-                                )}
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            {/* View Modal */}
-            <div className={`fixed inset-0 z-50 ${showViewModal ? 'flex' : 'hidden'} items-center justify-center p-4 bg-black/50 backdrop-blur-sm`}>
-                <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                    <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                        <h3 className="text-lg font-semibold text-gray-800">Medicine Details</h3>
-                        <button
-                            onClick={() => setShowViewModal(false)}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-
-                    <div className="p-6">
-                        <div className="flex gap-6 mb-6">
-                            <img
-                                src={getImageUrl(viewMedicine)}
-                                alt={viewMedicine?.name}
-                                className="w-32 h-32 rounded-xl object-cover border border-gray-200"
-                                onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
-                            />
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-800">{viewMedicine?.name}</h2>
-                                <p className="text-gray-500">{viewMedicine?.generic_name || 'No generic name'}</p>
-                                <div className="flex gap-2 mt-2">
-                                    {getStatusBadge(viewMedicine?.status)}
-                                    {viewMedicine?.quantity <= viewMedicine?.reorder_level && (
-                                        <span className="px-2.5 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">Low Stock</span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Category</p>
-                                <p className="font-medium">{viewMedicine?.category?.name || 'No Category'}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Shelf Location</p>
-                                <p className="font-medium">{viewMedicine?.shelf_location || 'Not set'}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Barcode</p>
-                                <p className="font-mono font-medium">{viewMedicine?.barcode || '---'}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Batch Number</p>
-                                <p className="font-medium">{viewMedicine?.batch_number || '---'}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Manufacturer</p>
-                                <p className="font-medium">{viewMedicine?.manufacturer || '---'}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Supplier</p>
-                                <p className="font-medium">{viewMedicine?.supplier?.name || 'No Supplier'}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Quantity</p>
-                                <p className="font-medium text-lg">{viewMedicine?.quantity}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Reorder Level</p>
-                                <p className="font-medium">{viewMedicine?.reorder_level}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Unit Price</p>
-                                <p className="font-medium">${Number(viewMedicine?.unit_price || 0).toFixed(2)}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Purchase Price</p>
-                                <p className="font-medium">${Number(viewMedicine?.purchase_price || 0).toFixed(2)}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Selling Price</p>
-                                <p className="font-medium">${Number(viewMedicine?.selling_price || 0).toFixed(2)}</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Expiry Date</p>
-                                <p className="font-medium">{viewMedicine?.expiry_date ? new Date(viewMedicine.expiry_date).toLocaleDateString() : '---'}</p>
-                            </div>
-                        </div>
-
-                        {viewMedicine?.description && (
-                            <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Description</p>
-                                <p className="font-medium">{viewMedicine.description}</p>
-                            </div>
-                        )}
-
-                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+            {/* View Medicine Modal */}
+            {showViewModal && viewMedicine && (
+                <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                            <h3 className="text-lg font-semibold text-gray-700">Medicine Details</h3>
                             <button
                                 onClick={() => setShowViewModal(false)}
-                                className="btn-secondary"
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Medicine Name</label>
+                                <p className="text-sm font-medium text-gray-800">{viewMedicine.name}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Generic Name</label>
+                                <p className="text-sm text-gray-600">{viewMedicine.generic_name || '---'}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Category</label>
+                                <p className="text-sm text-gray-600">{viewMedicine.category?.name || 'No Category'}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Batch Number</label>
+                                <p className="text-sm text-gray-600">{viewMedicine.batch_number || '---'}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label>
+                                <p className="text-sm text-gray-600">{viewMedicine.supplier?.name || 'No Supplier'}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+                                <div className="mt-1">{getStatusBadge(viewMedicine.status)}</div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label>
+                                <p className="text-sm font-medium text-gray-800">{viewMedicine.quantity}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label>
+                                <p className="text-sm text-gray-600">{viewMedicine.reorder_level}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Unit Price</label>
+                                <p className="text-sm text-gray-600">
+                                    {viewMedicine.unit_price ? `$${Number(viewMedicine.unit_price).toFixed(2)}` : '---'}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Purchase Price</label>
+                                <p className="text-sm text-gray-600">
+                                    {viewMedicine.purchase_price ? `$${Number(viewMedicine.purchase_price).toFixed(2)}` : '---'}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Selling Price</label>
+                                <p className="text-sm text-gray-600">
+                                    {viewMedicine.selling_price ? `$${Number(viewMedicine.selling_price).toFixed(2)}` : '---'}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Expiry Date</label>
+                                <p className="text-sm text-gray-600">
+                                    {viewMedicine.expiry_date ? new Date(viewMedicine.expiry_date).toLocaleDateString() : '---'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowViewModal(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"
                             >
                                 Close
                             </button>
@@ -1302,14 +910,49 @@ export default function Medicines() {
                                     setShowViewModal(false);
                                     openEdit(viewMedicine);
                                 }}
-                                className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 flex items-center gap-2"
                             >
-                                <Edit size={16} /> Edit Medicine
+                                <Edit size={16} />
+                                Edit Medicine
                             </button>
                         </div>
                     </div>
+<<<<<<< Updated upstream
+=======
+                </form>
+            </Modal>
+
+            <Modal open={showViewModal} onClose={() => setShowViewModal(false)} title="Medicine Details" size="max-w-3xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2 flex items-start gap-4">
+                        <img src={viewMedicine ? getImageUrl(viewMedicine) : '/images/medicine-placeholder.svg'} alt={viewMedicine?.name} className="w-24 h-24 rounded-xl object-cover border-2 border-gray-200" onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }} />
+                        <div className="flex-1">
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Medicine Name</label>
+                            <p className="text-lg font-medium text-gray-800">{viewMedicine?.name}</p>
+                        </div>
+                    </div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Generic Name</label><p className="text-sm text-gray-600">{viewMedicine?.generic_name || '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Barcode</label><p className="text-sm font-mono text-gray-600">{viewMedicine?.barcode || '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Category</label><p className="text-sm text-gray-600">{viewMedicine?.category?.name || 'No Category'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Shelf</label><p className="text-sm text-gray-600">
+                        {viewMedicine?.category?.shelf ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sky-50 text-sky-700 rounded-lg">
+                                <MapPin size={13} />
+                                {viewMedicine.category.shelf}
+                            </span>
+                        ) : '—'}
+                    </p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Batch Number</label><p className="text-sm text-gray-600">{viewMedicine?.batch_number || '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewMedicine?.supplier?.name || 'No Supplier'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Status</label><div className="mt-1">{getStatusBadge(viewMedicine?.status)}</div></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label><p className="text-sm font-medium text-gray-800">{viewMedicine?.quantity}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label><p className="text-sm text-gray-600">{viewMedicine?.reorder_level}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Unit Price</label><p className="text-sm text-gray-600">{viewMedicine?.unit_price ? `$${Number(viewMedicine.unit_price).toFixed(2)}` : '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Selling Price</label><p className="text-sm text-gray-600">{viewMedicine?.selling_price ? `$${Number(viewMedicine.selling_price).toFixed(2)}` : '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Expiry Date</label><p className="text-sm text-gray-600">{viewMedicine?.expiry_date ? new Date(viewMedicine.expiry_date).toLocaleDateString() : '---'}</p></div>
+>>>>>>> Stashed changes
                 </div>
-            </div>
-        </div>
+            )}
+        </SidebarLayout>
     );
 }

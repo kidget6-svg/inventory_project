@@ -9,6 +9,9 @@ import {
     Pill,
     Warehouse,
     AlertTriangle,
+    Clock,
+    Truck,
+    FolderTree,
     ArrowRight,
 } from 'lucide-react';
 
@@ -38,8 +41,29 @@ const adminActions = [
     {
         to: '/users',
         label: 'Manage Users',
-        description: 'User permissions',
+        description: 'All users & permissions',
         icon: Users,
+        color: 'blue',
+    },
+    {
+        to: '/users?status=pending',
+        label: 'Review Pending',
+        description: 'Approve applications',
+        icon: Clock,
+        color: 'orange',
+    },
+    {
+        to: '/suppliers',
+        label: 'Suppliers',
+        description: 'Manage suppliers',
+        icon: Truck,
+        color: 'blue',
+    },
+    {
+        to: '/categories',
+        label: 'Categories',
+        description: 'Manage categories',
+        icon: FolderTree,
         color: 'blue',
     },
     {
@@ -116,7 +140,6 @@ const actionsByRole = {
 };
 
 
-
 const colors = {
 
     blue: {
@@ -158,7 +181,6 @@ const colors = {
 };
 
 
-
 export default function QuickActions({
     role = 'admin'
 }) {
@@ -166,7 +188,6 @@ export default function QuickActions({
 
     const actions =
         actionsByRole[role] || cashierActions;
-
 
 
     return (
@@ -200,7 +221,6 @@ export default function QuickActions({
                         Quick Actions
                     </h2>
 
-
                     <p className="
                         text-sm
                         text-gray-500
@@ -208,17 +228,12 @@ export default function QuickActions({
                         Frequently used operations
                     </p>
 
-
                 </div>
 
 
             </div>
 
-
-
-
             {/* Actions */}
-
 
             <div className="
                 grid
@@ -228,16 +243,12 @@ export default function QuickActions({
                 gap-4
             ">
 
-
                 {actions.map((action)=>{
-
 
                     const Icon = action.icon;
 
                     const style =
                         colors[action.color];
-
-
 
                     return (
 
@@ -268,13 +279,11 @@ export default function QuickActions({
 
                         >
 
-
                             <div className="
                                 flex
                                 justify-between
                                 items-start
                             ">
-
 
                                 <div className={`
                                     h-12
@@ -292,7 +301,6 @@ export default function QuickActions({
 
                                 </div>
 
-
                                 <ArrowRight
                                     size={18}
                                     className="
@@ -302,10 +310,7 @@ export default function QuickActions({
                                     "
                                 />
 
-
                             </div>
-
-
 
                             <h3 className="
                                 mt-5
@@ -317,8 +322,6 @@ export default function QuickActions({
 
                             </h3>
 
-
-
                             <p className="
                                 mt-1
                                 text-xs
@@ -329,14 +332,11 @@ export default function QuickActions({
 
                             </p>
 
-
                         </Link>
 
                     );
 
-
                 })}
-
 
             </div>
 
