@@ -16,6 +16,10 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 
         if ($user->isAdmin()) {
             return $this->adminDashboard();
@@ -160,6 +164,7 @@ class DashboardController extends Controller
             ];
         }
 
+<<<<<<< Updated upstream
         // Sort by time (most recent first) — diffForHumans doesn't sort well, so use created_at
         usort($recentActivities, function ($a, $b) {
             return strcmp($b['time'], $a['time']);
@@ -188,6 +193,194 @@ class DashboardController extends Controller
                 'labels'   => $salesChartLabels,
                 'counts'   => $salesChartCounts,
                 'revenue'  => $salesChartRevenue,
+=======
+        return compact('daily', 'weekly', 'monthly');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shared helper: purchase vs sales totals
+    |--------------------------------------------------------------------------
+    */
+    private function purchaseVsSales(): array
+    {
+        return [
+            'totalPurchases' => (float) PurchaseOrder::where('status', 'completed')->sum('total_amount'),
+            'totalSales'     => (float) Sale::sum('total_amount'),
+            'purchaseCount'  => PurchaseOrder::where('status', 'completed')->count(),
+            'salesCount'     => Sale::count(),
+        ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shared helper: purchase order statistics
+    |--------------------------------------------------------------------------
+    */
+    private function purchaseOrderStats(): array
+    {
+        $statuses = PurchaseOrder::statuses();
+        $stats = [];
+        foreach ($statuses as $status) {
+            $stats[$status] = PurchaseOrder::where('status', $status)->count();
+        }
+        return $stats;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shared helper: recent activities (built from existing model timestamps)
+    |--------------------------------------------------------------------------
+    */
+   private function recentActivities(int $limit = 10): array
+{
+    $activities = [];
+
+    // Recent sales
+    foreach (Sale::latest()->take($limit)->get() as $sale) {
+
+        $createdAt = $sale->created_at ?? now();
+
+        $activities[] = [
+            'id'        => 'sale_' . $sale->id,
+            'user'      => 'System',
+            'action'    => "Completed Sale #{$sale->id}",
+            'icon'      => 'shopping-cart',
+            'date'      => $createdAt->format('Y-m-d'),
+            'time'      => $createdAt->format('H:i'),
+            'timestamp' => $createdAt->timestamp,
+        ];
+    }
+
+    // Recent purchase orders
+    foreach (PurchaseOrder::with('supplier')->latest()->take($limit)->get() as $po) {
+
+        $updatedAt = $po->updated_at ?? $po->created_at ?? now();
+
+        $action = match ($po->status) {
+            'pending'    => "Created Purchase Order #{$po->id}",
+            'approved'   => "Approved Purchase Order #{$po->id}",
+            'processing' => "Processing Purchase Order #{$po->id}",
+            'completed'  => "Completed Purchase Order #{$po->id}",
+            'cancelled'  => "Cancelled Purchase Order #{$po->id}",
+            default      => "Updated Purchase Order #{$po->id}",
+        };
+
+        $activities[] = [
+            'id'        => 'po_' . $po->id,
+            'user'      => 'System',
+            'action'    => $action,
+            'icon'      => 'package',
+            'date'      => $updatedAt->format('Y-m-d'),
+            'time'      => $updatedAt->format('H:i'),
+            'timestamp' => $updatedAt->timestamp,
+        ];
+    }
+
+    // Recently added medicines
+    foreach (Medicine::latest()->take($limit)->get() as $medicine) {
+
+        $createdAt = $medicine->created_at ?? now();
+
+        $activities[] = [
+            'id'        => 'med_' . $medicine->id,
+            'user'      => 'System',
+            'action'    => "Added new medicine: {$medicine->name}",
+            'icon'      => 'pill',
+            'date'      => $createdAt->format('Y-m-d'),
+            'time'      => $createdAt->format('H:i'),
+            'timestamp' => $createdAt->timestamp,
+        ];
+    }
+
+    // Recent stock movements
+    foreach (StockMovement::with('medicine')->latest()->take($limit)->get() as $movement) {
+
+        $createdAt = $movement->created_at ?? now();
+
+        $medicineName = $movement->medicine
+            ? $movement->medicine->name
+            : 'Unknown medicine';
+
+        $action = $movement->type === 'in'
+            ? "Stock increased for {$medicineName} ({$movement->quantity})"
+            : "Stock decreased for {$medicineName} ({$movement->quantity})";
+
+        $activities[] = [
+            'id'        => 'sm_' . $movement->id,
+            'user'      => 'System',
+            'action'    => $action,
+            'icon'      => 'activity',
+            'date'      => $createdAt->format('Y-m-d'),
+            'time'      => $createdAt->format('H:i'),
+            'timestamp' => $createdAt->timestamp,
+        ];
+    }
+
+    usort($activities, function ($a, $b) {
+        return $b['timestamp'] <=> $a['timestamp'];
+    });
+
+    return array_slice($activities, 0, $limit);
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin dashboard – full data set
+    |--------------------------------------------------------------------------
+    */
+    private function adminDashboard()
+    {
+        $totalMedicines       = Medicine::count();
+        $totalStock           = Medicine::sum('quantity');
+        $totalSuppliers       = Supplier::count();
+        $totalUsers           = User::count();
+        $pendingUsers         = User::where('status', User::STATUS_PENDING)->count();
+
+        $lowStockMedicines    = $this->lowStockMedicines();
+        $lowStockCount        = $lowStockMedicines->count();
+
+        $expiredMedicines     = $this->expiredMedicines();
+        $expiredCount         = $expiredMedicines->count();
+
+        $expiring30           = $this->expiringMedicines(30);
+        $expiring60           = $this->expiringMedicines(60);
+        $expiring90           = $this->expiringMedicines(90);
+
+        $pendingPOs           = PurchaseOrder::where('status', 'pending')->count();
+
+        $todaySalesCount      = Sale::whereDate('sale_date', today())->count();
+        $todayRevenue         = Sale::whereDate('sale_date', today())->sum('total_amount');
+
+        $salesAnalytics       = $this->salesAnalytics();
+        $purchaseVsSales      = $this->purchaseVsSales();
+        $inventoryStatus      = $this->inventoryStatus();
+        $poStats              = $this->purchaseOrderStats();
+        $activities           = $this->recentActivities(10);
+
+        $recentPurchaseOrders = PurchaseOrder::with('supplier')
+            ->latest()->take(5)->get();
+
+        return response()->json([
+            // ---- Summary cards ----
+            'totalMedicines'         => $totalMedicines,
+            'totalStock'             => $totalStock,
+            'lowStockCount'          => $lowStockCount,
+            'expiredCount'           => $expiredCount,
+            'pendingPurchaseOrders'  => $pendingPOs,
+            'todaySalesCount'        => $todaySalesCount,
+            'todayRevenue'           => $todayRevenue,
+            'totalUsers'             => $totalUsers,
+            'pendingUsers'           => $pendingUsers,
+
+            // ---- Lists ----
+            'lowStockMedicines'      => $lowStockMedicines,
+            'expiredMedicines'       => $expiredMedicines,
+            'expiringSoon'           => [
+                '30_days' => $expiring30,
+                '60_days' => $expiring60,
+                '90_days' => $expiring90,
+>>>>>>> Stashed changes
             ],
             'inventoryChartData' => $inventoryChartData,
             'recentActivities'   => $recentActivities,

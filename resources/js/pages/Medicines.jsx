@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+<<<<<<< Updated upstream
 import SidebarLayout from '../components/SidebarLayout';
 import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign } from 'lucide-react';
+=======
+import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight, Upload, MapPin } from 'lucide-react';
+>>>>>>> Stashed changes
 
 const statusOptions = [
     { value: '', label: 'All Statuses' },
@@ -12,6 +16,17 @@ const statusOptions = [
     { value: 'discontinued', label: 'Discontinued' },
 ];
 
+<<<<<<< Updated upstream
+=======
+const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
+
+const getImageUrl = (medicine) => {
+    if (medicine?.image_url) return medicine.image_url;
+    if (medicine?.image) return `/storage/${medicine.image}`;
+    return '/images/medicine-placeholder.svg';
+};
+
+>>>>>>> Stashed changes
 export default function Medicines() {
     const [medicines, setMedicines] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -23,6 +38,7 @@ export default function Medicines() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+<<<<<<< Updated upstream
 
     const [form, setForm] = useState({
         name: '',
@@ -37,6 +53,18 @@ export default function Medicines() {
         reorder_level: '',
         expiry_date: '',
         status: 'active',
+=======
+    const [scanning, setScanning] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
+    const videoRef = useRef(null);
+    const [step, setStep] = useState(0);
+
+    const [form, setForm] = useState({
+        name: '', generic_name: '', batch_number: '', barcode: '', category_id: '',
+        supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '',
+        reorder_level: '', expiry_date: '', status: 'active', image: '',
+>>>>>>> Stashed changes
     });
 
     const [filters, setFilters] = useState({
@@ -105,8 +133,18 @@ export default function Medicines() {
         setSearchTimeout(timeout);
     };
 
+<<<<<<< Updated upstream
     const resetFilters = () => {
         setFilters({ search: '', category_id: '', supplier_id: '', status: '' });
+=======
+    const resetFilters = () => setFilters({ search: '', category_id: '', supplier_id: '', status: '' });
+
+    const resetForm = () => {
+        setForm({ name: '', generic_name: '', batch_number: '', barcode: '', category_id: '', supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '', reorder_level: '', expiry_date: '', status: 'active', image: '' });
+        setSelectedImage(null);
+        setPreviewUrl('');
+        setEditId(null); setError(''); setStep(0);
+>>>>>>> Stashed changes
     };
 
     const openCreate = () => {
@@ -142,11 +180,17 @@ export default function Medicines() {
             selling_price: m.selling_price || '',
             reorder_level: m.reorder_level || '',
             expiry_date: m.expiry_date ? new Date(m.expiry_date).toISOString().split('T')[0] : '',
-            status: m.status || 'active',
+            status: m.status || 'active', image: m.image || '',
         });
+<<<<<<< Updated upstream
         setEditId(m.id);
         setShowForm(true);
         setError('');
+=======
+        setSelectedImage(null);
+        setPreviewUrl(getImageUrl(m));
+        setEditId(m.id); setShowModal(true); setError(''); setStep(0);
+>>>>>>> Stashed changes
     };
 
     const openView = (m) => {
@@ -154,6 +198,7 @@ export default function Medicines() {
         setShowViewModal(true);
     };
 
+<<<<<<< Updated upstream
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -168,6 +213,51 @@ export default function Medicines() {
             }
             setShowForm(false);
             loadMedicines();
+=======
+    const nextStep = () => { setStep(s => Math.min(s + 1, formSteps.length - 1)); };
+    const prevStep = () => { setStep(s => Math.max(s - 1, 0)); };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        setSelectedImage(file || null);
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => setPreviewUrl(ev.target.result);
+            reader.readAsDataURL(file);
+        } else {
+            setPreviewUrl(form.image ? getImageUrl({ image: form.image }) : '');
+        }
+    };
+
+    const removeSelectedImage = () => {
+        setSelectedImage(null);
+        setPreviewUrl(form.image ? getImageUrl({ image: form.image }) : '');
+    };
+
+    const handleSubmit = async () => {
+        setError('');
+        setSubmitting(true);
+        try {
+            if (selectedImage) {
+                const formData = new FormData();
+                Object.entries(form).forEach(([key, value]) => {
+                    if (key !== 'image') formData.append(key, value);
+                });
+                formData.append('image', selectedImage);
+
+                if (editId) {
+                    await api.put(`/medicines/${editId}`, formData, { headers: { 'Content-Type': undefined } });
+                    window.showToast('Medicine updated successfully', 'success');
+                } else {
+                    await api.post('/medicines', formData, { headers: { 'Content-Type': undefined } });
+                    window.showToast('Medicine created successfully', 'success');
+                }
+            } else {
+                if (editId) { await api.put(`/medicines/${editId}`, form); window.showToast('Medicine updated successfully', 'success'); }
+                else { await api.post('/medicines', form); window.showToast('Medicine created successfully', 'success'); }
+            }
+            setShowModal(false); loadMedicines();
+>>>>>>> Stashed changes
         } catch (err) {
             const msgs = err.response?.data?.errors;
             setError(msgs ? Object.values(msgs).flat().join(' ') : 'Error saving medicine');
@@ -373,8 +463,38 @@ export default function Medicines() {
                                 ))}
                             </select>
                         </div>
+<<<<<<< Updated upstream
 
                         {/* Supplier */}
+=======
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Picture</label>
+                            <div className="flex items-start gap-4">
+                                {(previewUrl || form.image) && (
+                                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200">
+                                        <img src={previewUrl || getImageUrl({ image: form.image })} alt="Preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }} />
+                                        {!selectedImage && form.image && (
+                                            <button type="button" onClick={removeSelectedImage} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600">
+                                                <X size={10} />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
+                                        <Upload size={16} /> Choose image
+                                        <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                                    </label>
+                                    <p className="mt-1 text-xs text-gray-400">PNG, JPG, GIF up to 2MB</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 1:
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+>>>>>>> Stashed changes
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier</label>
                             <select
@@ -504,6 +624,7 @@ export default function Medicines() {
                                 <option value="discontinued">Discontinued</option>
                             </select>
                         </div>
+<<<<<<< Updated upstream
 
                         {/* Form Buttons */}
                         <div className="lg:col-span-3 flex justify-end gap-3 pt-2">
@@ -531,6 +652,19 @@ export default function Medicines() {
                                     </>
                                 )}
                             </button>
+=======
+                        <div className="md:col-span-2 p-4 bg-sky-50 rounded-xl border border-sky-200">
+                            <h4 className="text-sm font-semibold text-sky-800 mb-2">Review Summary</h4>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div><span className="text-gray-500">Name:</span> <span className="font-medium">{form.name || '---'}</span></div>
+                                <div><span className="text-gray-500">Category:</span> <span className="font-medium">{categories.find(c => c.id == form.category_id)?.name || '---'}</span></div>
+                                <div><span className="text-gray-500">Shelf:</span> <span className="font-medium">{categories.find(c => c.id == form.category_id)?.shelf || '---'}</span></div>
+                                <div><span className="text-gray-500">Barcode:</span> <span className="font-medium">{form.barcode || '---'}</span></div>
+                                <div><span className="text-gray-500">Quantity:</span> <span className="font-medium">{form.quantity || '0'}</span></div>
+                                <div><span className="text-gray-500">Selling Price:</span> <span className="font-medium">{form.selling_price ? `$${form.selling_price}` : '---'}</span></div>
+                                <div><span className="text-gray-500">Status:</span> <span className="font-medium">{form.status}</span></div>
+                            </div>
+>>>>>>> Stashed changes
                         </div>
                     </form>
                 </div>
@@ -542,6 +676,7 @@ export default function Medicines() {
             ) : (
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
+<<<<<<< Updated upstream
                         <table className="w-full min-w-[1200px]">
                             <thead>
                                 <tr className="bg-blue-50 border-b border-blue-100">
@@ -621,6 +756,70 @@ export default function Medicines() {
                                             )}
                                         </td>
                                     </tr>
+=======
+                        <table className="w-full table-fixed">
+                            <colgroup>
+                                <col className="w-[6%]" />
+                                <col className="w-[17%]" />
+                                <col className="w-[11%]" />
+                                <col className="w-[8%]" />
+                                <col className="w-[13%]" />
+                                <col className="w-[6%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[8%]" />
+                                <col className="w-[8%]" />
+                            </colgroup>
+                            <thead>
+                                <tr className="bg-sky-50 border-b border-sky-100">
+                                    <th className="table-header">Image</th>
+                                    <th className="table-header">Medicine Name</th>
+                                    <th className="table-header">Category</th>
+                                    <th className="table-header">Shelf</th>
+                                    <th className="table-header">Barcode</th>
+                                    <th className="table-header">Qty</th>
+                                    <th className="table-header">Selling Price</th>
+                                    <th className="table-header">Expiry Date</th>
+                                    <th className="table-header">Status</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {medicines.length > 0 ? medicines.map(m => (
+                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30 transition-colors">
+                                        <td className="px-4 py-3">
+                                            <img src={getImageUrl(m)} alt={m.name} className="w-10 h-10 rounded-lg object-cover border border-gray-200" onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }} />
+                                        </td>
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-800 truncate">{m.name}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || 'No Category'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500 truncate">
+                                            {m.category?.shelf ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sky-50 text-sky-700 rounded-lg">
+                                                    <MapPin size={13} />
+                                                    {m.category.shelf}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">—</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm font-mono text-gray-500 truncate">{m.barcode || '---'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{m.quantity}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{m.selling_price ? `$${Number(m.selling_price).toFixed(2)}` : '---'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}</td>
+                                        <td className="px-4 py-3">{getStatusBadge(m.status)}</td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex justify-end gap-1">
+                                                <button onClick={() => openView(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
+                                                <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
+                                                <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-400">
+                                        No medicines found{isFiltered && <button onClick={resetFilters} className="ml-2 text-sky-600 hover:underline text-sm font-medium">Clear filters</button>}
+                                    </td></tr>
+>>>>>>> Stashed changes
                                 )}
                             </tbody>
                         </table>
@@ -718,6 +917,40 @@ export default function Medicines() {
                             </button>
                         </div>
                     </div>
+<<<<<<< Updated upstream
+=======
+                </form>
+            </Modal>
+
+            <Modal open={showViewModal} onClose={() => setShowViewModal(false)} title="Medicine Details" size="max-w-3xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2 flex items-start gap-4">
+                        <img src={viewMedicine ? getImageUrl(viewMedicine) : '/images/medicine-placeholder.svg'} alt={viewMedicine?.name} className="w-24 h-24 rounded-xl object-cover border-2 border-gray-200" onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }} />
+                        <div className="flex-1">
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Medicine Name</label>
+                            <p className="text-lg font-medium text-gray-800">{viewMedicine?.name}</p>
+                        </div>
+                    </div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Generic Name</label><p className="text-sm text-gray-600">{viewMedicine?.generic_name || '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Barcode</label><p className="text-sm font-mono text-gray-600">{viewMedicine?.barcode || '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Category</label><p className="text-sm text-gray-600">{viewMedicine?.category?.name || 'No Category'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Shelf</label><p className="text-sm text-gray-600">
+                        {viewMedicine?.category?.shelf ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sky-50 text-sky-700 rounded-lg">
+                                <MapPin size={13} />
+                                {viewMedicine.category.shelf}
+                            </span>
+                        ) : '—'}
+                    </p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Batch Number</label><p className="text-sm text-gray-600">{viewMedicine?.batch_number || '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewMedicine?.supplier?.name || 'No Supplier'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Status</label><div className="mt-1">{getStatusBadge(viewMedicine?.status)}</div></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label><p className="text-sm font-medium text-gray-800">{viewMedicine?.quantity}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label><p className="text-sm text-gray-600">{viewMedicine?.reorder_level}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Unit Price</label><p className="text-sm text-gray-600">{viewMedicine?.unit_price ? `$${Number(viewMedicine.unit_price).toFixed(2)}` : '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Selling Price</label><p className="text-sm text-gray-600">{viewMedicine?.selling_price ? `$${Number(viewMedicine.selling_price).toFixed(2)}` : '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Expiry Date</label><p className="text-sm text-gray-600">{viewMedicine?.expiry_date ? new Date(viewMedicine.expiry_date).toLocaleDateString() : '---'}</p></div>
+>>>>>>> Stashed changes
                 </div>
             )}
         </SidebarLayout>

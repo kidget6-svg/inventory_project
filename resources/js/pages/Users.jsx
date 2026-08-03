@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../axios';
@@ -11,6 +12,85 @@ const roleOptions = [
 ];
 
 export default function Users() {
+=======
+import React, { useEffect, useState } from "react";
+import {
+    User,
+    Mail,
+    Lock,
+    Eye,
+    EyeOff,
+    Edit,
+    Trash2,
+    Plus,
+    Search,
+    X,
+    Save,
+    Loader2,
+    ShieldCheck,
+    Pill,
+    WalletCards,
+    CheckCircle,
+    XCircle,
+    Clock,
+} from "lucide-react";
+
+import { useAuth } from "../context/AuthContext";
+import api from "../axios";
+import LoadingSpinner from "../components/LoadingSpinner";
+
+
+const roleOptions = [
+    { value: "admin", label: "Admin" },
+    { value: "pharmacist", label: "Pharmacist" },
+    { value: "cashier", label: "Cashier" },
+];
+
+const statusOptions = [
+    { value: "all", label: "All Statuses" },
+    { value: "pending", label: "Pending" },
+    { value: "approved", label: "Approved" },
+    { value: "rejected", label: "Rejected" },
+];
+
+
+const getStatusBadge = (status) => {
+    const styles = {
+        pending: "bg-amber-100 text-amber-700",
+        approved: "bg-green-100 text-green-700",
+        rejected: "bg-red-100 text-red-700",
+    };
+
+    const icons = {
+        pending: <Clock size={14} />,
+        approved: <CheckCircle size={14} />,
+        rejected: <XCircle size={14} />,
+    };
+
+    return (
+        <span
+            className={`
+                inline-flex
+                items-center
+                gap-1.5
+                px-3
+                py-1
+                rounded-full
+                text-xs
+                font-medium
+                ${styles[status] || "bg-gray-100 text-gray-700"}
+            `}
+        >
+            {icons[status]}
+            {status}
+        </span>
+    );
+};
+
+
+export default function Users() {
+
+>>>>>>> Stashed changes
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -20,6 +100,7 @@ export default function Users() {
     const [submitting, setSubmitting] = useState(false);
     const [actionLoading, setActionLoading] = useState(null);
 
+<<<<<<< Updated upstream
     const [form, setForm] = useState({
         first_name: '',
         last_name: '',
@@ -50,23 +131,57 @@ export default function Users() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
 
+=======
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
+    const [roleFilter, setRoleFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [showModal, setShowModal] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [actionLoading, setActionLoading] = useState(null);
+
+    const [form, setForm] = useState({
+        name: "",
+        email: "",
+        password: "",
+        password_confirmation: "",
+        role: "cashier",
+        status: "pending",
+    });
+
+>>>>>>> Stashed changes
     useEffect(() => {
         fetchUsers();
     }, []);
 
     const fetchUsers = async () => {
         try {
+<<<<<<< Updated upstream
             const res = await api.get('/users');
             setUsers(res.data);
             setError('');
         } catch (err) {
             setError('Failed to load users');
             console.error(err);
+=======
+            const response = await api.get("/users");
+            setUsers(response.data);
+            setError("");
+        } catch (error) {
+            console.log(error);
+            setError("Failed to load users");
+>>>>>>> Stashed changes
         } finally {
             setLoading(false);
         }
     };
 
+<<<<<<< Updated upstream
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const handleFileChange = (e, setter) => {
@@ -129,12 +244,53 @@ export default function Users() {
 
     const closeForm = () => {
         setShowForm(false);
+=======
+    const handleChange = (e) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const resetForm = () => {
+        setForm({
+            name: "",
+            email: "",
+            password: "",
+            password_confirmation: "",
+            role: "cashier",
+            status: "pending",
+        });
+        setEditingUser(null);
+        setShowPassword(false);
+        setShowConfirm(false);
+    };
+
+    const openCreate = () => {
+        resetForm();
+        setShowModal(true);
+    };
+
+    const openEdit = (user) => {
+        setForm({
+            name: user.name,
+            email: user.email,
+            password: "",
+            password_confirmation: "",
+            role: user.role,
+            status: user.status || "pending",
+        });
+        setEditingUser(user);
+        setShowModal(true);
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+>>>>>>> Stashed changes
         resetForm();
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitting(true);
+<<<<<<< Updated upstream
         try {
             const formData = new FormData();
             formData.append('first_name', form.first_name);
@@ -178,12 +334,33 @@ export default function Users() {
         } catch (err) {
             const msgs = err.response?.data?.errors;
             setError(msgs ? Object.values(msgs).flat().join(' ') : 'Operation failed');
+=======
+        setError("");
+
+        try {
+            if (editingUser) {
+                await api.put(`/users/${editingUser.id}`, form);
+            } else {
+                await api.post("/register", form);
+            }
+
+            await fetchUsers();
+            closeModal();
+        } catch (error) {
+            const messages = error.response?.data?.errors;
+            setError(
+                messages
+                    ? Object.values(messages).flat().join(" ")
+                    : "Operation failed"
+            );
+>>>>>>> Stashed changes
         } finally {
             setSubmitting(false);
         }
     };
 
     const handleDelete = async (id) => {
+<<<<<<< Updated upstream
         if (!window.confirm('Are you sure you want to delete this user?')) return;
         try {
             await api.delete(`/users/${id}`);
@@ -214,11 +391,37 @@ export default function Users() {
             window.showToast?.('User rejected successfully.', 'success');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to reject user');
+=======
+        if (!window.confirm("Delete this user?")) return;
+
+        try {
+            await api.delete(`/users/${id}`);
+            fetchUsers();
+            window.showToast("User deleted successfully", "success");
+        } catch (error) {
+            setError("Failed to delete user");
+            window.showToast("Failed to delete user", "error");
+        }
+    };
+
+    const handleApprove = async (id) => {
+        if (!window.confirm("Approve this user?")) return;
+
+        setActionLoading(id + "_approve");
+        try {
+            await api.post(`/users/${id}/approve`);
+            await fetchUsers();
+            window.showToast("User approved successfully", "success");
+        } catch (error) {
+            console.error(error);
+            window.showToast("Failed to approve user", "error");
+>>>>>>> Stashed changes
         } finally {
             setActionLoading(null);
         }
     };
 
+<<<<<<< Updated upstream
     const getRoleBadge = (role) => {
         const colors = {
             admin: 'bg-blue-100 text-blue-700',
@@ -367,10 +570,220 @@ export default function Users() {
                         <div>
                             <label className="text-sm font-medium text-gray-700">Role</label>
                             <div className="relative mt-1">
+=======
+    const handleReject = async (id) => {
+        if (!window.confirm("Reject this user?")) return;
+
+        setActionLoading(id + "_reject");
+        try {
+            await api.post(`/users/${id}/reject`);
+            await fetchUsers();
+            window.showToast("User rejected successfully", "success");
+        } catch (error) {
+            console.error(error);
+            window.showToast("Failed to reject user", "error");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const filteredUsers = users.filter((user) => {
+        const matchesSearch =
+            user.name?.toLowerCase().includes(search.toLowerCase()) ||
+            user.email?.toLowerCase().includes(search.toLowerCase());
+        const matchesRole =
+            roleFilter === "all" || user.role === roleFilter;
+        const matchesStatus =
+            statusFilter === "all" || user.status === statusFilter;
+        return matchesSearch && matchesRole && matchesStatus;
+    });
+
+    const totalUsers = users.length;
+    const adminCount = users.filter((u) => u.role === "admin").length;
+    const pharmacistCount = users.filter((u) => u.role === "pharmacist").length;
+    const cashierCount = users.filter((u) => u.role === "cashier").length;
+    const pendingCount = users.filter((u) => (u.status || "pending") === "pending").length;
+
+    return (
+
+        <div className="space-y-6">
+
+            {/* ERROR MESSAGE */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl">
+                    {error}
+                </div>
+            )}
+
+            {/* HEADER */}
+            <div className="flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
+                    <p className="text-gray-500 mt-1">Manage pharmacy staff accounts and permissions</p>
+                </div>
+
+                <button
+                    onClick={openCreate}
+                    className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-5 py-3 rounded-xl shadow-md hover:shadow-lg transition"
+                >
+                    <Plus size={20} />
+                    Add User
+                </button>
+            </div>
+
+            {/* STATISTICS CARDS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+
+                <div className="bg-white rounded-xl shadow-sm border p-5">
+                    <div className="flex justify-between">
+                        <div>
+                            <p className="text-gray-500 text-sm">Total Users</p>
+                            <h2 className="text-3xl font-bold text-blue-500 mt-2">{totalUsers}</h2>
+                        </div>
+                        <User className="text-blue-500" size={35} />
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border p-5">
+                    <div className="flex justify-between">
+                        <div>
+                            <p className="text-gray-500 text-sm">Admins</p>
+                            <h2 className="text-3xl font-bold text-blue-500 mt-2">{adminCount}</h2>
+                        </div>
+                        <ShieldCheck className="text-blue-500" size={35} />
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border p-5">
+                    <div className="flex justify-between">
+                        <div>
+                            <p className="text-gray-500 text-sm">Pharmacists</p>
+                            <h2 className="text-3xl font-bold text-blue-500 mt-2">{pharmacistCount}</h2>
+                        </div>
+                        <Pill className="text-blue-500" size={35} />
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border p-5">
+                    <div className="flex justify-between">
+                        <div>
+                            <p className="text-gray-500 text-sm">Cashiers</p>
+                            <h2 className="text-3xl font-bold text-blue-500 mt-2">{cashierCount}</h2>
+                        </div>
+                        <WalletCards className="text-blue-500" size={35} />
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border p-5">
+                    <div className="flex justify-between">
+                        <div>
+                            <p className="text-gray-500 text-sm">Pending Approval</p>
+                            <h2 className="text-3xl font-bold text-amber-500 mt-2">{pendingCount}</h2>
+                        </div>
+                        <Clock className="text-amber-500" size={35} />
+                    </div>
+                </div>
+            </div>
+
+            {/* SEARCH AND FILTER */}
+            <div className="bg-white rounded-xl shadow-sm border p-5 flex flex-col md:flex-row gap-4">
+
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+                    <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search by name or email..."
+                        className="w-full pl-11 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
+                <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="border rounded-xl px-4 py-3"
+                >
+                    <option value="all">All Roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="pharmacist">Pharmacist</option>
+                    <option value="cashier">Cashier</option>
+                </select>
+
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="border rounded-xl px-4 py-3"
+                >
+                    {statusOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* ADD / EDIT MODAL */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
+
+                        <div className="flex justify-between items-center mb-5">
+                            <h2 className="text-xl font-bold text-gray-800">
+                                {editingUser ? "Edit User" : "Add New User"}
+                            </h2>
+                            <button
+                                onClick={closeModal}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={22} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Full Name
+                                </label>
+                                <div className="relative mt-1">
+                                    <User size={18} className="absolute left-3 top-3 text-gray-400" />
+                                    <input
+                                        name="name"
+                                        value={form.name}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 py-3 border rounded-xl"
+                                        placeholder="Full name"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Email
+                                </label>
+                                <div className="relative mt-1">
+                                    <Mail size={18} className="absolute left-3 top-3 text-gray-400" />
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={form.email}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 py-3 border rounded-xl"
+                                        placeholder="Email"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Role
+                                </label>
+>>>>>>> Stashed changes
                                 <select
                                     name="role"
                                     value={form.role}
                                     onChange={handleChange}
+<<<<<<< Updated upstream
                                     className="w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
                                     required
                                 >
@@ -863,6 +1276,242 @@ export default function Users() {
                         )) : (
                             <tr>
                                 <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
+=======
+                                    className="w-full mt-1 py-3 px-4 border rounded-xl"
+                                    required
+                                >
+                                    {roleOptions.map((role) => (
+                                        <option key={role.value} value={role.value}>{role.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Status
+                                </label>
+                                <select
+                                    name="status"
+                                    value={form.status}
+                                    onChange={handleChange}
+                                    className="w-full mt-1 py-3 px-4 border rounded-xl"
+                                    required
+                                >
+                                    <option value="pending">Pending</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Password {editingUser && "(leave empty to keep current)"}
+                                </label>
+                                <div className="relative mt-1">
+                                    <Lock size={18} className="absolute left-3 top-3 text-gray-400" />
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={form.password}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 pr-12 py-3 border rounded-xl"
+                                        placeholder="Password"
+                                        minLength={editingUser ? undefined : 8}
+                                        required={!editingUser}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-3 text-gray-500"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Confirm Password
+                                </label>
+                                <div className="relative mt-1">
+                                    <Lock size={18} className="absolute left-3 top-3 text-gray-400" />
+                                    <input
+                                        type={showConfirm ? "text" : "password"}
+                                        name="password_confirmation"
+                                        value={form.password_confirmation}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 pr-12 py-3 border rounded-xl"
+                                        placeholder="Confirm password"
+                                        minLength={editingUser ? undefined : 8}
+                                        required={!editingUser}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirm(!showConfirm)}
+                                        className="absolute right-3 top-3 text-gray-500"
+                                    >
+                                        {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="md:col-span-2 flex justify-end gap-3 mt-3">
+                                <button
+                                    type="button"
+                                    onClick={closeModal}
+                                    className="px-5 py-3 border rounded-xl hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save size={18} />
+                                            {editingUser ? "Update User" : "Create User"}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* USERS TABLE */}
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <table className="w-full">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">User</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Created</th>
+                            <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {filteredUsers.length > 0 ? (
+                            filteredUsers.map((user) => (
+                                <tr key={user.id} className="hover:bg-gray-50 transition">
+
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                                                {user.name?.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold">{user.name}</p>
+                                                <p className="text-xs text-gray-400">ID: {user.id}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td className="px-6 py-4 text-gray-600">{user.email}</td>
+
+                                    <td className="px-6 py-4">
+                                        {(() => {
+                                            const styles = {
+                                                admin: "bg-sky-100 text-sky-700",
+                                                pharmacist: "bg-sky-100 text-sky-700",
+                                                cashier: "bg-sky-100 text-sky-700",
+                                            };
+                                            return (
+                                                <span
+                                                    className={`
+                                                        px-3
+                                                        py-1
+                                                        rounded-full
+                                                        text-xs
+                                                        font-semibold
+                                                        ${styles[user.role] || "bg-gray-100 text-gray-700"}
+                                                    `}
+                                                >
+                                                    {user.role}
+                                                </span>
+                                            );
+                                        })()}
+                                    </td>
+
+                                    <td className="px-6 py-4">
+                                        {getStatusBadge(user.status || "pending")}
+                                    </td>
+
+                                    <td className="px-6 py-4 text-gray-500">
+                                        {user.created_at
+                                            ? new Date(user.created_at).toLocaleDateString()
+                                            : "-"}
+                                    </td>
+
+                                    <td className="px-6 py-4">
+                                        <div className="flex justify-end gap-2 items-center">
+
+                                            {(user.status || "pending") === "pending" && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleApprove(user.id)}
+                                                        disabled={actionLoading === user.id + "_approve"}
+                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                                                        title="Approve"
+                                                    >
+                                                        <CheckCircle size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleReject(user.id)}
+                                                        disabled={actionLoading === user.id + "_reject"}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                                        title="Reject"
+                                                    >
+                                                        <XCircle size={18} />
+                                                    </button>
+                                                </>
+                                            )}
+
+                                            {(user.status || "pending") === "rejected" && (
+                                                <button
+                                                    onClick={() => handleApprove(user.id)}
+                                                    disabled={actionLoading === user.id + "_approve"}
+                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                                                    title="Re-approve"
+                                                >
+                                                    <CheckCircle size={18} />
+                                                </button>
+                                            )}
+
+                                            <button
+                                                onClick={() => openEdit(user)}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+
+                                            {user.id !== currentUser?.id && (
+                                                <button
+                                                    onClick={() => handleDelete(user.id)}
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="6" className="text-center py-10 text-gray-400">
+>>>>>>> Stashed changes
                                     No users found
                                 </td>
                             </tr>

@@ -7,6 +7,7 @@ use App\Models\Medicine;
 use App\Models\Category;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class MedicineController extends Controller
 {
@@ -58,7 +59,10 @@ class MedicineController extends Controller
             'reorder_level' => 'required|integer|min:0',
             'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        $validated = $this->handleImageUpload($validated, null);
 
         $medicine = Medicine::create($validated);
         return response()->json($medicine->load(['category', 'supplier']), 201);
@@ -84,10 +88,35 @@ class MedicineController extends Controller
             'reorder_level' => 'required|integer|min:0',
             'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        $validated = $this->handleImageUpload($validated, $medicine);
         $medicine->update($validated);
         return response()->json($medicine->load(['category', 'supplier']));
+    }
+
+    /**
+     * Store an uploaded medicine image (if present) on the public disk.
+     * Deletes any previously stored image when updating.
+     */
+    protected function handleImageUpload(array $validated, ?Medicine $medicine = null): array
+    {
+        $request = request();
+
+        if (! $request->hasFile('image')) {
+            return $validated;
+        }
+
+        // Remove a previously stored image when updating
+        if ($medicine && $medicine->image && Storage::disk('public')->exists($medicine->image)) {
+            Storage::disk('public')->delete($medicine->image);
+        }
+
+        $path = $request->file('image')->store('medicine-images', 'public');
+        $validated['image'] = $path;
+
+        return $validated;
     }
 
     public function destroy(Medicine $medicine)
