@@ -1,45 +1,39 @@
-// resources/js/pages/StockMovements.jsx
-
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
+import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { Search, Filter, Calendar, Package, RefreshCw, X } from 'lucide-react';
+import Pagination from '../components/Pagination';
+import { Eye, Plus, Save, X, Package, Tag, Calendar, FileText, Loader2 } from 'lucide-react';
 
 export default function StockMovements() {
-    const [movements, setMovements] = useState([]);
     const [medicines, setMedicines] = useState([]);
+    const [movements, setMovements] = useState([]);
+    const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
     const [error, setError] = useState('');
-    const [submitting, setSubmitting] = useState(false);
 
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [modalMode, setModalMode] = useState('create'); // 'create' | 'view'
+    const [modalItem, setModalItem] = useState(null);
     const [form, setForm] = useState({
         medicine_id: '',
         type: 'in',
         quantity: '',
         reference: '',
-        notes: ''
+        notes: '',
     });
+    const [submitting, setSubmitting] = useState(false);
+    const [formLoading, setFormLoading] = useState(false);
 
-    const [filters, setFilters] = useState({
-        medicine_id: '',
-        type: '',
-        start_date: '',
-        end_date: ''
-    });
-
-    const loadData = () => {
+    const load = () => {
         setLoading(true);
-        const params = {};
-        if (filters.medicine_id) params.medicine_id = filters.medicine_id;
-        if (filters.type) params.type = filters.type;
-        if (filters.start_date) params.start_date = filters.start_date;
-        if (filters.end_date) params.end_date = filters.end_date;
-
-        api.get('/stock-movements', { params })
+        api.get('/stock-movements', { params: { page } })
             .then(r => {
+                setMedicines(r.data.medicines);
                 setMovements(r.data.movements?.data || r.data.movements || []);
-                setMedicines(r.data.medicines || []);
+                setMeta(r.data.movements?.meta || null);
             })
             .catch(err => {
                 console.error(err);
@@ -48,179 +42,203 @@ export default function StockMovements() {
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { loadData(); }, [filters]);
+    useEffect(() => { load(); }, [page]);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setForm(prev => ({ ...prev, [name]: value }));
+    const handlePageChange = (p) => setPage(p);
+
+    const openCreate = () => {
+        setModalMode('create');
+        setModalItem(null);
+        setForm({ medicine_id: '', type: 'in', quantity: '', reference: '', notes: '' });
+        setError('');
+        setShowModal(true);
+        loadMedicines();
     };
 
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
+    const openView = (item) => {
+        setModalMode('view');
+        setModalItem(item);
+        setShowModal(true);
     };
 
-    const resetFilters = () => {
-        setFilters({ medicine_id: '', type: '', start_date: '', end_date: '' });
+    const closeModal = () => {
+        setShowModal(false);
+        setModalItem(null);
+        setForm({ medicine_id: '', type: 'in', quantity: '', reference: '', notes: '' });
+        setError('');
     };
+
+    const loadMedicines = async () => {
+        setFormLoading(true);
+        try {
+            await api.get('/medicines').then(r => setMedicines(r.data?.data || r.data));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setSubmitting(true);
-
         try {
             await api.post('/stock-movements', form);
             window.showToast('Stock movement recorded successfully', 'success');
-            setShowForm(false);
-            setForm({ medicine_id: '', type: 'in', quantity: '', reference: '', notes: '' });
-            loadData();
+            setShowModal(false);
+            load();
         } catch (err) {
-            const msg = err.response?.data?.errors?.quantity?.[0] || 
-                       err.response?.data?.message || 
-                       'Error recording movement';
-            setError(msg);
+            setError(err.response?.data?.message || 'Error recording movement');
         } finally {
             setSubmitting(false);
         }
     };
 
-    const getTypeBadge = (type) => {
-        const config = {
-            in: { bg: 'bg-green-100', text: 'text-green-700', icon: '📥', label: 'Stock In' },
-            out: { bg: 'bg-red-100', text: 'text-red-700', icon: '📤', label: 'Stock Out' },
-            adjustment: { bg: 'bg-orange-100', text: 'text-orange-700', icon: '🔄', label: 'Adjustment' },
-            return: { bg: 'bg-blue-100', text: 'text-blue-700', icon: '↩️', label: 'Return' },
-            damaged: { bg: 'bg-red-100', text: 'text-red-700', icon: '❌', label: 'Damaged' },
-        };
-        const cfg = config[type] || config.in;
-        return (
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>
-                {cfg.icon} {cfg.label}
-            </span>
-        );
-    };
-
-    const getQuantityDisplay = (movement) => {
-        if (movement.type === 'in' || movement.type === 'return') {
-            return <span className="text-green-600 font-semibold">+{movement.quantity}</span>;
-        }
-        return <span className="text-red-600 font-semibold">-{movement.quantity}</span>;
-    };
-
-    const isFiltered = filters.medicine_id || filters.type || filters.start_date || filters.end_date;
+    const isViewMode = modalMode === 'view';
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800">Stock Movements</h2>
-                    <p className="text-sm text-gray-500">Track all inventory movements</p>
-                </div>
-                <button
-                    onClick={() => { setShowForm(true); setError(''); }}
-                    className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
-                >
-                    <RefreshCw size={18} />
-                    Record Movement
+            <div className="flex justify-between items-center">
+                <h3 className="text-base font-semibold text-gray-700">Stock Movements ({movements.length})</h3>
+                <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm flex items-center gap-2">
+                    <Plus size={16} />
+                    New Stock Movement
                 </button>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine</label>
-                        <select
-                            name="medicine_id"
-                            value={filters.medicine_id}
-                            onChange={handleFilterChange}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                        >
-                            <option value="">All Medicines</option>
-                            {medicines.map(m => (
-                                <option key={m.id} value={m.id}>
-                                    {m.name} (Stock: {m.quantity})
-                                </option>
+            {loading ? (
+                <LoadingSpinner text="Loading stock movements..." />
+            ) : (
+                <div className="card overflow-hidden">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-sky-50">
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Medicine</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Type</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Quantity</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Reference</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Date</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {movements.map(m => (
+                                <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                    <td className="px-4 py-3 text-sm font-medium">{m.medicine?.name || '---'}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${m.type === 'in' ? 'bg-sky-100 text-sky-700' : 'bg-red-100 text-red-700'}`}>
+                                            {m.type === 'in' ? 'In' : 'Out'}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">{m.quantity}</td>
+                                    <td className="px-4 py-3 text-sm">{m.reference || '---'}</td>
+                                    <td className="px-4 py-3 text-sm">{m.created_at?.split('T')[0] || '---'}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => openView(m)}
+                                                className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                                                title="View"
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
                             ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
-                        <select
-                            name="type"
-                            value={filters.type}
-                            onChange={handleFilterChange}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                        >
-                            <option value="">All Types</option>
-                            <option value="in">Stock In</option>
-                            <option value="out">Stock Out</option>
-                            <option value="adjustment">Adjustment</option>
-                            <option value="return">Return</option>
-                            <option value="damaged">Damaged</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">From Date</label>
-                        <input
-                            type="date"
-                            name="start_date"
-                            value={filters.start_date}
-                            onChange={handleFilterChange}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">To Date</label>
-                        <input
-                            type="date"
-                            name="end_date"
-                            value={filters.end_date}
-                            onChange={handleFilterChange}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                        />
-                    </div>
+                            {movements.length === 0 && (
+                                <tr>
+                                    <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+                                        No stock movements recorded
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-                {isFiltered && (
-                    <div className="mt-3 flex justify-end">
-                        <button
-                            onClick={resetFilters}
-                            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                        >
-                            <X size={14} /> Clear Filters
-                        </button>
-                    </div>
-                )}
-            </div>
+            )}
 
-            {/* Form */}
-            {showForm && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h4 className="font-semibold text-gray-700 mb-4">Record Stock Movement</h4>
-                    {error && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm border border-red-100">
-                            {error}
+            <Pagination meta={meta} onPageChange={handlePageChange} />
+
+            <Modal
+                open={showModal}
+                onClose={closeModal}
+                title={modalMode === 'create' ? 'Record Stock Movement' : `Stock Movement ${modalItem?.id || ''}`}
+                size="max-w-lg"
+            >
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">{error}</div>}
+
+                {isViewMode && modalItem ? (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Medicine</label>
+                            <p className="text-sm font-medium text-gray-800 flex items-center gap-1">
+                                <Package size={14} />
+                                {modalItem.medicine?.name || 'N/A'}
+                            </p>
                         </div>
-                    )}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Type</label>
+                            <p className="text-sm text-gray-600">
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    modalItem.type === 'in' ? 'bg-sky-100 text-sky-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                    {modalItem.type === 'in' ? 'Stock In' : 'Stock Out'}
+                                </span>
+                            </p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label>
+                            <p className="text-sm font-medium text-gray-800">{modalItem.quantity}</p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Reference</label>
+                            <p className="text-sm text-gray-600 flex items-center gap-1">
+                                <Tag size={14} />
+                                {modalItem.reference || '---'}
+                            </p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Notes</label>
+                            <p className="text-sm text-gray-600 flex items-center gap-1">
+                                <FileText size={14} />
+                                {modalItem.notes || '---'}
+                            </p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Date</label>
+                            <p className="text-sm text-gray-600 flex items-center gap-1">
+                                <Calendar size={14} />
+                                {modalItem.created_at ? new Date(modalItem.created_at).toLocaleDateString() : '---'}
+                            </p>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button onClick={closeModal} className="btn-secondary">Close</button>
+                        </div>
+                    </div>
+                ) : (
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
-                            <select
-                                name="medicine_id"
-                                value={form.medicine_id}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                required
-                            >
-                                <option value="">Select Medicine</option>
-                                {medicines.map(m => (
-                                    <option key={m.id} value={m.id}>
-                                        {m.name} (Available: {m.quantity})
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <Package className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <select
+                                    name="medicine_id"
+                                    value={form.medicine_id}
+                                    onChange={handleChange}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                    required
+                                    disabled={formLoading}
+                                >
+                                    <option value="">Select Medicine</option>
+                                    {medicines.map(m => (
+                                        <option key={m.id} value={m.id}>{m.name} (Stock: {m.quantity})</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Type *</label>
@@ -228,14 +246,11 @@ export default function StockMovements() {
                                 name="type"
                                 value={form.type}
                                 onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                 required
                             >
-                                <option value="in">📥 Stock In</option>
-                                <option value="out">📤 Stock Out</option>
-                                <option value="adjustment">🔄 Adjustment</option>
-                                <option value="return">↩️ Return</option>
-                                <option value="damaged">❌ Damaged</option>
+                                <option value="in">Stock In</option>
+                                <option value="out">Stock Out</option>
                             </select>
                         </div>
                         <div>
@@ -245,158 +260,51 @@ export default function StockMovements() {
                                 name="quantity"
                                 value={form.quantity}
                                 onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                 min="1"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
                                 required
-                                placeholder="Enter quantity"
                             />
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Reference</label>
-                            <input
-                                type="text"
-                                name="reference"
-                                value={form.reference}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                placeholder="e.g. PO-001, Sale-001"
-                            />
+                            <div className="relative">
+                                <Tag className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    name="reference"
+                                    value={form.reference}
+                                    onChange={handleChange}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                />
+                            </div>
                         </div>
                         <div className="md:col-span-2">
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
-                            <input
-                                type="text"
-                                name="notes"
-                                value={form.notes}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                placeholder="Additional notes"
-                            />
+                            <div className="relative">
+                                <FileText className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    name="notes"
+                                    value={form.notes}
+                                    onChange={handleChange}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                />
+                            </div>
                         </div>
-                        <div className="md:col-span-2 flex gap-3 pt-2">
-                            <button
-                                type="button"
-                                onClick={() => setShowForm(false)}
-                                className="btn-secondary"
-                            >
+                        <div className="md:col-span-2 flex justify-end gap-3">
+                            <button type="button" onClick={closeModal} className="btn-secondary px-4 py-2 text-sm flex items-center gap-2">
+                                <X size={16} />
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="btn-primary flex items-center gap-2 disabled:opacity-60"
+                                className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60"
                             >
-                                {submitting ? 'Recording...' : 'Record Movement'}
+                                {submitting ? <><Loader2 size={16} className="animate-spin" /> Recording... </> : <><Save size={16} /> Record Movement</>}
                             </button>
                         </div>
                     </form>
-                </div>
-            )}
-
-            {/* Table */}
-            {loading ? (
-                <LoadingSpinner text="Loading stock movements..." />
-            ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-blue-50">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Medicine</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Type</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider">Quantity</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider">Before</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider">After</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Reference</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {movements.length > 0 ? movements.map(m => (
-                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
-                                        <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                                            {m.created_at ? new Date(m.created_at).toLocaleString() : '---'}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm font-medium text-gray-800">
-                                            {m.medicine?.name || '---'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {getTypeBadge(m.type)}
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            {getQuantityDisplay(m)}
-                                        </td>
-                                        <td className="px-4 py-3 text-center text-sm text-gray-500">
-                                            {m.before_quantity ?? '---'}
-                                        </td>
-                                        <td className="px-4 py-3 text-center text-sm font-medium text-gray-800">
-                                            {m.after_quantity ?? '---'}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">
-                                            {m.reference || '---'}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">
-                                            {m.notes || '---'}
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
-                                            {isFiltered ? (
-                                                <>
-                                                    No movements match your filters
-                                                    <button onClick={resetFilters} className="ml-2 text-blue-600 hover:underline text-sm font-medium">
-                                                        Clear filters
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                'No stock movements recorded yet'
-                                            )}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* Stats */}
-            {movements.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-                        <p className="text-2xl font-bold text-green-600">
-                            {movements.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0)}
-                        </p>
-                        <p className="text-xs text-gray-500">Total In</p>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-                        <p className="text-2xl font-bold text-red-600">
-                            {movements.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0)}
-                        </p>
-                        <p className="text-xs text-gray-500">Total Out</p>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-                        <p className="text-2xl font-bold text-orange-600">
-                            {movements.filter(m => m.type === 'adjustment').reduce((sum, m) => sum + m.quantity, 0)}
-                        </p>
-                        <p className="text-xs text-gray-500">Adjustments</p>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-                        <p className="text-2xl font-bold text-blue-600">
-                            {movements.filter(m => m.type === 'return').reduce((sum, m) => sum + m.quantity, 0)}
-                        </p>
-                        <p className="text-xs text-gray-500">Returns</p>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-                        <p className="text-2xl font-bold text-red-600">
-                            {movements.filter(m => m.type === 'damaged').reduce((sum, m) => sum + m.quantity, 0)}
-                        </p>
-                        <p className="text-xs text-gray-500">Damaged</p>
-                    </div>
-                </div>
-            )}
+                )}
+            </Modal>
         </div>
     );
 }

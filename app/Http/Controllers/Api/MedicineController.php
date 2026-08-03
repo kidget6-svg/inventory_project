@@ -39,7 +39,8 @@ class MedicineController extends Controller
             $query->where('status', $status);
         }
 
-        $medicines = $query->latest()->get();
+        $perPage = (int) $request->input('per_page', 10);
+        $medicines = $query->latest()->paginate($perPage);
 
         return response()->json($medicines);
     }

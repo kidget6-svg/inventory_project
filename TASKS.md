@@ -1,199 +1,126 @@
-# Pharmacy Inventory System - Team Task Breakdown
+# Purchase Order Workflow Improvement Tasks
 
-## SETUP (All members run this first)
-```bash
-composer install
-npm install
-php artisan key:generate
-php artisan migrate --force
-php artisan db:seed
-npm run dev
-```
+## Status Flow: Draft → Pending → Sent → Delivered → Completed → Cancelled
 
-## Default Login
-| Role | Email | Password |
-|------|-------|----------|
-| Admin |admin@pharmacy.com  | password |
-| Pharmacist | pharmacist@pharmacy.com | password |
-| Cashier | cashier@pharmacy.com | password |
+## Workflow Implementation
 
----
+The Purchase Order workflow has been implemented with the following steps:
 
-## TEAM MEMBER 1: Auth + Dashboard + Categories
-**Owns: Login, Register, all 3 Dashboards, Categories CRUD**
+1. **Draft** — Purchase order is created with a single medicine item
+2. **Pending** — Admin submits the order (draft → pending)
+3. **Preview PDF** — Admin previews the generated PDF in a modal before sending
+4. **Edit if needed** — Admin can edit the order from the preview modal (pending orders are editable)
+5. **Send to Supplier** — Admin clicks "Send to Supplier" in the preview modal:
+   - PDF is generated from database data using Laravel DOMPDF
+   - PDF is emailed to the supplier using Laravel Mail (synchronous, not queued)
+   - `sent_at` timestamp is recorded
+   - Status changes from Pending → Sent
+6. **Supplier delivers medicines** — Supplier delivers the ordered medicines
+7. **Mark as Delivered** — Admin marks the order as delivered (sent → delivered):
+   - `delivered_at` timestamp is recorded
+8. **Complete Purchase Order** — Admin completes the order (delivered → completed):
+   - Medicine stock quantities are automatically updated
+   - Stock movement records are created
+   - `completed_at` timestamp is recorded
+   - Duplicate stock additions are prevented
+9. **Inventory updates automatically** — Stock is incremented and stock movements are recorded
 
-### Pages
-- `resources/js/pages/Login.jsx`
-- `resources/js/pages/Register.jsx`
-- `resources/js/pages/AdminDashboard.jsx`
-- `resources/js/pages/PharmacistDashboard.jsx`
-- `resources/js/pages/CashierDashboard.jsx`
-- `resources/js/pages/Categories.jsx`
+## PDF Lifecycle (Updated)
 
-### API Controllers
-- `app/Http/Controllers/Api/AuthController.php`
-- `app/Http/Controllers/Api/DashboardController.php`
-- `app/Http/Controllers/Api/CategoryController.php`
+PDF generation, viewing, and downloading are now available across ALL active statuses:
 
-### Tasks
-1. Test login/register works for all 3 roles
-2. Fix sidebar bug in `SidebarLayout.jsx`:
-   ```js
-   // DELETE this line (~line 30):
-   cashier: cashierPage => cashierMenu,
-   // REPLACE WITH:
-   cashier: cashierMenu,
-   ```
-3. Make sure Admin Dashboard shows all stat cards with real data
-4. Make sure Pharmacist Dashboard shows medicines, low stock, expiring
-5. Make sure Cashier Dashboard shows today's sales and recent sales table
-6. Test Categories create/edit/delete
-7. Add success messages after actions
-8. Add loading states when pages load
+- **Pending**: Admin can review, generate/upload PDF, and send the purchase order to the supplier by email.
+- **Sent (Approved)**: PDF remains available for viewing/downloading. Admin can re-send the PO to the supplier (supplier communication).
+- **Delivered**: PDF remains available for viewing/downloading.
+- **Completed**: PDF history remains available for records.
+- **Cancelled**: PDF record is kept but editing/sending actions are disabled.
+- **Draft**: PDF is not yet available (order must be submitted first).
 
----
+### New Permission Methods (Model)
+- `canGeneratePdf()` — true for all statuses (PDF is generated from DB data)
+- `canViewPdf()` — true for all statuses except draft
+- `canDownloadPdf()` — true for all statuses except draft
+- `canResend()` — true for sent status only (re-send email without status change)
 
-## TEAM MEMBER 2: Medicines + Stock Movements + Low Stock
-**Owns: Medicine CRUD, Stock In/Out, Low Stock Alerts**
+### New Controller Methods
+- `download()` — Downloads the PDF as a file attachment (all statuses except draft)
+- `resend()` — Re-sends the PO PDF to the supplier via email (sent status only)
 
-### Pages
-- `resources/js/pages/Medicines.jsx`
-- `resources/js/pages/StockMovements.jsx`
-- `resources/js/pages/LowStock.jsx`
+### New Routes
+- `GET /purchase-orders/{purchaseOrder}/download` — Download PDF
+- `POST /purchase-orders/{purchaseOrder}/resend` — Re-send PO to supplier
 
-### API Controllers
-- `app/Http/Controllers/Api/MedicineController.php`
-- `app/Http/Controllers/Api/StockMovementController.php`
-- `app/Http/Controllers/Api/LowStockController.php`
+### Updated Controller Method
+- `preview()` — Now uses `canGeneratePdf()` instead of `canSend()`, allowing PDF generation for ALL statuses
 
-### Tasks
-1. Test medicine create/edit/delete with all fields
-2. Test that category dropdown loads in medicine form
-3. Test stock in - medicine quantity should increase
-4. Test stock out - medicine quantity should decrease
-5. Test stock out fails when quantity is insufficient
-6. Test low stock page shows medicines at/below reorder level
-7. Add form validation error messages
-8. Add confirmation dialog before delete
-9. Make expiry date field work properly
+## Completed Tasks
 
----
+- [x] 1. Install barryvdh/laravel-dompdf package
+- [x] 2. Create migration to add `sent_at` column to purchase_orders table
+- [x] 3. Update PurchaseOrder model (new statuses, can* methods, action methods)
+- [x] 4. Create PurchaseOrderMail mailable class
+- [x] 5. Create PurchaseOrderService (PDF generation + email sending)
+- [x] 6. Create SendPurchaseOrderEmail queue job (retained for future use)
+- [x] 7. Create professional PDF template (resources/views/pdf/purchase-order.blade.php)
+- [x] 8. Update PurchaseOrderController (submit, send, deliver, complete, cancel)
+- [x] 9. Update routes (add custom action routes)
+- [x] 10. Update PurchaseOrders.jsx (new actions, status badges, notifications)
+- [x] 11. Update PurchaseOrderFactory (new statuses)
+- [x] 12. Update PurchaseOrderTest (new status flow tests)
+- [x] 13. Run migrations and tests to verify
 
-## TEAM MEMBER 3: Suppliers + Purchase Orders + Reports
-**Owns: Supplier CRUD, Purchase Orders, Reports page**
+## Improvements Made
 
-### Pages
-- `resources/js/pages/Suppliers.jsx`
-- `resources/js/pages/PurchaseOrders.jsx`
-- `resources/js/pages/Reports.jsx`
+- [x] 14. Fix send() method to send email synchronously via PurchaseOrderService (not queued job)
+- [x] 15. Add `delivered_at` and `completed_at` timestamp columns (migration + model)
+- [x] 16. Record `delivered_at` in deliver() method
+- [x] 17. Record `completed_at` in complete() method
+- [x] 18. Update PDF template to display all workflow timestamps
+- [x] 19. Update email template to display sent_at timestamp
+- [x] 20. Update DashboardController to use most specific timestamp for activity tracking
+- [x] 21. Add Mail::assertSent() verification to send test
+- [x] 22. Add delivered_at and completed_at assertions to workflow tests
+- [x] 23. Remove unused SendPurchaseOrderEmail import from controller
 
-### API Controllers
-- `app/Http/Controllers/Api/SupplierController.php`
-- `app/Http/Controllers/Api/PurchaseOrderController.php`
-- `app/Http/Controllers/Api/ReportController.php`
+## PDF Lifecycle Improvements (New)
 
-### Tasks
-1. Test supplier create/edit/delete
-2. Test purchase order create - should show supplier dropdown, medicine dropdown
-3. Test that creating purchase order increases medicine stock
-4. Test delete purchase order
-5. Test Reports page - click all 5 tabs:
-   - Inventory tab shows all medicines
-   - Sales tab shows all sales
-   - Purchases tab shows all orders
-   - Low Stock tab shows low stock items
-   - Expiring tab shows medicines expiring within 90 days
-6. Fix `PurchaseOrderController::update()` - add edit functionality
-7. Add status badges with colors (pending=blue, completed=green, cancelled=red)
-8. Make report tables sortable or searchable
+- [x] 24. Add `canGeneratePdf()`, `canViewPdf()`, `canDownloadPdf()`, `canResend()` methods to PurchaseOrder model
+- [x] 25. Update `preview()` controller to use `canGeneratePdf()` instead of `canSend()` — PDF now available for ALL statuses
+- [x] 26. Add `download()` controller method for direct PDF file download
+- [x] 27. Add `resend()` controller method for re-sending PO to supplier (sent status only)
+- [x] 28. Add `GET /purchase-orders/{purchaseOrder}/download` route
+- [x] 29. Add `POST /purchase-orders/{purchaseOrder}/resend` route
+- [x] 30. Update PurchaseOrders.jsx: show PDF preview/download icons for all statuses except draft
+- [x] 31. Update PurchaseOrders.jsx: add Resend button for sent status (supplier communication)
+- [x] 32. Update PurchaseOrders.jsx: status-aware action buttons in preview modal
+- [x] 33. Update PurchaseOrders.jsx: add handleDownloadPdf() and handleResend() functions
+- [x] 34. Update tests: change `test_cannot_preview_non_pending_order` to `test_can_preview_non_pending_order`
+- [x] 35. Add `test_can_preview_pdf_in_all_active_statuses` test
+- [x] 36. Add `test_can_download_pdf_in_all_active_statuses` test
+- [x] 37. Add `test_cannot_download_pdf_for_draft_order` test
+- [x] 38. Add `test_admin_can_resend_a_sent_purchase_order` test
+- [x] 39. Add `test_cannot_resend_non_sent_order` test
 
----
+## Summary of Changes
 
-## TEAM MEMBER 4: Sales + Styling + Polish
-**Owns: Sales CRUD, Sidebar, Overall styling, Mobile responsive**
+### New Files Created:
+- `database/migrations/2026_08_01_000000_add_sent_at_to_purchase_orders_table.php`
+- `database/migrations/2026_08_02_000000_add_delivered_at_and_completed_at_to_purchase_orders_table.php`
+- `app/Mail/PurchaseOrderMail.php`
+- `app/Services/PurchaseOrderService.php`
+- `app/Jobs/SendPurchaseOrderEmail.php`
+- `resources/views/pdf/purchase-order.blade.php`
+- `resources/views/emails/purchase-order.blade.php`
 
-### Pages
-- `resources/js/pages/Sales.jsx`
-
-### Components
-- `resources/js/components/SidebarLayout.jsx`
-- `resources/js/components/StatCard.jsx`
-- `resources/js/App.jsx`
-- `resources/js/css/app.css`
-
-### API Controllers
-- `app/Http/Controllers/Api/SaleController.php`
-
-### Tasks
-1. Test sale create/edit/delete
-2. Make sure sale total amount formats as currency ($0.00)
-3. Make sidebar light blue (#E3F2FD) and white theme consistent
-4. Make sidebar work on mobile (hamburger menu opens/closes)
-5. Fix sidebar overlay click to close
-6. Add loading spinner component for all pages
-7. Add success/error toast notifications
-8. Make all tables responsive on mobile
-9. Test all pages on different screen sizes
-10. Add proper page titles to each page
-11. Test logout button works and redirects to login
-12. Fix any color inconsistencies across all pages
-
----
-
-## SHARED BUGS TO FIX (Anyone can fix)
-1. `SidebarLayout.jsx` line ~30: remove `cashier: cashierPage => cashierMenu,`
-2. `PurchaseOrderController::update()` is empty - needs implementation
-3. `SaleController::store()` should validate properly
-4. `resources/js/bootstrap.js` - remove old Alpine.js import if present
-
----
-
-## ACCOUNT APPROVAL WORKFLOW (Completed)
-New accounts are created with a Pending status by default. Pharmacists must provide license and qualification documents. Admins review submitted information, then Approve or Reject the application. Only Approved users can sign in and access the system.
-
-### Changes Made
-- **Backend:**
-  - `app/Models/User.php`: Added status constants (pending, approved, rejected), status helper methods (isPending, isApproved, isRejected), and all pharmacist fields to fillable
-  - `app/Http/Controllers/Api/AuthController.php`: Login checks for approval status; register creates pending users; no auto-login after registration
-  - `app/Http/Controllers/Api/UserController.php`: Added approve() and reject() methods for admin review; store() creates approved users (admin-created users are pre-approved)
-  - `app/Http/Middleware/EnsureUserApproved.php`: Middleware that blocks non-approved users from accessing protected routes
-  - `bootstrap/app.php`: Registered `approved` middleware alias
-  - `routes/web.php`: Added approve/reject routes under admin middleware; applied `approved` middleware to all protected routes
-  - `app/Http/Controllers/Api/DashboardController.php`: Added pending user count to admin dashboard data
-  - `database/migrations/`: Three migrations adding approval fields, registration fields, and pharmacist-specific fields to users table
-  - `database/seeders/DatabaseSeeder.php`: Seeds approved admin, pharmacist, and cashier users
-
-- **Frontend:**
-  - `resources/js/context/AuthContext.jsx`: register() does not auto-login the newly created user
-  - `resources/js/pages/Login.jsx`: Removed "Register" link (registration is admin-only); improved error display for pending/rejected accounts
-  - `resources/js/pages/Register.jsx`: Removed "Admin" from role dropdown (public registration only allows pharmacist & cashier)
-  - `resources/js/pages/Users.jsx`: Added status column with color-coded badges; added Approve/Reject buttons for pending users; added status field to edit form
-  - `resources/js/pages/AdminDashboard.jsx`: Added pending users stat card and quick action to review pending applications
-  - `resources/js/components/SidebarLayout.jsx`: Fixed syntax error (removed stray line); added "Users" link to admin sidebar menu
-
-### How It Works
-1. New users self-register as pharmacist or cashier → account created with "pending" status
-2. Pharmacists must provide license number, expiry, professional registration, university, degree, years of experience, national ID, and upload license/qualification/pharmacy license/degree certificate documents
-3. Admin reviews pending applications via the Users page (status column shows pending users)
-4. Admin clicks "Approve" or "Reject" → user status updated; approver and approval timestamp recorded
-5. Only "approved" users can log in (login blocked for pending/rejected users)
-6. The `approved` middleware also protects all authenticated routes, preventing access if status changes after login
-7. Admin-created users (via Users page) are approved immediately
-
-## FILES REFERENCE
-```
-resources/js/pages/          (14 page components, including new Users.jsx)
-resources/js/components/     (SidebarLayout, StatCard)
-resources/js/context/        (AuthContext)
-resources/js/App.jsx         (Router)
-resources/js/axios.js        (API client)
-app/Http/Controllers/Api/    (11 API controllers, including new UserController)
-routes/web.php               (all routes)
-database/seeders/            (user seeder)
-```
-resources/js/App.jsx         (Router)
-resources/js/axios.js        (API client)
-app/Http/Controllers/Api/    (11 API controllers, including new UserController)
-routes/web.php               (all routes)
-database/seeders/            (user seeder)
-```
+### Files Modified:
+- `app/Models/PurchaseOrder.php` — New status flow, can* methods, action methods, delivered_at/completed_at timestamps, **NEW: canGeneratePdf(), canViewPdf(), canDownloadPdf(), canResend()**
+- `app/Http/Controllers/Api/PurchaseOrderController.php` — New actions: submit, send, deliver, complete, cancel; send() now uses service directly for synchronous email; **NEW: download() and resend() methods; preview() now uses canGeneratePdf()**
+- `routes/web.php` — Added custom action routes; **NEW: download and resend routes**
+- `resources/js/pages/PurchaseOrders.jsx` — New UI actions, status badges, toast notifications, PDF preview modal; **NEW: PDF actions for all statuses, resend button, status-aware modal buttons**
+- `resources/views/pdf/purchase-order.blade.php` — Added sent_at, delivered_at, completed_at display
+- `resources/views/emails/purchase-order.blade.php` — Added sent_at display
+- `database/factories/PurchaseOrderFactory.php` — Updated statuses
+- `tests/Feature/PurchaseOrderTest.php` — Updated tests for new workflow, added Mail::assertSent and timestamp assertions; **NEW: PDF lifecycle tests, resend tests**
+- `tests/Feature/PurchaseOrderWorkflowTest.php` — Updated workflow test with timestamp assertions
+- `app/Http/Controllers/Api/DashboardController.php` — Updated activity labels and timestamp tracking
+- `composer.json` — Added barryvdh/laravel-dompdf dependency

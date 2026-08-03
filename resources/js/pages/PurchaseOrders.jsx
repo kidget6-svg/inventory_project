@@ -1,656 +1,800 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
-import { Eye, CheckCircle, XCircle, Pencil, Trash2 } from 'lucide-react';
+import Modal from '../components/Modal';
+import LoadingSpinner from '../components/LoadingSpinner';
+import {
+    Eye, Edit, Trash2, Plus, Save, X, Calendar, Package, DollarSign, Tag,
+    Send, RefreshCw, CheckCircle, XCircle, Download, FileText, Loader2,
+    Upload, ClipboardCheck, RotateCcw,
+} from 'lucide-react';
+import Pagination from '../components/Pagination';
 
+/**
+ * Reusable icon button used in the table action column.
+ * Every icon has a tooltip (title attribute) and supports a disabled state.
+ */
 const ActionIcon = ({ icon: Icon, tooltip, color = "sky", onClick, disabled = false }) => {
     const colorClasses = {
         sky: "text-sky-600 hover:bg-sky-50",
         green: "text-green-600 hover:bg-green-50",
         red: "text-red-600 hover:bg-red-50",
+        purple: "text-purple-600 hover:bg-purple-50",
+        amber: "text-amber-600 hover:bg-amber-50",
+        gray: "text-gray-500 hover:bg-gray-100",
     };
+
     return (
         <button
             type="button"
-            title={disabled ? "Not implemented yet" : tooltip}
+            title={disabled ? "Not available for this status" : tooltip}
+            aria-label={tooltip}
             onClick={disabled ? undefined : onClick}
             disabled={disabled}
-            className={`p-1.5 rounded transition-colors ${colorClasses[color]} ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+            className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${colorClasses[color]} ${disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "hover:shadow-sm"}`}
         >
-            <Icon size={18} />
+            <Icon size={16} />
         </button>
     );
 };
 
-
 export default function PurchaseOrders() {
-
-    console.log("PurchaseOrders loaded");
-
     const [orders, setOrders] = useState([]);
-    const [suppliers, setSuppliers] = useState([]);
-    const [medicines, setMedicines] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);
 
-    // the rest of your code...
-    const [showForm, setShowForm] = useState(false);
-    const [editId, setEditId] = useState(null);
-
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit' | 'view'
+    const [modalItem, setModalItem] = useState(null);
     const [form, setForm] = useState({
         supplier_id: '',
         order_date: '',
         medicine_id: '',
         quantity: '',
-        unit_price: ''
+        unit_price: '',
     });
+    const [submitting, setSubmitting] = useState(false);
+    const [suppliers, setSuppliers] = useState([]);
+    const [medicines, setMedicines] = useState([]);
+    const [formLoading, setFormLoading] = useState(false);
 
-    const [error, setError] = useState('');
+    // PDF preview modal state
+    const [showPdfPreview, setShowPdfPreview] = useState(false);
+    const [pdfPreviewData, setPdfPreviewData] = useState(null);
+    const [pdfLoading, setPdfLoading] = useState(false);
 
-
-   const load = async () => {
-    try {
-        const res = await api.get('/purchase-orders');
-        console.log("Purchase Orders:", res.data); // <-- Add this line
-        setOrders(res.data);
-    } catch (err) {
-        console.error(err);
-    }
-};
-
-
-    useEffect(() => {
-
-        load();
-
-        api.get('/suppliers')
-            .then(res => setSuppliers(res.data));
-
-        api.get('/medicines')
-            .then(res => setMedicines(res.data));
-
-    }, []);
-
-
-
-    const handleChange = (e) => {
-
-        setForm({
-            ...form,
-            [e.target.name]: e.target.value
-        });
-
+    const load = async (pageNumber = page) => {
+        try {
+            const res = await api.get('/purchase-orders', { params: { page: pageNumber } });
+            setOrders(res.data.data || res.data);
+            setMeta(res.data.meta || res.data);
+        } catch (err) {
+            console.error(err);
+            setError('Failed to load purchase orders');
+        } finally {
+            setLoading(false);
+        }
     };
 
+    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); }, [page]);
 
+    const handlePageChange = (p) => setPage(p);
+
+    // ------------------------------------------------------------------
+    // Action handlers (used by both the table action column and the view modal)
+    // ------------------------------------------------------------------
+
+    const handleDelete = async (id) => {
+        if (!confirm('Delete this purchase order?')) return;
+        try {
+            await api.delete(`/purchase-orders/${id}`);
+            window.showToast('Purchase order deleted', 'success');
+            load();
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to delete order', 'error');
+        }
+    };
+
+    /**
+     * Generic workflow action handler.
+     * Calls POST /purchase-orders/{id}/{action} and refreshes the list.
+     */
+    const handleWorkflowAction = async (order, action, label) => {
+        try {
+            const res = await api.post(`/purchase-orders/${order.id}/${action}`);
+            window.showToast(res.data?.message || `${label} completed successfully`, 'success');
+            load();
+        } catch (err) {
+            window.showToast(err.response?.data?.message || `Failed to ${label.toLowerCase()}`, 'error');
+        }
+    };
+
+    /**
+     * Email Supplier action.
+     * - Pending: uses `send` (emails supplier AND transitions to sent)
+     * - Approved/Completed/Sent/Delivered: uses `resend` (re-emails, no status change)
+     */
+    const handleEmailSupplier = (order) => {
+        const status = order.status?.toLowerCase();
+        if (status === 'pending') {
+            handleWorkflowAction(order, 'send', 'Email Supplier');
+        } else {
+            handleWorkflowAction(order, 'resend', 'Email Supplier');
+        }
+    };
+
+    /**
+     * Preview PDF - fetches base64 PDF and opens the preview modal.
+     */
+    const handlePreviewPdf = async (order) => {
+        setPdfLoading(true);
+        setShowPdfPreview(true);
+        try {
+            const res = await api.get(`/purchase-orders/${order.id}/preview`);
+            setPdfPreviewData({
+                pdf: res.data.pdf,
+                purchase_order: res.data.purchase_order,
+            });
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to generate PDF preview', 'error');
+            setShowPdfPreview(false);
+        } finally {
+            setPdfLoading(false);
+        }
+    };
+
+    /**
+     * Download PDF - triggers a file download.
+     */
+    const handleDownloadPdf = async (order) => {
+        try {
+            const res = await api.get(`/purchase-orders/${order.id}/download`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `purchase-order-${order.id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to download PDF', 'error');
+        }
+    };
+
+    // ------------------------------------------------------------------
+    // Data-driven action builder
+    // ------------------------------------------------------------------
+
+    /**
+     * Returns the list of action icons to display for a given order,
+     * based on its current status.  Every icon has a tooltip.
+     * Actions that are not allowed for the current status are shown
+     * as disabled (greyed out, no onClick) rather than hidden, so the
+     * user can see what is available.
+     */
+    const getActions = (order) => {
+        const status = order.status?.toLowerCase();
+        const actions = [];
+
+        // Always: View
+        actions.push({ icon: Eye, tooltip: 'View Details', color: 'sky', onClick: () => openView(order) });
+
+        const pdfAvailable = status !== 'draft';
+        if (pdfAvailable) {
+            actions.push({ icon: FileText, tooltip: 'Generate PDF', color: 'purple', onClick: () => handlePreviewPdf(order) });
+            actions.push({ icon: Download, tooltip: 'Download PDF', color: 'sky', onClick: () => handleDownloadPdf(order) });
+        }
+
+        switch (status) {
+            case 'draft':
+                actions.push({ icon: Edit, tooltip: 'Edit', color: 'sky', onClick: () => openEdit(order) });
+                actions.push({ icon: Trash2, tooltip: 'Delete', color: 'red', onClick: () => handleDelete(order.id) });
+                actions.push({ icon: Upload, tooltip: 'Submit to Pending', color: 'purple', onClick: () => handleWorkflowAction(order, 'submit', 'Submit') });
+                break;
+
+            case 'pending':
+                actions.push({ icon: CheckCircle, tooltip: 'Approve', color: 'green', onClick: () => handleWorkflowAction(order, 'approve', 'Approve') });
+                actions.push({ icon: XCircle, tooltip: 'Reject', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Reject') });
+                break;
+
+            case 'approved':
+                actions.push({ icon: ClipboardCheck, tooltip: 'Mark Complete', color: 'green', onClick: () => handleWorkflowAction(order, 'complete', 'Mark Complete') });
+                break;
+
+            case 'completed':
+                break;
+
+            case 'cancelled':
+                actions.push({ icon: RotateCcw, tooltip: 'Restore', color: 'purple', onClick: () => handleWorkflowAction(order, 'reopen', 'Restore') });
+                break;
+
+            default:
+                break;
+        }
+
+        return actions;
+    };
+
+    // ------------------------------------------------------------------
+    // Status badge
+    // ------------------------------------------------------------------
+
+    const statusBadge = (status) => {
+        const colors = {
+            draft: 'bg-gray-100 text-gray-700',
+            pending: 'bg-sky-100 text-sky-700',
+            sent: 'bg-purple-100 text-purple-700',
+            delivered: 'bg-amber-100 text-amber-700',
+            approved: 'bg-green-100 text-green-700',
+            completed: 'bg-green-100 text-green-700',
+            cancelled: 'bg-red-100 text-red-700',
+        };
+        const labels = {
+            draft: 'Draft',
+            pending: 'Pending',
+            sent: 'Sent',
+            delivered: 'Delivered',
+            approved: 'Approved',
+            completed: 'Completed',
+            cancelled: 'Cancelled',
+        };
+        const s = status?.toLowerCase();
+        return `px-3 py-1 rounded-full text-xs font-semibold ${colors[s] || 'bg-gray-100 text-gray-600'}`;
+    };
+
+    const statusLabel = (status) => {
+        const labels = {
+            draft: 'Draft',
+            pending: 'Pending',
+            sent: 'Sent',
+            delivered: 'Delivered',
+            approved: 'Approved',
+            completed: 'Completed',
+            cancelled: 'Cancelled',
+        };
+        const s = status?.toLowerCase();
+        return labels[s] || status;
+    };
+
+    const formatDate = (date) => {
+        if (!date) return '—';
+        const parsed = new Date(date);
+        if (Number.isNaN(parsed.getTime())) return date;
+        return parsed.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+    };
+
+    // ------------------------------------------------------------------
+    // Modal helpers
+    // ------------------------------------------------------------------
 
     const openCreate = () => {
-
-        setForm({
-            supplier_id:'',
-            order_date:'',
-            medicine_id:'',
-            quantity:'',
-            unit_price:''
-        });
-
-        setEditId(null);
-        setShowForm(true);
+        setModalMode('create');
+        setModalItem(null);
+        setForm({ supplier_id: '', order_date: '', medicine_id: '', quantity: '', unit_price: '' });
         setError('');
-
+        setShowModal(true);
+        loadFormOptions();
     };
 
-
-
-    const openEdit = async (order) => {
-
-        try {
-
-            const res = await api.get(`/purchase-orders/${order.id}`);
-
-            const data = res.data;
-            const item = data.items?.[0];
-
-
-            setForm({
-
-                supplier_id: data.supplier_id || '',
-                order_date: data.order_date || '',
-                medicine_id: item?.medicine_id || '',
-                quantity: item?.quantity || '',
-                unit_price: item?.unit_price || ''
-
+    const openEdit = (item) => {
+        setModalMode('edit');
+        setModalItem(item);
+        setError('');
+        setShowModal(true);
+        loadFormOptions().then(() => {
+            api.get(`/purchase-orders/${item.id}`).then(r => {
+                const data = r.data;
+                const orderItem = data.items?.[0];
+                setForm({
+                    supplier_id: data.supplier_id || '',
+                    order_date: data.order_date || '',
+                    medicine_id: orderItem?.medicine_id || '',
+                    quantity: orderItem?.quantity || '',
+                    unit_price: orderItem?.unit_price || '',
+                });
             });
-
-
-            setEditId(order.id);
-            setShowForm(true);
-
-        } catch(err){
-
-            console.error(err);
-
-        }
-
+        });
     };
 
+    const openView = (item) => {
+        setModalMode('view');
+        setModalItem(item);
+        setShowModal(true);
+    };
 
+    const closeModal = () => {
+        setShowModal(false);
+        setModalItem(null);
+        setForm({ supplier_id: '', order_date: '', medicine_id: '', quantity: '', unit_price: '' });
+        setError('');
+    };
 
+    const closePdfPreview = () => {
+        setShowPdfPreview(false);
+        setPdfPreviewData(null);
+    };
 
-    const handleSubmit = async(e)=>{
+    const loadFormOptions = async () => {
+        setFormLoading(true);
+        try {
+            await Promise.all([
+                api.get('/suppliers').then(r => setSuppliers(r.data?.data || r.data)),
+                api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
+            ]);
+        } finally {
+            setFormLoading(false);
+        }
+    };
 
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-
-        try{
-
-            if(editId){
-
-                await api.put(
-                    `/purchase-orders/${editId}`,
-                    form
-                );
-
-            }else{
-
-                await api.post(
-                    '/purchase-orders',
-                    form
-                );
-
+        setError('');
+        setSubmitting(true);
+        try {
+            if (modalMode === 'create') {
+                await api.post('/purchase-orders', form);
+                window.showToast('Purchase order created successfully', 'success');
+                if (page !== 1) {
+                    setPage(1);
+                } else {
+                    load(1);
+                }
+            } else {
+                await api.put(`/purchase-orders/${modalItem.id}`, form);
+                window.showToast('Purchase order updated successfully', 'success');
+                load();
             }
-
-
-            setShowForm(false);
-            setEditId(null);
-
-            load();
-
-
-        }catch(err){
-
+            setShowModal(false);
+        } catch (err) {
             const msgs = err.response?.data?.errors;
-
-            setError(
-                msgs
-                ? Object.values(msgs).flat().join(' ')
-                : 'Error saving order'
-            );
-
+            setError(msgs ? Object.values(msgs).flat().join(' ') : (err.response?.data?.message || 'Error saving order'));
+        } finally {
+            setSubmitting(false);
         }
-
     };
 
-
-
-
-    const handleDelete = async(id)=>{
-
-        if(!confirm('Delete this purchase order?'))
-            return;
-
-
-        try{
-
-            await api.delete(`/purchase-orders/${id}`);
-
+    // Modal-level workflow action (used inside the view modal)
+    const handleAction = async (action, label) => {
+        try {
+            const res = await api.post(`/purchase-orders/${modalItem.id}/${action}`);
+            window.showToast(res.data?.message || `${label} completed successfully`, 'success');
+            setShowModal(false);
             load();
-
-        }catch(err){
-
-            setError(
-                err.response?.data?.message ||
-                'Failed to delete order'
-            );
-
+        } catch (err) {
+            window.showToast(err.response?.data?.message || `Failed to ${label.toLowerCase()}`, 'error');
         }
-
     };
 
-
-
-
-    const handleAction = async(id,action)=>{
-
-        try{
-
-            await api.post(
-                `/purchase-orders/${id}/${action}`
-            );
-
+    const handleViewDelete = async () => {
+        if (!window.confirm('Delete this purchase order?')) return;
+        try {
+            await api.delete(`/purchase-orders/${modalItem.id}`);
+            window.showToast('Purchase order deleted', 'success');
+            setShowModal(false);
             load();
-
-        }catch(err){
-
-            setError(
-                err.response?.data?.message ||
-                `Failed to ${action}`
-            );
-
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to delete order', 'error');
         }
-
     };
 
-
-
-    const statusBadge=(status)=>{
-
-        const colors={
-
-            pending:
-            'bg-sky-100 text-sky-700',
-
-            approved:
-            'bg-sky-100 text-sky-700',
-
-            processing:
-            'bg-sky-100 text-sky-700',
-
-            completed:
-            'bg-sky-100 text-sky-700',
-
-            cancelled:
-            'bg-red-100 text-red-700'
-
-        };
-
-
-        return `
-        px-3 py-1 rounded-full text-xs font-semibold
-        ${colors[status] || 'bg-gray-100 text-gray-600'}
-        `;
-
+    const handleModalDownloadPdf = async () => {
+        try {
+            const res = await api.get(`/purchase-orders/${modalItem.id}/download`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `purchase-order-${modalItem.id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to download PDF', 'error');
+        }
     };
 
-
+    const isViewMode = modalMode === 'view';
 
     return (
-
-<div className="space-y-6">
-
-
-<div className="flex justify-between items-center">
-
-<h3 className="text-base font-semibold text-gray-700">
-All Purchase Orders ({orders.length})
-</h3>
-
-
-<button
-onClick={openCreate}
-className="btn-primary px-4 py-2 text-sm"
->
-+ New Order
-</button>
-
-
-</div>
-{showForm && (
-
-<div className="card p-5">
-
-<h4 className="font-semibold text-gray-700 mb-3">
-{editId ? 'Edit Purchase Order' : 'Create Purchase Order'}
-</h4>
-
-
-{error && (
-<div className="bg-red-50 text-red-600 p-3 rounded mb-3 text-sm">
-{error}
-</div>
-)}
-
-
-
-<form 
-onSubmit={handleSubmit}
-className="grid grid-cols-1 md:grid-cols-2 gap-4"
->
-
-
-<div>
-<label className="block text-xs font-semibold text-gray-600 mb-1">
-Supplier *
-</label>
-
-<select
-name="supplier_id"
-value={form.supplier_id}
-onChange={handleChange}
-className="w-full px-3 py-2 border rounded-lg text-sm"
-required
->
-
-<option value="">Select Supplier</option>
-
-{suppliers.map(s=>(
-
-<option key={s.id} value={s.id}>
-{s.name}
-</option>
-
-))}
-
-</select>
-
-</div>
-
-
-
-
-<div>
-
-<label className="block text-xs font-semibold text-gray-600 mb-1">
-Order Date *
-</label>
-
-
-<input
-type="date"
-name="order_date"
-value={form.order_date}
-onChange={handleChange}
-className="w-full px-3 py-2 border rounded-lg text-sm"
-required
-/>
-
-</div>
-
-
-
-
-
-<div>
-
-<label className="block text-xs font-semibold text-gray-600 mb-1">
-Medicine *
-</label>
-
-
-<select
-name="medicine_id"
-value={form.medicine_id}
-onChange={handleChange}
-className="w-full px-3 py-2 border rounded-lg text-sm"
-required
->
-
-
-<option value="">
-Select Medicine
-</option>
-
-
-{medicines.map(m=>(
-
-<option key={m.id} value={m.id}>
-{m.name}
-</option>
-
-))}
-
-
-</select>
-
-</div>
-
-
-
-
-
-<div>
-
-<label className="block text-xs font-semibold text-gray-600 mb-1">
-Quantity *
-</label>
-
-
-<input
-type="number"
-name="quantity"
-value={form.quantity}
-onChange={handleChange}
-className="w-full px-3 py-2 border rounded-lg text-sm"
-required
-/>
-
-</div>
-
-
-
-
-
-<div>
-
-<label className="block text-xs font-semibold text-gray-600 mb-1">
-Unit Price *
-</label>
-
-
-<input
-type="number"
-step="0.01"
-name="unit_price"
-value={form.unit_price}
-onChange={handleChange}
-className="w-full px-3 py-2 border rounded-lg text-sm"
-required
-/>
-
-</div>
-
-
-
-
-
-<div className="md:col-span-2 flex justify-end gap-3">
-
-
-<button
-type="button"
-onClick={()=>setShowForm(false)}
-className="px-5 py-2 border rounded-lg text-gray-600"
->
-Cancel
-</button>
-
-
-
-<button
-type="submit"
-className="px-5 py-2 bg-sky-500 text-white rounded-lg"
->
-{editId ? 'Update Order' : 'Create Order'}
-</button>
-
-
-
-</div>
-
-
-</form>
-
-
-</div>
-
-)}
-
-
-
-
-
-
-<div className="card overflow-hidden">
-
-
-<table className="w-full">
-
-
-<thead>
-
-<tr className="bg-sky-50">
-
-
-<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
-ID
-</th>
-
-
-<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
-Supplier
-</th>
-
-
-<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
-Date
-</th>
-
-
-<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
-Status
-</th>
-
-
-<th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">
-Amount
-</th>
-
-
-<th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">
-Actions
-</th>
-
-
-</tr>
-
-</thead>
-
-
-
-
-<tbody>
-
-{orders.map((o) => {
-
-    const status = o.status?.toLowerCase();
-
-    return (
-
-        <tr
-            key={o.id}
-            className="border-b hover:bg-sky-50/30"
-        >
-
-            <td className="px-4 py-3 text-sm">
-                #{o.id}
-            </td>
-
-
-            <td className="px-4 py-3 text-sm">
-                {o.supplier?.name || "---"}
-            </td>
-
-
-            <td className="px-4 py-3 text-sm">
-                {o.order_date}
-            </td>
-
-
-            <td className="px-4 py-3">
-
-                <span className={statusBadge(status)}>
-                    {status}
-                </span>
-
-            </td>
-
-
-            <td className="px-4 py-3 text-sm">
-                ${Number(o.total_amount || 0).toFixed(2)}
-            </td>
-
-
-            <td className="px-4 py-3">
-
-                <div className="flex justify-end gap-1">
-
-                    {/* View Details — always available (blue) */}
-                    <ActionIcon
-                        icon={Eye}
-                        tooltip="View Details"
-                        color="sky"
-                    />
-
-                    {/* Approve / Complete — pending, approved, processing (green) */}
-                    {["pending", "approved", "processing"].includes(status) && (
-                        <ActionIcon
-                            icon={CheckCircle}
-                            tooltip={status === "pending" ? "Approve" : "Complete"}
-                            color="green"
-                        />
-                    )}
-
-                    {/* Cancel — pending, approved, processing (red) */}
-                    {["pending", "approved", "processing"].includes(status) && (
-                        <ActionIcon
-                            icon={XCircle}
-                            tooltip="Cancel"
-                            color="red"
-                        />
-                    )}
-
-                    {/* Edit — always available (blue) */}
-                    <ActionIcon
-                        icon={Pencil}
-                        tooltip="Edit"
-                        color="sky"
-                        onClick={() => openEdit(o)}
-                    />
-
-                    {/* Delete — always available (red) */}
-                    <ActionIcon
-                        icon={Trash2}
-                        tooltip="Delete"
-                        color="red"
-                        onClick={() => handleDelete(o.id)}
-                    />
-
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h3 className="text-base font-semibold text-gray-700">
+                    All Purchase Orders ({meta?.total ?? orders.length})
+                </h3>
+                <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm flex items-center gap-2">
+                    <Plus size={16} />
+                    New Order
+                </button>
+            </div>
+
+            {error && (
+                <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">
+                    {error}
                 </div>
+            )}
 
-            </td>
+            <Pagination meta={meta} onPageChange={handlePageChange} />
 
-        </tr>
+            {loading ? (
+                <LoadingSpinner text="Loading purchase orders..." />
+            ) : (
+                <div className="card overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-sky-50">
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">ID</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Supplier</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Date</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Amount</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orders.map((o) => {
+                                    const status = o.status?.toLowerCase();
+                                    const actions = getActions(o);
+                                    return (
+                                        <tr
+                                            key={o.id}
+                                            className="border-b hover:bg-sky-50/30"
+                                        >
+                                            <td className="px-4 py-3 text-sm">{o.id}</td>
+                                            <td className="px-4 py-3 text-sm">
+                                                <div className="overflow-hidden whitespace-nowrap text-ellipsis truncate">
+                                                    {o.supplier?.name || "---"}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">{formatDate(o.order_date)}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={statusBadge(status)}>{statusLabel(status)}</span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">${Number(o.total_amount || 0).toFixed(2)}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex justify-end items-center gap-2">
+                                                    {actions.map((a, i) => (
+                                                        <ActionIcon
+                                                            key={i}
+                                                            icon={a.icon}
+                                                            tooltip={a.tooltip}
+                                                            color={a.color}
+                                                            onClick={a.onClick}
+                                                            disabled={a.disabled}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {orders.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+                                            No purchase orders found
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
+            {/* PDF Preview Modal */}
+            <Modal
+                open={showPdfPreview}
+                onClose={closePdfPreview}
+                title="Purchase Order PDF Preview"
+                size="max-w-4xl"
+            >
+                {pdfLoading ? (
+                    <div className="flex justify-center py-12">
+                        <LoadingSpinner text="Generating PDF..." />
+                    </div>
+                ) : pdfPreviewData ? (
+                    <div className="space-y-4">
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => handleDownloadPdf(pdfPreviewData.purchase_order)}
+                                className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                            >
+                                <Download size={16} />
+                                Download PDF
+                            </button>
+                            <button
+                                onClick={closePdfPreview}
+                                className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
+                            >
+                                <X size={16} />
+                                Close
+                            </button>
+                        </div>
+                        <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <iframe
+                                title="Purchase Order PDF Preview"
+                                src={`data:application/pdf;base64,${pdfPreviewData.pdf}`}
+                                className="w-full h-[600px]"
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-gray-500">No PDF data available.</p>
+                )}
+            </Modal>
+
+            {/* Main Modal (Create / Edit / View) */}
+            <Modal
+                open={showModal}
+                onClose={closeModal}
+                title={
+                    modalMode === 'create' ? 'Create Purchase Order'
+                    : modalMode === 'edit' ? 'Edit Purchase Order'
+                    : `Purchase Order ${modalItem?.id || ''}`
+                }
+                size="max-w-2xl"
+            >
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">{error}</div>}
+
+                {isViewMode && modalItem ? (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label>
+                                <p className="text-sm font-medium text-gray-800">{modalItem.supplier?.name || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Order Date</label>
+                                <p className="text-sm text-gray-600 flex items-center gap-1">
+                                    <Calendar size={14} />
+                                    {formatDate(modalItem.order_date)}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+                                <span className={statusBadge(modalItem.status?.toLowerCase())}>{statusLabel(modalItem.status)}</span>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Total Amount</label>
+                                <p className="text-sm text-gray-600 flex items-center gap-1">
+                                    <DollarSign size={14} />
+                                    ${Number(modalItem.total_amount || 0).toFixed(2)}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Medicine</label>
+                                <p className="text-sm font-medium text-gray-800 flex items-center gap-1">
+                                    <Package size={14} />
+                                    {modalItem.items?.[0]?.medicine?.name || modalItem.medicine?.name || 'N/A'}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label>
+                                <p className="text-sm text-gray-600">{modalItem.items?.[0]?.quantity || 0}</p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Unit Price</label>
+                                <p className="text-sm text-gray-600 flex items-center gap-1">
+                                    <DollarSign size={14} />
+                                    ${Number(modalItem.items?.[0]?.unit_price || 0).toFixed(2)}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Subtotal</label>
+                                <p className="text-sm text-gray-600 flex items-center gap-1">
+                                    <DollarSign size={14} />
+                                    ${Number(modalItem.items?.[0]?.subtotal || 0).toFixed(2)}
+                                </p>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Notes</label>
+                                <p className="text-sm text-gray-600 flex items-center gap-1">
+                                    <FileText size={14} />
+                                    {modalItem.notes || '---'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Status-aware icon-only action buttons */}
+                        <div className="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-gray-200">
+                            {modalItem.status?.toLowerCase() !== 'draft' && (
+                                <ActionIcon
+                                    icon={Download}
+                                    tooltip="Download PDF"
+                                    color="sky"
+                                    onClick={handleModalDownloadPdf}
+                                />
+                            )}
+                            {modalItem.status?.toLowerCase() === 'draft' && (
+                                <ActionIcon
+                                    icon={Upload}
+                                    tooltip="Submit to Pending"
+                                    color="purple"
+                                    onClick={() => handleAction('submit', 'Submit')}
+                                />
+                            )}
+                            {modalItem.status?.toLowerCase() === 'pending' && (
+                                <ActionIcon
+                                    icon={Send}
+                                    tooltip="Email Supplier"
+                                    color="sky"
+                                    onClick={() => handleAction('send', 'Email Supplier')}
+                                />
+                            )}
+                            {modalItem.status?.toLowerCase() === 'pending' && (
+                                <ActionIcon
+                                    icon={CheckCircle}
+                                    tooltip="Approve"
+                                    color="green"
+                                    onClick={() => handleAction('approve', 'Approve')}
+                                />
+                            )}
+                            {modalItem.status?.toLowerCase() === 'sent' && (
+                                <ActionIcon
+                                    icon={Package}
+                                    tooltip="Mark as Delivered"
+                                    color="amber"
+                                    onClick={() => handleAction('deliver', 'Mark as Delivered')}
+                                />
+                            )}
+                            {modalItem.status?.toLowerCase() === 'sent' && (
+                                <ActionIcon
+                                    icon={Send}
+                                    tooltip="Resend to Supplier"
+                                    color="purple"
+                                    onClick={() => handleAction('resend', 'Resend to Supplier')}
+                                />
+                            )}
+                            {['delivered', 'approved'].includes(modalItem.status?.toLowerCase()) && (
+                                <ActionIcon
+                                    icon={ClipboardCheck}
+                                    tooltip="Mark as Completed"
+                                    color="green"
+                                    onClick={() => handleAction('complete', 'Mark as Completed')}
+                                />
+                            )}
+                            {['draft', 'pending', 'sent', 'delivered', 'approved'].includes(modalItem.status?.toLowerCase()) && (
+                                <ActionIcon
+                                    icon={XCircle}
+                                    tooltip="Cancel"
+                                    color="red"
+                                    onClick={() => handleAction('cancel', 'Cancel')}
+                                />
+                            )}
+                            {['draft', 'pending', 'approved'].includes(modalItem.status?.toLowerCase()) && (
+                                <ActionIcon
+                                    icon={Edit}
+                                    tooltip="Edit"
+                                    color="sky"
+                                    onClick={() => { setShowModal(false); openEdit(modalItem); }}
+                                />
+                            )}
+                            {modalItem.status?.toLowerCase() === 'draft' && (
+                                <ActionIcon
+                                    icon={Trash2}
+                                    tooltip="Delete"
+                                    color="red"
+                                    onClick={handleViewDelete}
+                                />
+                            )}
+                            {modalItem.status?.toLowerCase() === 'cancelled' && (
+                                <ActionIcon
+                                    icon={RotateCcw}
+                                    tooltip="Reopen"
+                                    color="purple"
+                                    onClick={() => handleAction('reopen', 'Reopen')}
+                                />
+                            )}
+                            <ActionIcon
+                                icon={X}
+                                tooltip="Close"
+                                color="gray"
+                                onClick={closeModal}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier *</label>
+                            <select
+                                name="supplier_id"
+                                value={form.supplier_id}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                required
+                                disabled={formLoading}
+                            >
+                                <option value="">Select Supplier</option>
+                                {suppliers.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Order Date *</label>
+                            <div className="relative">
+                                <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="date"
+                                    name="order_date"
+                                    value={form.order_date}
+                                    onChange={handleChange}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
+                            <select
+                                name="medicine_id"
+                                value={form.medicine_id}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                required
+                                disabled={formLoading}
+                            >
+                                <option value="">Select Medicine</option>
+                                {medicines.map(m => (
+                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+                            <input
+                                type="number"
+                                name="quantity"
+                                value={form.quantity}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                min="1"
+                                required
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Price *</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    name="unit_price"
+                                    value={form.unit_price}
+                                    onChange={handleChange}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                    min="0"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div className="md:col-span-2 flex justify-end gap-3">
+                            <button type="button" onClick={closeModal} className="btn-secondary px-4 py-2 text-sm flex items-center gap-2">
+                                <X size={16} />
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60"
+                            >
+                                {submitting ? <><Loader2 size={16} className="animate-spin" /> Saving... </> : <><Save size={16} /> {modalMode === 'create' ? 'Create Order' : 'Update Order'}</>}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
+        </div>
     );
-
-})}
-
-
-
-{orders.length === 0 && (
-
-<tr>
-
-<td
-colSpan="6"
-className="px-4 py-8 text-center text-gray-400"
->
-
-No purchase orders found
-
-</td>
-
-</tr>
-
-)}
-
-</tbody>
-
-
-</table>
-
-
-</div>
-
-
-</div>
-
-);
-
 }

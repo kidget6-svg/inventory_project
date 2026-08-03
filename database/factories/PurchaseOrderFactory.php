@@ -19,7 +19,7 @@ class PurchaseOrderFactory extends Factory
             'supplier_id' => Supplier::factory(),
             'order_date' => fake()->date(),
             'total_amount' => fake()->randomFloat(2, 10, 5000),
-            'status' => fake()->randomElement(['pending', 'approved', 'processing', 'completed', 'cancelled']),
+            'status' => fake()->randomElement(['draft', 'pending', 'sent', 'delivered', 'completed', 'cancelled']),
         ];
     }
 }

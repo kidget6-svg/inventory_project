@@ -12,8 +12,8 @@ class ReportController extends Controller
     public function index()
     {
         $medicines = Medicine::orderBy('name')->get();
-        $sales = Sale::orderBy('sale_date', 'desc')->get();
-        $purchases = PurchaseOrder::with('supplier')->orderBy('created_at', 'desc')->get();
+        $sales = Sale::orderBy('sale_date', 'desc')->paginate(10);
+        $purchases = PurchaseOrder::with('supplier')->orderBy('created_at', 'desc')->paginate(10);
 
         $lowStock = Medicine::whereColumn('quantity', '<=', 'reorder_level')->get();
         $expiring = Medicine::whereNotNull('expiry_date')
