@@ -21,12 +21,12 @@ import StockMovements from './pages/StockMovements';
 import LowStock from './pages/LowStock';
 import Reports from './pages/Reports';
 
-function ProtectedRoute({ children, roles }) {
+function ProtectedRoute({ children, roles, pageTitle }) {
     const { user, loading } = useAuth();
     if (loading) return <div className="flex items-center justify-center min-h-screen text-sky-500 text-lg">Loading...</div>;
     if (!user) return <Navigate to="/login" />;
     if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" />;
-    return <SidebarLayout>{children}</SidebarLayout>;
+    return <SidebarLayout pageTitle={pageTitle}>{children}</SidebarLayout>;
 }
 
 function DashboardRouter() {
@@ -53,39 +53,39 @@ function App() {
 
             {/* Admin-only: User management */}
             <Route path="/users" element={
-                <ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>
+                <ProtectedRoute roles={['admin']} pageTitle="User Management"><Users /></ProtectedRoute>
             } />
 
             <Route path="/dashboard" element={
-                <ProtectedRoute><DashboardRouter /></ProtectedRoute>
+                <ProtectedRoute pageTitle="Dashboard"><DashboardRouter /></ProtectedRoute>
             } />
 
             <Route path="/medicines" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><Medicines /></ProtectedRoute>
+                <ProtectedRoute roles={['admin','pharmacist']} pageTitle="Medicine Management"><Medicines /></ProtectedRoute>
             } />
             <Route path="/inventory" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><Inventory /></ProtectedRoute>
+                <ProtectedRoute roles={['admin','pharmacist']} pageTitle="Inventory Management"><Inventory /></ProtectedRoute>
             } />
             <Route path="/categories" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><Categories /></ProtectedRoute>
+                <ProtectedRoute roles={['admin','pharmacist']} pageTitle="Category Management"><Categories /></ProtectedRoute>
             } />
             <Route path="/suppliers" element={
-                <ProtectedRoute roles={['admin']}><Suppliers /></ProtectedRoute>
+                <ProtectedRoute roles={['admin']} pageTitle="Supplier Management"><Suppliers /></ProtectedRoute>
             } />
             <Route path="/purchase-orders" element={
-                <ProtectedRoute roles={['admin']}><PurchaseOrders /></ProtectedRoute>
+                <ProtectedRoute roles={['admin']} pageTitle="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
             } />
             <Route path="/sales" element={
-                <ProtectedRoute roles={['admin','cashier']}><Sales /></ProtectedRoute>
+                <ProtectedRoute roles={['admin','cashier']} pageTitle="Sales Management"><Sales /></ProtectedRoute>
             } />
             <Route path="/stock-movements" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><StockMovements /></ProtectedRoute>
+                <ProtectedRoute roles={['admin','pharmacist']} pageTitle="Stock Movements"><StockMovements /></ProtectedRoute>
             } />
             <Route path="/low-stock" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><LowStock /></ProtectedRoute>
+                <ProtectedRoute roles={['admin','pharmacist']} pageTitle="Low Stock Alert"><LowStock /></ProtectedRoute>
             } />
             <Route path="/reports" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><Reports /></ProtectedRoute>
+                <ProtectedRoute roles={['admin','pharmacist']} pageTitle="Reports"><Reports /></ProtectedRoute>
             } />
 
             <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} />} />
@@ -99,7 +99,7 @@ function RootApp() {
             <BrowserRouter>
                 <App />
             </BrowserRouter>
-            <ToastContainer />
+            <ToastContainer /> 
         </AuthProvider>
     );
 }

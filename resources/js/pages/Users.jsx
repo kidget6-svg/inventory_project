@@ -20,6 +20,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import api from "../axios";
 import LoadingSpinner from "../components/LoadingSpinner";
+import Pagination from '../components/Pagination';
 
 
 const roleOptions = [
@@ -49,6 +50,9 @@ export default function Users(){
     const [loading,setLoading] = useState(true);
 
     const [error,setError] = useState("");
+
+    const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);
 
     const [search,setSearch] = useState("");
 
@@ -90,6 +94,8 @@ export default function Users(){
 
     },[]);
 
+    const handlePageChange = (p) => setPage(p);
+
 
 
 
@@ -98,9 +104,10 @@ export default function Users(){
 
         try{
 
-            const response = await api.get("/users");
+            const response = await api.get("/users", { params: { page, search: search, role: roleFilter } });
 
-            setUsers(response.data);
+            setUsers(response.data.data || response.data);
+            setMeta(response.data.meta || null);
 
             setError("");
 
@@ -121,6 +128,9 @@ export default function Users(){
         }
 
     };
+
+    useEffect(() => { setPage(1); }, [search, roleFilter]);
+    useEffect(() => { fetchUsers(); }, [page, search, roleFilter]);
 
 
 
@@ -345,37 +355,13 @@ export default function Users(){
 
 
 
-    const filteredUsers = users.filter(user=>{
-
-
-        const matchesSearch =
-        user.name
-        .toLowerCase()
-        .includes(search.toLowerCase())
-        ||
-        user.email
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-
-
-        const matchesRole =
-        roleFilter==="all"
-        ||
-        user.role===roleFilter;
-
-
-
-        return matchesSearch && matchesRole;
-
-
-    });
+    const filteredUsers = users;
 
 
 
 
 
-    const totalUsers = users.length;
+    const totalUsers = meta?.total || users.length;
 
 
     const adminCount =
@@ -800,6 +786,8 @@ size={35}
 
 </div>
 
+
+            <Pagination meta={meta} onPageChange={handlePageChange} />
 
 
 </div>

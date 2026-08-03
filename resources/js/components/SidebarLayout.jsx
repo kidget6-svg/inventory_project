@@ -1,5 +1,26 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+
+const pageTitleMap = {
+    '/dashboard': 'Dashboard',
+    '/medicines': 'Medicine Management',
+    '/inventory': 'Inventory Management',
+    '/users': 'User Management',
+    '/categories': 'Category Management',
+    '/categories/create': 'Add Category',
+    '/categories/edit': 'Edit Category',
+    '/suppliers': 'Supplier Management',
+    '/suppliers/create': 'Add Supplier',
+    '/suppliers/edit': 'Edit Supplier',
+    '/purchase-orders': 'Purchase Orders',
+    '/purchase-orders/create': 'Create Purchase Order',
+    '/purchase-orders/edit': 'Edit Purchase Order',
+    '/sales': 'Sales Management',
+    '/stock-movements': 'Stock Movements',
+    '/stock-movements/create': 'Record Stock Movement',
+    '/low-stock': 'Low Stock Alert',
+    '/reports': 'Reports',
+};
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, Package } from 'lucide-react';
 
@@ -58,8 +79,11 @@ const roleBadgeStyle = {
 export default function SidebarLayout({ children, pageTitle }) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const menu = getMenu(user?.role);
+
+    const resolvedTitle = pageTitle || pageTitleMap[location.pathname] || '';
 
     const handleLogout = async () => {
         await logout();
@@ -138,7 +162,7 @@ export default function SidebarLayout({ children, pageTitle }) {
 
             <main className="flex-1 md:ml-64 min-h-screen">
                 <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900 tracking-tight">{pageTitle || 'Dashboard'}</h2>
+                    <h2 className="text-xl font-bold text-gray-900 tracking-tight">{resolvedTitle}</h2>
                 </div>
                 <div className="p-6 lg:p-8">
                     {children}
@@ -149,5 +173,5 @@ export default function SidebarLayout({ children, pageTitle }) {
                 <div className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
             )}
         </div>
-    );
+    );  
 }

@@ -13,8 +13,13 @@ class StockMovementController extends Controller
     public function index()
     {
         $medicines = Medicine::orderBy('name')->get();
-        $movements = StockMovement::with('medicine')->latest()->get();
+        $movements = StockMovement::with('medicine')->latest()->paginate(10);
         return response()->json(['medicines' => $medicines, 'movements' => $movements]);
+    }
+
+    public function show(StockMovement $stockMovement)
+    {
+        return response()->json($stockMovement->load('medicine'));
     }
 
     public function store(Request $request)

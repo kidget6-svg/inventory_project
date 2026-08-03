@@ -98,7 +98,7 @@ export default function CashierDashboard() {
                                         className="border-b border-gray-50 hover:bg-sky-50/30 transition-colors"
                                     >
                                         <td className="px-4 py-3 text-sm font-medium text-gray-800">
-                                            #{sale.id}
+                                            {sale.id}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-600">
                                             {sale.sale_date}

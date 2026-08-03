@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../axios';
 import Modal from '../components/Modal';
 import { Plus, Trash2, Barcode, Camera, Loader2, Search, X } from 'lucide-react';
+import Pagination from '../components/Pagination';
 
 export default function Sales() {
     const [sales, setSales] = useState([]);
     const [medicines, setMedicines] = useState([]);
+    const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);
     const [showModal, setShowModal] = useState(false);
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -15,10 +18,10 @@ export default function Sales() {
     const [saleItems, setSaleItems] = useState([]);
     const [barcodeInput, setBarcodeInput] = useState('');
 
-    useEffect(() => { loadSales(); loadMedicines(); }, []);
+    useEffect(() => { loadSales(); loadMedicines(); }, [page]);
 
-    const loadSales = () => api.get('/sales').then(r => setSales(r.data)).catch(err => console.error(err));
-    const loadMedicines = () => api.get('/medicines').then(r => setMedicines(r.data)).catch(err => console.error(err));
+    const loadSales = () => api.get('/sales', { params: { page } }).then(r => { setSales(r.data.data || r.data); setMeta(r.data.meta || null); }).catch(err => console.error(err));
+    const loadMedicines = () => api.get('/medicines', { params: { per_page: 1000 } }).then(r => setMedicines(r.data.data || r.data)).catch(err => console.error(err));
 
     const findMedicineByBarcode = (barcode) => {
         return medicines.find(m => m.barcode === barcode);
@@ -171,6 +174,8 @@ export default function Sales() {
 
     const totalRevenue = sales.reduce((sum, s) => sum + Number(s.total_amount), 0);
 
+    const handlePageChange = (p) => setPage(p);
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -178,6 +183,10 @@ export default function Sales() {
                     All Sales ({sales.length}) | Total Revenue: <span className="text-blue-500">${totalRevenue.toFixed(2)}</span>
                 </h3>
                 <button onClick={openCreate} className="btn-primary flex items-center gap-2"><Plus size={16} /> New Sale</button>
+            </div>
+
+            <div>
+                <Pagination meta={meta} onPageChange={handlePageChange} />
             </div>
 
             <Modal open={showModal} onClose={() => { setShowModal(false); stopBarcodeScan(); }} title="New Sale" size="max-w-2xl">
@@ -282,7 +291,7 @@ export default function Sales() {
                     <tbody>
                         {sales.map(s => (
                             <tr key={s.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                <td className="px-4 py-3 text-sm font-medium">#{s.id}</td>
+                                <td className="px-4 py-3 text-sm font-medium">{s.id}</td>
                                 <td className="px-4 py-3 text-sm">{s.sale_date}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{s.items_count || '---'}</td>
                                 <td className="px-4 py-3 text-sm font-semibold text-blue-500 text-right">${Number(s.total_amount).toFixed(2)}</td>

@@ -13,7 +13,7 @@ class SaleController extends Controller
 {
     public function index()
     {
-        $sales = Sale::withCount('items')->latest()->get();
+        $sales = Sale::withCount('items')->latest()->paginate(10);
         return response()->json($sales);
     }
 
