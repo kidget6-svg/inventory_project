@@ -72,6 +72,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
         Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
         Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
+        Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
         Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
         Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
         Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);

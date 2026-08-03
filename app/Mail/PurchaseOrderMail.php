@@ -23,7 +23,7 @@ class PurchaseOrderMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Purchase Order #' . $this->purchaseOrder->id . ' from ' . config('app.name', 'PharmaSys'),
+            subject: 'Purchase Order #' . $this->purchaseOrder->id,
         );
     }
 
@@ -37,8 +37,11 @@ class PurchaseOrderMail extends Mailable
     public function attachments(): array
     {
         return [
-            Attachment::fromData($this->pdfContent, 'purchase-order-' . $this->purchaseOrder->id . '.pdf')
-                ->withMime('application/pdf'),
+            Attachment::fromData(
+                fn () => $this->pdfContent,
+                'purchase-order-' . $this->purchaseOrder->id . '.pdf'
+            )
+            ->withMime('application/pdf'),
         ];
     }
 }
