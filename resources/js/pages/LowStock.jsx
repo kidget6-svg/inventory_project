@@ -5,6 +5,119 @@ import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { AlertCircle, AlertTriangle, Package, ShoppingCart, RefreshCw } from 'lucide-react';
 
+// Donut Chart Component
+function DonutChart({ stats }) {
+    const critical = stats?.critical || 0;
+    const low = stats?.low || 0;
+    const reorder = stats?.reorder || 0;
+    const total = critical + low + reorder;
+
+    if (total === 0) {
+        return (
+            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+                No stock alerts to display
+            </div>
+        );
+    }
+
+    const strokeWidth = 16;
+    const radius = 40;
+    const circumference = 2 * Math.PI * radius;
+
+    const criticalPct = critical / total;
+    const lowPct = low / total;
+    const reorderPct = reorder / total;
+
+    const criticalDash = criticalPct * circumference;
+    const lowDash = lowPct * circumference;
+    const reorderDash = reorderPct * circumference;
+
+    const criticalOffset = 0;
+    const lowOffset = -criticalDash;
+    const reorderOffset = -(criticalDash + lowDash);
+
+    return (
+        <div className="flex flex-col sm:flex-row items-center justify-around p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="relative w-48 h-48 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    {/* Background Track */}
+                    <circle
+                        cx="50"
+                        cy="50"
+                        r={radius}
+                        className="text-gray-100"
+                        strokeWidth={strokeWidth}
+                        stroke="currentColor"
+                        fill="transparent"
+                    />
+                    {/* Critical Segment */}
+                    {critical > 0 && (
+                        <circle
+                            cx="50"
+                            cy="50"
+                            r={radius}
+                            className="text-red-500 transition-all duration-500 ease-out"
+                            strokeWidth={strokeWidth}
+                            strokeDasharray={`${criticalDash} ${circumference - criticalDash}`}
+                            strokeDashoffset={criticalOffset}
+                            stroke="currentColor"
+                            fill="transparent"
+                        />
+                    )}
+                    {/* Low Segment */}
+                    {low > 0 && (
+                        <circle
+                            cx="50"
+                            cy="50"
+                            r={radius}
+                            className="text-orange-500 transition-all duration-500 ease-out"
+                            strokeWidth={strokeWidth}
+                            strokeDasharray={`${lowDash} ${circumference - lowDash}`}
+                            strokeDashoffset={lowOffset}
+                            stroke="currentColor"
+                            fill="transparent"
+                        />
+                    )}
+                    {/* Reorder Segment */}
+                    {reorder > 0 && (
+                        <circle
+                            cx="50"
+                            cy="50"
+                            r={radius}
+                            className="text-yellow-500 transition-all duration-500 ease-out"
+                            strokeWidth={strokeWidth}
+                            strokeDasharray={`${reorderDash} ${circumference - reorderDash}`}
+                            strokeDashoffset={reorderOffset}
+                            stroke="currentColor"
+                            fill="transparent"
+                        />
+                    )}
+                </svg>
+                <div className="absolute flex flex-col items-center justify-center text-center">
+                    <span className="text-2xl font-bold text-gray-800">{total}</span>
+                    <span className="text-xs text-gray-400 font-medium">Alerts</span>
+                </div>
+            </div>
+
+            {/* Legend */}
+            <div className="space-y-3 mt-4 sm:mt-0">
+                <div className="flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                    <span className="text-xs font-semibold text-gray-600">Out of Stock ({critical})</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+                    <span className="text-xs font-semibold text-gray-600">Critical Low ({low})</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                    <span className="text-xs font-semibold text-gray-600">Needs Reorder ({reorder})</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function LowStock() {
     const [medicines, setMedicines] = useState([]);
     const [stats, setStats] = useState(null);
@@ -77,14 +190,6 @@ export default function LowStock() {
         );
     };
 
-    const getProgressColor = (medicine) => {
-        const ratio = medicine.quantity / medicine.reorder_level;
-        if (ratio === 0) return 'bg-red-500';
-        if (ratio <= 0.3) return 'bg-red-500';
-        if (ratio <= 0.6) return 'bg-orange-500';
-        return 'bg-yellow-500';
-    };
-
     if (loading) {
         return <LoadingSpinner text="Loading low stock items..." />;
     }
@@ -106,38 +211,43 @@ export default function LowStock() {
                 </button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-red-50 rounded-xl border border-red-200 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                            <AlertCircle className="w-5 h-5 text-red-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-red-600">{stats?.critical || 0}</p>
-                            <p className="text-xs text-red-500">Out of Stock</p>
+            {/* Visual Overview: Donut Chart + Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                    <DonutChart stats={stats} />
+                </div>
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-red-50 rounded-xl border border-red-200 p-4 flex flex-col justify-center">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                <AlertCircle className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-red-600">{stats?.critical || 0}</p>
+                                <p className="text-xs text-red-500">Out of Stock</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="bg-orange-50 rounded-xl border border-orange-200 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                            <AlertTriangle className="w-5 h-5 text-orange-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-orange-600">{stats?.low || 0}</p>
-                            <p className="text-xs text-orange-500">Critical Low</p>
+                    <div className="bg-orange-50 rounded-xl border border-orange-200 p-4 flex flex-col justify-center">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                <AlertTriangle className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-orange-600">{stats?.low || 0}</p>
+                                <p className="text-xs text-orange-500">Critical Low</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div className="bg-yellow-50 rounded-xl border border-yellow-200 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                            <Package className="w-5 h-5 text-yellow-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-yellow-600">{stats?.reorder || 0}</p>
-                            <p className="text-xs text-yellow-500">Needs Reorder</p>
+                    <div className="bg-yellow-50 rounded-xl border border-yellow-200 p-4 flex flex-col justify-center">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <Package className="w-5 h-5 text-yellow-600" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-yellow-600">{stats?.reorder || 0}</p>
+                                <p className="text-xs text-yellow-500">Needs Reorder</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -150,7 +260,7 @@ export default function LowStock() {
                         <Package className="w-8 h-8 text-green-600" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">All Stocked Up! 🎉</h3>
-                    <p className="text-gray-500">All medicines are above their reorder level. No low stock items found.</p>
+                    <p className="text-gray-500">All medicines are above their reorder level.</p>
                 </div>
             ) : (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -163,77 +273,28 @@ export default function LowStock() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase tracking-wider">Status</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold text-red-700 uppercase tracking-wider">Current Stock</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold text-red-700 uppercase tracking-wider">Reorder Level</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-red-700 uppercase tracking-wider">Progress</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-red-700 uppercase tracking-wider">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {medicines.map(medicine => {
-                                    const status = getStockStatus(medicine);
-                                    const progress = Math.min((medicine.quantity / medicine.reorder_level) * 100, 100);
-                                    
-                                    return (
-                                        <tr key={medicine.id} className="border-b border-gray-50 hover:bg-red-50/30 transition-colors">
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <img
-                                                        src={medicine.image_url || '/images/medicine-placeholder.svg'}
-                                                        alt={medicine.name}
-                                                        className="w-10 h-10 rounded-lg object-cover border border-gray-200"
-                                                        onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
-                                                    />
-                                                    <div>
-                                                        <div className="text-sm font-medium text-gray-800">{medicine.name}</div>
-                                                        <div className="text-xs text-gray-400">{medicine.generic_name || 'No generic name'}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-500">
-                                                {medicine.category?.name || 'No Category'}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {getStatusBadge(medicine)}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span className={`text-lg font-bold ${
-                                                    status.color === 'red' ? 'text-red-600' : 'text-orange-600'
-                                                }`}>
-                                                    {medicine.quantity}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-sm text-gray-500">
-                                                {medicine.reorder_level}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="w-full max-w-[150px]">
-                                                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                        <span>{Math.round(progress)}%</span>
-                                                        <span>{medicine.quantity}/{medicine.reorder_level}</span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                                        <div
-                                                            className={`h-2 rounded-full transition-all ${getProgressColor(medicine)}`}
-                                                            style={{ width: `${Math.min(progress, 100)}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => handleOrderNow(medicine.id)}
-                                                    disabled={ordering === medicine.id}
-                                                    className="btn-primary px-3 py-1.5 text-xs flex items-center gap-1.5 disabled:opacity-60"
-                                                >
-                                                    {ordering === medicine.id ? (
-                                                        <><RefreshCw size={14} className="animate-spin" /> Ordering...</>
-                                                    ) : (
-                                                        <><ShoppingCart size={14} /> Order Now</>
-                                                    )}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                {medicines.map(medicine => (
+                                    <tr key={medicine.id} className="border-b border-gray-50 hover:bg-red-50/30 transition-colors">
+                                        <td className="px-4 py-3 font-medium text-gray-800">{medicine.name}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{medicine.category?.name || 'Uncategorized'}</td>
+                                        <td className="px-4 py-3">{getStatusBadge(medicine)}</td>
+                                        <td className="px-4 py-3 text-center font-bold text-red-600">{medicine.quantity}</td>
+                                        <td className="px-4 py-3 text-center text-sm text-gray-500">{medicine.reorder_level}</td>
+                                        <td className="px-4 py-3 text-right">
+                                            <button
+                                                onClick={() => handleOrderNow(medicine.id)}
+                                                disabled={ordering === medicine.id}
+                                                className="btn-primary px-3 py-1.5 text-xs flex items-center gap-1.5 inline-flex"
+                                            >
+                                                <ShoppingCart size={14} /> Order Now
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>

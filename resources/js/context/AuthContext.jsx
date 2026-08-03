@@ -1,7 +1,6 @@
 // resources/js/context/AuthContext.jsx
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api, { refreshCsrfToken } from '../axios';
+import api from '../axios';
 
 const AuthContext = createContext(null);
 
@@ -10,25 +9,33 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        refreshCsrfToken();
+        const token = localStorage.getItem('token') || localStorage.getItem('access_token');
         
-        // Check if user is logged in
+        // Skip calling /api/user if no token exists yet
+        if (!token) {
+            setUser(null);
+            setLoading(false);
+            return;
+        }
+
         api.get('/user')
             .then(res => setUser(res.data))
-            .catch(() => setUser(null))
+            .catch(() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('access_token');
+                setUser(null);
+            })
             .finally(() => setLoading(false));
     }, []);
 
     const login = async (email, password) => {
         try {
-            await refreshCsrfToken();
-            
-            // Use '/login' NOT '/api/login'
             const response = await api.post('/login', { email, password });
             
-            // Store token if using Sanctum
             if (response.data.access_token) {
                 localStorage.setItem('token', response.data.access_token);
+            } else if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
             }
             
             setUser(response.data.user || response.data);
@@ -41,13 +48,10 @@ export function AuthProvider({ children }) {
 
     const register = async (data) => {
         try {
-            await refreshCsrfToken();
-            
             const config = data instanceof FormData 
                 ? { headers: { 'Content-Type': undefined } } 
                 : {};
                 
-            // Use '/register' NOT '/api/register'
             const response = await api.post('/register', data, config);
             return response.data;
         } catch (error) {
@@ -58,13 +62,12 @@ export function AuthProvider({ children }) {
 
     const logout = async () => {
         try {
-            // Use '/logout' NOT '/api/logout'
             await api.post('/logout');
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
             localStorage.removeItem('token');
-            await refreshCsrfToken();
+            localStorage.removeItem('access_token');
             setUser(null);
         }
     };

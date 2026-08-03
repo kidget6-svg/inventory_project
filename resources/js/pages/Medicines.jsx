@@ -7,7 +7,7 @@ import {
     Search, Filter, Eye, Edit, Trash2, Plus,
     Package, Calendar, Tag, DollarSign, Barcode,
     Camera, Loader2, ChevronLeft, ChevronRight,
-    Image as ImageIcon, Upload, X, AlertCircle, MapPin
+    Upload, X, AlertCircle, MapPin, TrendingUp, Clock
 } from 'lucide-react';
 
 const statusOptions = [
@@ -35,6 +35,16 @@ export default function Medicines() {
     const [step, setStep] = useState(0);
     const videoRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    // Table Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+
+    // Recently viewed medicines with pagination
+    const [recentlyViewed, setRecentlyViewed] = useState([]);
+    const [rvPage, setRvPage] = useState(1);
+    const rvItemsPerPage = 4;
 
     const [form, setForm] = useState({
         name: '',
@@ -67,10 +77,22 @@ export default function Medicines() {
 
     const [searchTimeout, setSearchTimeout] = useState(null);
 
-    // Load functions
+    // Helper to resolve image paths (URL vs Uploaded file)
+    const getImageUrl = (item) => {
+        if (!item) return '/images/medicine-placeholder.svg';
+        if (item.image_preview) return item.image_preview;
+        if (item.image_url) return item.image_url;
+        if (item.image) return `/storage/${item.image}`;
+        return '/images/medicine-placeholder.svg';
+    };
+
+    // Load medicines with pagination
     const loadMedicines = () => {
         setLoading(true);
-        const params = {};
+        const params = {
+            page: currentPage,
+            per_page: itemsPerPage,
+        };
         if (filters.search) params.search = filters.search;
         if (filters.category_id) params.category_id = filters.category_id;
         if (filters.supplier_id) params.supplier_id = filters.supplier_id;
@@ -78,8 +100,13 @@ export default function Medicines() {
         
         api.get('/medicines', { params })
             .then(r => {
-                console.log('Medicines loaded:', r.data);
-                setMedicines(r.data);
+                if (r.data.data) {
+                    setMedicines(r.data.data);
+                    setTotalItems(r.data.total || r.data.data.length);
+                } else {
+                    setMedicines(r.data);
+                    setTotalItems(r.data.length);
+                }
             })
             .catch(err => {
                 console.error('Error loading medicines:', err);
@@ -100,6 +127,25 @@ export default function Medicines() {
             .catch(err => console.error('Error loading suppliers:', err));
     };
 
+    // Load recently viewed from localStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('recentlyViewedMedicines');
+        if (saved) {
+            try {
+                setRecentlyViewed(JSON.parse(saved));
+            } catch (e) {
+                setRecentlyViewed([]);
+            }
+        }
+    }, []);
+
+    // Save recently viewed to localStorage
+    const saveRecentlyViewed = (medicine) => {
+        const updated = [medicine, ...recentlyViewed.filter(m => m.id !== medicine.id)].slice(0, 12);
+        setRecentlyViewed(updated);
+        localStorage.setItem('recentlyViewedMedicines', JSON.stringify(updated));
+    };
+
     useEffect(() => {
         loadCategories();
         loadSuppliers();
@@ -107,7 +153,7 @@ export default function Medicines() {
 
     useEffect(() => {
         loadMedicines();
-    }, [filters]);
+    }, [filters, currentPage, itemsPerPage]);
 
     const handleChange = (e) => {
         const { name, value, type, files } = e.target;
@@ -140,17 +186,20 @@ export default function Medicines() {
 
     const handleFilterChange = (e) => {
         setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        setCurrentPage(1);
     };
 
     const handleSearchChange = (e) => {
         const value = e.target.value;
         setFilters(prev => ({ ...prev, search: value }));
+        setCurrentPage(1);
         if (searchTimeout) clearTimeout(searchTimeout);
         setSearchTimeout(setTimeout(() => {}, 300));
     };
 
     const resetFilters = () => {
         setFilters({ search: '', category_id: '', supplier_id: '', status: '' });
+        setCurrentPage(1);
     };
 
     const resetForm = () => {
@@ -205,8 +254,8 @@ export default function Medicines() {
             description: m.description || '',
             manufacturer: m.manufacturer || '',
             image: null,
-            image_url: '',
-            image_preview: m.image_url || null
+            image_url: m.image_url || '',
+            image_preview: getImageUrl(m)
         });
         setEditId(m.id);
         setShowModal(true);
@@ -217,6 +266,7 @@ export default function Medicines() {
     const openView = (m) => {
         setViewMedicine(m);
         setShowViewModal(true);
+        saveRecentlyViewed(m);
     };
 
     const nextStep = () => {
@@ -232,7 +282,6 @@ export default function Medicines() {
         setSubmitting(true);
 
         try {
-            // Validate required fields
             if (!form.name) {
                 setError('Medicine name is required');
                 setSubmitting(false);
@@ -256,7 +305,6 @@ export default function Medicines() {
 
             const formData = new FormData();
             
-            // Add all form fields
             Object.keys(form).forEach(key => {
                 if (key === 'image' && form[key] instanceof File) {
                     formData.append('image', form[key]);
@@ -267,27 +315,24 @@ export default function Medicines() {
                 }
             });
 
-            let response;
             if (editId) {
                 formData.append('_method', 'PUT');
-                response = await api.post(`/medicines/${editId}`, formData, {
+                await api.post(`/medicines/${editId}`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
-                window.showToast('Medicine updated successfully', 'success');
+                window.showToast?.('Medicine updated successfully', 'success');
             } else {
-                response = await api.post('/medicines', formData, {
+                await api.post('/medicines', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
-                window.showToast('Medicine created successfully', 'success');
+                window.showToast?.('Medicine created successfully', 'success');
             }
 
-            console.log('Response:', response.data);
             setShowModal(false);
             loadMedicines();
         } catch (err) {
             console.error('Error saving medicine:', err);
             
-            // Handle validation errors
             if (err.response?.data?.errors) {
                 const msgs = Object.values(err.response.data.errors).flat().join(' ');
                 setError(msgs);
@@ -305,18 +350,17 @@ export default function Medicines() {
         if (!window.confirm('Are you sure you want to delete this medicine?')) return;
         try {
             await api.delete(`/medicines/${id}`);
-            window.showToast('Medicine deleted successfully', 'success');
+            window.showToast?.('Medicine deleted successfully', 'success');
             loadMedicines();
         } catch (err) {
-            window.showToast('Failed to delete medicine', 'error');
-            console.error('Delete error:', err);
+            window.showToast?.('Failed to delete medicine', 'error');
         }
     };
 
     // Barcode scanning
     const startBarcodeScan = async () => {
         if (!('BarcodeDetector' in window)) {
-            window.showToast('Barcode scanning is not supported in this browser.', 'error');
+            window.showToast?.('Barcode scanning is not supported in this browser.', 'error');
             return;
         }
         setScanning(true);
@@ -330,7 +374,7 @@ export default function Medicines() {
             }
             scanLoop();
         } catch (err) {
-            window.showToast('Could not access camera: ' + err.message, 'error');
+            window.showToast?.('Could not access camera: ' + err.message, 'error');
             setScanning(false);
         }
     };
@@ -346,7 +390,7 @@ export default function Medicines() {
                 if (barcodes.length > 0) {
                     setForm(prev => ({ ...prev, barcode: barcodes[0].rawValue }));
                     stopBarcodeScan();
-                    window.showToast('Barcode scanned: ' + barcodes[0].rawValue, 'success');
+                    window.showToast?.('Barcode scanned: ' + barcodes[0].rawValue, 'success');
                     return;
                 }
             }
@@ -396,6 +440,22 @@ export default function Medicines() {
     };
 
     const isFiltered = filters.search || filters.category_id || filters.supplier_id || filters.status;
+
+    // Table Pagination logic
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    const goToPage = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+    // Recently Viewed Pagination logic
+    const totalRvPages = Math.ceil(recentlyViewed.length / rvItemsPerPage);
+    const paginatedRecentlyViewed = recentlyViewed.slice(
+        (rvPage - 1) * rvItemsPerPage,
+        rvPage * rvItemsPerPage
+    );
 
     // Render step content for form
     const renderStepContent = () => {
@@ -449,7 +509,7 @@ export default function Medicines() {
                                 <div className="flex-1">
                                     <div
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
+                                        className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors relative overflow-hidden"
                                     >
                                         {form.image_preview ? (
                                             <div className="relative">
@@ -457,6 +517,7 @@ export default function Medicines() {
                                                     src={form.image_preview}
                                                     alt="Preview"
                                                     className="max-h-32 mx-auto rounded-lg object-contain"
+                                                    onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
                                                 />
                                                 <button
                                                     type="button"
@@ -464,7 +525,7 @@ export default function Medicines() {
                                                         e.stopPropagation();
                                                         setForm(prev => ({ ...prev, image_preview: null, image: null, image_url: '' }));
                                                     }}
-                                                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md"
                                                 >
                                                     <X size={14} />
                                                 </button>
@@ -730,6 +791,73 @@ export default function Medicines() {
 
     return (
         <div className="space-y-6">
+            {/* Recently Viewed 3D Interactive Cards with Pagination */}
+            {recentlyViewed.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Clock size={18} className="text-blue-500" />
+                            <h3 className="text-sm font-semibold text-gray-700">Recently Viewed</h3>
+                        </div>
+                        {totalRvPages > 1 && (
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setRvPage(p => Math.max(p - 1, 1))}
+                                    disabled={rvPage === 1}
+                                    className="p-1 rounded border border-gray-200 hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                                >
+                                    <ChevronLeft size={14} />
+                                </button>
+                                <span className="text-xs text-gray-500 font-medium px-1">
+                                    {rvPage} / {totalRvPages}
+                                </span>
+                                <button
+                                    onClick={() => setRvPage(p => Math.min(p + 1, totalRvPages))}
+                                    disabled={rvPage === totalRvPages}
+                                    className="p-1 rounded border border-gray-200 hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                                >
+                                    <ChevronRight size={14} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        {paginatedRecentlyViewed.map(medicine => (
+                            <div
+                                key={medicine.id}
+                                onClick={() => openView(medicine)}
+                                className="group relative cursor-pointer [perspective:1000px]"
+                            >
+                                <div className="p-3 bg-gradient-to-br from-blue-50/80 to-indigo-50/50 rounded-xl border border-blue-100 shadow-sm transition-all duration-300 transform-gpu [transform-style:preserve-3d] group-hover:[transform:rotateX(6deg)_rotateY(-10deg)_translateZ(10px)] group-hover:shadow-lg group-hover:border-blue-300">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative w-12 h-12 flex-shrink-0 bg-white rounded-lg p-1 border border-gray-100 shadow-inner overflow-hidden">
+                                            <img
+                                                src={getImageUrl(medicine)}
+                                                alt={medicine.name}
+                                                className="w-full h-full object-cover rounded transition-transform duration-300 group-hover:scale-110"
+                                                onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
+                                            />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-blue-600 transition-colors">
+                                                {medicine.name}
+                                            </p>
+                                            <p className="text-xs text-gray-500 truncate">
+                                                {medicine.category?.name || 'Uncategorized'}
+                                            </p>
+                                            <p className="text-xs font-semibold text-blue-600 mt-0.5">
+                                                ${Number(medicine.selling_price || medicine.unit_price || 0).toFixed(2)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Filters */}
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
@@ -797,7 +925,7 @@ export default function Medicines() {
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h3 className="text-base font-semibold text-gray-700">All Medicines ({medicines.length})</h3>
+                    <h3 className="text-base font-semibold text-gray-700">All Medicines ({totalItems})</h3>
                     <p className="text-sm text-gray-400">Manage your medicine inventory</p>
                 </div>
                 <button
@@ -815,7 +943,7 @@ export default function Medicines() {
             ) : (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1400px]">
+                        <table className="w-full min-w-[1000px]">
                             <thead>
                                 <tr className="bg-blue-50 border-b border-blue-100">
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Medicine</th>
@@ -826,7 +954,6 @@ export default function Medicines() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Stock</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Price</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Status</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 uppercase tracking-wider">Image</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
@@ -834,9 +961,17 @@ export default function Medicines() {
                                 {medicines.length > 0 ? medicines.map(m => (
                                     <tr key={m.id} className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
                                         <td className="px-4 py-3">
-                                            <div>
-                                                <div className="text-sm font-medium text-gray-800">{m.name}</div>
-                                                <div className="text-xs text-gray-400">{m.generic_name || 'No generic name'}</div>
+                                            <div className="flex items-center gap-3">
+                                                <img
+                                                    src={getImageUrl(m)}
+                                                    alt={m.name}
+                                                    className="w-10 h-10 rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                                                    onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
+                                                />
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-800">{m.name}</div>
+                                                    <div className="text-xs text-gray-400">{m.generic_name || 'No generic name'}</div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-500">
@@ -868,16 +1003,6 @@ export default function Medicines() {
                                             {getStatusBadge(m.status)}
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <img
-                                                src={m.image_url || '/images/medicine-placeholder.svg'}
-                                                alt={m.name}
-                                                className="w-12 h-12 rounded-lg object-cover border border-gray-200 ml-auto"
-                                                onError={(e) => {
-                                                    e.currentTarget.src = '/images/medicine-placeholder.svg';
-                                                }}
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-1">
                                                 <button
                                                     onClick={() => openView(m)}
@@ -905,7 +1030,7 @@ export default function Medicines() {
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan="10" className="px-4 py-8 text-center text-gray-400">
+                                        <td colSpan="9" className="px-4 py-8 text-center text-gray-400">
                                             {isFiltered ? (
                                                 <>
                                                     No medicines match your filters
@@ -925,13 +1050,80 @@ export default function Medicines() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Table Pagination */}
+                    {totalPages > 1 && (
+                        <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                            <div className="text-sm text-gray-500">
+                                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} items
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => goToPage(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+                                <div className="flex gap-1">
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        let page;
+                                        if (totalPages <= 5) {
+                                            page = i + 1;
+                                        } else if (currentPage <= 3) {
+                                            page = i + 1;
+                                        } else if (currentPage >= totalPages - 2) {
+                                            page = totalPages - 4 + i;
+                                        } else {
+                                            page = currentPage - 2 + i;
+                                        }
+                                        return (
+                                            <button
+                                                key={page}
+                                                onClick={() => goToPage(page)}
+                                                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                                                    currentPage === page
+                                                        ? 'bg-blue-500 text-white'
+                                                        : 'border border-gray-200 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={() => goToPage(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                            <div>
+                                <select
+                                    value={itemsPerPage}
+                                    onChange={(e) => {
+                                        setItemsPerPage(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-2 py-1 border border-gray-200 rounded-lg text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                                >
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* Add/Edit Modal */}
             <div className={`fixed inset-0 z-50 ${showModal ? 'flex' : 'hidden'} items-center justify-center p-4 bg-black/50 backdrop-blur-sm`}>
                 <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                    <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                    <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                         <h3 className="text-lg font-semibold text-gray-800">
                             {editId ? 'Edit Medicine' : 'Add New Medicine'}
                         </h3>
@@ -1010,7 +1202,7 @@ export default function Medicines() {
             {/* View Modal */}
             <div className={`fixed inset-0 z-50 ${showViewModal ? 'flex' : 'hidden'} items-center justify-center p-4 bg-black/50 backdrop-blur-sm`}>
                 <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                    <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                    <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
                         <h3 className="text-lg font-semibold text-gray-800">Medicine Details</h3>
                         <button
                             onClick={() => setShowViewModal(false)}
@@ -1023,12 +1215,10 @@ export default function Medicines() {
                     <div className="p-6">
                         <div className="flex gap-6 mb-6">
                             <img
-                                src={viewMedicine?.image_url || '/images/medicine-placeholder.svg'}
+                                src={getImageUrl(viewMedicine)}
                                 alt={viewMedicine?.name}
                                 className="w-32 h-32 rounded-xl object-cover border border-gray-200"
-                                onError={(e) => {
-                                    e.currentTarget.src = '/images/medicine-placeholder.svg';
-                                }}
+                                onError={(e) => { e.currentTarget.src = '/images/medicine-placeholder.svg'; }}
                             />
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-800">{viewMedicine?.name}</h2>

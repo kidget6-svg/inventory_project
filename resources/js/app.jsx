@@ -16,17 +16,34 @@ import Inventory from './pages/Inventory';
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
-import Sales from './pages/Sales';
+import PrescriptionSales from './pages/PrescriptionSales';
+import RetailSales from './pages/RetailSales';
 import StockMovements from './pages/StockMovements';
 import LowStock from './pages/LowStock';
 import Reports from './pages/Reports';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 
-function ProtectedRoute({ children, roles }) {
+function ProtectedRoute({ children, roles, title }) {
     const { user, loading } = useAuth();
-    if (loading) return <div className="flex items-center justify-center min-h-screen text-sky-500 text-lg">Loading...</div>;
-    if (!user) return <Navigate to="/login" />;
-    if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" />;
-    return <SidebarLayout>{children}</SidebarLayout>;
+    
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen text-sky-500 font-semibold text-lg">
+                Loading PharmaSys...
+            </div>
+        );
+    }
+    
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+    
+    if (roles && !roles.includes(user.role)) {
+        return <Navigate to="/dashboard" replace />;
+    }
+    
+    return <SidebarLayout pageTitle={title}>{children}</SidebarLayout>;
 }
 
 function DashboardRouter() {
@@ -39,56 +56,79 @@ function DashboardRouter() {
 function App() {
     const { user, loading } = useAuth();
 
-    if (loading) return <div className="flex items-center justify-center min-h-screen text-sky-500 text-lg">Loading...</div>;
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen text-sky-500 font-semibold text-lg">
+                Loading PharmaSys...
+            </div>
+        );
+    }
 
     return (
         <Routes>
-            {/* Public landing page */}
-            <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Landing />} />
+            {/* Public landing & auth pages */}
+            <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
+            <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+            <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
 
-            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
-
-            {/* Public self-registration (pharmacist & cashier only) */}
-            <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+            {/* Dashboard Router */}
+            <Route path="/dashboard" element={
+                <ProtectedRoute title="Dashboard"><DashboardRouter /></ProtectedRoute>
+            } />
 
             {/* Admin-only: User management */}
             <Route path="/users" element={
-                <ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>
+                <ProtectedRoute roles={['admin']} title="User Management"><Users /></ProtectedRoute>
             } />
 
-            <Route path="/dashboard" element={
-                <ProtectedRoute><DashboardRouter /></ProtectedRoute>
+            {/* Account pages */}
+            <Route path="/profile" element={
+                <ProtectedRoute title="User Profile"><Profile /></ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+                <ProtectedRoute title="Account Settings"><Settings /></ProtectedRoute>
             } />
 
+            {/* Operations & Inventory */}
             <Route path="/medicines" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><Medicines /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Medicines Catalog"><Medicines /></ProtectedRoute>
             } />
             <Route path="/inventory" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><Inventory /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Inventory"><Inventory /></ProtectedRoute>
             } />
             <Route path="/categories" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><Categories /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Medicine Categories"><Categories /></ProtectedRoute>
             } />
             <Route path="/suppliers" element={
-                <ProtectedRoute roles={['admin']}><Suppliers /></ProtectedRoute>
+                <ProtectedRoute roles={['admin']} title="Suppliers Directory"><Suppliers /></ProtectedRoute>
             } />
             <Route path="/purchase-orders" element={
-                <ProtectedRoute roles={['admin']}><PurchaseOrders /></ProtectedRoute>
-            } />
-            <Route path="/sales" element={
-                <ProtectedRoute roles={['admin','cashier']}><Sales /></ProtectedRoute>
-            } />
-            <Route path="/stock-movements" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><StockMovements /></ProtectedRoute>
-            } />
-            <Route path="/low-stock" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><LowStock /></ProtectedRoute>
-            } />
-            <Route path="/reports" element={
-                <ProtectedRoute roles={['admin','pharmacist']}><Reports /></ProtectedRoute>
+                <ProtectedRoute roles={['admin']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
             } />
 
-            <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} />} />
+            {/* Sales Routes */}
+            <Route path="/prescription-sales" element={
+                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+            } />
+            <Route path="/retail-sales" element={
+                <ProtectedRoute roles={['admin', 'cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+            } />
+            {/* Redirect legacy /sales path to prescription-sales */}
+            <Route path="/sales" element={<Navigate to="/prescription-sales" replace />} />
+
+            {/* Reports & Tracking */}
+            <Route path="/stock-movements" element={
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Movements"><StockMovements /></ProtectedRoute>
+            } />
+            <Route path="/low-stock" element={
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Low Stock Alerts"><LowStock /></ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="System Reports"><Reports /></ProtectedRoute>
+            } />
+
+            {/* Fallback Catch-all Route */}
+            <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} />
         </Routes>
     );
 }

@@ -1,5 +1,4 @@
 <?php
-// bootstrap/app.php
 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,14 +12,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // EXCLUDE ALL API ROUTES FROM CSRF VERIFICATION HERE:
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
+        
+        // Register custom middleware aliases
         $middleware->alias([
             'approved' => \App\Http\Middleware\EnsureUserApproved::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
-        ]);
-        
-        // Add Sanctum middleware
-        $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
