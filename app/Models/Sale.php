@@ -26,6 +26,7 @@ class Sale extends Model
         'notes',
         'receipt_number',
         'user_id',
+        'type',
         'status',
     ];
 

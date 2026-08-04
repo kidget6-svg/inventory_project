@@ -8,10 +8,15 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = Category::withCount('medicines')->get();
-        return response()->json($categories);
+        $query = Category::withCount('medicines');
+
+        if ($request->has('page') || $request->has('per_page')) {
+            return response()->json($query->paginate((int) $request->input('per_page', 10)));
+        }
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request)

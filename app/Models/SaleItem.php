@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class SaleItem extends Model
 {
@@ -14,6 +15,8 @@ class SaleItem extends Model
     protected $fillable = [
         'sale_id',
         'medicine_id',
+        'itemable_type',
+        'itemable_id',
         'quantity',
         'unit_price',
         'subtotal',
@@ -35,5 +38,10 @@ class SaleItem extends Model
     public function medicine(): BelongsTo
     {
         return $this->belongsTo(Medicine::class);
+    }
+
+    public function itemable(): MorphTo
+    {
+        return $this->morphTo();
     }
 }

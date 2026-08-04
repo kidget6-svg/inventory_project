@@ -22,7 +22,7 @@ Route::get('/csrf-token', function () {
 });
 Route::post('/register', [AuthController::class, 'register']);
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // ============================================
 // PUBLIC REGISTRATION (Pharmacist & Cashier only)

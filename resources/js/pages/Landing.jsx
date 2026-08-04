@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, UserPlus } from 'lucide-react';
-import logo from '../assets/logo.png';
 
 export default function Landing() {
     return (
@@ -21,7 +20,7 @@ export default function Landing() {
                     {/* Logo + Title */}
                     <div className="flex items-center gap-3">
                         <img
-                            src={logo}
+                            src="/images/pharmacy-logo.svg"
                             alt="PharmaSys Logo"
                             className="w-12 h-12 rounded-xl bg-white shadow"
                         />

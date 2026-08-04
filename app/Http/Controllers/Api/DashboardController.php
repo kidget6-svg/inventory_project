@@ -8,6 +8,7 @@ use App\Models\Sale;
 use App\Models\Supplier;
 use App\Models\PurchaseOrder;
 use App\Models\StockMovement;
+use App\Models\Category;
 use App\Models\User;
 
 class DashboardController extends Controller
@@ -306,6 +307,20 @@ class DashboardController extends Controller
         $recentPurchaseOrders = PurchaseOrder::with('supplier')
             ->latest()->take(5)->get();
 
+        $salesChartData = [
+            'labels'  => array_column($salesAnalytics['daily'], 'label'),
+            'counts'  => array_column($salesAnalytics['daily'], 'count'),
+            'revenue' => array_column($salesAnalytics['daily'], 'total'),
+        ];
+
+        $inventoryChartData = Category::with('medicines')->get()->map(function ($category) {
+            return [
+                'category'       => $category->name,
+                'total_stock'    => (int) $category->medicines->sum('quantity'),
+                'medicine_count' => $category->medicines->count(),
+            ];
+        })->values();
+
         return response()->json([
             // ---- Summary cards ----
             'totalMedicines'         => $totalMedicines,
@@ -316,6 +331,10 @@ class DashboardController extends Controller
             'todaySalesCount'        => $todaySalesCount,
             'todayRevenue'           => $todayRevenue,
             'totalUsers'             => $totalUsers,
+            'totalRevenue'           => (float) Sale::sum('total_amount'),
+            'pharmacistCount'        => User::where('role', 'pharmacist')->count(),
+            'cashierCount'           => User::where('role', 'cashier')->count(),
+            'pendingUsersCount'      => User::where('status', 'pending')->count(),
 
             // ---- Lists ----
             'lowStockMedicines'      => $lowStockMedicines,
@@ -331,6 +350,8 @@ class DashboardController extends Controller
 
             // ---- Charts ----
             'salesAnalytics'         => $salesAnalytics,
+            'salesChartData'         => $salesChartData,
+            'inventoryChartData'     => $inventoryChartData,
             'purchaseVsSales'        => $purchaseVsSales,
             'inventoryStatus'        => $inventoryStatus,
 

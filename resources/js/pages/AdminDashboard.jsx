@@ -6,7 +6,7 @@ import BarChart from '../components/BarChart';
 import PieChart from '../components/PieChart';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SidebarLayout from '../components/SidebarLayout';
-import { CheckCircle, XCircle, UserCheck, Clock, Trash2, AlertTriangle, Calendar } from 'lucide-react';
+import { CheckCircle, XCircle, UserCheck, Clock, Trash2, AlertTriangle, Calendar, ShoppingCart, Package, Pill, Activity, User } from 'lucide-react';
 
 export default function AdminDashboard() {
     const [data, setData] = useState(null);
@@ -37,7 +37,7 @@ export default function AdminDashboard() {
     const fetchPendingUsers = async () => {
         try {
             const res = await api.get('/users?status=pending');
-            const pending = res.data.filter(u => u.status === 'pending');
+            const pending = (res.data?.data ?? res.data).filter(u => u.status === 'pending');
             setPendingUsers(pending);
         } catch (err) {
             console.error(err);
@@ -109,6 +109,22 @@ export default function AdminDashboard() {
         );
     };
 
+    const activityIcon = (name) => {
+        const icons = { 'shopping-cart': ShoppingCart, package: Package, pill: Pill, activity: Activity };
+        const Icon = icons[name] || Clock;
+        return <Icon size={16} />;
+    };
+
+    const activityIconColor = (name) => {
+        const colors = {
+            'shopping-cart': 'bg-green-100 text-green-600',
+            package: 'bg-purple-100 text-purple-600',
+            pill: 'bg-blue-100 text-blue-600',
+            activity: 'bg-orange-100 text-orange-600',
+        };
+        return colors[name] || 'bg-gray-100 text-gray-600';
+    };
+
     // Prepare inventory chart data
     const inventoryLabels = data?.inventoryChartData?.map(c => c.category) || [];
     const inventoryStockValues = data?.inventoryChartData?.map(c => c.total_stock) || [];
@@ -119,13 +135,13 @@ export default function AdminDashboard() {
         'bg-purple-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
     ];
 
-    if (loading) return <SidebarLayout><LoadingSpinner text="Loading dashboard..." /></SidebarLayout>;
+    if (loading) return <LoadingSpinner text="Loading dashboard..." />;
 
-    if (error) return <SidebarLayout><div className="text-center py-12 text-red-500">{error}</div></SidebarLayout>;
+    if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
 
     return (
-        <SidebarLayout pageTitle="Admin Dashboard">
-            {/* ── Summary Cards ─────────────────────────────────────────── */}
+        <>
+            {/* â”€â”€ Summary Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
                 <StatCard value={data.totalProducts} label="Total Medicines" color="blue" />
                 <StatCard value={data.totalStock} label="Total Stock Units" color="green" />
@@ -133,7 +149,6 @@ export default function AdminDashboard() {
                 <StatCard value={data.expiredCount} label="Expired Medicines" color="orange" />
             </div>
 
-<<<<<<< Updated upstream
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
                 <StatCard value={data.todaySalesCount} label="Today's Sales" color="green" />
                 <StatCard value={`$${Number(data.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="blue" />
@@ -148,7 +163,7 @@ export default function AdminDashboard() {
                 <StatCard value={data.pendingUsersCount} label="Pending Approvals" color="yellow" />
             </div>
 
-            {/* ── Charts: Sales & Revenue ───────────────────────────────── */}
+            {/* â”€â”€ Charts: Sales & Revenue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 <BarChart
                     title="Sales (Last 7 Days)"
@@ -166,7 +181,7 @@ export default function AdminDashboard() {
                 />
             </div>
 
-            {/* ── Inventory Status Chart ────────────────────────────────── */}
+            {/* â”€â”€ Inventory Status Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 <PieChart
                     title="Inventory by Category"
@@ -183,7 +198,7 @@ export default function AdminDashboard() {
                 />
             </div>
 
-            {/* ── Notifications ─────────────────────────────────────────── */}
+            {/* â”€â”€ Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 {/* Low Stock Notifications */}
                 <div className="bg-white rounded-xl p-5 shadow-sm">
@@ -207,7 +222,7 @@ export default function AdminDashboard() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-gray-400 text-center py-5">✓ No low-stock medicines</p>
+                        <p className="text-gray-400 text-center py-5">âœ“ No low-stock medicines</p>
                     )}
                 </div>
 
@@ -230,7 +245,7 @@ export default function AdminDashboard() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-gray-400 text-center py-5">✓ No expired medicines</p>
+                        <p className="text-gray-400 text-center py-5">âœ“ No expired medicines</p>
                     )}
                 </div>
             </div>
@@ -256,7 +271,7 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            {/* ── Recent Activities ─────────────────────────────────────── */}
+            {/* â”€â”€ Recent Activities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
                 <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
                     <Clock size={18} className="text-blue-500" />
@@ -266,19 +281,14 @@ export default function AdminDashboard() {
                     <div className="space-y-3">
                         {data.recentActivities.map((activity, i) => (
                             <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm ${
-                                    activity.color === 'green' ? 'bg-green-100 text-green-600' :
-                                    activity.color === 'blue' ? 'bg-blue-100 text-blue-600' :
-                                    activity.color === 'orange' ? 'bg-orange-100 text-orange-600' :
-                                    'bg-gray-100 text-gray-600'
-                                }`}>
-                                    {activity.icon}
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm ${activityIconColor(activity.icon)}`}>
+                                    {activityIcon(activity.icon)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-semibold text-sm text-gray-800">{activity.title}</div>
-                                    <div className="text-xs text-gray-500 truncate">{activity.subtitle}</div>
+                                    <div className="font-semibold text-sm text-gray-800">{activity.action}</div>
+                                    <div className="text-xs text-gray-500 truncate">{activity.user}</div>
                                 </div>
-                                <span className="text-xs text-gray-400 whitespace-nowrap">{activity.time}</span>
+                                <span className="text-xs text-gray-400 whitespace-nowrap">{activity.date} {activity.time}</span>
                             </div>
                         ))}
                     </div>
@@ -287,7 +297,7 @@ export default function AdminDashboard() {
                 )}
             </div>
 
-            {/* ── Quick Actions ─────────────────────────────────────────── */}
+            {/* â”€â”€ Quick Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
                 <h3 className="text-base font-semibold text-gray-700 mb-3">Quick Actions</h3>
                 <div className="flex flex-wrap gap-3">
@@ -301,7 +311,7 @@ export default function AdminDashboard() {
                         + New Purchase Order
                     </Link>
                     <Link to="/reports" className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1">
-                        📊 Generate Report
+                        ðŸ“Š Generate Report
                     </Link>
                     <Link to="/sales" className="px-4 py-2 border border-green-500 text-green-600 rounded-lg text-sm font-semibold hover:bg-green-50 transition-colors flex items-center gap-1">
                         + New Sale
@@ -309,7 +319,7 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* ── Pending User Registrations ───────────────────────────── */}
+            {/* â”€â”€ Pending User Registrations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="bg-white rounded-xl p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-semibold text-gray-700 flex items-center gap-2">
@@ -320,7 +330,7 @@ export default function AdminDashboard() {
                         to="/users"
                         className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                     >
-                        View all users →
+                        View all users â†’
                     </Link>
                 </div>
 
@@ -407,442 +417,6 @@ export default function AdminDashboard() {
                     </div>
                 )}
             </div>
-        </SidebarLayout>
+        </>
     );
-=======
-        );
-
-    }
-
-
-
-
-
-    const todayRevenue =
-        Number(data.todayRevenue || 0);
-
-
-    const todaySales =
-        Number(data.todaySalesCount || 0);
-
-
-
-
-
-
-    return(
-
-        <div className="
-            space-y-8
-            min-h-screen
-            pb-10
-        ">
-
-
-
-
-
-{/* ================= HEADER ================= */}
-
-
-<div
-className="
-rounded-3xl
-bg-gradient-to-r
-from-sky-500
-via-sky-600
-to-sky-700
-p-8
-md:p-10
-text-white
-shadow-xl
-"
->
-
-
-<div className="
-flex
-flex-col
-md:flex-row
-justify-between
-items-center
-gap-6
-">
-
-
-<div>
-
-
-<h1 className="
-text-3xl
-md:text-4xl
-font-bold
-">
-
-Pharmacy Dashboard
-
-</h1>
-
-
-
-<p className="
-mt-3
-text-blue-100
-">
-
-Welcome back, Administrator
-
-</p>
-
-
-
-<p className="
-text-sm
-text-blue-200
-mt-1
-">
-
-Manage medicines, inventory, sales and suppliers.
-
-</p>
-
-
-</div>
-
-
-
-
-
-<div className="
-text-center
-bg-white/10
-rounded-2xl
-px-6
-py-4
-">
-
-
-<div className="text-6xl">
-
-💊
-
-</div>
-
-
-<p className="
-mt-2
-text-sm
-text-blue-100
-">
-
-{new Date().toLocaleDateString()}
-
-</p>
-
-
-</div>
-
-
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-{/* ================= STAT CARDS ================= */}
-
-
-
-<div
-className="
-grid
-grid-cols-1
-sm:grid-cols-2
-md:grid-cols-3
-lg:grid-cols-4
-xl:grid-cols-7
-gap-5
-"
->
-
-
-<StatCard
-value={data.totalMedicines}
-label="Total Medicines"
-icon="package"
-color="blue"
-/>
-
-
-
-<StatCard
-value={data.totalStock}
-label="Total Stock"
-icon="boxes"
-color="green"
-/>
-
-
-
-<StatCard
-value={data.lowStockCount}
-label="Low Stock"
-icon="alert"
-color="orange"
-/>
-
-
-
-<StatCard
-value={data.expiredCount}
-label="Expired"
-icon="calendar"
-color="red"
-/>
-
-
-
-<StatCard
-value={data.pendingPurchaseOrders}
-label="Pending Orders"
-icon="shopping-cart"
-color="orange"
-/>
-
-
-
-<StatCard
-value={`$${todayRevenue.toFixed(2)}`}
-label="Today's Sales"
-icon="banknote"
-color="green"
-subValue={`${todaySales} transactions`}
-/>
-
-
-
-<StatCard
-value={data.totalUsers}
-label="Users"
-icon="users"
-color="purple"
-/>
-
-
-
-<StatCard
-value={data.pendingUsers}
-label="Pending Users"
-icon="alert"
-color="orange"
-/>
-
-
-
-</div>
-
-
-
-
-
-
-{/* ================= SALES ANALYTICS ================= */}
-
-
-<ChartCard
-
-title="Sales Analytics"
-
-description="Daily, weekly and monthly sales performance"
-
->
-
-
-<SalesChart
-
-    data={data.salesAnalytics}
-
-/>
-
-
-</ChartCard>
-
-
-
-
-
-
-{/* ================= PURCHASE VS INVENTORY ================= */}
-
-
-<div
-className="
-grid
-grid-cols-1
-xl:grid-cols-2
-gap-6
-"
->
-
-
-
-<ChartCard
-
-title="Purchase vs Sales"
-
-description="Compare purchasing and selling"
-
->
-
-
-<div className="h-72">
-
-
-<PurchaseVsSalesChart
-
-    data={data.purchaseVsSales}
-
-/>
-
-
-</div>
-
-
-</ChartCard>
-
-
-
-
-
-<ChartCard
-
-title="Inventory Status"
-
-description="Current medicine stock condition"
-
->
-
-
-<div className="h-72">
-
-
-<InventoryStatusChart
-
-    data={data.inventoryStatus}
-
-/>
-
-
-</div>
-
-
-</ChartCard>
-
-
-</div>
-
-
-
-
-
-
-{/* ================= PURCHASE ORDERS ================= */}
-
-
-<PurchaseOrderStats
-
-    stats={data.purchaseOrderStats}
-
-/>
-
-
-
-
-
-
-{/* ================= ALERT SECTION ================= */}
-
-
-<div
-className="
-grid
-grid-cols-1
-xl:grid-cols-2
-gap-6
-"
->
-
-
-<LowStockAlert
-
-    medicines={data.lowStockMedicines}
-
-/>
-
-
-<ExpiryAlert
-
-    expiringSoon={data.expiringSoon}
-
-/>
-
-
-</div>
-
-
-
-
-
-
-{/* ================= ACTIVITY ================= */}
-
-
-<ChartCard
-
-title="Recent Activity"
-
-description="Latest pharmacy system activities"
-
->
-
-
-<RecentActivity
-
-    activities={data.recentActivities}
-
-/>
-
-
-</ChartCard>
-
-
-
-
-
-{/* ================= QUICK ACTION ================= */}
-
-
-<QuickActions
-
-role="admin"
-
-/>
-
-
-
-</div>
-
-
-    );
-
->>>>>>> Stashed changes
 }
