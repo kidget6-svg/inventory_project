@@ -8,7 +8,15 @@ export default function Reports() {
     const [sortKey, setSortKey] = useState('');
     const [sortDirection, setSortDirection] = useState('asc');
 
-    useEffect(() => { api.get('/reports').then(r => setData(r.data)); }, []);
+    useEffect(() => {
+        api.get('/reports').then(r => {
+            const payload = r.data || {};
+            // normalize paginated sub-resources
+            if (payload.sales && payload.sales.data) payload.sales = payload.sales.data;
+            if (payload.purchases && payload.purchases.data) payload.purchases = payload.purchases.data;
+            setData(payload);
+        });
+    }, []);
 
     // Reset search and sort when switching tabs
     useEffect(() => {
@@ -76,7 +84,7 @@ export default function Reports() {
 
     const statusBadge = (status) => {
         const base = 'px-2 py-1 rounded-full text-xs font-semibold';
-        if (status === 'completed') return `${base} bg-green-100 text-green-700`;
+        if (status === 'completed') return `${base} bg-sky-100 text-sky-700`;
         if (status === 'cancelled') return `${base} bg-red-100 text-red-600`;
         return `${base} bg-sky-100 text-sky-700`;
     };
@@ -188,7 +196,7 @@ const tabs = [
                         <tbody>
                             {salesData.length > 0 ? salesData.map(s => (
                                 <tr key={s.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                    <td className="px-4 py-3 text-sm">#{s.id}</td>
+                                    <td className="px-4 py-3 text-sm">{s.id}</td>
                                     <td className="px-4 py-3 text-sm">{s.sale_date}</td>
                                     <td className="px-4 py-3 text-sm font-semibold">${Number(s.total_amount).toFixed(2)}</td>
                                 </tr>
@@ -212,7 +220,7 @@ const tabs = [
                         <tbody>
                             {purchasesData.length > 0 ? purchasesData.map(p => (
                                 <tr key={p.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                    <td className="px-4 py-3 text-sm">#{p.id}</td>
+                                    <td className="px-4 py-3 text-sm">{p.id}</td>
                                     <td className="px-4 py-3 text-sm">{p.supplier?.name || '---'}</td>
                                     <td className="px-4 py-3 text-sm">{p.order_date}</td>
                                     <td className="px-4 py-3 text-sm"><span className={statusBadge(p.status)}>{p.status}</span></td>

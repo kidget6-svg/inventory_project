@@ -25,18 +25,18 @@ export default function LowStockAlert({
     }
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
             {/* Header */}
 
-            <div className="flex items-center justify-between px-6 py-5 border-b">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
 
                 <div className="flex items-center gap-3">
 
-                    <div className="h-11 w-11 rounded-xl bg-orange-100 flex items-center justify-center">
+                    <div className="h-11 w-11 rounded-xl bg-sky-100 flex items-center justify-center">
                         <AlertTriangle
                             size={22}
-                            className="text-orange-600"
+                            className="text-sky-600"
                         />
                     </div>
 
@@ -54,7 +54,7 @@ export default function LowStockAlert({
 
                 <Link
                     to="/medicines"
-                    className="text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1"
+                    className="text-sky-600 font-semibold hover:text-sky-700 flex items-center gap-1"
                 >
                     View All
                     <ChevronRight size={16} />
@@ -72,7 +72,7 @@ export default function LowStockAlert({
 
                         <Package
                             size={48}
-                            className="mx-auto text-green-400 mb-3"
+                            className="mx-auto text-sky-300 mb-3"
                         />
 
                         <h3 className="text-lg font-semibold text-gray-700">
@@ -110,15 +110,15 @@ export default function LowStockAlert({
 
                             if (percent >= 80) {
                                 badgeColor =
-                                    'bg-green-100 text-green-700';
+                                    'bg-sky-100 text-sky-700';
                                 progressColor =
-                                    'bg-green-500';
+                                    'bg-sky-500';
                                 badgeText = 'Healthy';
                             } else if (percent >= 50) {
                                 badgeColor =
-                                    'bg-yellow-100 text-yellow-700';
+                                    'bg-sky-200 text-sky-700';
                                 progressColor =
-                                    'bg-yellow-500';
+                                    'bg-sky-400';
                                 badgeText = 'Low';
                             }
 
@@ -131,8 +131,8 @@ export default function LowStockAlert({
                                         border-gray-200
                                         rounded-2xl
                                         p-4
-                                        hover:shadow-lg
-                                        hover:border-orange-300
+                                        hover:shadow-md
+                                        hover:border-sky-300
                                         transition-all
                                         duration-300
                                     "
@@ -142,11 +142,11 @@ export default function LowStockAlert({
 
                                         <div className="flex gap-3">
 
-                                            <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                                            <div className="h-12 w-12 rounded-xl bg-sky-100 flex items-center justify-center">
 
                                                 <Pill
                                                     size={22}
-                                                    className="text-blue-600"
+                                                    className="text-sky-600"
                                                 />
 
                                             </div>

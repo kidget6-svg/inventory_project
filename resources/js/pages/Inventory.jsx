@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+import Pagination from '../components/Pagination';
 import { Package, AlertTriangle, TrendingDown, Calendar, History, RefreshCw, Search, Filter, X, Save, Tag } from 'lucide-react';
 
 const TABS = [
@@ -16,6 +17,8 @@ const TABS = [
 export default function Inventory() {
     const [medicines, setMedicines] = useState([]);
     const [movements, setMovements] = useState([]);
+    const [movementsMeta, setMovementsMeta] = useState(null);
+    const [movementsPage, setMovementsPage] = useState(1);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
@@ -26,14 +29,17 @@ export default function Inventory() {
     const [submitting, setSubmitting] = useState(false);
 
     const loadMedicines = () => {
-        api.get('/medicines', { params: { category_id: filters.category_id || undefined } })
-            .then(r => setMedicines(r.data))
+        api.get('/medicines', { params: { category_id: filters.category_id || undefined, per_page: 1000 } })
+            .then(r => setMedicines(r.data.data || r.data))
             .catch(err => console.error(err));
     };
 
     const loadMovements = () => {
-        api.get('/stock-movements')
-            .then(r => setMovements(r.data.movements || []))
+        api.get('/stock-movements', { params: { page: movementsPage } })
+            .then(r => {
+                setMovements(r.data.movements?.data || r.data.movements || []);
+                setMovementsMeta(r.data.movements || null);
+            })
             .catch(err => console.error(err));
     };
 
@@ -46,22 +52,22 @@ export default function Inventory() {
     useEffect(() => {
         setLoading(true);
         Promise.all([
-            api.get('/medicines', { params: { category_id: filters.category_id || undefined } })
-                .then(r => setMedicines(r.data))
+            api.get('/medicines', { params: { category_id: filters.category_id || undefined, per_page: 1000 } })
+                .then(r => setMedicines(r.data.data || r.data))
                 .catch(err => console.error(err)),
-            api.get('/stock-movements')
-                .then(r => setMovements(r.data.movements || []))
+            api.get('/stock-movements', { params: { page: movementsPage } })
+                .then(r => { setMovements(r.data.movements?.data || r.data.movements || []); setMovementsMeta(r.data.movements || null); })
                 .catch(err => console.error(err)),
             api.get('/categories')
                 .then(r => setCategories(r.data))
                 .catch(err => console.error(err)),
         ]).finally(() => setLoading(false));
-    }, [filters]);
+    }, [filters, movementsPage]);
 
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
-    };
+    useEffect(() => {
+        // reload movements whenever page changes (keeps Promise.all consistent)
+        if (movementsPage !== 1) loadMovements();
+    }, [movementsPage]);
 
     const resetFilters = () => setFilters({ search: '', category_id: '' });
 
@@ -117,10 +123,10 @@ export default function Inventory() {
 
     const getStatusBadge = (status) => {
         const config = {
-            active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' },
+            active: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Active' },
             inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' },
             expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' },
-            discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' },
+            discontinued: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Discontinued' },
         };
         const cfg = config[status] || config.active;
         return (
@@ -267,8 +273,8 @@ export default function Inventory() {
                         </div>
                         <div className="card p-5">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-100 rounded-lg">
-                                    <TrendingDown className="w-6 h-6 text-green-600" />
+                                <div className="p-2 bg-sky-100 rounded-lg">
+                                    <TrendingDown className="w-6 h-6 text-sky-600" />
                                 </div>
                                 <div>
                                     <p className="text-2xl font-bold text-gray-800">{medicines.reduce((sum, m) => sum + m.quantity, 0)}</p>
@@ -278,8 +284,8 @@ export default function Inventory() {
                         </div>
                         <div className="card p-5">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-orange-100 rounded-lg">
-                                    <AlertTriangle className="w-6 h-6 text-orange-600" />
+                                <div className="p-2 bg-sky-100 rounded-lg">
+                                    <AlertTriangle className="w-6 h-6 text-sky-600" />
                                 </div>
                                 <div>
                                     <p className="text-2xl font-bold text-gray-800">{lowStockMedicines.length}</p>
@@ -312,7 +318,7 @@ export default function Inventory() {
                             <h3 className="text-sm font-semibold text-gray-600 mb-3">Low Stock Alert</h3>
                             <div className="space-y-2">
                                 {lowStockMedicines.slice(0, 5).map(m => (
-                                    <div key={m.id} className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                                    <div key={m.id} className="flex justify-between items-center p-3 bg-sky-50 rounded-lg">
                                         <div>
                                             <p className="text-sm font-medium">{m.name}</p>
                                             <p className="text-xs text-gray-500">Qty: {m.quantity} / Reorder: {m.reorder_level}</p>
@@ -344,7 +350,7 @@ export default function Inventory() {
                                                 </p>
                                             </div>
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                daysLeft <= 30 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                                daysLeft <= 30 ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700'
                                             }`}>
                                                 {daysLeft <= 30 ? 'Urgent' : 'Soon'}
                                             </span>
@@ -371,46 +377,51 @@ export default function Inventory() {
             {activeTab === 'expiring' && renderMedicineTable(expiringSoonMedicines)}
 
             {activeTab === 'movements' && (
-                <div className="card overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[900px]">
-                            <thead>
-                                <tr className="bg-sky-50 border-b border-sky-100">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Medicine</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Quantity</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Reference</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {movements.length > 0 ? movements.map(m => (
-                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                        <td className="px-4 py-3 text-sm text-gray-500">
-                                            {new Date(m.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm font-medium">{m.medicine?.name || 'Unknown'}</td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                m.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-sky-100 text-sky-700'
-                                            }`}>
-                                                {m.type === 'in' ? 'Stock In' : 'Stock Out'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm font-semibold">{m.quantity}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.reference || '---'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.notes || '---'}</td>
+                <div className="space-y-6">
+                    <div className="card overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[900px]">
+                                <thead>
+                                    <tr className="bg-sky-50 border-b border-sky-100">
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Date</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Medicine</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Quantity</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Reference</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Notes</th>
                                     </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
-                                            No stock movements found
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {movements.length > 0 ? movements.map(m => (
+                                        <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                            <td className="px-4 py-3 text-sm text-gray-500">
+                                                {new Date(m.created_at).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm font-medium">{m.medicine?.name || 'Unknown'}</td>
+                                            <td className="px-4 py-3 text-sm">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                                    m.type === 'in' ? 'bg-sky-100 text-sky-700' : 'bg-sky-100 text-sky-700'
+                                                }`}>
+                                                    {m.type === 'in' ? 'Stock In' : 'Stock Out'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm font-semibold">{m.quantity}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.reference || '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.notes || '---'}</td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+                                                No stock movements found
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div className="p-4">
+                        <Pagination meta={movementsMeta} onPageChange={(p) => setMovementsPage(p)} />
                     </div>
                 </div>
             )}

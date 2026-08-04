@@ -24,7 +24,7 @@ Route::get('/csrf-token', function () {
 });
 Route::post('/register', [AuthController::class, 'register']);
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // ============================================
 // PUBLIC REGISTRATION (Pharmacist & Cashier only)
@@ -70,6 +70,18 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // Purchase Orders (admin only)
     Route::middleware('role:admin')->group(function () {
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
+        Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
+        Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
+        Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
+        Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
+        Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
+        Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
+        Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
+        Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);
+        Route::post('/purchase-orders/{purchaseOrder}/process', [PurchaseOrderController::class, 'process']);
+        Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
+        Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel']);
+        Route::post('/purchase-orders/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopen']);
     });
 
     // Reports (admin + pharmacist)
@@ -95,6 +107,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // Stock Movements (admin + pharmacist)
     Route::middleware('role:admin,pharmacist')->group(function () {
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
+        Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
     });
 

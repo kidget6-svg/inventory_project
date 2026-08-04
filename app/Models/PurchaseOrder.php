@@ -7,6 +7,8 @@ use App\Models\StockMovement;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class PurchaseOrder extends Model
 {
@@ -17,14 +19,27 @@ class PurchaseOrder extends Model
         'order_date',
         'total_amount',
         'status',
+        'sent_at',
+        'delivered_at',
+        'completed_at',
+    ];
+
+    protected $casts = [
+        'sent_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'order_date' => 'date',
     ];
 
     /**
      * Get all valid statuses.
+     *
+     * Workflow: Draft -> Pending -> Approved -> Completed -> Cancelled
+     * (sent/delivered are legacy intermediate states kept for backward compatibility)
      */
     public static function statuses(): array
     {
-        return ['pending', 'approved', 'processing', 'completed', 'cancelled'];
+        return ['draft', 'pending', 'sent', 'delivered', 'approved', 'completed', 'cancelled'];
     }
 
     /**
@@ -47,23 +62,51 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * Whether the order can be edited (pending or approved).
+     * Whether the order can be edited (draft, pending, or approved).
      */
     public function canEdit(): bool
     {
-        return in_array($this->status, ['pending', 'approved']);
+        return in_array($this->status, ['draft', 'pending', 'approved']);
     }
 
     /**
-     * Whether the order can be deleted (pending only).
+     * Whether the order can be deleted (draft only).
      */
     public function canDelete(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    /**
+     * Whether the order can be submitted (draft only).
+     * Draft -> Pending
+     */
+    public function canSubmit(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    /**
+     * Whether the order can be sent to supplier (pending only).
+     * Pending -> Sent
+     */
+    public function canSend(): bool
     {
         return $this->status === 'pending';
     }
 
     /**
+     * Whether the order can be marked as delivered (sent only).
+     * Sent -> Delivered
+     */
+    public function canDeliver(): bool
+    {
+        return $this->status === 'sent';
+    }
+
+    /**
      * Whether the order can be approved (pending only).
+     * Pending -> Approved
      */
     public function canApprove(): bool
     {
@@ -71,31 +114,114 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * Whether the order can be processed (approved only).
-     */
-    public function canProcess(): bool
-    {
-        return $this->status === 'approved';
-    }
-
-    /**
-     * Whether the order can be completed (approved or processing).
+     * Whether the order can be completed (delivered or approved).
+     * Delivered -> Completed | Approved -> Completed
      */
     public function canComplete(): bool
     {
-        return in_array($this->status, ['approved', 'processing']);
+        return in_array($this->status, ['delivered', 'approved']);
     }
 
     /**
-     * Whether the order can be cancelled (pending, approved, or processing).
+     * Whether the order can be cancelled (draft, pending, sent, delivered, or approved).
      */
     public function canCancel(): bool
     {
-        return in_array($this->status, ['pending', 'approved', 'processing']);
+        return in_array($this->status, ['draft', 'pending', 'sent', 'delivered', 'approved']);
     }
 
     /**
-     * Approve the purchase order.
+     * Whether the order can be reopened (cancelled only).
+     * Cancelled -> Pending
+     */
+    public function canReopen(): bool
+    {
+        return $this->status === 'cancelled';
+    }
+
+    /**
+     * Whether the PDF can be generated for this order.
+     * Available for all statuses.
+     */
+    public function canGeneratePdf(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Whether the PDF can be viewed for this order.
+     * Available for all statuses except draft.
+     */
+    public function canViewPdf(): bool
+    {
+        return $this->status !== 'draft';
+    }
+
+    /**
+     * Whether the PDF can be downloaded for this order.
+     * Available for all statuses except draft.
+     */
+    public function canDownloadPdf(): bool
+    {
+        return $this->status !== 'draft';
+    }
+
+    /**
+     * Whether the order can be re-sent to the supplier.
+     * Available for sent, approved, and completed statuses.
+     * Allows supplier communication after the initial send.
+     */
+    public function canResend(): bool
+    {
+        return in_array($this->status, ['sent', 'approved', 'completed']);
+    }
+
+    /**
+     * Submit the purchase order (draft -> pending).
+     */
+    public function submit(): bool
+    {
+        if (! $this->canSubmit()) {
+            return false;
+        }
+
+        return $this->update(['status' => 'pending']);
+    }
+
+    /**
+     * Send the purchase order to the supplier (pending -> sent).
+     * Records the sent_at timestamp.
+     */
+    public function send(): bool
+    {
+        if (! $this->canSend()) {
+            return false;
+        }
+
+        return $this->update([
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+    }
+
+    /**
+     * Mark the purchase order as delivered (sent -> delivered).
+     * Records the delivered_at timestamp.
+     */
+    public function deliver(): bool
+    {
+        if (! $this->canDeliver()) {
+            return false;
+        }
+
+        return $this->update([
+            'status' => 'delivered',
+            'delivered_at' => now(),
+        ]);
+    }
+
+    /**
+     * Approve the purchase order (pending -> approved).
      */
     public function approve(): bool
     {
@@ -103,52 +229,7 @@ class PurchaseOrder extends Model
             return false;
         }
 
-        return DB::transaction(function () {
-            $updated = $this->update(['status' => 'approved']);
-
-            if (! $updated) {
-                return false;
-            }
-
-            foreach ($this->items as $item) {
-                $medicine = Medicine::lockForUpdate()->find($item->medicine_id);
-
-                if (! $medicine) {
-                    continue;
-                }
-
-                $existingMovement = StockMovement::where('medicine_id', $medicine->id)
-                    ->where('reference', 'PO-' . $this->id)
-                    ->where('type', 'in')
-                    ->exists();
-
-                if (! $existingMovement) {
-                    $medicine->increment('quantity', $item->quantity);
-
-                    StockMovement::create([
-                        'medicine_id' => $medicine->id,
-                        'type' => 'in',
-                        'quantity' => $item->quantity,
-                        'reference' => 'PO-' . $this->id,
-                        'notes' => 'Stock added via purchase order #' . $this->id,
-                    ]);
-                }
-            }
-
-            return true;
-        });
-    }
-
-    /**
-     * Mark the purchase order as processing.
-     */
-    public function process(): bool
-    {
-        if (! $this->canProcess()) {
-            return false;
-        }
-
-        return $this->update(['status' => 'processing']);
+        return $this->update(['status' => 'approved']);
     }
 
     /**
@@ -164,10 +245,24 @@ class PurchaseOrder extends Model
     }
 
     /**
+     * Reopen a cancelled purchase order (cancelled -> pending).
+     */
+    public function reopen(): bool
+    {
+        if (! $this->canReopen()) {
+            return false;
+        }
+
+        return $this->update(['status' => 'pending']);
+    }
+
+    /**
      * Complete the purchase order:
      * - Update medicine stock quantities
      * - Create stock movement records
      * - Prevent duplicate stock additions
+     * - Records the completed_at timestamp
+     * Delivered -> Completed | Approved -> Completed
      */
     public function complete(): bool
     {
@@ -182,7 +277,7 @@ class PurchaseOrder extends Model
                 $medicine = Medicine::lockForUpdate()->find($item->medicine_id);
 
                 if (! $medicine) {
-                    continue;
+                    throw new \RuntimeException('Medicine not found for order item ' . $item->id);
                 }
 
                 // Check if a stock movement already exists for this PO item
@@ -193,10 +288,10 @@ class PurchaseOrder extends Model
                     ->exists();
 
                 if (! $existingMovement) {
-                    // Increment stock
-                    $medicine->increment('quantity', $item->quantity);
+                    if (! $medicine->increment('quantity', $item->quantity)) {
+                        throw new \RuntimeException('Failed to increment stock for medicine ' . $medicine->id);
+                    }
 
-                    // Create stock movement record
                     StockMovement::create([
                         'medicine_id' => $medicine->id,
                         'type' => 'in',
@@ -207,14 +302,26 @@ class PurchaseOrder extends Model
                 }
             }
 
-            $this->update(['status' => 'completed']);
+            if (! $this->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ])) {
+                throw new \RuntimeException('Failed to update purchase order status to completed.');
+            }
 
             DB::commit();
 
             return true;
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             DB::rollBack();
-            return false;
+            Log::error('Purchase order completion failed', [
+                'purchase_order_id' => $this->id,
+                'status' => $this->status,
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw $e;
         }
     }
 }

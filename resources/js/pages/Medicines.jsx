@@ -3,6 +3,7 @@ import api from '../axios';
 import Modal from '../components/Modal';
 import Stepper from '../components/Stepper';
 import LoadingSpinner from '../components/LoadingSpinner';
+import Pagination from '../components/Pagination';
 import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const statusOptions = [
@@ -25,6 +26,8 @@ export default function Medicines() {
     const [viewMedicine, setViewMedicine] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);
     const [submitting, setSubmitting] = useState(false);
     const [scanning, setScanning] = useState(false);
     const videoRef = useRef(null);
@@ -44,13 +47,16 @@ export default function Medicines() {
 
     const loadMedicines = () => {
         setLoading(true);
-        const params = {};
+        const params = { page };
         if (filters.search) params.search = filters.search;
         if (filters.category_id) params.category_id = filters.category_id;
         if (filters.supplier_id) params.supplier_id = filters.supplier_id;
         if (filters.status) params.status = filters.status;
         api.get('/medicines', { params })
-            .then(r => setMedicines(r.data))
+            .then(r => {
+                setMedicines(r.data.data || r.data);
+                setMeta(r.data);
+            })
             .catch(err => { console.error(err); setError('Failed to load medicines'); })
             .finally(() => setLoading(false));
     };
@@ -59,7 +65,10 @@ export default function Medicines() {
     const loadSuppliers = () => { api.get('/suppliers').then(r => setSuppliers(r.data)).catch(err => console.error(err)); };
 
     useEffect(() => { loadCategories(); loadSuppliers(); }, []);
-    useEffect(() => { loadMedicines(); }, [filters]);
+    useEffect(() => { setPage(1); }, [filters.search, filters.category_id, filters.supplier_id, filters.status]);
+    useEffect(() => { loadMedicines(); }, [filters, page]);
+
+    const handlePageChange = (p) => setPage(p);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
     const handleFilterChange = (e) => { setFilters(prev => ({ ...prev, [e.target.name]: e.target.value })); };
@@ -154,7 +163,7 @@ export default function Medicines() {
     useEffect(() => { return () => stopBarcodeScan(); }, []);
 
     const getStatusBadge = (status) => {
-        const config = { active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' }, inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' }, expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }, discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' } };
+        const config = { active: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Active' }, inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' }, expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }, discontinued: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Discontinued' } };
         const cfg = config[status] || config.active;
         return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>;
     };
@@ -321,52 +330,61 @@ export default function Medicines() {
             </div>
 
             {loading ? <LoadingSpinner text="Loading medicines..." /> : (
-                <div className="card overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1200px]">
-                            <thead>
-                                <tr className="bg-sky-50 border-b border-sky-100">
-                                    <th className="table-header">Medicine Name</th>
-                                    <th className="table-header">Generic Name</th>
-                                    <th className="table-header">Category</th>
-                                    <th className="table-header">Barcode</th>
-                                    <th className="table-header">Batch #</th>
-                                    <th className="table-header">Qty</th>
-                                    <th className="table-header">Selling Price</th>
-                                    <th className="table-header">Expiry Date</th>
-                                    <th className="table-header">Status</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {medicines.length > 0 ? medicines.map(m => (
-                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30 transition-colors">
-                                        <td className="px-4 py-3 text-sm font-medium text-gray-800">{m.name}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.generic_name || '---'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.category?.name || 'No Category'}</td>
-                                        <td className="px-4 py-3 text-sm font-mono text-gray-500">{m.barcode || '---'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.batch_number || '---'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{m.quantity}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.selling_price ? `$${Number(m.selling_price).toFixed(2)}` : '---'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}</td>
-                                        <td className="px-4 py-3">{getStatusBadge(m.status)}</td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <button onClick={() => openView(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
-                                                <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
-                                                <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
-                                            </div>
-                                        </td>
+                <>
+                    <div className="card overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full table-fixed">
+                                <colgroup>
+                                    <col className="w-[22%]" />
+                                    <col className="w-[11%]" />
+                                    <col className="w-[14%]" />
+                                    <col className="w-[6%]" />
+                                    <col className="w-[12%]" />
+                                    <col className="w-[12%]" />
+                                    <col className="w-[10%]" />
+                                    <col className="w-[13%]" />
+                                </colgroup>
+                                <thead>
+                                    <tr className="bg-sky-50 border-b border-sky-100">
+                                        <th className="table-header">Medicine Name</th>
+                                        <th className="table-header">Category</th>
+                                        <th className="table-header">Barcode</th>
+                                        <th className="table-header">Qty</th>
+                                        <th className="table-header">Selling Price</th>
+                                        <th className="table-header">Expiry Date</th>
+                                        <th className="table-header">Status</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700 uppercase tracking-wider">Actions</th>
                                     </tr>
-                                )) : (
-                                    <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-400">
-                                        No medicines found{isFiltered && <button onClick={resetFilters} className="ml-2 text-sky-600 hover:underline text-sm font-medium">Clear filters</button>}
-                                    </td></tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {medicines.length > 0 ? medicines.map(m => (
+                                        <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30 transition-colors">
+                                            <td className="px-4 py-3 text-sm font-medium text-gray-800 truncate">{m.name}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || 'No Category'}</td>
+                                            <td className="px-4 py-3 text-sm font-mono text-gray-500 truncate">{m.barcode || '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900 font-medium">{m.quantity}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.selling_price ? `$${Number(m.selling_price).toFixed(2)}` : '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}</td>
+                                            <td className="px-4 py-3">{getStatusBadge(m.status)}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <button onClick={() => openView(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
+                                                    <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
+                                                    <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">
+                                            No medicines found{isFiltered && <button onClick={resetFilters} className="ml-2 text-sky-600 hover:underline text-sm font-medium">Clear filters</button>}
+                                        </td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                    <Pagination meta={meta} onPageChange={handlePageChange} />
+                </>
             )}
 
             <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Medicine' : 'Add New Medicine'} size="max-w-2xl">

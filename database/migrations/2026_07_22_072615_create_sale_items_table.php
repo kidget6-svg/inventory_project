@@ -1,4 +1,5 @@
 <?php
+// database/migrations/2026_07_22_072615_create_sale_items_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -6,20 +7,34 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
+        Schema::dropIfExists('sale_items');
+        
         Schema::create('sale_items', function (Blueprint $table) {
             $table->id();
+            
+            // Relationships
+            $table->unsignedBigInteger('sale_id');
+            $table->unsignedBigInteger('medicine_id');
+            
+            // Item details
+            $table->integer('quantity');
+            $table->decimal('unit_price', 10, 2);
+            $table->decimal('subtotal', 10, 2);
+            
+            // Optional discount per item
+            $table->decimal('discount', 10, 2)->default(0);
+            
             $table->timestamps();
+            
+            // Indexes
+            $table->index(['sale_id', 'medicine_id']);
+            $table->index('sale_id');
+            $table->index('medicine_id');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('sale_items');

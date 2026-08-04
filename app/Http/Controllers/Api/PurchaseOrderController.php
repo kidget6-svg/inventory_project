@@ -7,6 +7,7 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Medicine;
 use App\Models\Supplier;
+use App\Services\PurchaseOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +15,7 @@ class PurchaseOrderController extends Controller
 {
     public function index()
     {
-        $orders = PurchaseOrder::with('supplier')->orderBy('id', 'asc')->get();
+        $orders = PurchaseOrder::with('supplier')->latest()->paginate(5);
         return response()->json($orders);
     }
 
@@ -36,7 +37,7 @@ class PurchaseOrderController extends Controller
             $order = PurchaseOrder::create([
                 'supplier_id' => $validated['supplier_id'],
                 'order_date' => $validated['order_date'],
-                'status' => 'pending',
+                'status' => 'draft',
                 'total_amount' => $subtotal,
             ]);
 
@@ -64,7 +65,7 @@ class PurchaseOrderController extends Controller
 
     public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
-        // Only allow editing when status is pending or approved
+        // Only allow editing when status is draft, pending, or approved
         if (! $purchaseOrder->canEdit()) {
             return response()->json([
                 'message' => 'Cannot edit order in ' . $purchaseOrder->status . ' status'
@@ -84,7 +85,7 @@ class PurchaseOrderController extends Controller
         try {
             $subtotal = $validated['quantity'] * $validated['unit_price'];
 
-            // Update the order header (status is NOT changed here — it's workflow-driven)
+            // Update the order header (status is NOT changed here - it's workflow-driven)
             $purchaseOrder->update([
                 'supplier_id' => $validated['supplier_id'],
                 'order_date' => $validated['order_date'],
@@ -95,7 +96,7 @@ class PurchaseOrderController extends Controller
             $item = $purchaseOrder->items()->first();
 
             if ($item) {
-                // Update the item — stock is NOT adjusted here because
+                // Update the item - stock is NOT adjusted here because
                 // stock is only added when the order is completed
                 $item->update([
                     'medicine_id' => $validated['medicine_id'],
@@ -104,7 +105,7 @@ class PurchaseOrderController extends Controller
                     'subtotal' => $subtotal,
                 ]);
             } else {
-                // No existing item — create one (stock will be added on completion)
+                // No existing item - create one (stock will be added on completion)
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $purchaseOrder->id,
                     'medicine_id' => $validated['medicine_id'],
@@ -125,7 +126,7 @@ class PurchaseOrderController extends Controller
 
     public function destroy(PurchaseOrder $purchaseOrder)
     {
-        // Only allow deletion when status is pending
+        // Only allow deletion when status is draft
         if (! $purchaseOrder->canDelete()) {
             return response()->json([
                 'message' => 'Cannot delete order in ' . $purchaseOrder->status . ' status'
@@ -148,7 +149,191 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Approve a purchase order (pending → approved).
+     * Submit a purchase order (draft -> pending).
+     */
+    public function submit(PurchaseOrder $purchaseOrder)
+    {
+        if (! $purchaseOrder->canSubmit()) {
+            return response()->json([
+                'message' => 'Cannot submit order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        $purchaseOrder->submit();
+
+        return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
+    }
+
+    /**
+     * Preview the Purchase Order PDF.
+     * Generates the PDF from database data and returns it as base64
+     * so the admin can review it in a modal before emailing the supplier.
+     *
+     * PDF generation is available for ALL statuses (not just pending)
+     * so the PDF remains accessible throughout the entire lifecycle.
+     */
+    public function preview(PurchaseOrder $purchaseOrder, PurchaseOrderService $service)
+    {
+        if (! $purchaseOrder->canGeneratePdf()) {
+            return response()->json([
+                'message' => 'Cannot generate PDF for order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        $pdfContent = $service->generatePdf($purchaseOrder);
+
+        return response()->json([
+            'pdf' => base64_encode($pdfContent),
+            'purchase_order' => $purchaseOrder->load('supplier', 'items.medicine'),
+        ]);
+    }
+
+    /**
+     * Download the Purchase Order PDF as a file attachment.
+     * Available for all statuses except draft.
+     */
+    public function download(PurchaseOrder $purchaseOrder, PurchaseOrderService $service)
+    {
+        if (! $purchaseOrder->canDownloadPdf()) {
+            return response()->json([
+                'message' => 'Cannot download PDF for order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        $pdfContent = $service->generatePdf($purchaseOrder);
+
+        $filename = 'purchase-order-' . $purchaseOrder->id . '.pdf';
+
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Send a purchase order to the supplier (pending -> sent).
+     * Generates a PDF, emails it to the supplier, and records the sent timestamp.
+     * The email is sent synchronously so the status only changes after
+     * the supplier has actually received the email.
+     */
+    public function send(PurchaseOrder $purchaseOrder, PurchaseOrderService $service)
+    {
+        if (! $purchaseOrder->canSend()) {
+            return response()->json([
+                'message' => 'Cannot send order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        if (! $purchaseOrder->supplier || ! $purchaseOrder->supplier->email) {
+            return response()->json([
+                'message' => 'Supplier does not have an email address'
+            ], 422);
+        }
+
+        try {
+            $service->sendToSupplier($purchaseOrder);
+
+            $purchaseOrder->send();
+
+            return response()->json([
+                'message' => 'Purchase Order emailed successfully.',
+                'purchase_order' => $purchaseOrder->fresh()->load('supplier', 'items.medicine'),
+            ]);
+        } catch (\Exception $e) {
+            report($e);
+
+            return response()->json([
+                'message' => 'Error sending purchase order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Re-send a purchase order to the supplier (sent/approved/completed only).
+     * Re-generates the PDF and re-emails it without changing the status.
+     * This allows supplier communication after the initial send.
+     */
+    public function resend(PurchaseOrder $purchaseOrder, PurchaseOrderService $service)
+    {
+        if (! $purchaseOrder->canResend()) {
+            return response()->json([
+                'message' => 'Cannot resend order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        // Validate supplier has an email
+        if (! $purchaseOrder->supplier || ! $purchaseOrder->supplier->email) {
+            return response()->json([
+                'message' => 'Supplier does not have an email address'
+            ], 422);
+        }
+
+        try {
+            // Re-generate PDF and re-send email to supplier
+            $service->sendToSupplier($purchaseOrder);
+
+            return response()->json([
+                'message' => 'Purchase order re-sent to supplier successfully',
+                'purchase_order' => $purchaseOrder->fresh()->load('supplier', 'items.medicine'),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error re-sending purchase order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Send the latest Purchase Order PDF to the supplier as an email attachment.
+     */
+    public function sendPdfToSupplier(PurchaseOrder $purchaseOrder, PurchaseOrderService $service)
+    {
+        if (! in_array($purchaseOrder->status, ['pending', 'approved'])) {
+            return response()->json([
+                'message' => 'Cannot send PDF for order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        if (! $purchaseOrder->supplier || ! $purchaseOrder->supplier->email) {
+            return response()->json([
+                'message' => 'Supplier does not have an email address'
+            ], 422);
+        }
+
+        try {
+            $service->sendToSupplier($purchaseOrder);
+
+            return response()->json([
+                'message' => 'Purchase Order PDF sent successfully.',
+                'purchase_order' => $purchaseOrder->fresh()->load('supplier', 'items.medicine'),
+            ]);
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json([
+                'message' => 'Error sending Purchase Order PDF: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark a purchase order as delivered (sent -> delivered).
+     * Does NOT update inventory yet.
+     */
+    public function deliver(PurchaseOrder $purchaseOrder)
+    {
+        if (! $purchaseOrder->canDeliver()) {
+            return response()->json([
+                'message' => 'Cannot mark as delivered in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        $purchaseOrder->deliver();
+
+        return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
+    }
+
+    /**
+     * Approve a purchase order (pending -> approved).
      */
     public function approve(PurchaseOrder $purchaseOrder)
     {
@@ -158,33 +343,13 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
-        $result = $purchaseOrder->approve();
-
-        if (! $result) {
-            return response()->json(['message' => 'Error approving order'], 500);
-        }
+        $purchaseOrder->approve();
 
         return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
     }
 
     /**
-     * Process a purchase order (approved → processing).
-     */
-    public function process(PurchaseOrder $purchaseOrder)
-    {
-        if (! $purchaseOrder->canProcess()) {
-            return response()->json([
-                'message' => 'Cannot process order in ' . $purchaseOrder->status . ' status'
-            ], 422);
-        }
-
-        $purchaseOrder->process();
-
-        return response()->json($purchaseOrder->load('supplier', 'items.medicine'));
-    }
-
-    /**
-     * Complete a purchase order (approved/processing → completed).
+     * Complete a purchase order (delivered/approved -> completed).
      * Updates medicine stock and creates stock movement records.
      */
     public function complete(PurchaseOrder $purchaseOrder)
@@ -195,17 +360,18 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
-        $result = $purchaseOrder->complete();
+        try {
+            $purchaseOrder->complete();
 
-        if (! $result) {
-            return response()->json(['message' => 'Error completing order'], 500);
+            return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json(['message' => 'Error completing order: ' . $e->getMessage()], 500);
         }
-
-        return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
     }
 
     /**
-     * Cancel a purchase order (pending/approved/processing → cancelled).
+     * Cancel a purchase order (draft/pending/sent/delivered/approved -> cancelled).
      */
     public function cancel(PurchaseOrder $purchaseOrder)
     {
@@ -218,5 +384,21 @@ class PurchaseOrderController extends Controller
         $purchaseOrder->cancel();
 
         return response()->json($purchaseOrder->load('supplier', 'items.medicine'));
+    }
+
+    /**
+     * Reopen a cancelled purchase order (cancelled -> pending).
+     */
+    public function reopen(PurchaseOrder $purchaseOrder)
+    {
+        if (! $purchaseOrder->canReopen()) {
+            return response()->json([
+                'message' => 'Cannot reopen order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        $purchaseOrder->reopen();
+
+        return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
     }
 }

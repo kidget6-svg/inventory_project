@@ -20,6 +20,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import api from "../axios";
 import LoadingSpinner from "../components/LoadingSpinner";
+import Pagination from '../components/Pagination';
 
 
 const roleOptions = [
@@ -49,6 +50,9 @@ export default function Users(){
     const [loading,setLoading] = useState(true);
 
     const [error,setError] = useState("");
+
+    const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);
 
     const [search,setSearch] = useState("");
 
@@ -90,6 +94,8 @@ export default function Users(){
 
     },[]);
 
+    const handlePageChange = (p) => setPage(p);
+
 
 
 
@@ -98,9 +104,10 @@ export default function Users(){
 
         try{
 
-            const response = await api.get("/users");
+            const response = await api.get("/users", { params: { page, search: search, role: roleFilter } });
 
-            setUsers(response.data);
+            setUsers(response.data.data || response.data);
+            setMeta(response.data);
 
             setError("");
 
@@ -121,6 +128,9 @@ export default function Users(){
         }
 
     };
+
+    useEffect(() => { setPage(1); }, [search, roleFilter]);
+    useEffect(() => { fetchUsers(); }, [page, search, roleFilter]);
 
 
 
@@ -345,37 +355,13 @@ export default function Users(){
 
 
 
-    const filteredUsers = users.filter(user=>{
-
-
-        const matchesSearch =
-        user.name
-        .toLowerCase()
-        .includes(search.toLowerCase())
-        ||
-        user.email
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-
-
-        const matchesRole =
-        roleFilter==="all"
-        ||
-        user.role===roleFilter;
-
-
-
-        return matchesSearch && matchesRole;
-
-
-    });
+    const filteredUsers = users;
 
 
 
 
 
-    const totalUsers = users.length;
+    const totalUsers = meta?.total || users.length;
 
 
     const adminCount =
@@ -405,13 +391,13 @@ export default function Users(){
         const styles={
 
             admin:
-            "bg-blue-100 text-blue-700",
+            "bg-sky-100 text-sky-700",
 
             pharmacist:
-            "bg-green-100 text-green-700",
+            "bg-sky-100 text-sky-700",
 
             cashier:
-            "bg-orange-100 text-orange-700"
+            "bg-sky-100 text-sky-700"
 
         };
 
@@ -534,13 +520,14 @@ className="
 flex
 items-center
 gap-2
-bg-blue-600
-hover:bg-blue-700
+bg-blue-500
+hover:bg-blue-600
 text-white
 px-5
 py-3
 rounded-xl
-shadow
+shadow-md
+hover:shadow-lg
 transition
 "
 
@@ -608,7 +595,7 @@ Total Users
 <h2 className="
 text-3xl
 font-bold
-text-blue-600
+text-blue-500
 mt-2
 ">
 
@@ -663,7 +650,7 @@ Admins
 <h2 className="
 text-3xl
 font-bold
-text-indigo-600
+text-blue-500
 mt-2
 ">
 
@@ -675,7 +662,7 @@ mt-2
 
 
 <ShieldCheck
-className="text-indigo-500"
+className="text-blue-500"
 size={35}
 />
 
@@ -719,7 +706,7 @@ Pharmacists
 <h2 className="
 text-3xl
 font-bold
-text-green-600
+text-blue-500
 mt-2
 ">
 
@@ -733,7 +720,7 @@ mt-2
 
 
 <Pill
-className="text-green-500"
+className="text-blue-500"
 size={35}
 />
 
@@ -775,7 +762,7 @@ Cashiers
 <h2 className="
 text-3xl
 font-bold
-text-orange-600
+text-blue-500
 mt-2
 ">
 
@@ -789,7 +776,7 @@ mt-2
 
 
 <WalletCards
-className="text-orange-500"
+className="text-blue-500"
 size={35}
 />
 
@@ -799,6 +786,8 @@ size={35}
 
 </div>
 
+
+            <Pagination meta={meta} onPageChange={handlePageChange} />
 
 
 </div>

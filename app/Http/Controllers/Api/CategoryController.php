@@ -8,9 +8,15 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Category::all());
+        $query = Category::withCount('medicines');
+
+        if ($request->has('page') || $request->has('per_page')) {
+            return response()->json($query->paginate((int) $request->input('per_page', 10)));
+        }
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
@@ -18,15 +24,16 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'shelf_location' => 'nullable|string|max:255',
         ]);
 
         $category = Category::create($validated);
-        return response()->json($category, 201);
+        return response()->json($category->loadCount('medicines'), 201);
     }
 
     public function show(Category $category)
     {
-        return response()->json($category);
+        return response()->json($category->loadCount('medicines'));
     }
 
     public function update(Request $request, Category $category)
@@ -34,15 +41,16 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'shelf_location' => 'nullable|string|max:255',
         ]);
 
         $category->update($validated);
-        return response()->json($category);
+        return response()->json($category->loadCount('medicines'));
     }
 
     public function destroy(Category $category)
     {
         $category->delete();
-        return response()->json(['message' => 'Category deleted']);
+        return response()->json(['message' => 'Category deleted successfully']);
     }
 }

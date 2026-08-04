@@ -14,36 +14,36 @@ const statusConfig = {
     pending:{
         label:"Pending",
         icon:Clock,
-        bg:"bg-yellow-50",
-        text:"text-yellow-600",
-        border:"border-yellow-400"
+        bg:"bg-sky-50",
+        text:"text-sky-600",
+        border:"border-sky-400"
     },
 
 
     approved:{
         label:"Approved",
         icon:CheckCircle,
-        bg:"bg-blue-50",
-        text:"text-blue-600",
-        border:"border-blue-400"
+        bg:"bg-sky-50",
+        text:"text-sky-600",
+        border:"border-sky-400"
     },
 
 
     processing:{
         label:"Processing",
         icon:Truck,
-        bg:"bg-purple-50",
-        text:"text-purple-600",
-        border:"border-purple-400"
+        bg:"bg-sky-50",
+        text:"text-sky-600",
+        border:"border-sky-400"
     },
 
 
     completed:{
         label:"Completed",
         icon:Package,
-        bg:"bg-green-50",
-        text:"text-green-600",
-        border:"border-green-400"
+        bg:"bg-sky-50",
+        text:"text-sky-600",
+        border:"border-sky-400"
     },
 
 
@@ -74,6 +74,7 @@ export default function PurchaseOrderStats({
                 rounded-2xl
                 shadow-sm
                 border
+                border-gray-200
                 p-6
             ">
 
@@ -92,9 +93,9 @@ export default function PurchaseOrderStats({
         <div className="
             bg-white
             rounded-2xl
-            shadow-md
+            shadow-sm
             border
-            border-gray-100
+            border-gray-200
             overflow-hidden
         ">
 
@@ -108,7 +109,7 @@ export default function PurchaseOrderStats({
                 px-6
                 py-5
                 border-b
-                border-gray-100
+                border-gray-200
             ">
 
 
@@ -116,7 +117,7 @@ export default function PurchaseOrderStats({
                     w-10
                     h-10
                     rounded-xl
-                    bg-blue-100
+                    bg-sky-100
                     flex
                     items-center
                     justify-center
@@ -124,7 +125,7 @@ export default function PurchaseOrderStats({
 
                     <ClipboardList
                         size={22}
-                        className="text-blue-600"
+                        className="text-sky-600"
                     />
 
                 </div>
@@ -192,7 +193,7 @@ export default function PurchaseOrderStats({
                                     transition-all
                                     duration-300
                                     hover:-translate-y-1
-                                    hover:shadow-lg
+                                    hover:shadow-md
                                 `}
                             >
 

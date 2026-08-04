@@ -1,51 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
+import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { Edit, Trash2 } from 'lucide-react';
+import { Eye, Edit, Trash2, Plus, Save, X, Calendar, Tag } from 'lucide-react';
+import Pagination from '../components/Pagination';
 
 export default function Categories() {
     const [categories, setCategories] = useState([]);
-    const [showForm, setShowForm] = useState(false);
-    const [editId, setEditId] = useState(null);
-    const [form, setForm] = useState({ name: '', description: '' });
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);
+
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit' | 'view'
+    const [modalItem, setModalItem] = useState(null);
+    const [form, setForm] = useState({ name: '', description: '' });
+    const [submitting, setSubmitting] = useState(false);
 
     const load = () => {
-        api.get('/categories')
-            .then(r => setCategories(r.data))
-            .catch(err => {
-                console.error(err);
-                setError('Failed to load categories');
-            })
+        api.get('/categories', { params: { page } })
+            .then(r => { setCategories(r.data.data || r.data); setMeta(r.data); })
+            .catch(err => { console.error(err); setError('Failed to load categories'); })
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { load(); }, []);
-
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-    const openCreate = () => { setForm({ name: '', description: '' }); setEditId(null); setShowForm(true); setError(''); };
-    const openEdit = (c) => { setForm({ name: c.name, description: c.description || '' }); setEditId(c.id); setShowForm(true); setError(''); };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        try {
-            if (editId) {
-                await api.put(`/categories/${editId}`, form);
-                window.showToast('Category updated successfully', 'success');
-            } else {
-                await api.post('/categories', form);
-                window.showToast('Category created successfully', 'success');
-            }
-            setShowForm(false);
-            load();
-        } catch (err) {
-            const msgs = err.response?.data?.errors;
-            setError(msgs ? Object.values(msgs).flat().join(' ') : 'Error saving category');
-        }
-    };
+    useEffect(() => { load(); }, [page]);
 
     const handleDelete = async (id) => {
         if (!confirm('Delete this category?')) return;
@@ -58,27 +39,70 @@ export default function Categories() {
         }
     };
 
+    const openCreate = () => {
+        setModalMode('create');
+        setModalItem(null);
+        setForm({ name: '', description: '' });
+        setError('');
+        setShowModal(true);
+    };
+
+    const openEdit = (item) => {
+        setModalMode('edit');
+        setModalItem(item);
+        setForm({ name: item.name, description: item.description || '' });
+        setError('');
+        setShowModal(true);
+    };
+
+    const openView = (item) => {
+        setModalMode('view');
+        setModalItem(item);
+        setShowModal(true);
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setModalItem(null);
+        setForm({ name: '', description: '' });
+        setError('');
+    };
+
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSubmitting(true);
+        try {
+            if (modalMode === 'create') {
+                await api.post('/categories', form);
+                window.showToast('Category created successfully', 'success');
+            } else {
+                await api.put(`/categories/${modalItem.id}`, form);
+                window.showToast('Category updated successfully', 'success');
+            }
+            setShowModal(false);
+            load();
+        } catch (err) {
+            const msgs = err.response?.data?.errors;
+            setError(msgs ? Object.values(msgs).flat().join(' ') : 'Error saving category');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const isViewMode = modalMode === 'view';
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-700">All Categories ({categories.length})</h3>
-                <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm">+ Add Category</button>
+                <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+                    <Plus size={16} />
+                    New Category
+                </button>
             </div>
-
-            {showForm && (
-                <div className="card p-5">
-                    <h4 className="font-semibold text-gray-700 mb-3">{editId ? 'Edit Category' : 'Add Category'}</h4>
-                    {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-3 text-sm">{error}</div>}
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label><input name="name" value={form.name} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required /></div>
-                        <div><label className="block text-xs font-semibold text-gray-600 mb-1">Description</label><input name="description" value={form.description} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" /></div>
-                        <div className="md:col-span-2 flex justify-end gap-3">
-                            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
-                            <button type="submit" className="btn-primary">{editId ? 'Update' : 'Create'}</button>
-                        </div>
-                    </form>
-                </div>
-            )}
 
             {loading ? (
                 <LoadingSpinner text="Loading categories..." />
@@ -99,6 +123,13 @@ export default function Categories() {
                                     <td className="px-4 py-3 text-sm text-gray-500">{c.description || '---'}</td>
                                     <td className="px-4 py-3 text-sm">
                                         <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => openView(c)}
+                                                className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                                                title="View"
+                                            >
+                                                <Eye size={16} />
+                                            </button>
                                             <button
                                                 onClick={() => openEdit(c)}
                                                 className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
@@ -122,6 +153,79 @@ export default function Categories() {
                     </table>
                 </div>
             )}
+
+            <Pagination meta={meta} onPageChange={(p) => setPage(p)} />
+
+            <Modal
+                open={showModal}
+                onClose={closeModal}
+                title={modalMode === 'create' ? 'Add New Category' : modalMode === 'edit' ? 'Edit Category' : 'Category Details'}
+                size="max-w-lg"
+            >
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">{error}</div>}
+
+                {isViewMode && modalItem ? (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Name</label>
+                            <p className="text-sm font-medium text-gray-800">{modalItem.name}</p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Description</label>
+                            <p className="text-sm text-gray-600">{modalItem.description || '---'}</p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Created</label>
+                            <p className="text-sm text-gray-600 flex items-center gap-1">
+                                <Calendar size={14} />
+                                {modalItem.created_at ? new Date(modalItem.created_at).toLocaleDateString() : '---'}
+                            </p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Last Updated</label>
+                            <p className="text-sm text-gray-600 flex items-center gap-1">
+                                <Calendar size={14} />
+                                {modalItem.updated_at ? new Date(modalItem.updated_at).toLocaleDateString() : '---'}
+                            </p>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button onClick={closeModal} className="btn-secondary">Close</button>
+                        </div>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label>
+                            <input
+                                name="name"
+                                value={form.name}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                            <input
+                                name="description"
+                                value={form.description}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="btn-primary flex items-center gap-2 disabled:opacity-60"
+                            >
+                                {submitting ? <><Tag size={16} className="animate-spin" /> Saving... </> : <><Save size={16} /> {modalMode === 'create' ? 'Create Category' : 'Update Category'}</>}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
         </div>
     );
 }

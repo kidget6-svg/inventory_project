@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\PurchaseOrderMail;
 use App\Models\Medicine;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
@@ -9,6 +10,7 @@ use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class PurchaseOrderTest extends TestCase
@@ -17,7 +19,10 @@ class PurchaseOrderTest extends TestCase
 
     private function adminUser()
     {
-        return User::factory()->create(['role' => 'admin']);
+        return User::factory()->create([
+            'role' => 'admin',
+            'status' => 'approved',
+        ]);
     }
 
     private function createMedicine(int $quantity = 100): Medicine
@@ -28,7 +33,7 @@ class PurchaseOrderTest extends TestCase
         ]);
     }
 
-    private function createOrderWithItem(Medicine $medicine, int $quantity = 20, string $status = 'pending'): PurchaseOrder
+    private function createOrderWithItem(Medicine $medicine, int $quantity = 20, string $status = 'draft'): PurchaseOrder
     {
         $order = PurchaseOrder::create([
             'supplier_id' => Supplier::factory()->create()->id,
@@ -81,13 +86,13 @@ class PurchaseOrderTest extends TestCase
         $response->assertCreated()
             ->assertJsonFragment([
                 'supplier_id' => $supplier->id,
-                'status' => 'pending',
+                'status' => 'draft',
             ]);
 
         // Verify the purchase order was created
         $this->assertDatabaseHas('purchase_orders', [
             'supplier_id' => $supplier->id,
-            'status' => 'pending',
+            'status' => 'draft',
         ]);
 
         // Verify the purchase order item was created
@@ -116,11 +121,11 @@ class PurchaseOrderTest extends TestCase
             ->assertJsonValidationErrors(['supplier_id', 'medicine_id']);
     }
 
-    public function test_admin_can_edit_a_pending_purchase_order()
+    public function test_admin_can_edit_a_draft_purchase_order()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
-        $order = $this->createOrderWithItem($medicine, 20, 'pending');
+        $order = $this->createOrderWithItem($medicine, 20, 'draft');
 
         // Medicine stock should still be 100 (no stock added at creation)
         $medicine->refresh();
@@ -137,7 +142,7 @@ class PurchaseOrderTest extends TestCase
 
         $response->assertOk()
             ->assertJsonFragment([
-                'status' => 'pending',
+                'status' => 'draft',
             ]);
 
         // Verify the item was updated
@@ -151,11 +156,11 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals(100, $medicine->quantity);
     }
 
-    public function test_admin_can_delete_a_pending_purchase_order()
+    public function test_admin_can_delete_a_draft_purchase_order()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
-        $order = $this->createOrderWithItem($medicine, 25, 'pending');
+        $order = $this->createOrderWithItem($medicine, 25, 'draft');
 
         // Medicine stock should still be 100 (no stock added at creation)
         $medicine->refresh();
@@ -175,49 +180,208 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals(100, $medicine->quantity);
     }
 
-    public function test_admin_can_approve_a_purchase_order()
+    public function test_admin_can_submit_a_draft_purchase_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'draft');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/submit");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'status' => 'pending',
+            ]);
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $order->id,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_admin_can_send_a_pending_purchase_order()
+    {
+        Mail::fake();
+
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'pending');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/send");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'status' => 'sent',
+            ]);
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $order->id,
+            'status' => 'sent',
+        ]);
+
+        // Verify sent_at was recorded
+        $order->refresh();
+        $this->assertNotNull($order->sent_at);
+
+        // Verify the email was actually sent to the supplier
+        Mail::assertSent(PurchaseOrderMail::class, function ($mail) use ($order) {
+            return $mail->hasTo($order->supplier->email)
+                && $mail->purchaseOrder->is($order);
+        });
+    }
+
+    public function test_admin_can_preview_a_pending_purchase_order()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine();
         $order = $this->createOrderWithItem($medicine, 20, 'pending');
 
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/approve");
+        $response = $this->actingAs($user)->getJson("/purchase-orders/{$order->id}/preview");
 
         $response->assertOk()
-            ->assertJsonFragment([
-                'status' => 'approved',
+            ->assertJsonStructure([
+                'pdf',
+                'purchase_order',
             ]);
 
-        $this->assertDatabaseHas('purchase_orders', [
-            'id' => $order->id,
-            'status' => 'approved',
-        ]);
+        // Verify the PDF data is a valid base64-encoded string
+        $this->assertNotEmpty($response->json('pdf'));
+        $this->assertNotEmpty(base64_decode($response->json('pdf'), true));
     }
 
-    public function test_admin_can_process_a_purchase_order()
+    public function test_can_preview_non_pending_order()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 20, 'approved');
+        $order = $this->createOrderWithItem($medicine, 20, 'sent');
 
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/process");
+        $response = $this->actingAs($user)->getJson("/purchase-orders/{$order->id}/preview");
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'pdf',
+                'purchase_order',
+            ]);
+
+        // Verify the PDF data is a valid base64-encoded string
+        $this->assertNotEmpty($response->json('pdf'));
+        $this->assertNotEmpty(base64_decode($response->json('pdf'), true));
+    }
+
+    public function test_can_preview_pdf_in_all_active_statuses()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+
+        foreach (['pending', 'sent', 'delivered', 'completed', 'cancelled'] as $status) {
+            $order = $this->createOrderWithItem($medicine, 20, $status);
+
+            $response = $this->actingAs($user)->getJson("/purchase-orders/{$order->id}/preview");
+
+            $response->assertOk()
+                ->assertJsonStructure([
+                    'pdf',
+                    'purchase_order',
+                ]);
+
+            $this->assertNotEmpty($response->json('pdf'));
+        }
+    }
+
+    public function test_can_download_pdf_in_all_active_statuses()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+
+        foreach (['pending', 'sent', 'delivered', 'completed', 'cancelled'] as $status) {
+            $order = $this->createOrderWithItem($medicine, 20, $status);
+
+            $response = $this->actingAs($user)->getJson("/purchase-orders/{$order->id}/download");
+
+            $response->assertOk()
+                ->assertHeader('Content-Type', 'application/pdf')
+                ->assertHeader('Content-Disposition', 'attachment; filename="purchase-order-' . $order->id . '.pdf"');
+        }
+    }
+
+    public function test_cannot_download_pdf_for_draft_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'draft');
+
+        $response = $this->actingAs($user)->getJson("/purchase-orders/{$order->id}/download");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Cannot download PDF for order in draft status',
+            ]);
+    }
+
+    public function test_admin_can_resend_a_sent_purchase_order()
+    {
+        Mail::fake();
+
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'sent');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/resend");
 
         $response->assertOk()
             ->assertJsonFragment([
-                'status' => 'processing',
+                'status' => 'sent',
+            ]);
+
+        // Verify the email was sent again
+        Mail::assertSent(PurchaseOrderMail::class, function ($mail) use ($order) {
+            return $mail->hasTo($order->supplier->email)
+                && $mail->purchaseOrder->is($order);
+        });
+    }
+
+    public function test_cannot_resend_non_sent_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'pending');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/resend");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Cannot resend order in pending status',
+            ]);
+    }
+
+    public function test_admin_can_deliver_a_sent_purchase_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'sent');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/deliver");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'status' => 'delivered',
             ]);
 
         $this->assertDatabaseHas('purchase_orders', [
             'id' => $order->id,
-            'status' => 'processing',
+            'status' => 'delivered',
         ]);
+
+        // Verify delivered_at was recorded
+        $order->refresh();
+        $this->assertNotNull($order->delivered_at);
     }
 
-    public function test_admin_can_complete_a_purchase_order_and_stock_increases()
+    public function test_admin_can_complete_a_delivered_purchase_order_and_stock_increases()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
-        $order = $this->createOrderWithItem($medicine, 25, 'approved');
+        $order = $this->createOrderWithItem($medicine, 25, 'delivered');
 
         $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
 
@@ -243,13 +407,17 @@ class PurchaseOrderTest extends TestCase
             'quantity' => 25,
             'reference' => 'PO-' . $order->id,
         ]);
+
+        // Verify completed_at was recorded
+        $order->refresh();
+        $this->assertNotNull($order->completed_at);
     }
 
     public function test_complete_prevents_duplicate_stock_additions()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
-        $order = $this->createOrderWithItem($medicine, 25, 'approved');
+        $order = $this->createOrderWithItem($medicine, 25, 'delivered');
 
         // Complete the order
         $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
@@ -259,7 +427,7 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals(125, $medicine->quantity);
 
         // Try to complete again (should not add stock again)
-        $order->update(['status' => 'approved']);
+        $order->update(['status' => 'delivered']);
         $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
 
         // Medicine stock should still be 125 (no duplicate addition)
@@ -274,7 +442,7 @@ class PurchaseOrderTest extends TestCase
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 20, 'pending');
+        $order = $this->createOrderWithItem($medicine, 20, 'draft');
 
         $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/cancel");
 
@@ -309,34 +477,90 @@ class PurchaseOrderTest extends TestCase
             ]);
     }
 
-    public function test_cannot_delete_approved_order()
+    public function test_cannot_delete_pending_order()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 20, 'approved');
+        $order = $this->createOrderWithItem($medicine, 20, 'pending');
 
         $response = $this->actingAs($user)->deleteJson("/purchase-orders/{$order->id}");
 
         $response->assertStatus(422)
             ->assertJsonFragment([
-                'message' => 'Cannot delete order in approved status',
+                'message' => 'Cannot delete order in pending status',
             ]);
 
         // Verify the order still exists
         $this->assertDatabaseHas('purchase_orders', ['id' => $order->id]);
     }
 
-    public function test_cannot_approve_non_pending_order()
+    public function test_cannot_send_non_pending_order()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 20, 'approved');
+        $order = $this->createOrderWithItem($medicine, 20, 'sent');
 
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/approve");
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/send");
 
         $response->assertStatus(422)
             ->assertJsonFragment([
-                'message' => 'Cannot approve order in approved status',
+                'message' => 'Cannot send order in sent status',
+            ]);
+    }
+
+    public function test_cannot_deliver_non_sent_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'pending');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/deliver");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Cannot mark as delivered in pending status',
+            ]);
+    }
+
+    public function test_cannot_complete_non_delivered_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'sent');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Cannot complete order in sent status',
+            ]);
+    }
+
+    public function test_cannot_cancel_completed_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'completed');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/cancel");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Cannot cancel order in completed status',
+            ]);
+    }
+
+    public function test_cannot_cancel_cancelled_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'cancelled');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/cancel");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Cannot cancel order in cancelled status',
             ]);
     }
 
@@ -344,7 +568,7 @@ class PurchaseOrderTest extends TestCase
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 10, 'pending');
+        $order = $this->createOrderWithItem($medicine, 10, 'draft');
 
         $response = $this->actingAs($user)->getJson("/purchase-orders/{$order->id}");
 
@@ -365,5 +589,159 @@ class PurchaseOrderTest extends TestCase
         $response = $this->actingAs($cashier)->getJson('/purchase-orders');
 
         $response->assertStatus(403);
+    }
+
+    // ------------------------------------------------------------------
+    // Approve endpoint tests
+    // ------------------------------------------------------------------
+
+    public function test_admin_can_approve_a_pending_purchase_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'pending');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/approve");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'status' => 'approved',
+            ]);
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $order->id,
+            'status' => 'approved',
+        ]);
+    }
+
+    public function test_cannot_approve_non_pending_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'draft');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/approve");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Cannot approve order in draft status',
+            ]);
+    }
+
+    public function test_can_complete_an_approved_purchase_order_and_stock_increases()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine(100);
+        $order = $this->createOrderWithItem($medicine, 25, 'approved');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'status' => 'completed',
+            ]);
+
+        // Verify the order was completed
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $order->id,
+            'status' => 'completed',
+        ]);
+
+        // Verify medicine stock increased by 25 (from 100 to 125)
+        $medicine->refresh();
+        $this->assertEquals(125, $medicine->quantity);
+
+        // Verify a stock movement record was created
+        $this->assertDatabaseHas('stock_movements', [
+            'medicine_id' => $medicine->id,
+            'type' => 'in',
+            'quantity' => 25,
+            'reference' => 'PO-' . $order->id,
+        ]);
+
+        // Verify completed_at was recorded
+        $order->refresh();
+        $this->assertNotNull($order->completed_at);
+    }
+
+    // ------------------------------------------------------------------
+    // Reopen endpoint tests
+    // ------------------------------------------------------------------
+
+    public function test_admin_can_reopen_a_cancelled_purchase_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'cancelled');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/reopen");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'status' => 'pending',
+            ]);
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $order->id,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_cannot_reopen_non_cancelled_order()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'pending');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/reopen");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Cannot reopen order in pending status',
+            ]);
+    }
+
+    public function test_can_resend_an_approved_purchase_order()
+    {
+        Mail::fake();
+
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'approved');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/resend");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'status' => 'approved',
+            ]);
+
+        // Verify the email was sent
+        Mail::assertSent(PurchaseOrderMail::class, function ($mail) use ($order) {
+            return $mail->hasTo($order->supplier->email)
+                && $mail->purchaseOrder->is($order);
+        });
+    }
+
+    public function test_can_resend_a_completed_purchase_order()
+    {
+        Mail::fake();
+
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine();
+        $order = $this->createOrderWithItem($medicine, 20, 'completed');
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/resend");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'status' => 'completed',
+            ]);
+
+        // Verify the email was sent
+        Mail::assertSent(PurchaseOrderMail::class, function ($mail) use ($order) {
+            return $mail->hasTo($order->supplier->email)
+                && $mail->purchaseOrder->is($order);
+        });
     }
 }

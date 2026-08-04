@@ -39,6 +39,7 @@ class Medicine extends Model
         'reorder_level',
         'expiry_date',
         'status',
+        'image',
     ];
 
     protected $casts = [
@@ -70,9 +71,17 @@ class Medicine extends Model
         return $this->hasMany(PurchaseOrderItem::class);
     }
 
-    public function saleItems()
+    /**
+     * Get the full public URL to the medicine image.
+     * Falls back to a placeholder when no image is set.
+     */
+    public function getImageUrlAttribute(): string
     {
-        return $this->hasMany(SaleItem::class);
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+
+        return asset('images/medicine-placeholder.svg');
     }
 
     public function getStatusBadgeClass(): string

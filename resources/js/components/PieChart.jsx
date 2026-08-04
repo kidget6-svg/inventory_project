@@ -6,9 +6,9 @@ export default function PieChart({ title, labels = [], values = [], colors = [] 
     const segments = [];
     let cumulative = 0;
     const colorPalette = [
-        'bg-sky-500', 'bg-emerald-500', 'bg-amber-400', 'bg-red-400',
-        'bg-purple-500', 'bg-cyan-500', 'bg-pink-500', 'bg-teal-500',
-        'bg-sky-400', 'bg-emerald-400',
+        'bg-sky-500', 'bg-sky-400', 'bg-sky-300', 'bg-sky-200',
+        'bg-sky-100', 'bg-blue-400', 'bg-blue-300', 'bg-blue-200',
+        'bg-cyan-400', 'bg-cyan-300',
     ];
 
     labels.forEach((label, i) => {
@@ -64,11 +64,14 @@ export default function PieChart({ title, labels = [], values = [], colors = [] 
 const tailwindToHex = (cls) => {
     const map = {
         'bg-sky-500': '#0ea5e9', 'bg-sky-400': '#38bdf8',
-        'bg-indigo-500': '#6366f1', 'bg-emerald-500': '#22c55e',
+        'bg-sky-300': '#7dd3fc', 'bg-sky-200': '#bae6fd',
+        'bg-sky-100': '#e0f2fe', 'bg-blue-400': '#60a5fa',
+        'bg-blue-300': '#93c5fd', 'bg-blue-200': '#bfdbfe',
+        'bg-cyan-400': '#22d3ee', 'bg-cyan-300': '#67e8f9',
+        'bg-emerald-500': '#22c55e', 'bg-emerald-400': '#4ade80',
         'bg-amber-400': '#fbbf24', 'bg-red-400': '#f87171',
         'bg-purple-500': '#a855f7', 'bg-cyan-500': '#06b6d4',
         'bg-pink-500': '#ec4899', 'bg-teal-500': '#14b8a3',
-        'bg-emerald-400': '#4ade80',
         'bg-green-500': '#22c55e',
         'bg-orange-400': '#fb9225', 'bg-red-500': '#ef4444',
         'bg-orange-500': '#f97316',

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class MedicineController extends Controller
 {
@@ -12,13 +14,12 @@ class MedicineController extends Controller
     {
         $query = Medicine::with(['category', 'supplier', 'shelf']);
 
-        // Search by name, generic name, batch number, or barcode
+        // Search by name, generic name, or batch number
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('batch_number', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
+                  ->orWhere('batch_number', 'like', "%{$search}%");
             });
         }
 
@@ -42,7 +43,8 @@ class MedicineController extends Controller
             $query->where('status', $status);
         }
 
-        $medicines = $query->latest()->get();
+        $perPage = (int) $request->input('per_page', 10);
+        $medicines = $query->latest()->paginate($perPage);
 
         return response()->json($medicines);
     }
@@ -64,7 +66,10 @@ class MedicineController extends Controller
             'reorder_level' => 'required|integer|min:0',
             'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        $validated = $this->handleImageUpload($validated, null);
 
         $medicine = Medicine::create($validated);
         return response()->json($medicine->load(['category', 'supplier', 'shelf']), 201);
@@ -81,7 +86,7 @@ class MedicineController extends Controller
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
-            'barcode' => 'nullable|string|max:255|unique:medicines,barcode,' . $medicine->id,
+            'barcode' => ['nullable', 'string', 'max:100', Rule::unique('medicines', 'barcode')->ignore($medicine->id)],
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'shelf_id' => 'nullable|exists:shelves,id',
@@ -92,10 +97,35 @@ class MedicineController extends Controller
             'reorder_level' => 'required|integer|min:0',
             'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        $validated = $this->handleImageUpload($validated, $medicine);
         $medicine->update($validated);
         return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+    }
+
+    /**
+     * Store an uploaded medicine image (if present) on the public disk.
+     * Deletes any previously stored image when updating.
+     */
+    protected function handleImageUpload(array $validated, ?Medicine $medicine = null): array
+    {
+        $request = request();
+
+        if (! $request->hasFile('image')) {
+            return $validated;
+        }
+
+        // Remove a previously stored image when updating
+        if ($medicine && $medicine->image && Storage::disk('public')->exists($medicine->image)) {
+            Storage::disk('public')->delete($medicine->image);
+        }
+
+        $path = $request->file('image')->store('medicine-images', 'public');
+        $validated['image'] = $path;
+
+        return $validated;
     }
 
     public function destroy(Medicine $medicine)

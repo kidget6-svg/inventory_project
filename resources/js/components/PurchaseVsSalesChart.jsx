@@ -16,8 +16,8 @@ export default function PurchaseVsSalesChart({ data, loading = false }) {
                 data: [purchases, sales],
 
                 backgroundColor: [
-                    'rgba(249,115,22,0.85)',
-                    'rgba(34,197,94,0.85)'
+                    'rgba(59,130,246,0.85)',
+                    'rgba(59,130,246,0.85)'
                 ],
 
                 borderRadius: 12,
@@ -60,7 +60,7 @@ export default function PurchaseVsSalesChart({ data, loading = false }) {
     if(loading){
         return(
             <div className="h-72 flex items-center justify-center">
-                Loading...
+                <div className="w-12 h-12 border-4 border-sky-100 border-t-sky-500 rounded-full animate-spin"/>
             </div>
         );
     }
@@ -83,17 +83,18 @@ export default function PurchaseVsSalesChart({ data, loading = false }) {
                 mt-5
                 pt-5
                 border-t
+                border-gray-200
             ">
 
 
                 <div className="
-                    bg-orange-50
+                    bg-sky-50
                     rounded-xl
                     p-4
                     text-center
                 ">
 
-                    <p className="text-orange-600 font-bold text-2xl">
+                    <p className="text-sky-600 font-bold text-2xl">
                         ${purchases.toFixed(2)}
                     </p>
 
@@ -106,13 +107,13 @@ export default function PurchaseVsSalesChart({ data, loading = false }) {
 
 
                 <div className="
-                    bg-green-50
+                    bg-sky-50
                     rounded-xl
                     p-4
                     text-center
                 ">
 
-                    <p className="text-green-600 font-bold text-2xl">
+                    <p className="text-sky-600 font-bold text-2xl">
                         ${sales.toFixed(2)}
                     </p>
 
