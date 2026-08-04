@@ -21,7 +21,7 @@ export default function Categories() {
 
     const load = () => {
         api.get('/categories', { params: { page } })
-            .then(r => { setCategories(r.data.data || r.data); setMeta(r.data.meta || null); })
+            .then(r => { setCategories(r.data.data || r.data); setMeta(r.data); })
             .catch(err => { console.error(err); setError('Failed to load categories'); })
             .finally(() => setLoading(false));
     };

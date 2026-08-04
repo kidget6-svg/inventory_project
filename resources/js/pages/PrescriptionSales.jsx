@@ -46,7 +46,9 @@ export default function PrescriptionSales() {
 
     const removeFromCart = (id) => setCart(prev => prev.filter(i => i.id !== id));
 
-    const totalCalculated = cart.reduce((sum, item) => sum + (parseFloat(item.price) * (item.cartQty || 0)), 0);
+    const priceOf = (m) => Number(m.selling_price ?? m.unit_price ?? 0);
+
+    const totalCalculated = cart.reduce((sum, item) => sum + (priceOf(item) * (item.cartQty || 0)), 0);
 
     const handleSendToCashier = async () => {
         if (cart.length === 0) return window.showToast('Cart is empty', 'error');
@@ -98,7 +100,7 @@ export default function PrescriptionSales() {
                                 <h3 className="font-bold text-gray-800">{med.name}</h3>
                                 <p className="text-xs text-gray-400">{med.category?.name || 'Rx Medicine'}</p>
                                 <div className="mt-3 flex justify-between items-center text-sm">
-                                    <span className="font-bold text-gray-700">${parseFloat(med.price).toFixed(2)}</span>
+                                    <span className="font-bold text-gray-700">${priceOf(med).toFixed(2)}</span>
                                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${med.quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                         Stock: {med.quantity}
                                     </span>
@@ -130,7 +132,7 @@ export default function PrescriptionSales() {
                             <div key={item.id} className="py-3 flex items-center justify-between gap-2">
                                 <div className="flex-1">
                                     <p className="font-semibold text-sm text-gray-800">{item.name}</p>
-                                    <p className="text-xs text-gray-400">${parseFloat(item.price).toFixed(2)} / unit</p>
+                                    <p className="text-xs text-gray-400">${priceOf(item).toFixed(2)} / unit</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input
@@ -142,7 +144,7 @@ export default function PrescriptionSales() {
                                         className="w-14 text-center border border-gray-200 rounded-lg text-sm font-semibold p-1"
                                     />
                                     <span className="text-xs font-bold text-gray-700 min-w-[50px] text-right">
-                                        ${(parseFloat(item.price) * (item.cartQty || 0)).toFixed(2)}
+                                        ${(priceOf(item) * (item.cartQty || 0)).toFixed(2)}
                                     </span>
                                     <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:bg-red-50 p-1 rounded">
                                         <Trash2 size={14} />

@@ -33,7 +33,7 @@ export default function StockMovements() {
             .then(r => {
                 setMedicines(r.data.medicines);
                 setMovements(r.data.movements?.data || r.data.movements || []);
-                setMeta(r.data.movements?.meta || null);
+                setMeta(r.data.movements || null);
             })
             .catch(err => {
                 console.error(err);

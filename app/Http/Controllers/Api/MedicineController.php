@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class MedicineController extends Controller
 {
@@ -51,6 +52,7 @@ class MedicineController extends Controller
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:100|unique:medicines,barcode',
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'quantity' => 'required|integer|min:0',
@@ -80,6 +82,7 @@ class MedicineController extends Controller
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
+            'barcode' => ['nullable', 'string', 'max:100', Rule::unique('medicines', 'barcode')->ignore($medicine->id)],
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'quantity' => 'required|integer|min:0',

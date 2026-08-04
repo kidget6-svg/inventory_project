@@ -44,20 +44,23 @@ class SaleController extends Controller
                     ], 422);
                 }
 
-                $subtotal = $medicine->price * $item['quantity'];
+                $unitPrice = $medicine->selling_price ?? $medicine->unit_price ?? 0;
+                $subtotal = $unitPrice * $item['quantity'];
                 $totalAmount += $subtotal;
 
                 $itemsToCreate[] = [
+                    'medicine_id' => $medicine->id,
                     'itemable_id' => $medicine->id,
                     'itemable_type' => Medicine::class,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $medicine->price,
+                    'unit_price' => $unitPrice,
                     'subtotal' => $subtotal,
                 ];
             }
 
             $sale = Sale::create([
-                'user_id' => $request->user()?->id,
+                'user_id' => $request->user()->id,
+                'sale_date' => now(),
                 'type' => 'prescription',
                 'status' => 'pending_cashier',
                 'total_amount' => $totalAmount,

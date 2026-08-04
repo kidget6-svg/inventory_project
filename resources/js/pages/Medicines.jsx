@@ -55,7 +55,7 @@ export default function Medicines() {
         api.get('/medicines', { params })
             .then(r => {
                 setMedicines(r.data.data || r.data);
-                setMeta(r.data.meta || null);
+                setMeta(r.data);
             })
             .catch(err => { console.error(err); setError('Failed to load medicines'); })
             .finally(() => setLoading(false));

@@ -36,7 +36,7 @@ export default function Suppliers() {
         api.get('/suppliers', { params: { page, search } })
             .then(r => {
                 setSuppliers(r.data.data || r.data);
-                setMeta(r.data.meta || null);
+                setMeta(r.data);
             });
     };
 

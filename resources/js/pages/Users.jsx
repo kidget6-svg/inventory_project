@@ -107,7 +107,7 @@ export default function Users(){
             const response = await api.get("/users", { params: { page, search: search, role: roleFilter } });
 
             setUsers(response.data.data || response.data);
-            setMeta(response.data.meta || null);
+            setMeta(response.data);
 
             setError("");
 

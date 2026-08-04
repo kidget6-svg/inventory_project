@@ -38,7 +38,7 @@ export default function Inventory() {
         api.get('/stock-movements', { params: { page: movementsPage } })
             .then(r => {
                 setMovements(r.data.movements?.data || r.data.movements || []);
-                setMovementsMeta(r.data.movements?.meta || r.data.movements?.meta || null);
+                setMovementsMeta(r.data.movements || null);
             })
             .catch(err => console.error(err));
     };
@@ -56,7 +56,7 @@ export default function Inventory() {
                 .then(r => setMedicines(r.data.data || r.data))
                 .catch(err => console.error(err)),
             api.get('/stock-movements', { params: { page: movementsPage } })
-                .then(r => { setMovements(r.data.movements?.data || r.data.movements || []); setMovementsMeta(r.data.movements?.meta || null); })
+                .then(r => { setMovements(r.data.movements?.data || r.data.movements || []); setMovementsMeta(r.data.movements || null); })
                 .catch(err => console.error(err)),
             api.get('/categories')
                 .then(r => setCategories(r.data))
