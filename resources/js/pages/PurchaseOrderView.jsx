@@ -201,7 +201,7 @@ export default function PurchaseOrderView() {
                             </button>
                         </>
                     )}
-                    {status === 'delivered' && (
+                    {['delivered', 'approved'].includes(status) && (
                         <button
                             onClick={() => handleAction('complete', 'Complete Order')}
                             className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 flex items-center gap-2"

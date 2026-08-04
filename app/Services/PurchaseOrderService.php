@@ -32,6 +32,10 @@ class PurchaseOrderService
      */
     public function sendToSupplier(PurchaseOrder $purchaseOrder): void
     {
+        if (! $purchaseOrder->supplier || ! $purchaseOrder->supplier->email) {
+            throw new \RuntimeException('Supplier does not have an email address.');
+        }
+
         $pdfContent = $this->generatePdf($purchaseOrder);
 
         $adminName = auth()->check()

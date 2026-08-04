@@ -7,6 +7,8 @@ use App\Models\StockMovement;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class PurchaseOrder extends Model
 {
@@ -275,7 +277,7 @@ class PurchaseOrder extends Model
                 $medicine = Medicine::lockForUpdate()->find($item->medicine_id);
 
                 if (! $medicine) {
-                    continue;
+                    throw new \RuntimeException('Medicine not found for order item ' . $item->id);
                 }
 
                 // Check if a stock movement already exists for this PO item
@@ -286,10 +288,10 @@ class PurchaseOrder extends Model
                     ->exists();
 
                 if (! $existingMovement) {
-                    // Increment stock
-                    $medicine->increment('quantity', $item->quantity);
+                    if (! $medicine->increment('quantity', $item->quantity)) {
+                        throw new \RuntimeException('Failed to increment stock for medicine ' . $medicine->id);
+                    }
 
-                    // Create stock movement record
                     StockMovement::create([
                         'medicine_id' => $medicine->id,
                         'type' => 'in',
@@ -300,17 +302,26 @@ class PurchaseOrder extends Model
                 }
             }
 
-            $this->update([
+            if (! $this->update([
                 'status' => 'completed',
                 'completed_at' => now(),
-            ]);
+            ])) {
+                throw new \RuntimeException('Failed to update purchase order status to completed.');
+            }
 
             DB::commit();
 
             return true;
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             DB::rollBack();
-            return false;
+            Log::error('Purchase order completion failed', [
+                'purchase_order_id' => $this->id,
+                'status' => $this->status,
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw $e;
         }
     }
 }

@@ -224,7 +224,6 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
-        // Validate supplier has an email
         if (! $purchaseOrder->supplier || ! $purchaseOrder->supplier->email) {
             return response()->json([
                 'message' => 'Supplier does not have an email address'
@@ -232,17 +231,17 @@ class PurchaseOrderController extends Controller
         }
 
         try {
-            // Generate PDF and send email to supplier synchronously
             $service->sendToSupplier($purchaseOrder);
 
-            // Record the sent timestamp and update status
             $purchaseOrder->send();
 
             return response()->json([
-                'message' => 'Purchase order sent to supplier successfully',
+                'message' => 'Purchase Order emailed successfully.',
                 'purchase_order' => $purchaseOrder->fresh()->load('supplier', 'items.medicine'),
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
                 'message' => 'Error sending purchase order: ' . $e->getMessage()
             ], 500);
@@ -280,6 +279,38 @@ class PurchaseOrderController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error re-sending purchase order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Send the latest Purchase Order PDF to the supplier as an email attachment.
+     */
+    public function sendPdfToSupplier(PurchaseOrder $purchaseOrder, PurchaseOrderService $service)
+    {
+        if (! in_array($purchaseOrder->status, ['pending', 'approved'])) {
+            return response()->json([
+                'message' => 'Cannot send PDF for order in ' . $purchaseOrder->status . ' status'
+            ], 422);
+        }
+
+        if (! $purchaseOrder->supplier || ! $purchaseOrder->supplier->email) {
+            return response()->json([
+                'message' => 'Supplier does not have an email address'
+            ], 422);
+        }
+
+        try {
+            $service->sendToSupplier($purchaseOrder);
+
+            return response()->json([
+                'message' => 'Purchase Order PDF sent successfully.',
+                'purchase_order' => $purchaseOrder->fresh()->load('supplier', 'items.medicine'),
+            ]);
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json([
+                'message' => 'Error sending Purchase Order PDF: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -329,13 +360,14 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
-        $result = $purchaseOrder->complete();
+        try {
+            $purchaseOrder->complete();
 
-        if (! $result) {
-            return response()->json(['message' => 'Error completing order'], 500);
+            return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
+        } catch (\Exception $e) {
+            report($e);
+            return response()->json(['message' => 'Error completing order: ' . $e->getMessage()], 500);
         }
-
-        return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
     }
 
     /**

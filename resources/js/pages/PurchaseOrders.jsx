@@ -59,6 +59,7 @@ export default function PurchaseOrders() {
     const [suppliers, setSuppliers] = useState([]);
     const [medicines, setMedicines] = useState([]);
     const [formLoading, setFormLoading] = useState(false);
+    const [sendingOrderId, setSendingOrderId] = useState(null);
 
     // PDF preview modal state
     const [showPdfPreview, setShowPdfPreview] = useState(false);
@@ -126,6 +127,19 @@ export default function PurchaseOrders() {
         }
     };
 
+    const handleSendPdf = async (order) => {
+        setSendingOrderId(order.id);
+        try {
+            const res = await api.post(`/purchase-orders/${order.id}/send-email`);
+            window.showToast(res.data?.message || 'Purchase Order PDF sent successfully.', 'success');
+            load();
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to send Purchase Order PDF', 'error');
+        } finally {
+            setSendingOrderId(null);
+        }
+    };
+
     /**
      * Preview PDF - fetches base64 PDF and opens the preview modal.
      */
@@ -187,6 +201,16 @@ export default function PurchaseOrders() {
         if (pdfAvailable) {
             actions.push({ icon: FileText, tooltip: 'Generate PDF', color: 'purple', onClick: () => handlePreviewPdf(order) });
             actions.push({ icon: Download, tooltip: 'Download PDF', color: 'sky', onClick: () => handleDownloadPdf(order) });
+        }
+
+        if (['pending', 'approved'].includes(status)) {
+            actions.push({
+                icon: sendingOrderId === order.id ? Loader2 : Send,
+                tooltip: 'Send Purchase Order PDF to Supplier',
+                color: 'sky',
+                onClick: () => handleSendPdf(order),
+                disabled: sendingOrderId === order.id,
+            });
         }
 
         switch (status) {
@@ -371,7 +395,8 @@ export default function PurchaseOrders() {
             setShowModal(false);
             load();
         } catch (err) {
-            window.showToast(err.response?.data?.message || `Failed to ${label.toLowerCase()}`, 'error');
+            const message = err.response?.data?.message || `Failed to ${label.toLowerCase()}`;
+            window.showToast(message, 'error');
         }
     };
 
@@ -433,7 +458,7 @@ export default function PurchaseOrders() {
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-sky-50">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">ID</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">No.</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Supplier</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Date</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Status</th>
@@ -442,15 +467,16 @@ export default function PurchaseOrders() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {orders.map((o) => {
+                                {orders.map((o, idx) => {
                                     const status = o.status?.toLowerCase();
                                     const actions = getActions(o);
+                                    const displayIndex = meta ? ((meta.current_page - 1) * meta.per_page) + idx + 1 : idx + 1;
                                     return (
                                         <tr
                                             key={o.id}
                                             className="border-b hover:bg-sky-50/30"
                                         >
-                                            <td className="px-4 py-3 text-sm">{o.id}</td>
+                                                                    <td className="px-4 py-3 text-sm">{displayIndex}</td>
                                             <td className="px-4 py-3 text-sm">
                                                 <div className="overflow-hidden whitespace-nowrap text-ellipsis truncate">
                                                     {o.supplier?.name || "---"}
