@@ -118,7 +118,6 @@ export default function Reports() {
         );
     }
 
-<<<<<<< HEAD
 const tabs = [
     { key: 'inventory', label: 'Inventory' },
     { key: 'sales', label: 'Sales' },
@@ -128,15 +127,6 @@ const tabs = [
 ];
 
 
-=======
-    const tabs = [
-        { key: 'inventory', label: 'Inventory' },
-        { key: 'sales', label: 'Sales' },
-        { key: 'purchases', label: 'Purchases' },
-        { key: 'lowStock', label: 'Low Stock' },
-        { key: 'expiring', label: 'Expiring' },
-    ];
->>>>>>> b5b4dd71dff8a8a3ca4a27d244782027fdec4668
 
     return (
         <div className="space-y-6">
