@@ -31,46 +31,60 @@ const iconMap = {
 
 const colorClasses = {
     blue: {
-        bg: 'bg-sky-50',
+        bg: 'bg-blue-50',
         border: 'border-blue-500',
         text: 'text-blue-500',
         icon: 'text-blue-500',
         ring: 'ring-blue-200',
     },
-    green: {
-        bg: 'bg-sky-50',
-        border: 'border-blue-500',
-        text: 'text-blue-500',
-        icon: 'text-blue-500',
-        ring: 'ring-blue-200',
+    'sky-blue': {
+        bg: 'bg-green-50',
+        border: 'border-green-500',
+        text: 'text-green-500',
+        icon: 'text-green-500',
+        ring: 'ring-green-200',
     },
-    orange: {
-        bg: 'bg-sky-50',
-        border: 'border-blue-500',
-        text: 'text-blue-500',
-        icon: 'text-blue-500',
-        ring: 'ring-blue-200',
+    'sky-blue': {
+        bg: 'bg-orange-50',
+        border: 'border-orange-500',
+        text: 'text-orange-500',
+        icon: 'text-orange-500',
+        ring: 'ring-orange-200',
     },
-    red: {
-        bg: 'bg-sky-50',
-        border: 'border-blue-500',
-        text: 'text-blue-500',
-        icon: 'text-blue-500',
-        ring: 'ring-blue-200',
+   'sky-blue': {
+        bg: 'bg-red-50',
+        border: 'border-red-500',
+        text: 'text-red-500',
+        icon: 'text-red-500',
+        ring: 'ring-red-200',
     },
-    purple: {
-        bg: 'bg-sky-50',
-        border: 'border-blue-500',
-        text: 'text-blue-500',
-        icon: 'text-blue-500',
-        ring: 'ring-blue-200',
+'sky-blue': {
+        bg: 'bg-purple-50',
+        border: 'border-purple-500',
+        text: 'text-purple-500',
+        icon: 'text-purple-500',
+        ring: 'ring-purple-200',
     },
     teal: {
-        bg: 'bg-sky-50',
-        border: 'border-blue-500',
-        text: 'text-blue-500',
-        icon: 'text-blue-500',
-        ring: 'ring-blue-200',
+        bg: 'bg-teal-50',
+        border: 'border-teal-500',
+        text: 'text-teal-500',
+        icon: 'text-teal-500',
+        ring: 'ring-teal-200',
+    },
+    indigo: {
+        bg: 'bg-indigo-50',
+        border: 'border-indigo-500',
+        text: 'text-indigo-500',
+        icon: 'text-indigo-500',
+        ring: 'ring-indigo-200',
+    },
+    yellow: {
+        bg: 'bg-yellow-50',
+        border: 'border-yellow-500',
+        text: 'text-yellow-500',
+        icon: 'text-yellow-500',
+        ring: 'ring-yellow-200',
     },
 };
 
@@ -87,15 +101,15 @@ export default function StatCard({
     const colors = colorClasses[color] || colorClasses.blue;
 return (
    <div
-    className={`
-       relative overflow-hidden rounded-2xl
-       border border-gray-200
-       bg-white
-       shadow-sm
-       hover:shadow-md
-       transition-all duration-300
-       group
-   `}
+      className={`
+        relative overflow-hidden rounded-2xl
+        border border-gray-200
+        bg-white
+        shadow-sm
+        hover:shadow-md
+        transition-all duration-300
+        group
+    `}
 >
         {/* Colored top bar */}
        <div className={`absolute top-0 left-0 right-0 h-1 ${colors.border.replace('border','bg')}`}></div>
@@ -127,13 +141,13 @@ return (
                 </div>
 
                <div
-    
+
     className={`
         h-16 w-16
         rounded-2xl
         flex items-center justify-center
-        bg-sky-50
-        hover:ring-2 hover:ring-sky-200
+        ${colors.bg}
+        hover:ring-2 hover:${colors.ring}
         group-hover:rotate-12
         group-hover:scale-110
         transition-all duration-300
@@ -190,5 +204,5 @@ return (
 
     </div>
 );
-  
+
 }

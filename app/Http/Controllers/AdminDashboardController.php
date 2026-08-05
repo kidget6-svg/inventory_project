@@ -18,7 +18,7 @@ class AdminDashboardController extends Controller
         // Dashboard Statistics
         $totalProducts = Product::count();
         $totalStock = Batch::sum('quantity');
-        
+
         // Low Stock Products
         $lowStockProducts = Product::with(['batches' => function($query) {
             $query->where('quantity', '>', 0);
@@ -27,40 +27,40 @@ class AdminDashboardController extends Controller
             $query->where('quantity', '<=', DB::raw('reorder_level'));
         })
         ->get();
-        
+
         $lowStockCount = $lowStockProducts->count();
-        
+
         // Expiring Soon (within 30, 60, 90 days)
         $expiring30Days = Batch::with('product')
             ->where('quantity', '>', 0)
             ->whereDate('expiry_date', '>=', now())
             ->whereDate('expiry_date', '<=', now()->addDays(30))
             ->count();
-        
+
         $expiring60Days = Batch::with('product')
             ->where('quantity', '>', 0)
             ->whereDate('expiry_date', '>=', now()->addDays(31))
             ->whereDate('expiry_date', '<=', now()->addDays(60))
             ->count();
-        
+
         $expiring90Days = Batch::with('product')
             ->where('quantity', '>', 0)
             ->whereDate('expiry_date', '>=', now()->addDays(61))
             ->whereDate('expiry_date', '<=', now()->addDays(90))
             ->count();
-        
+
         $expiringCount = $expiring30Days + $expiring60Days + $expiring90Days;
-        
+
         // Today's Sales
         $todaySales = Sale::whereDate('sale_date', today())->get();
         $todaySalesCount = $todaySales->count();
         $todayRevenue = $todaySales->sum('total_amount');
-        
+
         // Monthly Sales
         $monthlySales = Sale::whereMonth('sale_date', now()->month)
             ->whereYear('sale_date', now()->year)
             ->sum('total_amount');
-        
+
         // Top Selling Products
         $topProducts = DB::table('sale_items')
             ->join('products', 'sale_items.product_id', '=', 'products.id')
@@ -69,23 +69,23 @@ class AdminDashboardController extends Controller
             ->orderBy('total_sold', 'desc')
             ->limit(5)
             ->get();
-        
+
         // Controlled Medicines
         $controlledMedicines = Product::where('is_controlled', true)->count();
-        
+
         // Total Suppliers
         $totalSuppliers = Supplier::count();
-        
+
         // Pending Orders
         $pendingOrders = PurchaseOrder::where('status', 'pending')->count();
-        
+
         // Stock Value
         $stockValue = Batch::with('product')
             ->get()
             ->sum(function($batch) {
                 return $batch->quantity * ($batch->unit_cost ?? 0);
             });
-        
+
         // Recent Activities (if audit_logs table exists)
         $recentActivities = [];
         if (DB::table('audit_logs')->exists()) {
@@ -96,7 +96,7 @@ class AdminDashboardController extends Controller
                 ->limit(10)
                 ->get();
         }
-        
+
         // Pass all data to the view
         return view('admin.dashboard', compact(
             'totalProducts',

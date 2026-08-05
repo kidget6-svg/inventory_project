@@ -6,15 +6,16 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::table('users', function (Blueprint $table) {
+   public function up(): void
+{
+    Schema::table('users', function (Blueprint $table) {
+        if (!Schema::hasColumn('users', 'status')) {
             $table->string('status')
                   ->default('pending')
                   ->after('role');
-        });
-    }
-
+        }
+    });
+}
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {

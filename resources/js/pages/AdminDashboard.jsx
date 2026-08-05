@@ -143,24 +143,10 @@ export default function AdminDashboard() {
         <>
             {/* â”€â”€ Summary Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                <StatCard value={data.totalProducts} label="Total Medicines" color="blue" />
-                <StatCard value={data.totalStock} label="Total Stock Units" color="green" />
-                <StatCard value={data.lowStockCount} label="Low Stock" color="red" />
-                <StatCard value={data.expiredCount} label="Expired Medicines" color="orange" />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                <StatCard value={data.todaySalesCount} label="Today's Sales" color="green" />
-                <StatCard value={`$${Number(data.todayRevenue || 0).toFixed(2)}`} label="Today's Revenue" color="blue" />
-                <StatCard value={`$${Number(data.totalRevenue || 0).toFixed(2)}`} label="Total Revenue" color="purple" />
-                <StatCard value={data.totalSuppliers} label="Suppliers" color="orange" />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                <StatCard value={data.totalUsers} label="Total Users" color="indigo" />
-                <StatCard value={data.pharmacistCount} label="Pharmacists" color="green" />
-                <StatCard value={data.cashierCount} label="Cashiers" color="orange" />
-                <StatCard value={data.pendingUsersCount} label="Pending Approvals" color="yellow" />
+                <StatCard value={data.totalUsers} label="Total Users" icon="users" color="indigo" />
+                <StatCard value={data.totalProducts} label="Total Medicines" icon="package" color="green" />
+                <StatCard value={`$${Number(data.totalRevenue || 0).toFixed(2)}`} label="Total Sales" icon="banknote" color="purple" />
+                <StatCard value={data.lowStockCount} label="Low Stock Medicines" icon="alert" color="red" />
             </div>
 
             {/* â”€â”€ Charts: Sales & Revenue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
