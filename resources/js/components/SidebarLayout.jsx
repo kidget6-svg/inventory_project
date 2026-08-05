@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import logo from '../assets/pharmacy-logo.jpg';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-    LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
-    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
+import {
+    LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign,
+    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users,
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
     ShoppingBag, FileText
 } from 'lucide-react';
@@ -52,10 +53,10 @@ const cashierMenu = [
     { to: '/medicines', label: 'Medicines', icon: Pill },
 ];
 
-const menuByRole = { 
-    admin: adminMenu, 
-    pharmacist: pharmacistMenu, 
-    cashier: cashierMenu 
+const menuByRole = {
+    admin: adminMenu,
+    pharmacist: pharmacistMenu,
+    cashier: cashierMenu
 };
 
 function getMenu(role) {
@@ -115,7 +116,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                 <div className="p-5 border-b border-sky-200 flex items-center justify-between">
                     <div className={`flex items-center gap-3 min-w-0 ${collapsed ? 'md:justify-center md:w-full' : ''}`}>
                         <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-                            <Pill size={20} className="text-sky-500" />
+                            <img src={logo} alt="PharmaSys Logo" className="w-full h-full object-cover rounded-lg" />
                         </div>
                         {!collapsed && (
                             <div className="min-w-0">
@@ -230,9 +231,9 @@ export default function SidebarLayout({ children, pageTitle }) {
             </main>
 
             {sidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" 
-                    onClick={() => setSidebarOpen(false)} 
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
+                    onClick={() => setSidebarOpen(false)}
                 />
             )}
         </div>

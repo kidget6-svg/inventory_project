@@ -66,7 +66,7 @@ class PurchaseOrderTest extends TestCase
         $response = $this->actingAs($user)->getJson('/purchase-orders');
 
         $response->assertOk()
-            ->assertJsonCount(3);
+            ->assertJsonCount(3, 'data');
     }
 
     public function test_admin_can_create_a_purchase_order()
