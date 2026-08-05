@@ -295,8 +295,24 @@ class DashboardController extends Controller
 
         $pendingPOs           = PurchaseOrder::where('status', 'pending')->count();
 
-        $todaySalesCount      = Sale::whereDate('sale_date', today())->count();
-        $todayRevenue         = Sale::whereDate('sale_date', today())->sum('total_amount');
+        $todaySalesCount      = Sale::whereDate('sale_date', today())
+            ->where('status', 'completed')->count();
+        $todayRevenue         = Sale::whereDate('sale_date', today())
+            ->where('status', 'completed')->sum('total_amount');
+
+        $cashPayments         = (float) Sale::whereDate('sale_date', today())
+            ->where('status', 'completed')
+            ->where('payment_method', Sale::PAYMENT_CASH)
+            ->sum('total_amount');
+        $telebirrPayments     = (float) Sale::whereDate('sale_date', today())
+            ->where('status', 'completed')
+            ->where('payment_method', Sale::PAYMENT_TELEBIRR)
+            ->sum('total_amount');
+        $bankPayments         = (float) Sale::whereDate('sale_date', today())
+            ->where('status', 'completed')
+            ->whereIn('payment_method', Sale::bankPaymentMethods())
+            ->sum('total_amount');
+        $totalTransactions    = Sale::where('status', 'completed')->count();
 
         $salesAnalytics       = $this->salesAnalytics();
         $purchaseVsSales      = $this->purchaseVsSales();
@@ -335,6 +351,12 @@ class DashboardController extends Controller
             'pharmacistCount'        => User::where('role', 'pharmacist')->count(),
             'cashierCount'           => User::where('role', 'cashier')->count(),
             'pendingUsersCount'      => User::where('status', 'pending')->count(),
+
+            // ---- Sales payment breakdown cards ----
+            'cashPayments'           => $cashPayments,
+            'telebirrPayments'       => $telebirrPayments,
+            'bankPayments'           => $bankPayments,
+            'totalTransactions'      => $totalTransactions,
 
             // ---- Lists ----
             'lowStockMedicines'      => $lowStockMedicines,

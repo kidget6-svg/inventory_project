@@ -28,7 +28,7 @@ Route::post('/register', [AuthController::class, 'register']);
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:sanctum', 'approved'])->group(function () {
-    
+
     // Account & Dashboard
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
@@ -58,10 +58,10 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
         Route::get('/medicines', [MedicineController::class, 'index']);
         Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
-        
+
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
-        
+
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
     });
@@ -97,6 +97,17 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
         Route::get('/sales/stats', [SaleController::class, 'getStats']);
 
+        // Receipt & PDF routes
+        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
+        Route::get('/sales/{sale}/receipt/pdf', [SaleController::class, 'download']);
+        Route::get('/sales/{sale}/receipt/print', [SaleController::class, 'print']);
+
         Route::apiResource('retail-products', RetailProductController::class);
+    });
+
+    // Admin-only: Sales History & Export
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/sales/history', [SaleController::class, 'history']);
+        Route::get('/sales/export', [SaleController::class, 'export']);
     });
 });

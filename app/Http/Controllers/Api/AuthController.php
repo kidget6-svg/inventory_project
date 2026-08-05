@@ -14,29 +14,29 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        // Log the login attempt
+        $credentials = $request->only(['email', 'password']);
+
         Log::info('=== LOGIN ATTEMPT ===');
-        Log::info('Email received:', ['email' => $request->email]);
-        Log::info('Password received:', ['password' => $request->password]);
+        Log::info('Email received:', ['email' => $credentials['email'] ?? null]);
+        Log::info('Password received:', ['password' => $credentials['password'] ?? null]);
 
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
 
-        // Find user by email
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $credentials['email'])->first();
 
         Log::info('User found:', ['exists' => $user ? 'YES' : 'NO']);
 
         if (!$user) {
-            Log::warning('User not found:', ['email' => $request->email]);
+            Log::warning('User not found:', ['email' => $credentials['email']]);
+
             return response()->json([
-                'message' => 'Invalid email or password'
+                'message' => 'Invalid email or password',
             ], 401);
         }
 
-        // Log user details
         Log::info('User details:', [
             'id' => $user->id,
             'name' => $user->name,
@@ -45,38 +45,47 @@ class AuthController extends Controller
             'status' => $user->status,
         ]);
 
-        // Check password
-        $passwordMatch = Hash::check($request->password, $user->password);
+        $passwordMatch = Hash::check($credentials['password'], $user->password);
         Log::info('Password check:', ['matches' => $passwordMatch ? 'YES' : 'NO']);
 
         if (!$passwordMatch) {
-            Log::warning('Password mismatch for user:', ['email' => $request->email]);
+            Log::warning('Password mismatch for user:', ['email' => $credentials['email']]);
+
             return response()->json([
-                'message' => 'Invalid email or password'
+                'message' => 'Invalid email or password',
             ], 401);
         }
 
-        // Check if user is approved
         if (!$user->isApproved()) {
-            $message = $user->isPending() 
-                ? 'Your account is pending approval. Please wait for admin approval.' 
+            $message = $user->isPending()
+                ? 'Your account is pending approval. Please wait for admin approval.'
                 : 'Your account has been rejected. Please contact an administrator.';
-            
+
             Log::warning('User not approved:', [
-                'email' => $request->email,
-                'status' => $user->status
+                'email' => $credentials['email'],
+                'status' => $user->status,
             ]);
-            
+
             return response()->json([
                 'message' => $message,
-                'status' => $user->status
+                'status' => $user->status,
             ], 403);
         }
 
-        // Create Sanctum token
-        $token = $user->createToken('auth_token')->plainTextToken;
+        try {
+            $token = $user->createToken('auth_token')->plainTextToken;
+        } catch (\Throwable $e) {
+            Log::error('Sanctum token creation failed during login.', [
+                'email' => $credentials['email'],
+                'exception' => $e->getMessage(),
+            ]);
 
-        Log::info('Login SUCCESS:', ['email' => $request->email]);
+            return response()->json([
+                'message' => 'Authentication succeeded but the session token could not be created.',
+            ], 500);
+        }
+
+        Log::info('Login SUCCESS:', ['email' => $credentials['email']]);
 
         return response()->json([
             'message' => 'Login successful',

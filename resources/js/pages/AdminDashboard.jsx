@@ -141,7 +141,7 @@ export default function AdminDashboard() {
 
     return (
         <>
-            {/* â”€â”€ Summary Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
                 <StatCard value={data.totalProducts} label="Total Medicines" color="blue" />
                 <StatCard value={data.totalStock} label="Total Stock Units" color="green" />
@@ -156,6 +156,14 @@ export default function AdminDashboard() {
                 <StatCard value={data.totalSuppliers} label="Suppliers" color="orange" />
             </div>
 
+            {/* Sales Payment Breakdown Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+                <StatCard value={`$${Number(data.cashPayments || 0).toFixed(2)}`} label="Cash Payments" color="green" />
+                <StatCard value={`$${Number(data.telebirrPayments || 0).toFixed(2)}`} label="Telebirr Payments" color="blue" />
+                <StatCard value={`$${Number(data.bankPayments || 0).toFixed(2)}`} label="Bank Payments" color="purple" />
+                <StatCard value={data.totalTransactions} label="Total Transactions" color="orange" />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
                 <StatCard value={data.totalUsers} label="Total Users" color="indigo" />
                 <StatCard value={data.pharmacistCount} label="Pharmacists" color="green" />
@@ -163,7 +171,7 @@ export default function AdminDashboard() {
                 <StatCard value={data.pendingUsersCount} label="Pending Approvals" color="yellow" />
             </div>
 
-            {/* â”€â”€ Charts: Sales & Revenue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* Charts: Sales & Revenue */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 <BarChart
                     title="Sales (Last 7 Days)"
@@ -181,7 +189,7 @@ export default function AdminDashboard() {
                 />
             </div>
 
-            {/* â”€â”€ Inventory Status Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* Inventory Status Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 <PieChart
                     title="Inventory by Category"
@@ -198,7 +206,7 @@ export default function AdminDashboard() {
                 />
             </div>
 
-            {/* â”€â”€ Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* Notifications */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 {/* Low Stock Notifications */}
                 <div className="bg-white rounded-xl p-5 shadow-sm">
@@ -222,7 +230,7 @@ export default function AdminDashboard() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-gray-400 text-center py-5">âœ“ No low-stock medicines</p>
+                        <p className="text-gray-400 text-center py-5">No low-stock medicines</p>
                     )}
                 </div>
 
@@ -245,7 +253,7 @@ export default function AdminDashboard() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-gray-400 text-center py-5">âœ“ No expired medicines</p>
+                        <p className="text-gray-400 text-center py-5">No expired medicines</p>
                     )}
                 </div>
             </div>
@@ -271,7 +279,7 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            {/* â”€â”€ Recent Activities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* Recent Activities */}
             <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
                 <h3 className="text-base font-semibold text-gray-700 mb-3 pb-3 border-b border-blue-50 flex items-center gap-2">
                     <Clock size={18} className="text-blue-500" />
@@ -297,7 +305,7 @@ export default function AdminDashboard() {
                 )}
             </div>
 
-            {/* â”€â”€ Quick Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* Quick Actions */}
             <div className="bg-white rounded-xl p-5 shadow-sm mb-6">
                 <h3 className="text-base font-semibold text-gray-700 mb-3">Quick Actions</h3>
                 <div className="flex flex-wrap gap-3">
@@ -311,15 +319,15 @@ export default function AdminDashboard() {
                         + New Purchase Order
                     </Link>
                     <Link to="/reports" className="px-4 py-2 border border-blue-500 text-blue-500 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1">
-                        ðŸ“Š Generate Report
+                        Generate Report
                     </Link>
-                    <Link to="/sales" className="px-4 py-2 border border-green-500 text-green-600 rounded-lg text-sm font-semibold hover:bg-green-50 transition-colors flex items-center gap-1">
-                        + New Sale
+                    <Link to="/sales-history" className="px-4 py-2 border border-green-500 text-green-600 rounded-lg text-sm font-semibold hover:bg-green-50 transition-colors flex items-center gap-1">
+                        Sales History
                     </Link>
                 </div>
             </div>
 
-            {/* â”€â”€ Pending User Registrations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            {/* Pending User Registrations */}
             <div className="bg-white rounded-xl p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-semibold text-gray-700 flex items-center gap-2">
@@ -330,7 +338,7 @@ export default function AdminDashboard() {
                         to="/users"
                         className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                     >
-                        View all users â†’
+                        View all users
                     </Link>
                 </div>
 

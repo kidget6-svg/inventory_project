@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
+import { Download, FileText, BarChart3 } from 'lucide-react';
 
 export default function Reports() {
     const [data, setData] = useState(null);
@@ -94,28 +95,28 @@ export default function Reports() {
     );
 
    const inventoryData = useMemo(
-     () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
-     [data, searchTerm, sortKey, sortDirection]
+      () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
+      [data, searchTerm, sortKey, sortDirection]
    );
 
    const salesData = useMemo(
-     () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
-     [data, searchTerm, sortKey, sortDirection]
+      () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
+      [data, searchTerm, sortKey, sortDirection]
    );
 
    const purchasesData = useMemo(
-     () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
-     [data, searchTerm, sortKey, sortDirection]
+      () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
+      [data, searchTerm, sortKey, sortDirection]
    );
 
    const lowStockData = useMemo(
-     () => filterAndSort(data?.lowStock || [], ['name']),
-     [data, searchTerm, sortKey, sortDirection]
+      () => filterAndSort(data?.lowStock || [], ['name']),
+      [data, searchTerm, sortKey, sortDirection]
    );
 
    const expiringData = useMemo(
-     () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
-     [data, searchTerm, sortKey, sortDirection]
+      () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
+      [data, searchTerm, sortKey, sortDirection]
    );
 
     if (!data) {
@@ -134,6 +135,13 @@ export default function Reports() {
         { key: 'expiring', label: 'Expiring' },
     ];
 
+    const handleExport = (type, format) => {
+        const params = new URLSearchParams();
+        params.append('type', type);
+        params.append('format', format);
+        window.open(`${import.meta.env.VITE_API_URL || ''}/api/sales/export?${params.toString()}`, '_blank');
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex gap-2 mb-5 flex-wrap">
@@ -143,6 +151,63 @@ export default function Reports() {
                         {t.label}
                     </button>
                 ))}
+            </div>
+
+            {/* Export Buttons */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <BarChart3 size={16} /> Export Reports
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <button
+                        onClick={() => handleExport('sales', 'pdf')}
+                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                    >
+                        <FileText size={14} /> Sales Report (PDF)
+                    </button>
+                    <button
+                        onClick={() => handleExport('sales', 'csv')}
+                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                    >
+                        <Download size={14} /> Sales Report (CSV)
+                    </button>
+                    <button
+                        onClick={() => handleExport('daily', 'pdf')}
+                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                    >
+                        <FileText size={14} /> Daily Report (PDF)
+                    </button>
+                    <button
+                        onClick={() => handleExport('daily', 'csv')}
+                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                    >
+                        <Download size={14} /> Daily Report (CSV)
+                    </button>
+                    <button
+                        onClick={() => handleExport('monthly', 'pdf')}
+                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                    >
+                        <FileText size={14} /> Monthly Report (PDF)
+                    </button>
+                    <button
+                        onClick={() => handleExport('monthly', 'csv')}
+                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                    >
+                        <Download size={14} /> Monthly Report (CSV)
+                    </button>
+                    <button
+                        onClick={() => handleExport('payment_method', 'pdf')}
+                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                    >
+                        <FileText size={14} /> Payment Method (PDF)
+                    </button>
+                    <button
+                        onClick={() => handleExport('payment_method', 'csv')}
+                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                    >
+                        <Download size={14} /> Payment Method (CSV)
+                    </button>
+                </div>
             </div>
 
             {/* Search bar */}

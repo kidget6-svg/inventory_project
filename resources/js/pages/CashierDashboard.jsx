@@ -1,12 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { CheckCircle, Clock, ChevronDown, RefreshCw, DollarSign } from 'lucide-react';
+import Modal from '../components/Modal';
+import { CheckCircle, Clock, ChevronDown, RefreshCw, DollarSign, CreditCard, Smartphone, Building, Banknote, Receipt, Download, Printer, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+const PAYMENT_METHODS = [
+    { value: 'cash', label: 'Cash', icon: Banknote },
+    { value: 'telebirr', label: 'Telebirr', icon: Smartphone },
+    { value: 'cbe', label: 'Commercial Bank of Ethiopia (CBE)', icon: Building },
+    { value: 'boa', label: 'Bank of Abyssinia (BOA)', icon: Building },
+    { value: 'awash', label: 'Awash Bank', icon: Building },
+    { value: 'dashen', label: 'Dashen Bank', icon: Building },
+    { value: 'coop', label: 'Cooperative Bank of Oromia (Coop)', icon: Building },
+    { value: 'wegagen', label: 'Wegagen Bank', icon: Building },
+    { value: 'card', label: 'Credit/Debit Card', icon: CreditCard },
+    { value: 'other', label: 'Other', icon: DollarSign },
+];
 
 export default function CashierDashboard() {
     const [pendingSales, setPendingSales] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedSale, setSelectedSale] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [amountPaid, setAmountPaid] = useState('');
+    const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+    const [completedSale, setCompletedSale] = useState(null);
+    const navigate = useNavigate();
 
     const fetchPendingSales = async () => {
         setLoading(true);
@@ -24,18 +46,78 @@ export default function CashierDashboard() {
         fetchPendingSales();
     }, []);
 
-    const handleConfirmPayment = async (saleId) => {
-        setProcessingId(saleId);
+    const openPaymentModal = (sale) => {
+        setSelectedSale(sale);
+        setPaymentMethod('cash');
+        setAmountPaid(parseFloat(sale.total_amount).toFixed(2));
+        setPaymentModalOpen(true);
+    };
+
+    const closePaymentModal = () => {
+        setPaymentModalOpen(false);
+        setSelectedSale(null);
+    };
+
+    const handleCompleteSale = async () => {
+        if (!selectedSale) return;
+
+        const total = parseFloat(selectedSale.total_amount);
+        const paid = parseFloat(amountPaid);
+        const isCash = paymentMethod === 'cash';
+
+        if (paid < total) {
+            window.showToast('Amount paid cannot be less than the total amount', 'error');
+            return;
+        }
+
+        setProcessingId(selectedSale.id);
         try {
-            await api.patch(`/sales/${saleId}/status`, { status: 'completed' });
-            window.showToast(`Order #${saleId} payment completed!`, 'success');
-            setPendingSales(prev => prev.filter(sale => sale.id !== saleId));
+            const response = await api.patch(`/sales/${selectedSale.id}/status`, {
+                status: 'completed',
+                payment_method: paymentMethod,
+                amount_paid: paid,
+                change_amount: isCash ? paid - total : 0,
+            });
+
+            const sale = response.data.sale;
+            setCompletedSale(sale);
+            setPaymentModalOpen(false);
+            setSuccessDialogOpen(true);
+            setPendingSales(prev => prev.filter(s => s.id !== selectedSale.id));
+            window.showToast('Payment completed successfully!', 'success');
         } catch (err) {
-            window.showToast('Failed to finalize payment', 'error');
+            window.showToast('Failed to complete payment', 'error');
         } finally {
             setProcessingId(null);
         }
     };
+
+    const handleViewReceipt = () => {
+        if (completedSale) {
+            navigate(`/receipt/${completedSale.id}`);
+        }
+    };
+
+    const handleDownloadPdf = () => {
+        if (completedSale) {
+            window.open(`${import.meta.env.VITE_API_URL || ''}/api/sales/${completedSale.id}/receipt/pdf`, '_blank');
+        }
+    };
+
+    const handlePrintReceipt = () => {
+        if (completedSale) {
+            window.open(`${import.meta.env.VITE_API_URL || ''}/api/sales/${completedSale.id}/receipt/print`, '_blank');
+        }
+    };
+
+    const handleCloseSuccess = () => {
+        setSuccessDialogOpen(false);
+        setCompletedSale(null);
+    };
+
+    const changeAmount = paymentMethod === 'cash'
+        ? Math.max(0, parseFloat(amountPaid) - parseFloat(selectedSale?.total_amount || 0))
+        : 0;
 
     if (loading) return <LoadingSpinner text="Fetching cashier queue..." />;
 
@@ -103,17 +185,200 @@ export default function CashierDashboard() {
                                     <p className="text-xl font-bold text-green-600">${parseFloat(sale.total_amount).toFixed(2)}</p>
                                 </div>
                                 <button
-                                    onClick={() => handleConfirmPayment(sale.id)}
-                                    disabled={processingId === sale.id}
-                                    className="btn-primary px-4 py-2 text-xs flex items-center gap-1.5 disabled:opacity-50"
+                                    onClick={() => openPaymentModal(sale)}
+                                    className="btn-primary px-4 py-2 text-xs flex items-center gap-1.5"
                                 >
-                                    <CheckCircle size={14} /> Accept Payment
+                                    <DollarSign size={14} /> Complete Sale
                                 </button>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
+
+            {/* Payment Method Selection Modal */}
+            <Modal
+                open={paymentModalOpen}
+                onClose={closePaymentModal}
+                title="Complete Sale"
+                size="max-w-md"
+            >
+                {selectedSale && (
+                    <div className="space-y-4">
+                        <div className="bg-gray-50 rounded-lg p-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-gray-500">Order Ref</span>
+                                <span className="font-bold text-gray-800">#{selectedSale.id}</span>
+                            </div>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-gray-500">Total Amount</span>
+                                <span className="text-xl font-bold text-green-600">${parseFloat(selectedSale.total_amount).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-500">Customer</span>
+                                <span className="text-sm text-gray-700">{selectedSale.customer_name || 'Walk-in Customer'}</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-2">
+                                Select Payment Method
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {PAYMENT_METHODS.map(pm => {
+                                    const Icon = pm.icon;
+                                    return (
+                                        <button
+                                            key={pm.value}
+                                            type="button"
+                                            onClick={() => setPaymentMethod(pm.value)}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                                                paymentMethod === pm.value
+                                                    ? 'bg-sky-500 text-white ring-2 ring-sky-500'
+                                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                            }`}
+                                        >
+                                            <Icon size={14} />
+                                            {pm.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {paymentMethod === 'cash' && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">
+                                    Amount Paid
+                                </label>
+                                <input
+                                    type="number"
+                                    min={parseFloat(selectedSale.total_amount).toFixed(2)}
+                                    step="0.01"
+                                    value={amountPaid}
+                                    onChange={(e) => setAmountPaid(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                                />
+                                {changeAmount > 0 && (
+                                    <div className="mt-2 text-sm text-gray-600">
+                                        Change to return: <span className="font-bold text-green-600">${changeAmount.toFixed(2)}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={closePaymentModal}
+                                className="flex-1 btn-secondary px-4 py-2 text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCompleteSale}
+                                disabled={processingId === selectedSale?.id}
+                                className="flex-1 btn-primary px-4 py-2 text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            >
+                                {processingId === selectedSale?.id ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <CheckCircle size={14} />
+                                )}
+                                Confirm Payment
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Payment Success Dialog */}
+            <Modal
+                open={successDialogOpen}
+                onClose={handleCloseSuccess}
+                title="Payment Successful"
+                size="max-w-lg"
+            >
+                {completedSale && (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto">
+                            <CheckCircle size={28} className="text-green-600" />
+                        </div>
+
+                        <div className="text-center">
+                            <h3 className="text-lg font-bold text-gray-800 mb-1">✓ Payment Successful</h3>
+                            <p className="text-sm text-gray-500">The sale has been completed successfully.</p>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Sale Number</span>
+                                <span className="text-sm font-medium text-gray-800">#{completedSale.id}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Date & Time</span>
+                                <span className="text-sm font-medium text-gray-800">
+                                    {new Date(completedSale.sale_date).toLocaleString()}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Cashier</span>
+                                <span className="text-sm font-medium text-gray-800">{completedSale.cashier_name || 'Unknown'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Customer</span>
+                                <span className="text-sm font-medium text-gray-800">{completedSale.customer_name || 'Walk-in Customer'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Total Amount</span>
+                                <span className="text-sm font-medium text-gray-800">${parseFloat(completedSale.total_amount).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Payment Method</span>
+                                <span className="text-sm font-medium text-gray-800">{completedSale.payment_method_label || completedSale.payment_method}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Amount Paid</span>
+                                <span className="text-sm font-medium text-gray-800">${parseFloat(completedSale.amount_paid || completedSale.total_amount).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-gray-500">Change</span>
+                                <span className="text-sm font-medium text-green-600">${parseFloat(completedSale.change_amount || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between border-t pt-2">
+                                <span className="text-xs text-gray-500">Receipt Number</span>
+                                <span className="text-sm font-medium text-gray-800">{completedSale.receipt_number || 'N/A'}</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                            <button
+                                onClick={handleViewReceipt}
+                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                            >
+                                <Receipt size={14} /> View Receipt
+                            </button>
+                            <button
+                                onClick={handleDownloadPdf}
+                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                            >
+                                <Download size={14} /> Download PDF
+                            </button>
+                            <button
+                                onClick={handlePrintReceipt}
+                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                            >
+                                <Printer size={14} /> Print Receipt
+                            </button>
+                            <button
+                                onClick={handleCloseSuccess}
+                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                            >
+                                <X size={14} /> Close
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 }

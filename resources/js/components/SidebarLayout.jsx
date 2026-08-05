@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-    LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
-    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
+import {
+    LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign,
+    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users,
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText
+    ShoppingBag, FileText, Receipt
 } from 'lucide-react';
 
 const adminMenu = [
@@ -21,6 +21,7 @@ const adminMenu = [
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
     { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
     { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
+    { to: '/sales-history', label: 'Sales History', icon: Receipt },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
     { section: 'Reports' },
     { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
@@ -52,10 +53,10 @@ const cashierMenu = [
     { to: '/medicines', label: 'Medicines', icon: Pill },
 ];
 
-const menuByRole = { 
-    admin: adminMenu, 
-    pharmacist: pharmacistMenu, 
-    cashier: cashierMenu 
+const menuByRole = {
+    admin: adminMenu,
+    pharmacist: pharmacistMenu,
+    cashier: cashierMenu
 };
 
 function getMenu(role) {
@@ -230,9 +231,9 @@ export default function SidebarLayout({ children, pageTitle }) {
             </main>
 
             {sidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" 
-                    onClick={() => setSidebarOpen(false)} 
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
+                    onClick={() => setSidebarOpen(false)}
                 />
             )}
         </div>

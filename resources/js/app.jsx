@@ -23,10 +23,12 @@ import LowStock from './pages/LowStock';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import ReceiptPage from './pages/ReceiptPage';
+import SalesHistory from './pages/SalesHistory';
 
 function ProtectedRoute({ children, roles, title }) {
     const { user, loading } = useAuth();
-    
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen text-sky-500 font-semibold text-lg">
@@ -34,15 +36,15 @@ function ProtectedRoute({ children, roles, title }) {
             </div>
         );
     }
-    
+
     if (!user) {
         return <Navigate to="/login" replace />;
     }
-    
+
     if (roles && !roles.includes(user.role)) {
         return <Navigate to="/dashboard" replace />;
     }
-    
+
     return <SidebarLayout pageTitle={title}>{children}</SidebarLayout>;
 }
 
@@ -115,6 +117,16 @@ function App() {
             } />
             {/* Redirect legacy /sales path to prescription-sales */}
             <Route path="/sales" element={<Navigate to="/prescription-sales" replace />} />
+
+            {/* Receipt Page */}
+            <Route path="/receipt/:id" element={
+                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Receipt"><ReceiptPage /></ProtectedRoute>
+            } />
+
+            {/* Admin-only: Sales History */}
+            <Route path="/sales-history" element={
+                <ProtectedRoute roles={['admin']} title="Sales History"><SalesHistory /></ProtectedRoute>
+            } />
 
             {/* Reports & Tracking */}
             <Route path="/stock-movements" element={

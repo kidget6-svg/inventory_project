@@ -23,8 +23,15 @@ export default function Login() {  // ← Make sure this is here
             await login(form.email, form.password);
             navigate('/dashboard');
         } catch (err) {
-            const msgs = err.response?.data?.errors;
-            setError(msgs ? Object.values(msgs).flat().join(' ') : 'Invalid email or password');
+            const backendMessage = err.response?.data?.message;
+            const validationErrors = err.response?.data?.errors;
+            const message = backendMessage
+                ? backendMessage
+                : validationErrors
+                    ? Object.values(validationErrors).flat().join(' ')
+                    : 'Invalid email or password';
+
+            setError(message);
         } finally {
             setLoading(false);
         }
