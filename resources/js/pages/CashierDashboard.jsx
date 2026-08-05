@@ -18,6 +18,19 @@ const PAYMENT_METHODS = [
     { value: 'other', label: 'Other', icon: DollarSign },
 ];
 
+const PAYMENT_LABELS = {
+    cash: 'Cash',
+    telebirr: 'Telebirr',
+    cbe: 'Commercial Bank of Ethiopia (CBE)',
+    boa: 'Bank of Abyssinia (BOA)',
+    awash: 'Awash Bank',
+    dashen: 'Dashen Bank',
+    coop: 'Cooperative Bank of Oromia (Coop)',
+    wegagen: 'Wegagen Bank',
+    card: 'Credit/Debit Card',
+    other: 'Other',
+};
+
 export default function CashierDashboard() {
     const [pendingSales, setPendingSales] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -311,11 +324,11 @@ export default function CashierDashboard() {
 
                         <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                             <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Sale Number</span>
-                                <span className="text-sm font-medium text-gray-800">#{completedSale.id}</span>
+                                <span className="text-xs text-gray-500">Receipt Number</span>
+                                <span className="text-sm font-medium text-gray-800">{completedSale.receipt_number || `#${completedSale.id}`}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Date & Time</span>
+                                <span className="text-xs text-gray-500">Date &amp; Time</span>
                                 <span className="text-sm font-medium text-gray-800">
                                     {new Date(completedSale.sale_date).toLocaleString()}
                                 </span>
@@ -334,7 +347,7 @@ export default function CashierDashboard() {
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-xs text-gray-500">Payment Method</span>
-                                <span className="text-sm font-medium text-gray-800">{completedSale.payment_method_label || completedSale.payment_method}</span>
+                                <span className="text-sm font-medium text-gray-800">{PAYMENT_LABELS[completedSale.payment_method] || completedSale.payment_method}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-xs text-gray-500">Amount Paid</span>
@@ -343,10 +356,6 @@ export default function CashierDashboard() {
                             <div className="flex justify-between">
                                 <span className="text-xs text-gray-500">Change</span>
                                 <span className="text-sm font-medium text-green-600">${parseFloat(completedSale.change_amount || 0).toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between border-t pt-2">
-                                <span className="text-xs text-gray-500">Receipt Number</span>
-                                <span className="text-sm font-medium text-gray-800">{completedSale.receipt_number || 'N/A'}</span>
                             </div>
                         </div>
 
