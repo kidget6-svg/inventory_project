@@ -28,9 +28,29 @@ class UserController extends Controller
             $query->where('role', $role);
         }
 
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
         $users = $query->orderBy('created_at', 'desc')->paginate(10);
 
         return response()->json($users);
+    }
+
+    /**
+     * User counts summary (admin only).
+     */
+    public function stats()
+    {
+        return response()->json([
+            'total' => User::count(),
+            'pending' => User::where('status', User::STATUS_PENDING)->count(),
+            'approved' => User::where('status', User::STATUS_APPROVED)->count(),
+            'rejected' => User::where('status', User::STATUS_REJECTED)->count(),
+            'admins' => User::where('role', 'admin')->count(),
+            'pharmacists' => User::where('role', 'pharmacist')->count(),
+            'cashiers' => User::where('role', 'cashier')->count(),
+        ]);
     }
 
     /**
