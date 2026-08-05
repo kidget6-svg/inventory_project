@@ -84,6 +84,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
         Route::get('/low-stock', [LowStockController::class, 'index']);
+        Route::post('/low-stock/order-now/{medicine}', [LowStockController::class, 'orderNow']);
         Route::get('/reports', [ReportController::class, 'index']);
     });
 
@@ -92,6 +93,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // --------------------------------------------------------------------
     Route::middleware('role:admin,cashier,pharmacist')->group(function () {
         Route::get('/sales', [SaleController::class, 'index']);
+        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
         Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
         Route::get('/sales/today', [SaleController::class, 'getTodaySales']);

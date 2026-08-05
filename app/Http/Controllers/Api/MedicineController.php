@@ -66,6 +66,9 @@ class MedicineController extends Controller
             'reorder_level' => 'required|integer|min:0',
             'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
+            'description' => 'nullable|string',
+            'manufacturer' => 'nullable|string|max:255',
+            'shelf_location' => 'nullable|string|max:50',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
@@ -78,6 +81,16 @@ class MedicineController extends Controller
     public function show(Medicine $medicine)
     {
         return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+    }
+
+    public function getLowStock()
+    {
+        $medicines = Medicine::with(['category', 'supplier'])
+            ->whereColumn('quantity', '<=', 'reorder_level')
+            ->orderBy('quantity')
+            ->paginate(10);
+
+        return response()->json($medicines);
     }
 
     public function update(Request $request, Medicine $medicine)
@@ -97,6 +110,9 @@ class MedicineController extends Controller
             'reorder_level' => 'required|integer|min:0',
             'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
+            'description' => 'nullable|string',
+            'manufacturer' => 'nullable|string|max:255',
+            'shelf_location' => 'nullable|string|max:50',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 

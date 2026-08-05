@@ -37,6 +37,7 @@ export default function Medicines() {
         name: '', generic_name: '', batch_number: '', barcode: '', category_id: '',
         supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '',
         reorder_level: '', expiry_date: '', status: 'active',
+        description: '', manufacturer: '', shelf_location: '',
     });
 
     const [filters, setFilters] = useState({
@@ -83,7 +84,7 @@ export default function Medicines() {
     const resetFilters = () => setFilters({ search: '', category_id: '', supplier_id: '', status: '' });
 
     const resetForm = () => {
-        setForm({ name: '', generic_name: '', batch_number: '', barcode: '', category_id: '', supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '', reorder_level: '', expiry_date: '', status: 'active' });
+        setForm({ name: '', generic_name: '', batch_number: '', barcode: '', category_id: '', supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '', reorder_level: '', expiry_date: '', status: 'active', description: '', manufacturer: '', shelf_location: '' });
         setEditId(null); setError(''); setStep(0);
     };
 
@@ -97,6 +98,9 @@ export default function Medicines() {
             selling_price: m.selling_price || '', reorder_level: m.reorder_level || '',
             expiry_date: m.expiry_date ? new Date(m.expiry_date).toISOString().split('T')[0] : '',
             status: m.status || 'active',
+            description: m.description || '',
+            manufacturer: m.manufacturer || '',
+            shelf_location: m.shelf_location || '',
         });
         setEditId(m.id); setShowModal(true); setError(''); setStep(0);
     };
@@ -207,11 +211,23 @@ export default function Medicines() {
                             <input type="text" name="batch_number" value={form.batch_number} onChange={handleChange} placeholder="e.g. BATCH-001" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                         </div>
                         <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
+                            <input type="text" name="manufacturer" value={form.manufacturer} onChange={handleChange} placeholder="e.g. GSK" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
+                            <input type="text" name="shelf_location" value={form.shelf_location} onChange={handleChange} placeholder="e.g. A-2-3" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
+                        <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
                             <select name="category_id" value={form.category_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
                                 <option value="">Select Category</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                         </div>
                     </div>
                 );
@@ -418,12 +434,15 @@ export default function Medicines() {
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Category</label><p className="text-sm text-gray-600">{viewMedicine?.category?.name || 'No Category'}</p></div>
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Batch Number</label><p className="text-sm text-gray-600">{viewMedicine?.batch_number || '---'}</p></div>
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewMedicine?.supplier?.name || 'No Supplier'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Manufacturer</label><p className="text-sm text-gray-600">{viewMedicine?.manufacturer || '---'}</p></div>
+                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Shelf Location</label><p className="text-sm text-gray-600">{viewMedicine?.shelf_location || '---'}</p></div>
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Status</label><div className="mt-1">{getStatusBadge(viewMedicine?.status)}</div></div>
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label><p className="text-sm font-medium text-gray-800">{viewMedicine?.quantity}</p></div>
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label><p className="text-sm text-gray-600">{viewMedicine?.reorder_level}</p></div>
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Unit Price</label><p className="text-sm text-gray-600">{viewMedicine?.unit_price ? `$${Number(viewMedicine.unit_price).toFixed(2)}` : '---'}</p></div>
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Selling Price</label><p className="text-sm text-gray-600">{viewMedicine?.selling_price ? `$${Number(viewMedicine.selling_price).toFixed(2)}` : '---'}</p></div>
                     <div><label className="block text-xs font-semibold text-gray-500 mb-1">Expiry Date</label><p className="text-sm text-gray-600">{viewMedicine?.expiry_date ? new Date(viewMedicine.expiry_date).toLocaleDateString() : '---'}</p></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Description</label><p className="text-sm text-gray-600">{viewMedicine?.description || '---'}</p></div>
                 </div>
                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
                     <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>

@@ -40,6 +40,9 @@ class Medicine extends Model
         'expiry_date',
         'status',
         'image',
+        'description',
+        'manufacturer',
+        'shelf_location',
     ];
 
     protected $casts = [

@@ -16,7 +16,7 @@ export default function Categories() {
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit' | 'view'
     const [modalItem, setModalItem] = useState(null);
-    const [form, setForm] = useState({ name: '', description: '' });
+    const [form, setForm] = useState({ name: '', description: '', shelf_location: '' });
     const [submitting, setSubmitting] = useState(false);
 
     const load = () => {
@@ -42,7 +42,7 @@ export default function Categories() {
     const openCreate = () => {
         setModalMode('create');
         setModalItem(null);
-        setForm({ name: '', description: '' });
+        setForm({ name: '', description: '', shelf_location: '' });
         setError('');
         setShowModal(true);
     };
@@ -50,7 +50,7 @@ export default function Categories() {
     const openEdit = (item) => {
         setModalMode('edit');
         setModalItem(item);
-        setForm({ name: item.name, description: item.description || '' });
+        setForm({ name: item.name, description: item.description || '', shelf_location: item.shelf_location || '' });
         setError('');
         setShowModal(true);
     };
@@ -64,7 +64,7 @@ export default function Categories() {
     const closeModal = () => {
         setShowModal(false);
         setModalItem(null);
-        setForm({ name: '', description: '' });
+        setForm({ name: '', description: '', shelf_location: '' });
         setError('');
     };
 
@@ -113,6 +113,7 @@ export default function Categories() {
                             <tr className="bg-sky-50">
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Name</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Description</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Shelf Location</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">Actions</th>
                             </tr>
                         </thead>
@@ -121,6 +122,7 @@ export default function Categories() {
                                 <tr key={c.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                     <td className="px-4 py-3 text-sm font-medium">{c.name}</td>
                                     <td className="px-4 py-3 text-sm text-gray-500">{c.description || '---'}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-500">{c.shelf_location || '---'}</td>
                                     <td className="px-4 py-3 text-sm">
                                         <div className="flex justify-end gap-2">
                                             <button
@@ -148,7 +150,7 @@ export default function Categories() {
                                     </td>
                                 </tr>
                             ))}
-                            {categories.length === 0 && <tr><td colSpan="3" className="px-4 py-8 text-center text-gray-400">No categories found</td></tr>}
+                            {categories.length === 0 && <tr><td colSpan="4" className="px-4 py-8 text-center text-gray-400">No categories found</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -173,6 +175,10 @@ export default function Categories() {
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 mb-1">Description</label>
                             <p className="text-sm text-gray-600">{modalItem.description || '---'}</p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">Shelf Location</label>
+                            <p className="text-sm text-gray-600">{modalItem.shelf_location || '---'}</p>
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 mb-1">Created</label>
@@ -210,6 +216,16 @@ export default function Categories() {
                                 name="description"
                                 value={form.description}
                                 onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
+                            <input
+                                name="shelf_location"
+                                value={form.shelf_location}
+                                onChange={handleChange}
+                                placeholder="e.g. A-2-3"
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                             />
                         </div>
