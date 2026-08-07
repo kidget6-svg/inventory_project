@@ -6,14 +6,15 @@ namespace Database\Seeders;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class SupplierSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Schema::disableForeignKeyConstraints();
         Supplier::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        Schema::enableForeignKeyConstraints();
 
         $suppliers = [
             [

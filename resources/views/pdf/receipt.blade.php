@@ -23,6 +23,13 @@
         .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 12px; color: #777; text-align: center; }
         .divider { border-top: 1px dashed #ccc; margin: 15px 0; }
         .thank-you { text-align: center; font-size: 16px; font-weight: bold; color: #0287ce; margin: 20px 0; }
+        .print-instructions { text-align: center; padding: 15px; background: #f0f8ff; border: 1px solid #0287ce; border-radius: 6px; margin: 20px 0; font-size: 13px; color: #333; }
+        .print-instructions strong { color: #0287ce; }
+        @media print {
+            body { background: #fff !important; color: #000 !important; }
+            .no-print { display: none !important; }
+            .print-instructions { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -131,6 +138,12 @@
         <div class="divider"></div>
         <div class="thank-you">Thank you for shopping with us.</div>
         <div class="divider"></div>
+
+        <!-- Print Instructions (visible on screen, hidden when printing) -->
+        <div class="print-instructions no-print">
+            <strong>Print Receipt</strong><br>
+            The print dialog should open automatically. If it doesn't, press <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) or use your browser's print function.
+        </div>
 
         <!-- Footer -->
         <div class="footer">

@@ -16,7 +16,9 @@ return new class extends Migration
             
             // Relationships
             $table->unsignedBigInteger('sale_id');
-            $table->unsignedBigInteger('medicine_id');
+            // medicine_id is nullable: retail product sales use the polymorphic
+            // itemable relationship (RetailProduct) and do not reference a medicine.
+            $table->unsignedBigInteger('medicine_id')->nullable();
             
             // Item details
             $table->integer('quantity');

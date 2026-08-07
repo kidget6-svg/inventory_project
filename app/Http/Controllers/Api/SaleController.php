@@ -6,14 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use App\Models\Medicine;
 use App\Models\RetailProduct;
+use App\Models\SaleItem;
 use App\Services\SaleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Response;
 
 class SaleController extends Controller
 {
     /**
-     * Fetch sales queue for Cashier / Admin.
+     * Fetch sales queue for Cashier.
      */
     public function index(Request $request)
     {
@@ -23,21 +25,37 @@ class SaleController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
         return response()->json($query->latest()->get());
     }
 
     /**
      * Pharmacist dispatches prescription sale.
+     *
+     * When payment_method and amount_paid are provided, the sale is
+     * completed immediately (stock deducted, receipt generated, payment
+     * information saved).  When they are omitted the sale is created
+     * in the pending_cashier state so the cashier can collect payment
+     * later via the CashierDashboard.
+     *
+     * @policy Only pharmacists may dispatch prescription sales.
      */
-    public function storePrescription(Request $request)
+    public function storePrescription(Request $request, SaleService $service)
     {
+        abort_if(! $request->user()->hasRole('pharmacist'), 403, 'Unauthorized. Only pharmacists can process prescription sales.');
+
         $validated = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.medicine_id' => 'required|exists:medicines,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'payment_method' => 'nullable|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
+            'amount_paid' => 'nullable|numeric|min:0',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
+        return DB::transaction(function () use ($validated, $request, $service) {
             $totalAmount = 0;
             $itemsToCreate = [];
 
@@ -64,37 +82,59 @@ class SaleController extends Controller
                 ];
             }
 
+            $hasPaymentInfo = !empty($validated['payment_method']) && !empty($validated['amount_paid']);
+
             $sale = Sale::create([
                 'user_id' => $request->user()->id,
                 'sale_date' => now(),
                 'type' => 'prescription',
-                'status' => 'pending_cashier',
+                'status' => $hasPaymentInfo ? 'completed' : 'pending_cashier',
                 'total_amount' => $totalAmount,
+                'net_amount' => $totalAmount,
+                'payment_method' => $validated['payment_method'] ?? 'cash',
+                'amount_paid' => $validated['amount_paid'] ?? 0,
+                'change_amount' => $hasPaymentInfo
+                    ? $service->calculateChange($totalAmount, (float) $validated['amount_paid'], $validated['payment_method'])
+                    : 0,
+                'payment_status' => $hasPaymentInfo ? 'paid' : 'pending',
+                'receipt_number' => $hasPaymentInfo ? Sale::generateReceiptNumber() : null,
             ]);
 
             foreach ($itemsToCreate as $itemData) {
                 $sale->items()->create($itemData);
+                if ($hasPaymentInfo) {
+                    Medicine::whereKey($itemData['itemable_id'])->decrement('quantity', $itemData['quantity']);
+                }
             }
 
             return response()->json([
-                'message' => 'Order sent to Cashier',
+                'message' => $hasPaymentInfo
+                    ? 'Prescription sale completed successfully'
+                    : 'Order sent to Cashier',
                 'sale' => $sale->load('items.itemable')
             ], 201);
         });
     }
 
     /**
-     * Cashier completes a retail sale from the retail catalogue.
+     * Pharmacist dispatches a retail/OTC draft to the cashier queue.
+     *
+     * Creates a pending_cashier sale without payment info or stock deduction.
+     * The cashier will complete payment and deduct stock later via updateStatus.
+     *
+     * @policy Only pharmacists may dispatch retail drafts.
      */
-    public function storeRetail(Request $request)
+    public function storeRetailDraft(Request $request, SaleService $service)
     {
+        abort_if(! $request->user()->hasRole('pharmacist'), 403, 'Unauthorized. Only pharmacists can dispatch retail drafts.');
+
         $validated = $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.id' => 'required|integer|exists:retail_products,id',
+            'items.*.id' => 'required|exists:retail_products,id',
             'items.*.cartQty' => 'required|integer|min:1',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
+        return DB::transaction(function () use ($validated, $request, $service) {
             $totalAmount = 0;
             $itemsToCreate = [];
 
@@ -107,15 +147,16 @@ class SaleController extends Controller
                     ], 422);
                 }
 
-                $subtotal = $product->price * $item['cartQty'];
+                $unitPrice = $product->price;
+                $subtotal = $unitPrice * $item['cartQty'];
                 $totalAmount += $subtotal;
 
                 $itemsToCreate[] = [
-                    'medicine_id' => $product->id,
+                    'medicine_id' => null,
                     'itemable_id' => $product->id,
                     'itemable_type' => RetailProduct::class,
                     'quantity' => $item['cartQty'],
-                    'unit_price' => $product->price,
+                    'unit_price' => $unitPrice,
                     'subtotal' => $subtotal,
                 ];
             }
@@ -124,9 +165,89 @@ class SaleController extends Controller
                 'user_id' => $request->user()->id,
                 'sale_date' => now(),
                 'type' => 'retail',
+                'status' => 'pending_cashier',
+                'total_amount' => $totalAmount,
+                'net_amount' => $totalAmount,
+                'payment_method' => 'cash',
+                'amount_paid' => 0,
+                'change_amount' => 0,
+                'payment_status' => 'pending',
+                'receipt_number' => null,
+            ]);
+
+            foreach ($itemsToCreate as $itemData) {
+                $sale->items()->create($itemData);
+            }
+
+            return response()->json([
+                'message' => 'Retail order sent to Cashier',
+                'sale' => $sale->load('items.itemable')
+            ], 201);
+        });
+    }
+
+    /**
+     * Cashier completes a retail sale from the retail catalogue.
+     *
+     * Receives payment_method and amount_paid, calculates change_amount
+     * automatically, generates a receipt_number, and saves all
+     * payment information to the database.
+     *
+     * @policy Only cashiers may process retail sales.
+     */
+    public function storeRetail(Request $request, SaleService $service)
+    {
+        abort_if(! $request->user()->hasRole('cashier'), 403, 'Unauthorized. Only cashiers can process retail sales.');
+
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|exists:retail_products,id',
+            'items.*.cartQty' => 'required|integer|min:1',
+            'payment_method' => 'required|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
+            'amount_paid' => 'required|numeric|min:0',
+        ]);
+
+        return DB::transaction(function () use ($validated, $request, $service) {
+            $totalAmount = 0;
+            $itemsToCreate = [];
+
+            foreach ($validated['items'] as $item) {
+                $product = RetailProduct::findOrFail($item['id']);
+
+                if ($product->quantity < $item['cartQty']) {
+                    return response()->json([
+                        'message' => "Insufficient stock for {$product->name}"
+                    ], 422);
+                }
+
+                $unitPrice = $product->price;
+                $subtotal = $unitPrice * $item['cartQty'];
+                $totalAmount += $subtotal;
+
+                $itemsToCreate[] = [
+                    'medicine_id' => null,
+                    'itemable_id' => $product->id,
+                    'itemable_type' => RetailProduct::class,
+                    'quantity' => $item['cartQty'],
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $subtotal,
+                ];
+            }
+
+            $changeAmount = $service->calculateChange($totalAmount, (float) $validated['amount_paid'], $validated['payment_method']);
+
+            $sale = Sale::create([
+                'user_id' => $request->user()->id,
+                'sale_date' => now(),
+                'type' => 'retail',
                 'status' => 'completed',
                 'total_amount' => $totalAmount,
                 'net_amount' => $totalAmount,
+                'payment_method' => $validated['payment_method'],
+                'amount_paid' => $validated['amount_paid'],
+                'change_amount' => $changeAmount,
+                'payment_status' => 'paid',
+                'receipt_number' => Sale::generateReceiptNumber(),
             ]);
 
             foreach ($itemsToCreate as $itemData) {
@@ -135,274 +256,263 @@ class SaleController extends Controller
             }
 
             return response()->json([
-                'message' => 'Retail sale processed successfully',
+                'message' => 'Retail sale completed successfully',
                 'sale' => $sale->load('items.itemable')
             ], 201);
         });
     }
 
     /**
-     * Cashier completes a sale.
+     * Cashier completes a pending prescription sale by collecting payment.
      *
-     * Receives payment_method and amount_paid, calculates change_amount
-     * automatically, generates a receipt_number, and saves all
-     * payment information to the database.
+     * Updates the sale status to completed, saves payment information,
+     * generates a receipt number, and deducts stock.
+     *
+     * @policy Only cashiers may update sale status.
      */
     public function updateStatus(Request $request, $id, SaleService $service)
     {
+        abort_if(! $request->user()->hasRole('cashier'), 403, 'Unauthorized. Only cashiers can update sale status.');
+
+        $sale = Sale::findOrFail($id);
+
         $validated = $request->validate([
-            'status' => 'required|string|in:completed,cancelled',
-            'payment_method' => 'required_if:status,completed|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
-            'amount_paid' => 'required_if:status,completed|numeric|min:0',
+            'status' => 'required|string|in:pending,pending_cashier,completed,cancelled',
+            'payment_method' => 'required|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
+            'amount_paid' => 'required|numeric|min:0',
+            'change_amount' => 'nullable|numeric|min:0',
         ]);
 
-        $sale = Sale::with('items')->findOrFail($id);
+        return DB::transaction(function () use ($sale, $validated, $service) {
+            $totalAmount = (float) $sale->total_amount;
+            $amountPaid = (float) $validated['amount_paid'];
+            $paymentMethod = $validated['payment_method'];
 
-        if ($sale->status === 'completed') {
-            return response()->json(['message' => 'Sale already completed'], 400);
-        }
-
-        DB::transaction(function () use ($sale, $validated, $service) {
-            if ($validated['status'] === 'completed') {
-                // Deduct stock for items when payment is confirmed
-                foreach ($sale->items as $item) {
-                    if ($item->itemable) {
-                        $item->itemable->decrement('quantity', $item->quantity);
-                    }
-                }
-
-                // Generate receipt number automatically
-                if (!$sale->receipt_number) {
-                    $sale->receipt_number = Sale::generateReceiptNumber();
-                }
-
-                // Set payment details
-                $sale->payment_method = $validated['payment_method'];
-                $sale->amount_paid = $validated['amount_paid'];
-
-                // Calculate change amount based on payment method
-                $sale->change_amount = $service->calculateChange(
-                    (float) $sale->total_amount,
-                    (float) $validated['amount_paid'],
-                    $validated['payment_method']
-                );
-
-                $sale->payment_status = 'paid';
+            if ($amountPaid < $totalAmount) {
+                return response()->json([
+                    'message' => 'Amount paid cannot be less than the total amount'
+                ], 422);
             }
 
-            $sale->status = $validated['status'];
-            $sale->save();
+            $changeAmount = $service->calculateChange($totalAmount, $amountPaid, $paymentMethod);
+
+            $sale->update([
+                'status' => $validated['status'],
+                'payment_method' => $paymentMethod,
+                'amount_paid' => $amountPaid,
+                'change_amount' => $changeAmount,
+                'payment_status' => 'paid',
+                'receipt_number' => $sale->receipt_number ?? Sale::generateReceiptNumber(),
+            ]);
+
+            // Deduct stock if transitioning to completed and not already deducted
+            if ($validated['status'] === 'completed') {
+                foreach ($sale->items as $item) {
+                    if ($item->itemable_type === Medicine::class) {
+                        Medicine::whereKey($item->itemable_id)->decrement('quantity', $item->quantity);
+                    } elseif ($item->itemable_type === RetailProduct::class) {
+                        RetailProduct::whereKey($item->itemable_id)->decrement('quantity', $item->quantity);
+                    }
+                }
+            }
+
+            return response()->json([
+                'message' => 'Sale status updated successfully',
+                'sale' => $sale->load('items.itemable', 'user'),
+            ]);
         });
-
-        return response()->json([
-            'message' => 'Sale status updated to ' . $validated['status'],
-            'sale' => $sale->fresh()->load('items.itemable', 'user')
-        ]);
     }
 
     /**
-     * Get today's sales summary.
-     */
-    public function getTodaySales()
-    {
-        $todaySales = Sale::whereDate('sale_date', today())
-            ->where('status', 'completed')
-            ->with('items.itemable')
-            ->get();
-
-        return response()->json([
-            'sales' => $todaySales,
-            'total' => $todaySales->sum('total_amount'),
-            'count' => $todaySales->count(),
-        ]);
-    }
-
-    /**
-     * Get sales statistics for dashboard.
-     */
-    public function getStats()
-    {
-        $today = today();
-
-        $stats = [
-            'today_sales_count' => Sale::whereDate('sale_date', $today)
-                ->where('status', 'completed')
-                ->count(),
-            'today_revenue' => (float) Sale::whereDate('sale_date', $today)
-                ->where('status', 'completed')
-                ->sum('total_amount'),
-            'cash_payments' => (float) Sale::whereDate('sale_date', $today)
-                ->where('status', 'completed')
-                ->where('payment_method', Sale::PAYMENT_CASH)
-                ->sum('total_amount'),
-            'telebirr_payments' => (float) Sale::whereDate('sale_date', $today)
-                ->where('status', 'completed')
-                ->where('payment_method', Sale::PAYMENT_TELEBIRR)
-                ->sum('total_amount'),
-            'bank_payments' => (float) Sale::whereDate('sale_date', $today)
-                ->where('status', 'completed')
-                ->whereIn('payment_method', Sale::bankPaymentMethods())
-                ->sum('total_amount'),
-            'total_transactions' => Sale::where('status', 'completed')->count(),
-        ];
-
-        return response()->json($stats);
-    }
-
-    /**
-     * Get a sale for receipt display.
+     * Get receipt data for a sale (JSON for the React receipt page).
      */
     public function receipt(Sale $sale)
     {
-        return response()->json($sale->load('items.itemable', 'user'));
+        $sale->load('items.itemable', 'user');
+
+        return response()->json($sale);
     }
 
     /**
-     * Download the receipt as a PDF file.
+     * Download receipt as PDF.
      */
     public function download(Sale $sale, SaleService $service)
     {
         $pdfContent = $service->generatePdf($sale);
 
-        $filename = 'receipt-' . $sale->receipt_number . '.pdf';
+        $filename = 'receipt-' . ($sale->receipt_number ?? $sale->id) . '.pdf';
 
-        return response($pdfContent, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ]);
+        return response($pdfContent, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; ' . $filename)
+            ->header('Content-Transfer-Encoding', 'binary');
     }
 
     /**
-     * Print the receipt (print-friendly HTML).
+     * Print receipt (HTML page that triggers browser print dialog).
      */
     public function print(Sale $sale)
     {
         $sale->load('items.itemable', 'user');
+
         $cashierName = $sale->cashier_name;
 
         $html = view('pdf.receipt', compact('sale', 'cashierName'))->render();
 
+        $html .= '<script>window.print();</script>';
+
         return response($html, 200)
-            ->header('Content-Type', 'text/html');
+            ->header('Content-Type', 'text/html; charset=utf-8');
     }
 
     /**
-     * Admin: Get all completed sales for history page.
+     * Get today's sales.
      */
-    public function history(Request $request)
+    public function getTodaySales(Request $request)
     {
-        $query = Sale::with(['items.itemable', 'user'])
-            ->where('status', 'completed');
-
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('receipt_number', 'like', "%{$search}%")
-                    ->orWhere('id', 'like', "%{$search}%")
-                    ->orWhere('customer_name', 'like', "%{$search}%");
-            });
-        }
-
-        // Filter by date
-        if ($request->filled('date')) {
-            $query->whereDate('sale_date', $request->date);
-        }
-
-        // Filter by cashier
-        if ($request->filled('cashier')) {
-            $query->where('user_id', $request->cashier);
-        }
-
-        // Filter by payment method
-        if ($request->filled('payment_method')) {
-            $query->where('payment_method', $request->payment_method);
-        }
-
-        // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $sales = $query->latest()->paginate(15);
+        $sales = Sale::with(['items.itemable', 'user'])
+            ->whereDate('sale_date', today())
+            ->latest()
+            ->get();
 
         return response()->json($sales);
     }
 
     /**
-     * Export sales report in PDF or CSV format.
+     * Get sales statistics for the dashboard.
      */
-    public function export(Request $request, SaleService $service)
+    public function getStats(Request $request)
     {
-        $request->validate([
-            'type' => 'required|in:sales,daily,monthly,payment_method',
-            'format' => 'required|in:pdf,csv',
-            'date' => 'nullable|date',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
-            'payment_method' => 'nullable|string',
+        $todaySales = Sale::whereDate('sale_date', today())
+            ->where('status', 'completed')
+            ->get();
+
+        $todaySalesCount = $todaySales->count();
+        $todayRevenue = (float) $todaySales->sum('total_amount');
+
+        $cashPayments = (float) Sale::where('payment_method', Sale::PAYMENT_CASH)
+            ->where('status', 'completed')
+            ->whereDate('sale_date', today())
+            ->sum('total_amount');
+
+        $telebirrPayments = (float) Sale::where('payment_method', Sale::PAYMENT_TELEBIRR)
+            ->where('status', 'completed')
+            ->whereDate('sale_date', today())
+            ->sum('total_amount');
+
+        $bankMethods = Sale::bankPaymentMethods();
+        $bankPayments = (float) Sale::whereIn('payment_method', $bankMethods)
+            ->where('status', 'completed')
+            ->whereDate('sale_date', today())
+            ->sum('total_amount');
+
+        $totalTransactions = Sale::where('status', 'completed')
+            ->whereDate('sale_date', today())
+            ->count();
+
+        return response()->json([
+            'today_sales_count' => $todaySalesCount,
+            'today_revenue' => $todayRevenue,
+            'cash_payments' => $cashPayments,
+            'telebirr_payments' => $telebirrPayments,
+            'bank_payments' => $bankPayments,
+            'total_transactions' => $totalTransactions,
         ]);
+    }
 
-        $query = Sale::with(['items.itemable', 'user'])
-            ->where('status', 'completed');
+    /**
+     * Get sales history (paginated, with filters).
+     */
+    public function history(Request $request)
+    {
+        $query = Sale::with(['items.itemable', 'user']);
 
-        // Apply date filters based on report type
-        if ($request->type === 'daily' && $request->filled('date')) {
-            $query->whereDate('sale_date', $request->date);
-        } elseif ($request->type === 'monthly') {
-            if ($request->filled('start_date') && $request->filled('end_date')) {
-                $query->whereBetween('sale_date', [$request->start_date, $request->end_date]);
-            } else {
-                $query->whereMonth('sale_date', now()->month)
-                    ->whereYear('sale_date', now()->year);
-            }
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('receipt_number', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('id', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('sale_date', $request->input('date'));
+        }
+
+        if ($request->filled('cashier')) {
+            $query->where('user_id', $request->input('cashier'));
         }
 
         if ($request->filled('payment_method')) {
-            $query->where('payment_method', $request->payment_method);
+            $query->where('payment_method', $request->input('payment_method'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $sales = $query->latest()->paginate(10);
+
+        return response()->json($sales);
+    }
+
+    /**
+     * Export sales report (CSV or PDF).
+     */
+    public function export(Request $request, SaleService $service)
+    {
+        $type = $request->input('type', 'sales');
+        $format = $request->input('format', 'csv');
+
+        $query = Sale::with(['items.itemable', 'user']);
+
+        if ($request->filled('date')) {
+            $query->whereDate('sale_date', $request->input('date'));
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->input('payment_method'));
         }
 
         $sales = $query->latest()->get();
 
-        if ($request->format === 'pdf') {
-            $html = view('pdf.report', compact('sales', 'request'))->render();
-            $pdfContent = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'landscape')->output();
+        if ($format === 'csv') {
+            $headers = [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename=sales-report.csv',
+            ];
 
-            $filename = 'sales-report-' . now()->format('Ymd-His') . '.pdf';
+            $callback = function () use ($sales) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, ['Receipt Number', 'Date', 'Cashier', 'Customer', 'Payment Method', 'Total Amount', 'Status']);
 
-            return response($pdfContent, 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            ]);
+                foreach ($sales as $sale) {
+                    fputcsv($file, [
+                        $sale->receipt_number ?? 'N/A',
+                        $sale->sale_date ? \Carbon\Carbon::parse($sale->sale_date)->format('Y-m-d H:i') : 'N/A',
+                        $sale->cashier_name,
+                        $sale->customer_name ?? 'Walk-in Customer',
+                        $sale->payment_method_label,
+                        number_format($sale->total_amount, 2),
+                        $sale->status_label,
+                    ]);
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
         }
 
-        // CSV export
-        $filename = 'sales-report-' . now()->format('Ymd-His') . '.csv';
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
+        // PDF export
+        $html = view('pdf.report', compact('sales'))->render();
+        $pdfContent = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'landscape')->output();
 
-        $callback = function () use ($sales) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['Receipt Number', 'Sale Number', 'Date', 'Cashier', 'Customer', 'Payment Method', 'Total', 'Status']);
+        $filename = 'sales-report.pdf';
 
-            foreach ($sales as $sale) {
-                fputcsv($file, [
-                    $sale->receipt_number ?? '',
-                    $sale->id,
-                    $sale->sale_date ? \Carbon\Carbon::parse($sale->sale_date)->format('Y-m-d H:i') : '',
-                    $sale->cashier_name,
-                    $sale->customer_name ?? 'Walk-in Customer',
-                    $sale->payment_method_label,
-                    $sale->total_amount,
-                    $sale->status_label,
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return response($pdfContent, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename=' . $filename);
     }
 }

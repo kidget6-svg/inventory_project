@@ -38,7 +38,7 @@ class SaleFactory extends Factory
             'amount_paid' => $amountPaid,
             'change_amount' => $changeAmount,
             'notes' => fake()->optional(0.3)->sentence(),
-            'receipt_number' => Sale::generateReceiptNumber(),
+            'receipt_number' => 'RCPT-' . now()->format('Ymd') . '-' . str_pad(fake()->unique()->randomNumber(5), 5, '0', STR_PAD_LEFT),
             'user_id' => User::factory(),
             'type' => fake()->randomElement(['prescription', 'retail']),
             'status' => 'completed',

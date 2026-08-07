@@ -104,8 +104,8 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/low-stock', [LowStockController::class, 'index']);
     });
 
-    // Sales (admin + cashier)
-    Route::middleware('role:admin,cashier')->group(function () {
+    // Sales Queue & Retail Checkout (cashier only)
+    Route::middleware('role:cashier')->group(function () {
         Route::apiResource('sales', SaleController::class);
     });
 });

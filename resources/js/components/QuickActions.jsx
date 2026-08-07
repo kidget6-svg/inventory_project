@@ -13,6 +13,7 @@ import {
     Truck,
     FolderTree,
     ArrowRight,
+    ShoppingBag,
 } from 'lucide-react';
 
 
@@ -25,17 +26,17 @@ const adminActions = [
         color: 'blue',
     },
     {
+        to: '/retail-products',
+        label: 'Add Retail Product',
+        description: 'Create new retail/OTC product',
+        icon: Package,
+        color: 'blue',
+    },
+    {
         to: '/purchase-orders',
         label: 'Purchase Order',
         description: 'Order new stock',
         icon: ShoppingCart,
-        color: 'blue',
-    },
-    {
-        to: '/sales',
-        label: 'Create Sale',
-        description: 'Process customer sale',
-        icon: Package,
         color: 'blue',
     },
     {
@@ -78,6 +79,20 @@ const adminActions = [
 
 const pharmacistActions = [
     {
+        to: '/prescription-sales',
+        label: 'Prescription Sales',
+        description: 'Dispense medications',
+        icon: Plus,
+        color: 'blue',
+    },
+    {
+        to: '/retail-otc-sales',
+        label: 'Retail & OTC Sales',
+        description: 'Sell OTC products',
+        icon: ShoppingBag,
+        color: 'blue',
+    },
+    {
         to: '/medicines',
         label: 'Add Medicine',
         description: 'Update inventory',
@@ -110,9 +125,9 @@ const pharmacistActions = [
 
 const cashierActions = [
     {
-        to: '/sales',
+        to: '/retail-sales',
         label: 'New Sale',
-        description: 'Sell medicine',
+        description: 'Sell retail products',
         icon: Plus,
         color: 'blue',
     },

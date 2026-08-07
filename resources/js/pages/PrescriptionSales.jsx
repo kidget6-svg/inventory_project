@@ -1,9 +1,29 @@
 // resources/js/pages/PrescriptionSales.jsx
+//
+// Prescription Sales — Pharmacy POS terminal.
+//
+// Displays medicine cards on the left and a sticky "Prescription Draft"
+// panel on the right.  The draft panel contains selected medicines,
+// quantity controls (+/-), remove-item, total price, Clear Draft, and
+// Send to Cashier Queue.
+//
+// Admin and Cashier see exactly the same UI and functionality.
+// All shared UI is provided by the reusable components in
+// resources/js/components/pos/.
 
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { Search, Plus, Minus, Trash2, Send, ShoppingBag } from 'lucide-react';
+import {
+    PosProductCard,
+    PosCartPanel,
+} from '../components/pos';
+import {
+    Search,
+    FileText,
+    Send,
+    Pill,
+} from 'lucide-react';
 
 export default function PrescriptionSales() {
     const [medicines, setMedicines] = useState([]);
@@ -12,15 +32,24 @@ export default function PrescriptionSales() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
+    // ── Data loading ──────────────────────────────────────────────
     useEffect(() => {
-        api.get('/medicines')
+        api.get('/medicines', { params: { per_page: 100 } })
             .then(res => setMedicines(res.data.data || res.data))
-            .catch(() => window.showToast('Failed to load medicines', 'error'))
+            .catch(err => {
+                console.error('Failed to load medicines:', err);
+                window.showToast('Failed to load medicines', 'error');
+            })
             .finally(() => setLoading(false));
     }, []);
 
+    // ── Cart helpers ────────────────────────────────────────────
+    const priceOf = (m) => Number(m.selling_price ?? m.unit_price ?? 0);
+
     const addToCart = (med) => {
-        if (med.quantity <= 0) return window.showToast('Out of stock', 'error');
+        if (med.quantity <= 0) {
+            return window.showToast('Out of stock', 'error');
+        }
 
         setCart(prev => {
             const existing = prev.find(item => item.id === med.id);
@@ -29,145 +58,181 @@ export default function PrescriptionSales() {
                     window.showToast(`Stock limit reached (${med.quantity})`, 'error');
                     return prev;
                 }
-                return prev.map(item => item.id === med.id ? { ...item, cartQty: item.cartQty + 1 } : item);
+                return prev.map(item =>
+                    item.id === med.id
+                        ? { ...item, cartQty: item.cartQty + 1 }
+                        : item
+                );
             }
             return [...prev, { ...med, cartQty: 1 }];
         });
     };
 
-    const handleQtyInput = (id, newQty, maxStock) => {
-        const parsed = parseInt(newQty) || 0;
-        if (parsed > maxStock) {
-            window.showToast(`Cannot exceed available stock of ${maxStock}`, 'error');
-            return;
-        }
-        setCart(prev => prev.map(item => item.id === id ? { ...item, cartQty: parsed } : item));
+    const incrementQty = (item, maxStock) => {
+        setCart(prev => prev.map(i => {
+            if (i.id === item.id) {
+                if (i.cartQty + 1 > maxStock) {
+                    window.showToast(`Stock limit reached (${maxStock})`, 'error');
+                    return i;
+                }
+                return { ...i, cartQty: i.cartQty + 1 };
+            }
+            return i;
+        }));
     };
 
-    const removeFromCart = (id) => setCart(prev => prev.filter(i => i.id !== id));
+    const decrementQty = (item) => {
+        setCart(prev => prev.map(i =>
+            i.id === item.id
+                ? { ...i, cartQty: Math.max(1, i.cartQty - 1) }
+                : i
+        ));
+    };
 
-    const priceOf = (m) => Number(m.selling_price ?? m.unit_price ?? 0);
+    const removeFromCart = (item) =>
+        setCart(prev => prev.filter(i => i.id !== item.id));
 
-    const totalCalculated = cart.reduce((sum, item) => sum + (priceOf(item) * (item.cartQty || 0)), 0);
+    const clearDraft = () => setCart([]);
 
+    const totalCalculated = cart.reduce(
+        (sum, item) => sum + (priceOf(item) * (item.cartQty || 0)),
+        0
+    );
+
+    const totalItems = cart.reduce(
+        (sum, item) => sum + (item.cartQty || 0),
+        0
+    );
+
+    // ── Submit ────────────────────────────────────────────────────
     const handleSendToCashier = async () => {
-        if (cart.length === 0) return window.showToast('Cart is empty', 'error');
-        if (cart.some(i => i.cartQty <= 0)) return window.showToast('All items must have quantity > 0', 'error');
+        if (cart.length === 0) {
+            return window.showToast('Cart is empty', 'error');
+        }
+        if (cart.some(i => i.cartQty <= 0)) {
+            return window.showToast('All items must have quantity > 0', 'error');
+        }
 
         setSubmitting(true);
         try {
             await api.post('/sales/prescription', {
                 items: cart.map(item => ({
                     medicine_id: item.id,
-                    quantity: item.cartQty
-                }))
+                    quantity: item.cartQty,
+                })),
             });
             window.showToast('Order dispatched to Cashier queue!', 'success');
             setCart([]);
         } catch (err) {
-            window.showToast(err.response?.data?.message || 'Failed to send order', 'error');
+            window.showToast(
+                err.response?.data?.message || 'Failed to send order',
+                'error'
+            );
         } finally {
             setSubmitting(false);
         }
     };
 
-    const filtered = medicines.filter(m => m.name.toLowerCase().includes(search.toLowerCase()));
+    // ── Search filter ────────────────────────────────────────────
+    const filtered = medicines.filter(m => {
+        const q = search.toLowerCase();
+        return (
+            m.name?.toLowerCase().includes(q) ||
+            m.generic_name?.toLowerCase().includes(q) ||
+            m.barcode?.toLowerCase().includes(q)
+        );
+    });
 
-    if (loading) return <LoadingSpinner text="Opening prescription terminal..." />;
+    if (loading) {
+        return <LoadingSpinner text="Opening prescription terminal..." />;
+    }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left: Inventory Selection */}
-            <div className="lg:col-span-2 space-y-4">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-800">💊 Dispense Medications</h2>
-                    <div className="relative w-64">
+        <div className="pos-layout">
+            {/* ── Left: Medicine Selection ── */}
+            <div className="pos-main">
+                {/* Page header */}
+                <div className="pos-page-header">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
+                            <Pill size={22} className="text-sky-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-800">
+                                Prescription Sales
+                            </h2>
+                            <p className="text-sm text-gray-500">
+                                Dispense medications and send to cashier queue
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative w-full sm:w-64">
                         <input
                             type="text"
                             placeholder="Search medication..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="pos-search-input"
                         />
                         <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {filtered.map(med => (
-                        <div key={med.id} className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
-                            <div>
-                                <h3 className="font-bold text-gray-800">{med.name}</h3>
-                                <p className="text-xs text-gray-400">{med.category?.name || 'Rx Medicine'}</p>
-                                <div className="mt-3 flex justify-between items-center text-sm">
-                                    <span className="font-bold text-gray-700">${priceOf(med).toFixed(2)}</span>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${med.quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                        Stock: {med.quantity}
-                                    </span>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => addToCart(med)}
-                                disabled={med.quantity <= 0}
-                                className="mt-4 btn-primary text-xs py-2 w-full flex items-center justify-center gap-1.5 disabled:opacity-50"
-                            >
-                                <Plus size={14} /> Add to Prescription
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Right: Cart Summary */}
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4 h-fit">
-                <h3 className="text-lg font-bold text-gray-800 border-b pb-3 flex items-center gap-2">
-                    <ShoppingBag size={18} /> Prescription Draft
-                </h3>
-
-                {cart.length === 0 ? (
-                    <p className="text-gray-400 text-xs text-center py-6">Select medicines from list to begin.</p>
+                {/* Medicine cards */}
+                {filtered.length === 0 ? (
+                    <div className="text-center py-12 text-gray-400">
+                        <Pill size={40} className="mx-auto mb-3 text-gray-300" />
+                        <p className="text-sm">No medications found</p>
+                        <p className="text-xs mt-1">
+                            Try adjusting your search terms
+                        </p>
+                    </div>
                 ) : (
-                    <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
-                        {cart.map(item => (
-                            <div key={item.id} className="py-3 flex items-center justify-between gap-2">
-                                <div className="flex-1">
-                                    <p className="font-semibold text-sm text-gray-800">{item.name}</p>
-                                    <p className="text-xs text-gray-400">${priceOf(item).toFixed(2)} / unit</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max={item.quantity}
-                                        value={item.cartQty}
-                                        onChange={(e) => handleQtyInput(item.id, e.target.value, item.quantity)}
-                                        className="w-14 text-center border border-gray-200 rounded-lg text-sm font-semibold p-1"
-                                    />
-                                    <span className="text-xs font-bold text-gray-700 min-w-[50px] text-right">
-                                        ${(priceOf(item) * (item.cartQty || 0)).toFixed(2)}
-                                    </span>
-                                    <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:bg-red-50 p-1 rounded">
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            </div>
+                    <div className="pos-product-grid">
+                        {filtered.map(med => (
+                            <PosProductCard
+                                key={med.id}
+                                item={med}
+                                price={priceOf(med)}
+                                onAdd={addToCart}
+                                addLabel="Add to Prescription"
+                                image={med.image_url}
+                                imageAlt={med.name}
+                            />
                         ))}
                     </div>
                 )}
+            </div>
 
-                <div className="border-t pt-4 space-y-3">
-                    <div className="flex justify-between font-bold text-lg">
-                        <span className="text-gray-700">Total Price:</span>
-                        <span className="text-green-600">${totalCalculated.toFixed(2)}</span>
-                    </div>
-                    <button
-                        onClick={handleSendToCashier}
-                        disabled={cart.length === 0 || submitting}
-                        className="w-full btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                        <Send size={16} /> Send to Cashier Queue
-                    </button>
-                </div>
+            {/* ── Right: Prescription Draft (sticky) ── */}
+            <div className="pos-sidebar">
+                <PosCartPanel
+                    title="Prescription Draft"
+                    titleIcon={FileText}
+                    titleColor="text-sky-600"
+                    headerBg="bg-sky-50"
+                    headerBorder="border-sky-200"
+                    clearLabel="Clear Draft"
+                    onClear={clearDraft}
+                    items={cart}
+                    priceOf={priceOf}
+                    onIncrement={incrementQty}
+                    onDecrement={decrementQty}
+                    onRemove={removeFromCart}
+                    showQtyInput={false}
+                    total={totalCalculated}
+                    totalItems={totalItems}
+                    actionIcon={Send}
+                    actionLabel="Send to Cashier Queue"
+                    onAction={handleSendToCashier}
+                    actionDisabled={cart.length === 0 || submitting}
+                    actionLoading={submitting}
+                    emptyMessage="Prescription draft is empty"
+                    emptySubMessage="Select medicines from the list to begin"
+                    emptyIcon={FileText}
+                />
             </div>
         </div>
     );

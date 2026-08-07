@@ -8,6 +8,7 @@ use App\Models\Medicine;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class BatchSeeder extends Seeder
 {
@@ -19,9 +20,9 @@ class BatchSeeder extends Seeder
             return;
         }
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Schema::disableForeignKeyConstraints();
         Batch::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        Schema::enableForeignKeyConstraints();
 
         $medicines = Medicine::all();
         $suppliers = Supplier::all();

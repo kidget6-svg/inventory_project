@@ -30,6 +30,13 @@ return new class extends Migration {
         });
 
         // 3. Add Polymorphic columns to existing Sale Items Table
+        //
+        // medicine_id is already nullable in the base sale_items migration
+        // (2026_07_22_072615), so retail product sale items can be stored
+        // without a medicine_id.  We previously tried to make it nullable here
+        // via ->change(), but that requires doctrine/dbal which is not
+        // installed in this project.  The nullability is now handled at the
+        // source (the create migration) so no ->change() is needed.
         Schema::table('sale_items', function (Blueprint $table) {
             if (!Schema::hasColumn('sale_items', 'itemable_type')) {
                 $table->nullableMorphs('itemable'); // Adds itemable_type & itemable_id

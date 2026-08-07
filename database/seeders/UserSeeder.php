@@ -7,15 +7,16 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Disable foreign key checks for clean truncation
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Disable foreign key checks for clean truncation (database-agnostic)
+        Schema::disableForeignKeyConstraints();
         User::truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        Schema::enableForeignKeyConstraints();
 
         $users = [
             [

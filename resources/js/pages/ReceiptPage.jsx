@@ -74,10 +74,17 @@ export default function ReceiptPage() {
     const paymentLabel = PAYMENT_LABELS[sale.payment_method] || sale.payment_method;
     const amountPaid = parseFloat(sale.amount_paid || sale.total_amount);
     const changeAmount = parseFloat(sale.change_amount || 0);
-    const netAmount = parseFloat(sale.net_amount > 0 ? sale.net_amount : sale.total_amount);
 
     return (
-        <div className="space-y-6">
+        <div className="receipt-page space-y-6">
+            <style>{`
+                @media print {
+                    .receipt-page .no-print { display: none !important; }
+                    .receipt-page { background: #ffffff !important; color: #000000 !important; }
+                    .receipt-page table { border-color: #000000 !important; }
+                    .receipt-page th, .receipt-page td { color: #000000 !important; }
+                }
+            `}</style>
             {/* Header with actions */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
@@ -114,7 +121,7 @@ export default function ReceiptPage() {
                     {/* Header */}
                     <div className="border-b-3 border-sky-400 pb-6 mb-6">
                         <div className="text-2xl font-bold text-sky-600">PharmaSys</div>
-                        <div className="text-sm text-gray-500">Pharmacy Inventory Management System</div>
+                        <div className="text-sm text-gray-500">Inventory Management System</div>
                     </div>
 
                     {/* Receipt Info */}
@@ -144,6 +151,10 @@ export default function ReceiptPage() {
 
                     {/* Items Table */}
                     <div className="mb-6">
+                        <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-700">Medicine list</h4>
+                            <p className="text-xs text-gray-500">Items purchased in this sale</p>
+                        </div>
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-sky-50">
@@ -169,43 +180,25 @@ export default function ReceiptPage() {
                     </div>
 
                     {/* Totals */}
-                    <div className="border-t border-gray-200 pt-4 mb-6">
-                        <div className="flex justify-between items-center mb-2">
+                    <div className="border-t border-gray-200 pt-4 mb-6 space-y-3">
+                        <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">Total</span>
                             <span className="font-bold text-lg text-gray-800">${parseFloat(sale.total_amount).toFixed(2)}</span>
                         </div>
-                        {sale.discount > 0 && (
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm text-gray-600">Discount</span>
-                                <span className="text-gray-600">-${parseFloat(sale.discount).toFixed(2)}</span>
-                            </div>
-                        )}
-                        {sale.tax > 0 && (
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm text-gray-600">Tax</span>
-                                <span className="text-gray-600">${parseFloat(sale.tax).toFixed(2)}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between items-center mb-2 pt-2 border-t border-gray-200">
-                            <span className="text-sm text-gray-600">Net Amount</span>
-                            <span className="font-bold text-gray-800">${netAmount.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
+                        <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600 flex items-center gap-1">
                                 <PaymentIcon size={14} /> Payment Method
                             </span>
                             <span className="text-gray-800">{paymentLabel}</span>
                         </div>
-                        <div className="flex justify-between items-center mb-2">
+                        <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">Amount Paid</span>
                             <span className="text-gray-800">${amountPaid.toFixed(2)}</span>
                         </div>
-                        {changeAmount > 0 && (
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm text-gray-600">Change</span>
-                                <span className="text-green-600 font-semibold">${changeAmount.toFixed(2)}</span>
-                            </div>
-                        )}
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Change</span>
+                            <span className="text-green-600 font-semibold">${changeAmount.toFixed(2)}</span>
+                        </div>
                     </div>
 
                     {/* Thank You */}

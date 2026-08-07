@@ -57,7 +57,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // --------------------------------------------------------------------
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
         Route::get('/medicines', [MedicineController::class, 'index']);
-        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
+        Route::get('/medicines/{medicine}', [MedicineController::class, 'show'])->where('medicine', '[0-9]+');
 
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
@@ -89,13 +89,44 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     });
 
     // --------------------------------------------------------------------
-    // Sales Operations (Admin + Cashier + Pharmacist)
+    // Read-Only Catalogue Access (Admin + Pharmacist + Cashier)
+    // Allows cashiers to fetch retail products for POS
     // --------------------------------------------------------------------
-    Route::middleware('role:admin,cashier,pharmacist')->group(function () {
+    Route::middleware('role:admin,pharmacist,cashier')->group(function () {
+        Route::get('/retail-products', [RetailProductController::class, 'index']);
+        Route::get('/retail-products/{retail_product}', [RetailProductController::class, 'show'])->where('retail_product', '[0-9]+');
+    });
+
+    // --------------------------------------------------------------------
+    // Admin-only: Retail Product Management
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/retail-products', [RetailProductController::class, 'store']);
+        Route::put('/retail-products/{retail_product}', [RetailProductController::class, 'update']);
+        Route::delete('/retail-products/{retail_product}', [RetailProductController::class, 'destroy']);
+    });
+
+    // --------------------------------------------------------------------
+    // Cashier-only: Sales Queue & Retail Checkout
+    // --------------------------------------------------------------------
+    Route::middleware('role:cashier')->group(function () {
         Route::get('/sales', [SaleController::class, 'index']);
         Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
-        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
         Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
+    });
+
+    // --------------------------------------------------------------------
+    // Pharmacist-only: Prescription Sales
+    // --------------------------------------------------------------------
+    Route::middleware('role:pharmacist')->group(function () {
+        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
+        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
+    });
+
+    // --------------------------------------------------------------------
+    // Shared read-only: Sales stats, today's sales, and receipts
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin,cashier,pharmacist')->group(function () {
         Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
         Route::get('/sales/stats', [SaleController::class, 'getStats']);
 
@@ -103,11 +134,9 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
         Route::get('/sales/{sale}/receipt/pdf', [SaleController::class, 'download']);
         Route::get('/sales/{sale}/receipt/print', [SaleController::class, 'print']);
-
-        Route::apiResource('retail-products', RetailProductController::class);
     });
 
-    // Admin-only: Sales History & Export
+    // Admin-only: Sales History & Export (read-only)
     Route::middleware('role:admin')->group(function () {
         Route::get('/sales/history', [SaleController::class, 'history']);
         Route::get('/sales/export', [SaleController::class, 'export']);

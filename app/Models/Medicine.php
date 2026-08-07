@@ -44,6 +44,12 @@ class Medicine extends Model
         'shelf_location',
     ];
 
+    /**
+     * Always append the computed image_url accessor so the frontend
+     * receives a ready-to-use image URL in every JSON response.
+     */
+    protected $appends = ['image_url'];
+
     protected $casts = [
         'expiry_date' => 'date',
         'quantity' => 'integer',

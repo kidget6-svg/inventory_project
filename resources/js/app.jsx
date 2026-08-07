@@ -17,7 +17,10 @@ import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
 import PrescriptionSales from './pages/PrescriptionSales';
+import CashierPrescriptionSales from './pages/CashierPrescriptionSales';
 import RetailSales from './pages/RetailSales';
+import RetailOTCSales from './pages/RetailOTCSales';
+import RetailProducts from './pages/RetailProducts';
 import StockMovements from './pages/StockMovements';
 import LowStock from './pages/LowStock';
 import Reports from './pages/Reports';
@@ -107,14 +110,24 @@ function App() {
             <Route path="/purchase-orders" element={
                 <ProtectedRoute roles={['admin']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
             } />
+            <Route path="/retail-products" element={
+                <ProtectedRoute roles={['admin']} title="Retail Products"><RetailProducts /></ProtectedRoute>
+            } />
 
             {/* Sales Routes */}
             <Route path="/prescription-sales" element={
-                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute roles={['pharmacist']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+            } />
+            <Route path="/prescription-sales-cashier" element={
+                <ProtectedRoute roles={['cashier']} title="Prescription Sales"><CashierPrescriptionSales /></ProtectedRoute>
+            } />
+            <Route path="/retail-otc-sales" element={
+                <ProtectedRoute roles={['pharmacist']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
             } />
             <Route path="/retail-sales" element={
-                <ProtectedRoute roles={['admin', 'cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+                <ProtectedRoute roles={['cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
             } />
+
             {/* Redirect legacy /sales path to prescription-sales */}
             <Route path="/sales" element={<Navigate to="/prescription-sales" replace />} />
 

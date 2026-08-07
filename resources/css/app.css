@@ -71,4 +71,82 @@
     .table-cell {
         @apply px-4 py-3.5 text-sm;
     }
+
+    /* Pharmacy POS System — shared component styles
+       Used by both Prescription Sales and Retail Sales */
+
+    /* Product / medicine card */
+    .pos-card {
+        @apply bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-col h-full transition-all duration-200 hover:shadow-md;
+    }
+
+    /* Primary action button (POS variant) */
+    .pos-btn-primary {
+        @apply bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-[0.98];
+    }
+
+    /* Cart / draft panel */
+    .pos-cart-panel {
+        @apply bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden;
+    }
+
+    /* Cart / draft panel header */
+    .pos-cart-header {
+        @apply border-b px-5 py-4 flex items-center justify-between;
+    }
+
+    /* Cart line item */
+    .pos-cart-item {
+        @apply py-3 flex items-center justify-between gap-2;
+    }
+
+    /* Quantity +/- button */
+    .pos-qty-btn {
+        @apply p-1 hover:bg-gray-100 rounded transition-colors;
+    }
+
+    /* Quantity numeric input */
+    .pos-qty-input {
+        @apply border border-gray-200 rounded focus:ring-1 focus:ring-sky-500 outline-none;
+    }
+
+    /* Remove item button */
+    .pos-remove-btn {
+        @apply hover:bg-red-50 p-1 rounded transition-colors;
+    }
+
+    /* Stock badge */
+    .pos-badge {
+        @apply px-2 py-0.5 rounded-full font-medium;
+    }
+
+    /* Search input (POS) */
+    .pos-search-input {
+        @apply w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none transition-all duration-200 placeholder:text-gray-400;
+    }
+
+    /* Page header */
+    .pos-page-header {
+        @apply flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6;
+    }
+
+    /* Product grid */
+    .pos-product-grid {
+        @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4;
+    }
+
+    /* POS layout wrapper */
+    .pos-layout {
+        @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
+    }
+
+    /* POS main content area */
+    .pos-main {
+        @apply lg:col-span-2 space-y-4;
+    }
+
+    /* POS sidebar (cart / draft) */
+    .pos-sidebar {
+        @apply lg:col-span-1;
+    }
 }

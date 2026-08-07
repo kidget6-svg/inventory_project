@@ -149,7 +149,7 @@ export default function SalesHistory() {
                         <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by receipt number, sale number, or customer..."
+                            placeholder="Search by receipt number or customer..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none"
@@ -225,7 +225,6 @@ export default function SalesHistory() {
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Receipt Number</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sale Number</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cashier</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
@@ -242,7 +241,6 @@ export default function SalesHistory() {
                                         <td className="px-4 py-3 text-sm font-medium text-gray-800">
                                             {sale.receipt_number || 'N/A'}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">#{sale.id}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">
                                             {new Date(sale.sale_date).toLocaleString()}
                                         </td>
@@ -292,7 +290,7 @@ export default function SalesHistory() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="9" className="px-4 py-8 text-center text-gray-400">
+                                    <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
                                         No sales found. Try adjusting your search or filters.
                                     </td>
                                 </tr>

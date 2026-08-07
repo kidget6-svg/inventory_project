@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
             SupplierSeeder::class,
             MedicineSeeder::class,
             BatchSeeder::class,
-            SaleSeeder::class,
+            RetailProductSeeder::class,
         ]);
         
         $this->command->info('✅ All data seeded successfully!');
