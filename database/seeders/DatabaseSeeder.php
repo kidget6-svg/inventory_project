@@ -1,5 +1,4 @@
 <?php
-// database/seeders/DatabaseSeeder.php
 
 namespace Database\Seeders;
 
@@ -9,17 +8,21 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Order matters - seed parent tables first
         $this->call([
-            UserSeeder::class,
-            CategorySeeder::class,
-            SupplierSeeder::class,
-            MedicineSeeder::class,
-            BatchSeeder::class,
-            SaleSeeder::class,
+            UserSeeder::class,      // Users first
+            CategorySeeder::class,  // Categories
+            SupplierSeeder::class,  // Suppliers
+            MedicineSeeder::class,  // Medicines (depends on categories & suppliers)
+            BatchSeeder::class,     // Batches (depends on medicines & suppliers)
+            SaleSeeder::class,      // Sales (depends on medicines & users)
         ]);
         
         $this->command->info('✅ All data seeded successfully!');
         $this->command->info('📊 Dashboard will now show real data!');
-        $this->command->info('🔑 Login: admin@pharmacy.com / password');
+        $this->command->info('🔑 Login Credentials:');
+        $this->command->info('   Admin: admin@pharmacy.com / password');
+        $this->command->info('   Pharmacist: pharmacist@pharmacy.com / password');
+        $this->command->info('   Cashier: cashier@pharmacy.com / password');
     }
 }

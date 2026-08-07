@@ -55,9 +55,19 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::post('/users/{user}/reject', [UserController::class, 'reject']);
     });
 
-    // Categories (admin only)
+    // Categories - read-only for admin + pharmacist
+    Route::middleware('role:admin,pharmacist')->group(function () {
+        Route::get('/categories', [CategoryController::class, 'index']);
+        Route::get('/categories/{category}', [CategoryController::class, 'show']);
+    });
+
+    // Categories - write access admin only
     Route::middleware('role:admin')->group(function () {
-        Route::apiResource('categories', CategoryController::class);
+        Route::get('/categories/create', [CategoryController::class, 'create']);
+        Route::post('/categories', [CategoryController::class, 'store']);
+        Route::get('/categories/{category}/edit', [CategoryController::class, 'edit']);
+        Route::put('/categories/{category}', [CategoryController::class, 'update']);
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
     });
 
     // Suppliers (admin only)
@@ -87,9 +97,19 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/reports', [ReportController::class, 'index']);
     });
 
-    // Medicines (admin + pharmacist)
+    // Medicines - read-only for admin + pharmacist
     Route::middleware('role:admin,pharmacist')->group(function () {
-        Route::apiResource('medicines', MedicineController::class);
+        Route::get('/medicines', [MedicineController::class, 'index']);
+        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
+    });
+
+    // Medicines - write access admin only
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/medicines/create', [MedicineController::class, 'create']);
+        Route::post('/medicines', [MedicineController::class, 'store']);
+        Route::get('/medicines/{medicine}/edit', [MedicineController::class, 'edit']);
+        Route::put('/medicines/{medicine}', [MedicineController::class, 'update']);
+        Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
     });
 
     // Stock Movements (admin + pharmacist)

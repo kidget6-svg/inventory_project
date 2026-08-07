@@ -30,7 +30,7 @@ function ProtectedRoute({ children, roles, title }) {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen text-sky-500 font-semibold text-lg">
-                Loading PharmaSys...
+                Loading EthioPharmacy....
             </div>
         );
     }
@@ -59,7 +59,7 @@ function App() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen text-sky-500 font-semibold text-lg">
-                Loading PharmaSys...
+                Loading EthioPharmacy....
             </div>
         );
     }

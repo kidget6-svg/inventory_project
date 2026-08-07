@@ -7,17 +7,43 @@ import { ArrowLeft, Save, X } from 'lucide-react';
 export default function CategoryEdit() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [form, setForm] = useState({ name: '', description: '' });
+    const [form, setForm] = useState({ name: '', description: '', shelf_location: '' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    // Check if user is admin
+    useEffect(() => {
+        const checkAdmin = async () => {
+            try {
+                const response = await api.get('/user');
+                if (response.data.role !== 'admin') {
+                    window.showToast('Only admins can edit categories', 'error');
+                    navigate('/categories');
+                    return;
+                }
+                setIsAdmin(true);
+            } catch (err) {
+                window.showToast('Unauthorized access', 'error');
+                navigate('/categories');
+            }
+        };
+        checkAdmin();
+    }, [navigate]);
 
     useEffect(() => {
-        api.get(`/categories/${id}`)
-            .then(r => setForm({ name: r.data.name, description: r.data.description || '' }))
-            .catch(() => setError('Failed to load category'))
-            .finally(() => setLoading(false));
-    }, [id]);
+        if (isAdmin) {
+            api.get(`/categories/${id}`)
+                .then(r => setForm({ 
+                    name: r.data.name, 
+                    description: r.data.description || '',
+                    shelf_location: r.data.shelf_location || '' 
+                }))
+                .catch(() => setError('Failed to load category'))
+                .finally(() => setLoading(false));
+        }
+    }, [id, isAdmin]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -38,6 +64,8 @@ export default function CategoryEdit() {
     };
 
     if (loading) return <LoadingSpinner text="Loading category..." />;
+
+    if (!isAdmin) return null;
 
     return (
         <div className="space-y-6">
@@ -65,12 +93,23 @@ export default function CategoryEdit() {
                             required
                         />
                     </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
+                        <input
+                            name="shelf_location"
+                            value={form.shelf_location}
+                            onChange={handleChange}
+                            placeholder="e.g. A-2-3"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        />
+                    </div>
                     <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                        <input
+                        <textarea
                             name="description"
                             value={form.description}
                             onChange={handleChange}
+                            rows="3"
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                         />
                     </div>

@@ -1,5 +1,4 @@
 <?php
-// database/seeders/BatchSeeder.php
 
 namespace Database\Seeders;
 
@@ -13,12 +12,6 @@ class BatchSeeder extends Seeder
 {
     public function run(): void
     {
-        // Check if Batch model exists
-        if (!class_exists('App\\Models\\Batch')) {
-            $this->command->warn('⚠️ Batch model not found! Skipping BatchSeeder.');
-            return;
-        }
-
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         Batch::truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
@@ -31,7 +24,10 @@ class BatchSeeder extends Seeder
             return;
         }
 
+        $batchesCreated = 0;
+
         foreach ($medicines as $medicine) {
+            // Create 2-3 batches per medicine
             $numBatches = rand(2, 3);
             
             for ($i = 0; $i < $numBatches; $i++) {
@@ -58,9 +54,11 @@ class BatchSeeder extends Seeder
                     'unit_cost' => rand(10, 100),
                     'supplier_id' => $suppliers->random()->id,
                 ]);
+                
+                $batchesCreated++;
             }
         }
 
-        $this->command->info('✅ Batches created successfully!');
+        $this->command->info('✅ Batches created: ' . $batchesCreated);
     }
 }
