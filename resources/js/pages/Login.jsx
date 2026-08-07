@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Mail, Lock, Pill, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
 export default function Login() {  // ← Make sure this is here
     const { login } = useAuth();
@@ -36,8 +36,8 @@ export default function Login() {  // ← Make sure this is here
                 <div className="bg-white rounded-2xl shadow-xl p-8">
                     {/* Logo */}
                     <div className="text-center mb-8">
-                        <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-                            <Pill size={32} className="text-blue-600" />
+                        <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4 shadow-2xl ring-2 ring-sky-400/70 transform hover:scale-105 transition-transform duration-200">
+                            <img src="/images/sidebar.png" alt="EthioPharmacy" className="w-16 h-16 object-contain" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome Back</h2>
                         <p className="text-gray-500 mt-1.5 text-sm">Sign in to your account</p>

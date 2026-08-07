@@ -27,6 +27,29 @@ export default function Inventory() {
     const [restockQty, setRestockQty] = useState('');
     const [restockNotes, setRestockNotes] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [userRole, setUserRole] = useState(null);
+    const [canWrite, setCanWrite] = useState(false);
+
+    // Get user role
+    useEffect(() => {
+        const getUser = async () => {
+            try {
+                const response = await api.get('/user');
+                const role = response.data.role;
+                setUserRole(role);
+                setCanWrite(role === 'admin' || role === 'pharmacist');
+            } catch (err) {
+                console.error('Failed to get user role:', err);
+            }
+        };
+        getUser();
+    }, []);
+
+    // --- FIX: Add the missing handleFilterChange function ---
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({ ...prev, [name]: value }));
+    };
 
     const loadMedicines = () => {
         api.get('/medicines', { params: { category_id: filters.category_id || undefined, per_page: 1000 } })
@@ -65,7 +88,6 @@ export default function Inventory() {
     }, [filters, movementsPage]);
 
     useEffect(() => {
-        // reload movements whenever page changes (keeps Promise.all consistent)
         if (movementsPage !== 1) loadMovements();
     }, [movementsPage]);
 
@@ -99,6 +121,12 @@ export default function Inventory() {
     const handleRestock = async (e) => {
         e.preventDefault();
         if (!restockMedicine || !restockQty || Number(restockQty) < 1) return;
+        
+        if (!canWrite) {
+            window.showToast('Only admins and pharmacists can restock medicines', 'error');
+            return;
+        }
+        
         setSubmitting(true);
         try {
             await api.post('/stock-movements', {
@@ -284,11 +312,11 @@ export default function Inventory() {
                         </div>
                         <div className="card p-5">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-sky-100 rounded-lg">
-                                    <AlertTriangle className="w-6 h-6 text-sky-600" />
+                                <div className="p-2 bg-amber-100 rounded-lg">
+                                    <AlertTriangle className="w-6 h-6 text-amber-600" />
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-bold text-gray-800">{lowStockMedicines.length}</p>
+                                    <p className="text-2xl font-bold text-amber-600">{lowStockMedicines.length}</p>
                                     <p className="text-xs text-gray-500">Low Stock</p>
                                 </div>
                             </div>
@@ -299,7 +327,7 @@ export default function Inventory() {
                                     <Calendar className="w-6 h-6 text-red-600" />
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-bold text-gray-800">{expiredMedicines.length}</p>
+                                    <p className="text-2xl font-bold text-red-600">{expiredMedicines.length}</p>
                                     <p className="text-xs text-gray-500">Expired</p>
                                 </div>
                             </div>
@@ -318,7 +346,7 @@ export default function Inventory() {
                             <h3 className="text-sm font-semibold text-gray-600 mb-3">Low Stock Alert</h3>
                             <div className="space-y-2">
                                 {lowStockMedicines.slice(0, 5).map(m => (
-                                    <div key={m.id} className="flex justify-between items-center p-3 bg-sky-50 rounded-lg">
+                                    <div key={m.id} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-200">
                                         <div>
                                             <p className="text-sm font-medium">{m.name}</p>
                                             <p className="text-xs text-gray-500">Qty: {m.quantity} / Reorder: {m.reorder_level}</p>
@@ -342,7 +370,7 @@ export default function Inventory() {
                                 {expiringSoonMedicines.slice(0, 5).map(m => {
                                     const daysLeft = Math.ceil((new Date(m.expiry_date) - today) / (1000 * 60 * 60 * 24));
                                     return (
-                                        <div key={m.id} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                                        <div key={m.id} className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
                                             <div>
                                                 <p className="text-sm font-medium">{m.name}</p>
                                                 <p className="text-xs text-gray-500">
@@ -350,7 +378,7 @@ export default function Inventory() {
                                                 </p>
                                             </div>
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                daysLeft <= 30 ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700'
+                                                daysLeft <= 30 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                                             }`}>
                                                 {daysLeft <= 30 ? 'Urgent' : 'Soon'}
                                             </span>
@@ -400,7 +428,7 @@ export default function Inventory() {
                                             <td className="px-4 py-3 text-sm font-medium">{m.medicine?.name || 'Unknown'}</td>
                                             <td className="px-4 py-3 text-sm">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                    m.type === 'in' ? 'bg-sky-100 text-sky-700' : 'bg-sky-100 text-sky-700'
+                                                    m.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                                 }`}>
                                                     {m.type === 'in' ? 'Stock In' : 'Stock Out'}
                                                 </span>

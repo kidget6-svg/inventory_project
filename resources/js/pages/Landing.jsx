@@ -18,20 +18,20 @@ export default function Landing() {
                 <nav className="flex items-center justify-between px-6 lg:px-12 py-5">
 
                     {/* Logo + Title */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <img
-                            src="/images/pharmacy-logo.svg"
-                            alt="PharmaSys Logo"
-                            className="w-12 h-12 rounded-xl bg-white shadow"
+                            src="/images/sidebar.png"
+                            alt="EthioPharmacy"
+                            className="w-16 h-16 rounded-2xl bg-white shadow-2xl ring-2 ring-sky-400/70 transform hover:scale-105 transition-transform duration-200"
                         />
 
                         <div>
                             <h1 className="text-3xl font-bold text-blue-800">
-                               EPIS
+                               EthioPharmacy
                             </h1>
 
                             <p className="text-sm text-gray-600">
-                                Pharmacy Inventory Management System
+                                Smart Pharmacy Inventory System
                             </p>
                         </div>
                     </div>

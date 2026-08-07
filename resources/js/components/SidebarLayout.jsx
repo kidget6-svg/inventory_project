@@ -114,13 +114,12 @@ export default function SidebarLayout({ children, pageTitle }) {
             >
                 <div className="p-5 border-b border-sky-200 flex items-center justify-between">
                     <div className={`flex items-center gap-3 min-w-0 ${collapsed ? 'md:justify-center md:w-full' : ''}`}>
-                        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-                            <Pill size={20} className="text-sky-500" />
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-2xl ring-2 ring-sky-400/70 bg-white transform hover:scale-105 transition-transform duration-200">
+                            <img src="/images/sidebar.png" alt="EthioPharmacy" className="w-10 h-10 object-contain" />
                         </div>
                         {!collapsed && (
                             <div className="min-w-0">
-                                <div className="text-base font-bold text-gray-900 tracking-tight truncate">PharmaSys</div>
-                                <div className="text-[10px] text-gray-600 font-medium truncate">Inventory Management</div>
+                                <div className="text-base font-bold text-gray-900 tracking-tight truncate">EthioPharmacy</div>
                             </div>
                         )}
                     </div>
