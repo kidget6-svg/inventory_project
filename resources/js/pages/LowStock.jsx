@@ -37,177 +37,66 @@ const COLORS = {
 };
 
 // ============================================================
-// INTERACTIVE DONUT CHART COMPONENT
+// DONUT CHART COMPONENT
 // ============================================================
-const InteractiveDonutChart = ({ 
+const DonutChart = ({ 
     data, 
     title, 
-    subtitle, 
-    centerLabel, 
-    centerValue, 
-    onSegmentClick,
-    activeKey,
-    size = 200,
-    innerRadius = 65,
-    strokeWidth = 30,
-    showLegend = true,
-    legendPosition = 'bottom'
+    value, 
+    color = COLORS.primary,
+    size = 120,
+    strokeWidth = 12,
+    percentage = 0,
+    onClick,
+    active = false
 }) => {
-    const [hovered, setHovered] = useState(null);
-    const total = data.reduce((s, d) => s + d.value, 0) || 1;
-    const cx = size / 2, cy = size / 2, r = size / 2 - 15;
-    let cumulative = 0;
-
-    const segments = data.map((d) => {
-        const fraction = d.value / total;
-        const startAngle = cumulative * 2 * Math.PI - Math.PI / 2;
-        cumulative += fraction;
-        const endAngle = cumulative * 2 * Math.PI - Math.PI / 2;
-        const largeArc = fraction > 0.5 ? 1 : 0;
-        const x1 = cx + r * Math.cos(startAngle);
-        const y1 = cy + r * Math.sin(startAngle);
-        const x2 = cx + r * Math.cos(endAngle);
-        const y2 = cy + r * Math.sin(endAngle);
-        const path = fraction >= 0.9999
-            ? `M ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy} A ${r} ${r} 0 1 1 ${cx - r} ${cy}`
-            : `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
-        return { ...d, path, fraction, startAngle, endAngle };
-    });
-
-    if (total === 0 || data.every(d => d.value === 0)) {
-        return (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-                <CheckCircle className="w-16 h-16 text-emerald-400 mb-4" />
-                <p className="text-lg font-semibold text-gray-700">All Clear!</p>
-                <p className="text-sm text-gray-400">No data to display</p>
-            </div>
-        );
-    }
-
-    const getStrokeWidth = (seg) => {
-        const isHovered = hovered === seg.key;
-        const isActive = activeKey === seg.key;
-        if (isHovered || isActive) return strokeWidth + 8;
-        return strokeWidth;
-    };
-
-    const getOpacity = (seg) => {
-        if (hovered && hovered !== seg.key) return 0.4;
-        return 1;
-    };
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = size / 2 - 10;
+    const circumference = 2 * Math.PI * r;
+    const offset = circumference - (percentage / 100) * circumference;
 
     return (
-        <div className="flex flex-col items-center">
-            {/* Title */}
-            {title && (
-                <div className="text-center mb-4">
-                    <h3 className="text-lg font-bold text-gray-800">{title}</h3>
-                    {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
-                </div>
-            )}
-
-            {/* Chart */}
-            <div className="relative" style={{ width: size, height: size }}>
-                <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                    {/* Glow effect */}
-                    <defs>
-                        <filter id="glow">
-                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                            <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                    </defs>
-
-                    {segments.map((seg, i) => (
-                        <path
-                            key={i}
-                            d={seg.path}
-                            fill="none"
-                            stroke={seg.color}
-                            strokeWidth={getStrokeWidth(seg)}
-                            strokeLinecap="round"
-                            style={{
-                                cursor: 'pointer',
-                                transition: 'stroke-width 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms ease',
-                                opacity: getOpacity(seg),
-                                filter: (hovered === seg.key || activeKey === seg.key) ? 'url(#glow)' : 'none'
-                            }}
-                            onMouseEnter={() => setHovered(seg.key)}
-                            onMouseLeave={() => setHovered(null)}
-                            onClick={() => onSegmentClick?.(seg)}
-                        />
-                    ))}
-                </svg>
-
-                {/* Center content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    {centerValue !== undefined ? (
-                        <>
-                            <span className="text-3xl font-bold text-gray-800">{centerValue}</span>
-                            <span className="text-xs text-gray-400">{centerLabel || 'Total'}</span>
-                        </>
-                    ) : (
-                        <>
-                            <span className="text-2xl font-bold text-gray-800">
-                                {hovered ? segments.find(s => s.key === hovered)?.value : total}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                                {hovered ? segments.find(s => s.key === hovered)?.label : 'Total'}
-                            </span>
-                        </>
-                    )}
-                </div>
+        <div 
+            className={`relative cursor-pointer transition-all duration-300 ${
+                active ? 'scale-105 ring-2 ring-sky-400 shadow-lg' : 'hover:scale-105 hover:shadow-lg'
+            }`}
+            onClick={onClick}
+            style={{ width: size, height: size }}
+        >
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                {/* Background circle */}
+                <circle
+                    cx={cx}
+                    cy={cy}
+                    r={r}
+                    fill="none"
+                    stroke="#f1f5f9"
+                    strokeWidth={strokeWidth}
+                />
+                {/* Progress circle */}
+                <circle
+                    cx={cx}
+                    cy={cy}
+                    r={r}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${cx} ${cy})`}
+                    className="transition-all duration-1000 ease-out"
+                />
+            </svg>
+            {/* Center content */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-bold text-gray-800">{value}</span>
+                <span className="text-[10px] text-gray-400 text-center leading-tight">{title}</span>
             </div>
-
-            {/* Legend */}
-            {showLegend && (
-                <div className={`flex flex-wrap gap-3 mt-4 ${legendPosition === 'bottom' ? 'justify-center' : 'flex-col'}`}>
-                    {segments.map((seg, i) => (
-                        <button
-                            key={i}
-                            onClick={() => onSegmentClick?.(seg)}
-                            onMouseEnter={() => setHovered(seg.key)}
-                            onMouseLeave={() => setHovered(null)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                                activeKey === seg.key ? 'bg-gray-100 ring-2 ring-gray-300' : 'hover:bg-gray-50'
-                            }`}
-                        >
-                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: seg.color }} />
-                            <span className="text-gray-700">{seg.label}</span>
-                            <span className="text-gray-400">({seg.value})</span>
-                            <span className="text-gray-300">·</span>
-                            <span className="text-gray-500">{(seg.fraction * 100).toFixed(1)}%</span>
-                        </button>
-                    ))}
-                </div>
-            )}
         </div>
     );
 };
-
-// ============================================================
-// MINI STAT CARD (Used sparingly for key metrics)
-// ============================================================
-const MiniStat = ({ icon: Icon, value, label, color, trend }) => (
-    <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm hover:shadow-md transition-shadow duration-200">
-        <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg bg-${color}-50`}>
-                <Icon className={`w-4 h-4 text-${color}-500`} />
-            </div>
-            <div>
-                <p className="text-lg font-bold text-gray-800">{value}</p>
-                <p className="text-xs text-gray-400">{label}</p>
-            </div>
-            {trend && (
-                <span className={`text-xs font-semibold ml-auto ${trend.direction === 'up' ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {trend.value}
-                </span>
-            )}
-        </div>
-    </div>
-);
 
 // ============================================================
 // MAIN COMPONENT
@@ -228,11 +117,6 @@ export default function LowStock() {
 
     const [showModal, setShowModal] = useState(false);
     const [selectedMedicine, setSelectedMedicine] = useState(null);
-
-    // Chart interaction state
-    const [activeStatusKey, setActiveStatusKey] = useState(null);
-    const [activeCategoryKey, setActiveCategoryKey] = useState(null);
-    const [activeSupplierKey, setActiveSupplierKey] = useState(null);
     const tableRef = useRef(null);
 
     // Load data
@@ -285,41 +169,40 @@ export default function LowStock() {
     const handleFilterChange = useCallback((e) => {
         setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
         setPage(1);
-        setActiveStatusKey(null);
-        setActiveCategoryKey(null);
-        setActiveSupplierKey(null);
     }, []);
 
     const resetFilters = useCallback(() => {
         setFilters({ search: '', category_id: '', supplier_id: '', status: '', sort: 'name_asc' });
         setPage(1);
-        setActiveStatusKey(null);
-        setActiveCategoryKey(null);
-        setActiveSupplierKey(null);
     }, []);
 
     const getStockStatus = useCallback((medicine) => {
         const qty = Number(medicine.quantity) || 0;
         const reorder = Number(medicine.reorder_level) || 0;
-        if (qty === 0) return { key: 'out', label: 'Out of Stock', color: COLORS.red, severity: 'critical' };
-        if (qty <= reorder / 2) return { key: 'critical', label: 'Critical', color: COLORS.orange, severity: 'critical' };
-        if (qty <= reorder) return { key: 'low', label: 'Low Stock', color: COLORS.warning, severity: 'low' };
-        return { key: 'healthy', label: 'Healthy', color: COLORS.success, severity: 'healthy' };
+        if (qty === 0) return { key: 'out', label: 'Out of Stock', color: COLORS.danger };
+        if (qty <= reorder / 2) return { key: 'critical', label: 'Critical', color: COLORS.orange };
+        if (qty <= reorder) return { key: 'low', label: 'Low Stock', color: COLORS.warning };
+        return { key: 'healthy', label: 'Healthy', color: COLORS.success };
     }, []);
 
     const getStatusBadge = useCallback((medicine) => {
         const status = getStockStatus(medicine);
         const colors = {
-            red: 'bg-red-100 text-red-700 border-red-200',
-            orange: 'bg-orange-100 text-orange-700 border-orange-200',
-            yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-            green: 'bg-green-100 text-green-700 border-green-200',
+            [COLORS.danger]: 'bg-red-100 text-red-700 border-red-200',
+            [COLORS.orange]: 'bg-orange-100 text-orange-700 border-orange-200',
+            [COLORS.warning]: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+            [COLORS.success]: 'bg-green-100 text-green-700 border-green-200',
         };
-        const colorMap = { [COLORS.red]: 'red', [COLORS.orange]: 'orange', [COLORS.warning]: 'yellow', [COLORS.success]: 'green' };
-        const colorKey = colorMap[status.color] || 'orange';
+        const colorMap = { 
+            [COLORS.danger]: 'red', 
+            [COLORS.orange]: 'orange', 
+            [COLORS.warning]: 'yellow', 
+            [COLORS.success]: 'green' 
+        };
+        const colorKey = colorMap[status.color] || 'yellow';
         return (
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border inline-flex items-center gap-1 ${colors[colorKey]}`}>
-                {status.color === COLORS.red || status.color === COLORS.orange ? 
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border inline-flex items-center gap-1 ${colors[status.color]}`}>
+                {status.color === COLORS.danger || status.color === COLORS.orange ? 
                     <AlertCircle className="w-3.5 h-3.5" /> : 
                     <AlertTriangle className="w-3.5 h-3.5" />
                 }
@@ -329,139 +212,95 @@ export default function LowStock() {
     }, [getStockStatus]);
 
     // ============================================================
-    // DERIVED DATA FOR CHARTS
+    // CALCULATE METRICS FOR DONUT CHARTS
     // ============================================================
 
-    // 1. Status Distribution
-    const statusData = useMemo(() => {
-        const counts = { out: 0, critical: 0, low: 0, healthy: 0 };
-        medicines.forEach(m => {
-            const status = getStockStatus(m);
-            counts[status.key] = (counts[status.key] || 0) + 1;
-        });
-        return [
-            { key: 'out', label: 'Out of Stock', value: counts.out, color: COLORS.red },
-            { key: 'critical', label: 'Critical', value: counts.critical, color: COLORS.orange },
-            { key: 'low', label: 'Low Stock', value: counts.low, color: COLORS.warning },
-            { key: 'healthy', label: 'Healthy', value: counts.healthy, color: COLORS.success },
-        ];
-    }, [medicines, getStockStatus]);
-
-    // 2. Category Distribution
-    const categoryData = useMemo(() => {
-        const map = new Map();
-        medicines.forEach(m => {
-            const catName = m.category?.name || 'Uncategorized';
-            const catId = m.category_id || m.category?.id || 'uncategorized';
-            const prev = map.get(catId) || { key: catId, label: catName, value: 0 };
-            prev.value += 1;
-            map.set(catId, prev);
-        });
-        const colors = [COLORS.sky, COLORS.purple, COLORS.pink, COLORS.indigo, COLORS.teal, COLORS.emerald, COLORS.amber, COLORS.rose];
-        return Array.from(map.values())
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 8)
-            .map((d, i) => ({ ...d, color: colors[i % colors.length] }));
-    }, [medicines]);
-
-    // 3. Supplier Distribution
-    const supplierData = useMemo(() => {
-        const map = new Map();
-        medicines.forEach(m => {
-            const supName = m.supplier?.name || 'No Supplier';
-            const supId = m.supplier_id || m.supplier?.id || 'nosupplier';
-            const prev = map.get(supId) || { key: supId, label: supName, value: 0 };
-            prev.value += 1;
-            map.set(supId, prev);
-        });
-        const colors = [COLORS.purple, COLORS.info, COLORS.emerald, COLORS.amber, COLORS.rose, COLORS.indigo, COLORS.teal];
-        return Array.from(map.values())
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 6)
-            .map((d, i) => ({ ...d, color: colors[i % colors.length] }));
-    }, [medicines]);
-
-    // 4. Stock Value by Status
-    const stockValueData = useMemo(() => {
-        const map = { out: 0, critical: 0, low: 0, healthy: 0 };
-        medicines.forEach(m => {
-            const status = getStockStatus(m);
-            const value = (Number(m.quantity) || 0) * (Number(m.purchase_price) || Number(m.unit_price) || 0);
-            map[status.key] = (map[status.key] || 0) + value;
-        });
-        return [
-            { key: 'out', label: 'Out of Stock', value: Math.round(map.out), color: COLORS.red },
-            { key: 'critical', label: 'Critical', value: Math.round(map.critical), color: COLORS.orange },
-            { key: 'low', label: 'Low Stock', value: Math.round(map.low), color: COLORS.warning },
-            { key: 'healthy', label: 'Healthy', value: Math.round(map.healthy), color: COLORS.success },
-        ];
-    }, [medicines, getStockStatus]);
-
-    // 5. Expiry Status
-    const expiryData = useMemo(() => {
-        const today = new Date();
-        const counts = { expired: 0, '30days': 0, '60days': 0, '90days': 0, good: 0 };
-        medicines.forEach(m => {
-            if (!m.expiry_date) { counts.good++; return; }
-            const days = (new Date(m.expiry_date) - today) / (1000 * 60 * 60 * 24);
-            if (days < 0) counts.expired++;
-            else if (days <= 30) counts['30days']++;
-            else if (days <= 60) counts['60days']++;
-            else if (days <= 90) counts['90days']++;
-            else counts.good++;
-        });
-        return [
-            { key: 'expired', label: 'Expired', value: counts.expired, color: COLORS.red },
-            { key: '30days', label: '≤ 30 Days', value: counts['30days'], color: COLORS.orange },
-            { key: '60days', label: '≤ 60 Days', value: counts['60days'], color: COLORS.warning },
-            { key: '90days', label: '≤ 90 Days', value: counts['90days'], color: COLORS.sky },
-            { key: 'good', label: 'Good (>90d)', value: counts.good, color: COLORS.success },
-        ];
-    }, [medicines]);
-
-    // 6. Low Stock Severity
-    const severityData = useMemo(() => {
-        const critical = medicines.filter(m => {
-            const qty = Number(m.quantity) || 0;
-            const reorder = Number(m.reorder_level) || 0;
-            return qty === 0 || qty <= reorder / 2;
-        }).length;
-        const low = medicines.filter(m => {
+    const metrics = useMemo(() => {
+        const total = medicines.length;
+        const outOfStock = medicines.filter(m => Number(m.quantity) === 0).length;
+        const lowStock = medicines.filter(m => {
             const qty = Number(m.quantity) || 0;
             const reorder = Number(m.reorder_level) || 0;
             return qty > 0 && qty <= reorder;
         }).length;
-        const healthy = medicines.length - critical - low;
-        return [
-            { key: 'critical', label: 'Critical', value: critical, color: COLORS.red },
-            { key: 'low', label: 'Low', value: low, color: COLORS.warning },
-            { key: 'healthy', label: 'Healthy', value: healthy, color: COLORS.success },
-        ];
+        const stockValue = medicines.reduce((sum, m) => {
+            return sum + (Number(m.quantity) || 0) * (Number(m.purchase_price) || Number(m.unit_price) || 0);
+        }, 0);
+        const expired = medicines.filter(m => {
+            if (!m.expiry_date) return false;
+            return new Date(m.expiry_date) < new Date();
+        }).length;
+        const healthy = total - outOfStock - lowStock;
+
+        return {
+            total,
+            outOfStock,
+            lowStock,
+            stockValue,
+            expired,
+            healthy,
+            // Percentages for donut charts
+            totalPercentage: 100,
+            outOfStockPercentage: total > 0 ? (outOfStock / total) * 100 : 0,
+            lowStockPercentage: total > 0 ? (lowStock / total) * 100 : 0,
+            expiredPercentage: total > 0 ? (expired / total) * 100 : 0,
+            healthyPercentage: total > 0 ? (healthy / total) * 100 : 0,
+        };
     }, [medicines]);
 
-    // 7. Reorder Cost by Category
-    const reorderCostData = useMemo(() => {
-        const map = new Map();
-        medicines.forEach(m => {
-            const qty = Number(m.quantity) || 0;
-            const reorder = Number(m.reorder_level) || 0;
-            if (qty > reorder) return;
-            const price = Number(m.purchase_price) || Number(m.unit_price) || 0;
-            const suggestedQty = Math.max(reorder * 2 - qty, 1);
-            const catName = m.category?.name || 'Uncategorized';
-            const catId = m.category_id || m.category?.id || 'uncategorized';
-            const prev = map.get(catId) || { key: catId, label: catName, value: 0 };
-            prev.value += suggestedQty * price;
-            map.set(catId, prev);
-        });
-        const colors = [COLORS.emerald, COLORS.sky, COLORS.purple, COLORS.pink, COLORS.indigo, COLORS.teal, COLORS.amber];
-        return Array.from(map.values())
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 6)
-            .map((d, i) => ({ ...d, color: colors[i % colors.length], value: Math.round(d.value) }));
-    }, [medicines]);
+    // Donut chart data for each metric
+    const donutData = useMemo(() => ({
+        total: {
+            value: metrics.total,
+            label: 'Total Items',
+            color: COLORS.sky,
+            percentage: 100,
+            data: [
+                { label: 'Items', value: metrics.total, color: COLORS.sky }
+            ]
+        },
+        outOfStock: {
+            value: metrics.outOfStock,
+            label: 'Out of Stock',
+            color: COLORS.danger,
+            percentage: metrics.outOfStockPercentage,
+            data: [
+                { label: 'Out of Stock', value: metrics.outOfStock, color: COLORS.danger },
+                { label: 'In Stock', value: metrics.total - metrics.outOfStock, color: COLORS.success }
+            ]
+        },
+        lowStock: {
+            value: metrics.lowStock,
+            label: 'Low Stock',
+            color: COLORS.warning,
+            percentage: metrics.lowStockPercentage,
+            data: [
+                { label: 'Low Stock', value: metrics.lowStock, color: COLORS.warning },
+                { label: 'Healthy', value: metrics.total - metrics.lowStock, color: COLORS.success }
+            ]
+        },
+        stockValue: {
+            value: `$${(metrics.stockValue / 1000).toFixed(0)}K`,
+            label: 'Stock Value',
+            color: COLORS.emerald,
+            percentage: 100,
+            data: [
+                { label: 'Value', value: metrics.stockValue, color: COLORS.emerald }
+            ]
+        },
+        expired: {
+            value: metrics.expired,
+            label: 'Expired',
+            color: COLORS.rose,
+            percentage: metrics.expiredPercentage,
+            data: [
+                { label: 'Expired', value: metrics.expired, color: COLORS.rose },
+                { label: 'Valid', value: metrics.total - metrics.expired, color: COLORS.success }
+            ]
+        }
+    }), [metrics]);
 
-    // 8. Filtered medicines
+    // Filtered medicines for table
     const filteredMedicines = useMemo(() => {
         let result = [...medicines];
         if (filters.search) {
@@ -488,26 +327,21 @@ export default function LowStock() {
         return result;
     }, [medicines, filters]);
 
-    // Chart click handlers
-    const handleStatusClick = (seg) => {
-        setActiveStatusKey(prev => prev === seg.key ? null : seg.key);
-        setFilters(prev => ({ ...prev, status: prev.status === seg.key ? '' : seg.key }));
-        setPage(1);
-        tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
-    const handleCategoryClick = (seg) => {
-        setActiveCategoryKey(prev => prev === seg.key ? null : seg.key);
-        setFilters(prev => ({ ...prev, category_id: prev.category_id === seg.key ? '' : seg.key }));
-        setPage(1);
-        tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
-    const handleSupplierClick = (seg) => {
-        setActiveSupplierKey(prev => prev === seg.key ? null : seg.key);
-        setFilters(prev => ({ ...prev, supplier_id: prev.supplier_id === seg.key ? '' : seg.key }));
-        setPage(1);
-        tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Donut chart click handlers
+    const handleDonutClick = (type) => {
+        const filterMap = {
+            outOfStock: 'out',
+            lowStock: 'low',
+            expired: 'expired',
+        };
+        if (filterMap[type]) {
+            setFilters(prev => ({
+                ...prev,
+                status: prev.status === filterMap[type] ? '' : filterMap[type]
+            }));
+            setPage(1);
+            tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     };
 
     const isFiltered = filters.search || filters.category_id || filters.supplier_id || filters.status;
@@ -515,6 +349,7 @@ export default function LowStock() {
     // ============================================================
     // RENDER
     // ============================================================
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -538,7 +373,7 @@ export default function LowStock() {
     }
 
     return (
-        <div className="space-y-8 pb-8">
+        <div className="space-y-6 pb-8">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -546,7 +381,7 @@ export default function LowStock() {
                         <AlertTriangle className="w-7 h-7 text-amber-500" />
                         Low Stock Management
                     </h1>
-                    <p className="text-sm text-gray-500">Interactive dashboard with real-time inventory insights</p>
+                    <p className="text-sm text-gray-500">Monitor inventory health with visual metrics</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <button onClick={loadData} className="px-4 py-2 text-sm flex items-center gap-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all">
@@ -558,101 +393,96 @@ export default function LowStock() {
                 </div>
             </div>
 
-            {/* Quick Stats - Mini Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                <MiniStat icon={Package} value={medicines.length} label="Total Items" color="blue" />
-                <MiniStat icon={AlertTriangle} value={statusData.filter(d => d.key === 'critical').reduce((s, d) => s + d.value, 0)} label="Critical" color="red" />
-                <MiniStat icon={AlertCircle} value={statusData.filter(d => d.key === 'out').reduce((s, d) => s + d.value, 0)} label="Out of Stock" color="red" />
-                <MiniStat icon={Clock} value={statusData.filter(d => d.key === 'low').reduce((s, d) => s + d.value, 0)} label="Low Stock" color="yellow" />
-                <MiniStat icon={DollarSign} value={`$${Math.round(medicines.reduce((s, m) => s + (Number(m.quantity) || 0) * (Number(m.purchase_price) || Number(m.unit_price) || 0), 0)).toLocaleString()}`} label="Stock Value" color="green" />
-                <MiniStat icon={Calendar} value={expiryData.find(d => d.key === 'expired')?.value || 0} label="Expired" color="red" trend={{ direction: 'down', value: 'Check' }} />
-            </div>
-
-            {/* Dashboard Charts Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {/* Status Distribution */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                    <InteractiveDonutChart
-                        data={statusData}
-                        title="Stock Status"
-                        subtitle="Click segment to filter"
-                        activeKey={activeStatusKey}
-                        onSegmentClick={handleStatusClick}
-                        size={200}
-                        innerRadius={60}
+            {/* ============================================================
+                DONUT CHARTS METRICS
+                ============================================================ */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+                {/* Total Items */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow">
+                    <DonutChart
+                        data={donutData.total.data}
+                        title="Total Items"
+                        value={donutData.total.value}
+                        color={donutData.total.color}
+                        percentage={donutData.total.percentage}
+                        size={130}
+                        strokeWidth={10}
                     />
+                    <p className="text-xs text-gray-400 mt-2">All medicines in inventory</p>
                 </div>
 
-                {/* Category Distribution */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                    <InteractiveDonutChart
-                        data={categoryData}
-                        title="By Category"
-                        subtitle="Click to filter by category"
-                        activeKey={activeCategoryKey}
-                        onSegmentClick={handleCategoryClick}
-                        size={200}
-                        innerRadius={60}
+                {/* Out of Stock */}
+                <div 
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleDonutClick('outOfStock')}
+                >
+                    <DonutChart
+                        data={donutData.outOfStock.data}
+                        title="Out of Stock"
+                        value={donutData.outOfStock.value}
+                        color={donutData.outOfStock.color}
+                        percentage={donutData.outOfStock.percentage}
+                        size={130}
+                        strokeWidth={10}
+                        active={filters.status === 'out'}
                     />
+                    <p className="text-xs text-gray-400 mt-2">{metrics.outOfStockPercentage.toFixed(1)}% of total</p>
                 </div>
 
-                {/* Supplier Distribution */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                    <InteractiveDonutChart
-                        data={supplierData}
-                        title="By Supplier"
-                        subtitle="Click to filter by supplier"
-                        activeKey={activeSupplierKey}
-                        onSegmentClick={handleSupplierClick}
-                        size={200}
-                        innerRadius={60}
+                {/* Low Stock */}
+                <div 
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleDonutClick('lowStock')}
+                >
+                    <DonutChart
+                        data={donutData.lowStock.data}
+                        title="Low Stock"
+                        value={donutData.lowStock.value}
+                        color={donutData.lowStock.color}
+                        percentage={donutData.lowStock.percentage}
+                        size={130}
+                        strokeWidth={10}
+                        active={filters.status === 'low'}
                     />
+                    <p className="text-xs text-gray-400 mt-2">{metrics.lowStockPercentage.toFixed(1)}% of total</p>
                 </div>
 
-                {/* Stock Value by Status */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                    <InteractiveDonutChart
-                        data={stockValueData}
-                        title="Stock Value by Status"
-                        subtitle="Value distribution ($)"
-                        centerValue={`$${(stockValueData.reduce((s, d) => s + d.value, 0) / 1000).toFixed(0)}K`}
-                        centerLabel="Total Value"
-                        activeKey={activeStatusKey}
-                        onSegmentClick={handleStatusClick}
-                        size={200}
-                        innerRadius={55}
+                {/* Stock Value */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow">
+                    <DonutChart
+                        data={donutData.stockValue.data}
+                        title="Stock Value"
+                        value={donutData.stockValue.value}
+                        color={donutData.stockValue.color}
+                        percentage={donutData.stockValue.percentage}
+                        size={130}
+                        strokeWidth={10}
                     />
+                    <p className="text-xs text-gray-400 mt-2">Total inventory value</p>
                 </div>
 
-                {/* Expiry Status */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                    <InteractiveDonutChart
-                        data={expiryData}
-                        title="Expiry Status"
-                        subtitle="Days until expiry"
-                        activeKey={null}
-                        size={200}
-                        innerRadius={60}
+                {/* Expired */}
+                <div 
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleDonutClick('expired')}
+                >
+                    <DonutChart
+                        data={donutData.expired.data}
+                        title="Expired"
+                        value={donutData.expired.value}
+                        color={donutData.expired.color}
+                        percentage={donutData.expired.percentage}
+                        size={130}
+                        strokeWidth={10}
+                        active={filters.status === 'expired'}
                     />
-                </div>
-
-                {/* Reorder Cost by Category */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-                    <InteractiveDonutChart
-                        data={reorderCostData}
-                        title="Reorder Cost"
-                        subtitle="Estimated cost by category"
-                        centerValue={`$${(reorderCostData.reduce((s, d) => s + d.value, 0) / 1000).toFixed(0)}K`}
-                        centerLabel="Total Cost"
-                        activeKey={activeCategoryKey}
-                        onSegmentClick={handleCategoryClick}
-                        size={200}
-                        innerRadius={55}
-                    />
+                    <p className="text-xs text-gray-400 mt-2">{metrics.expiredPercentage.toFixed(1)}% of total</p>
                 </div>
             </div>
 
-            {/* Filters */}
+            {/* ============================================================
+                FILTERS
+                ============================================================ */}
             <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-4 shadow-sm">
                 <div className="flex flex-col lg:flex-row gap-3">
                     <div className="relative flex-1">
@@ -679,6 +509,7 @@ export default function LowStock() {
                         <option value="critical">Critical</option>
                         <option value="low">Low Stock</option>
                         <option value="out">Out of Stock</option>
+                        <option value="expired">Expired</option>
                     </select>
                     <select name="sort" value={filters.sort} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none min-w-[140px]">
                         <option value="name_asc">Name A-Z</option>
@@ -694,7 +525,9 @@ export default function LowStock() {
                 </div>
             </div>
 
-            {/* Table */}
+            {/* ============================================================
+                TABLE
+                ============================================================ */}
             <div ref={tableRef} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1000px]">
@@ -762,7 +595,9 @@ export default function LowStock() {
                 {meta && <Pagination meta={meta} onPageChange={setPage} />}
             </div>
 
-            {/* Detail Modal */}
+            {/* ============================================================
+                DETAIL MODAL
+                ============================================================ */}
             <Modal open={showModal} onClose={() => setShowModal(false)} title={selectedMedicine?.name || 'Medicine Details'} size="max-w-2xl">
                 {selectedMedicine && (
                     <div className="space-y-4">
