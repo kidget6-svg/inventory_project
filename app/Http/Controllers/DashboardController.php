@@ -204,19 +204,6 @@ class DashboardController extends Controller
             ];
         }
 
-        foreach (Medicine::latest()->take($limit)->get() as $medicine) {
-            $createdAt = $medicine->created_at ?? now();
-            $activities[] = [
-                'id'        => 'med_' . $medicine->id,
-                'user'      => 'System',
-                'action'    => "Added new medicine: {$medicine->name}",
-                'icon'      => 'pill',
-                'date'      => $createdAt->format('Y-m-d'),
-                'time'      => $createdAt->format('H:i'),
-                'timestamp' => $createdAt->timestamp,
-            ];
-        }
-
         foreach (StockMovement::with('medicine')->latest()->take($limit)->get() as $movement) {
             $createdAt = $movement->created_at ?? now();
             $medicineName = $movement->medicine
@@ -304,6 +291,15 @@ class DashboardController extends Controller
             ->orderBy('total_stock', 'desc')
             ->get();
 
+        // Calculate percentage of medicines in each category
+        $totalMedicinesForChart = $inventoryChartData->sum('medicine_count');
+        $inventoryChartData = $inventoryChartData->map(function ($item) use ($totalMedicinesForChart) {
+            $item->percentage = $totalMedicinesForChart > 0
+                ? round(($item->medicine_count / $totalMedicinesForChart) * 100, 1)
+                : 0;
+            return $item;
+        })->values();
+
         $recentSales = Sale::latest('sale_date')
             ->take(5)->get();
 
@@ -378,8 +374,8 @@ class DashboardController extends Controller
                 'counts'   => $salesChartCounts,
                 'revenue'  => $salesChartRevenue,
             ],
-            'inventoryChartData' => $inventoryChartData,
-            'recentActivities'   => $recentActivities,
+            'inventoryChartData'   => $inventoryChartData,
+            'recentActivities'     => $recentActivities,
         ];
     }
 

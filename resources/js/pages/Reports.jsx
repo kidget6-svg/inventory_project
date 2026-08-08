@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
+import PieChart from '../components/PieChart';
 
 export default function Reports() {
     const [data, setData] = useState(null);
@@ -93,30 +94,41 @@ export default function Reports() {
         <tr><td colSpan={colSpan} className="px-4 py-8 text-center text-gray-400">{message}</td></tr>
     );
 
-   const inventoryData = useMemo(
-     () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
-     [data, searchTerm, sortKey, sortDirection]
-   );
+    const inventoryData = useMemo(
+        () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
 
-   const salesData = useMemo(
-     () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
-     [data, searchTerm, sortKey, sortDirection]
-   );
+    // Derive labels/values for the Inventory by Category pie chart from the
+    // inventoryChartData returned by the API.
+    const inventoryChartLabels = useMemo(
+        () => data?.inventoryChartData?.map(c => c.category) || [],
+        [data]
+    );
+    const inventoryChartValues = useMemo(
+        () => data?.inventoryChartData?.map(c => c.medicine_count) || [],
+        [data]
+    );
 
-   const purchasesData = useMemo(
-     () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
-     [data, searchTerm, sortKey, sortDirection]
-   );
+    const salesData = useMemo(
+        () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
 
-   const lowStockData = useMemo(
-     () => filterAndSort(data?.lowStock || [], ['name']),
-     [data, searchTerm, sortKey, sortDirection]
-   );
+    const purchasesData = useMemo(
+        () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
 
-   const expiringData = useMemo(
-     () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
-     [data, searchTerm, sortKey, sortDirection]
-   );
+    const lowStockData = useMemo(
+        () => filterAndSort(data?.lowStock || [], ['name']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
+
+    const expiringData = useMemo(
+        () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
 
     if (!data) {
         return (
@@ -126,15 +138,13 @@ export default function Reports() {
         );
     }
 
-const tabs = [
-    { key: 'inventory', label: 'Inventory' },
-    { key: 'sales', label: 'Sales' },
-    { key: 'purchases', label: 'Purchases' },
-    { key: 'lowStock', label: 'Low Stock' },
-    { key: 'expiring', label: 'Expiring' },
-];
-
-
+    const tabs = [
+        { key: 'inventory', label: 'Inventory' },
+        { key: 'sales', label: 'Sales' },
+        { key: 'purchases', label: 'Purchases' },
+        { key: 'lowStock', label: 'Low Stock' },
+        { key: 'expiring', label: 'Expiring' },
+    ];
 
     return (
         <div className="space-y-6">
@@ -159,28 +169,42 @@ const tabs = [
             </div>
 
             {activeTab === 'inventory' && (
-                <div className="card overflow-hidden">
-                    <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Inventory Report ({inventoryData.length} items)</h3></div>
-                    <table className="w-full">
-                        <thead><tr className="bg-sky-50">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Name{sortIcon('name')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch{sortIcon('batch_number')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Qty{sortIcon('quantity')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('unit_price')}>Price{sortIcon('unit_price')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>Expiry{sortIcon('expiry_date')}</th>
-                        </tr></thead>
-                        <tbody>
-                            {inventoryData.length > 0 ? inventoryData.map(m => (
-                                <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                    <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
-                                    <td className="px-4 py-3 text-sm">{m.batch_number || '---'}</td>
-                                    <td className="px-4 py-3 text-sm">{m.quantity}</td>
-                                    <td className="px-4 py-3 text-sm">${Number(m.unit_price).toFixed(2)}</td>
-                                    <td className="px-4 py-3 text-sm">{m.expiry_date || '---'}</td>
-                                </tr>
-                            )) : emptyRow(5, 'No medicines found')}
-                        </tbody>
-                    </table>
+                <div className="space-y-6">
+                    {/* Inventory by Category — pie chart shows proportions at a glance */}
+                    {inventoryChartLabels.length > 0 && (
+                        <div className="card">
+                            <div className="p-5">
+                                <PieChart
+                                    labels={inventoryChartLabels}
+                                    values={inventoryChartValues}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="card overflow-hidden">
+                        <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Inventory Report ({inventoryData.length} items)</h3></div>
+                        <table className="w-full">
+                            <thead><tr className="bg-sky-50">
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Name{sortIcon('name')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch{sortIcon('batch_number')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Qty{sortIcon('quantity')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('unit_price')}>Price{sortIcon('unit_price')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>Expiry{sortIcon('expiry_date')}</th>
+                            </tr></thead>
+                            <tbody>
+                                {inventoryData.length > 0 ? inventoryData.map(m => (
+                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                        <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
+                                        <td className="px-4 py-3 text-sm">{m.batch_number || '---'}</td>
+                                        <td className="px-4 py-3 text-sm">{m.quantity}</td>
+                                        <td className="px-4 py-3 text-sm">${Number(m.unit_price).toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-sm">{m.expiry_date || '---'}</td>
+                                    </tr>
+                                )) : emptyRow(5, 'No medicines found')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 

@@ -243,9 +243,23 @@ class UserController extends Controller
      */
     public function reject(Request $request, User $user)
     {
+        $request->validate([
+            'reason' => 'nullable|string',
+        ]);
+
         $user->update([
             'status' => User::STATUS_REJECTED,
+            'rejection_reason' => $request->input('reason'),
         ]);
+
+        // Optionally notify the user about rejection if notifications exist
+        try {
+            if (method_exists($user, 'notify')) {
+                // If a specific notification exists, you could send it here.
+            }
+        } catch (\Throwable $e) {
+            // don't block the request on notification failures
+        }
 
         return response()->json([
             'message' => 'User rejected successfully.',

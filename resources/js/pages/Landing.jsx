@@ -37,31 +37,30 @@ export default function Landing() {
                             </h1>
 
                             <p className="text-gray-700 text-lg">
-                                Pharmacy Inventory Management System
+                              Ethio  Pharmacy Inventory  System
                             </p>
                         </div>
 
                     </div>
 
                     {/* Navigation Buttons */}
-                    <div className="flex items-center gap-4">
 
+                    <div className="flex items-center gap-3">
                         <Link
                             to="/login"
-                            className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-blue-700 shadow-lg transition hover:bg-blue-50"
+                            className="px-5 py-2.5 bg-white rounded-xl shadow text-blue-700 font-semibold flex items-center gap-2 hover:bg-blue-50"
                         >
-                            <LogIn size={20} />
+                            <LogIn size={18} />
                             Sign In
                         </Link>
 
                         <Link
                             to="/register"
-                            className="flex items-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-blue-800"
+                            className="px-5 py-2.5 bg-blue-600 rounded-xl shadow text-white font-semibold flex items-center gap-2 hover:bg-blue-700"
                         >
-                            <UserPlus size={20} />
+                            <UserPlus size={18} />
                             Register
                         </Link>
-
                     </div>
 
                 </nav>
@@ -73,10 +72,10 @@ export default function Landing() {
                     <div className="max-w-4xl text-center">
 
                         <h2 className="text-5xl font-extrabold leading-tight text-blue-900 md:text-6xl">
-                            Welcome to
+                            Welcome to  EPIS
                             <br />
                             <span className="text-blue-700">
-                                EPIS Pharmacy System
+
                             </span>
                         </h2>
 
@@ -87,7 +86,7 @@ export default function Landing() {
                             user-friendly platform.
                         </p>
 
-                       
+
 
                     </div>
 

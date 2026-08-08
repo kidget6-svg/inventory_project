@@ -10,12 +10,14 @@ use App\Models\PurchaseOrder;
 use App\Models\StockMovement;
 use App\Models\Category;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         if ($user->isAdmin()) {
             return $this->adminDashboard();
@@ -33,7 +35,7 @@ class DashboardController extends Controller
     */
     private function lowStockMedicines()
     {
-        return Medicine::whereColumn('quantity', '<=', 'reorder_level')
+        return Medicine::whereColumn('quantity', '<=', 'reorder_level', 'and')
             ->with('category')
             ->orderBy('quantity')
             ->get();
@@ -46,8 +48,8 @@ class DashboardController extends Controller
     */
     private function expiredMedicines()
     {
-        return Medicine::whereNotNull('expiry_date')
-            ->where('expiry_date', '<', today())
+        return Medicine::whereNotNull('expiry_date', 'and')
+            ->where('expiry_date', '<', Carbon::today(null), 'and')
             ->orderBy('expiry_date')
             ->get();
     }
@@ -59,8 +61,8 @@ class DashboardController extends Controller
     */
     private function expiringMedicines(int $days)
     {
-        return Medicine::whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [today(), today()->addDays($days)])
+        return Medicine::whereNotNull('expiry_date', 'and')
+            ->whereBetween('expiry_date', [Carbon::today(null), Carbon::today(null)->addDays($days)], 'and')
             ->with('category')
             ->orderBy('expiry_date')
             ->get();
@@ -74,21 +76,21 @@ class DashboardController extends Controller
     private function inventoryStatus(): array
     {
         return [
-            'inStock'    => Medicine::where('quantity', '>', 0)
-                ->whereColumn('quantity', '>', 'reorder_level')
-                ->where(function ($q) {
-                    $q->whereNull('expiry_date')
-                      ->orWhere('expiry_date', '>=', today());
-                })->count(),
-            'lowStock'   => Medicine::where('quantity', '>', 0)
-                ->whereColumn('quantity', '<=', 'reorder_level')
-                ->where(function ($q) {
-                    $q->whereNull('expiry_date')
-                      ->orWhere('expiry_date', '>=', today());
-                })->count(),
+                                'inStock'    => Medicine::where('quantity', '>', 0, 'and')
+                                ->whereColumn('quantity', '>', 'reorder_level', 'and')
+                                ->where(function ($q) {
+                                        $q->whereNull('expiry_date')
+                                            ->orWhere('expiry_date', '>=', Carbon::today(null));
+                                })->count(),
+                                'lowStock'   => Medicine::where('quantity', '>', 0, 'and')
+                                ->whereColumn('quantity', '<=', 'reorder_level', 'and')
+                                ->where(function ($q) {
+                                        $q->whereNull('expiry_date')
+                                            ->orWhere('expiry_date', '>=', Carbon::today(null));
+                                })->count(),
             'outOfStock' => Medicine::where('quantity', 0)->count(),
             'expired'    => Medicine::whereNotNull('expiry_date')
-                ->where('expiry_date', '<', today())->count(),
+                ->where('expiry_date', '<', Carbon::today())->count(),
         ];
     }
 
@@ -102,38 +104,38 @@ class DashboardController extends Controller
         // Daily – last 7 days
         $daily = [];
         for ($i = 6; $i >= 0; $i--) {
-            $date = today()->subDays($i);
+            $date = Carbon::today(null)->subDays($i);
             $daily[] = [
                 'label' => $date->format('D'),
                 'date'  => $date->format('Y-m-d'),
-                'total' => (float) Sale::whereDate('sale_date', $date)->sum('total_amount'),
-                'count' => Sale::whereDate('sale_date', $date)->count(),
+                'total' => (float) Sale::whereDate('sale_date', '=', $date)->sum('total_amount'),
+                'count' => Sale::whereDate('sale_date', '=', $date)->count(),
             ];
         }
 
         // Weekly – last 4 weeks
         $weekly = [];
         for ($i = 3; $i >= 0; $i--) {
-            $start = today()->subWeeks($i)->startOfWeek();
-            $end   = today()->subWeeks($i)->endOfWeek();
+            $start = Carbon::today(null)->subWeeks($i)->startOfWeek();
+            $end   = Carbon::today(null)->subWeeks($i)->endOfWeek();
             $weekly[] = [
                 'label' => $start->format('M d') . ' – ' . $end->format('M d'),
-                'total' => (float) Sale::whereBetween('sale_date', [$start, $end])->sum('total_amount'),
-                'count' => Sale::whereBetween('sale_date', [$start, $end])->count(),
+                'total' => (float) Sale::whereBetween('sale_date', [$start, $end], 'and')->sum('total_amount'),
+                'count' => Sale::whereBetween('sale_date', [$start, $end], 'and')->count(),
             ];
         }
 
         // Monthly – last 6 months
         $monthly = [];
         for ($i = 5; $i >= 0; $i--) {
-            $month = today()->subMonths($i);
+            $month = Carbon::today(null)->subMonths($i);
             $monthly[] = [
                 'label' => $month->format('M Y'),
-                'total' => (float) Sale::whereYear('sale_date', $month->year)
-                    ->whereMonth('sale_date', $month->month)
+                'total' => (float) Sale::whereYear('sale_date', '=', $month->year)
+                    ->whereMonth('sale_date', '=', $month->month)
                     ->sum('total_amount'),
-                'count' => Sale::whereYear('sale_date', $month->year)
-                    ->whereMonth('sale_date', $month->month)
+                'count' => Sale::whereYear('sale_date', '=', $month->year)
+                    ->whereMonth('sale_date', '=', $month->month)
                     ->count(),
             ];
         }
@@ -149,9 +151,9 @@ class DashboardController extends Controller
     private function purchaseVsSales(): array
     {
         return [
-            'totalPurchases' => (float) PurchaseOrder::where('status', 'completed')->sum('total_amount'),
+            'totalPurchases' => (float) PurchaseOrder::where('status', 'completed', 'and')->sum('total_amount'),
             'totalSales'     => (float) Sale::sum('total_amount'),
-            'purchaseCount'  => PurchaseOrder::where('status', 'completed')->count(),
+            'purchaseCount'  => PurchaseOrder::where('status', 'completed', 'and')->count(),
             'salesCount'     => Sale::count(),
         ];
     }
@@ -182,7 +184,7 @@ class DashboardController extends Controller
 
         // Recent sales
         foreach (Sale::latest()->take($limit)->get() as $sale) {
-            $createdAt = $sale->created_at ?? now();
+            $createdAt = $sale->created_at ?? Carbon::now();
 
             $activities[] = [
                 'id'        => 'sale_' . $sale->id,
@@ -203,7 +205,7 @@ class DashboardController extends Controller
                 ?? $po->sent_at
                 ?? $po->updated_at
                 ?? $po->created_at
-                ?? now();
+                ?? Carbon::now();
 
             $action = match ($po->status) {
                 'draft'      => "Created Purchase Order #{$po->id}",
@@ -226,24 +228,9 @@ class DashboardController extends Controller
             ];
         }
 
-        // Recently added medicines
-        foreach (Medicine::latest()->take($limit)->get() as $medicine) {
-            $createdAt = $medicine->created_at ?? now();
-
-            $activities[] = [
-                'id'        => 'med_' . $medicine->id,
-                'user'      => 'System',
-                'action'    => "Added new medicine: {$medicine->name}",
-                'icon'      => 'pill',
-                'date'      => $createdAt->format('Y-m-d'),
-                'time'      => $createdAt->format('H:i'),
-                'timestamp' => $createdAt->timestamp,
-            ];
-        }
-
         // Recent stock movements
         foreach (StockMovement::with('medicine')->latest()->take($limit)->get() as $movement) {
-            $createdAt = $movement->created_at ?? now();
+            $createdAt = $movement->created_at ?? Carbon::now();
 
             $medicineName = $movement->medicine
                 ? $movement->medicine->name
@@ -295,8 +282,8 @@ class DashboardController extends Controller
 
         $pendingPOs           = PurchaseOrder::where('status', 'pending')->count();
 
-        $todaySalesCount      = Sale::whereDate('sale_date', today())->count();
-        $todayRevenue         = Sale::whereDate('sale_date', today())->sum('total_amount');
+        $todaySalesCount      = Sale::whereDate('sale_date', Carbon::today())->count();
+        $todayRevenue         = Sale::whereDate('sale_date', Carbon::today())->sum('total_amount');
 
         $salesAnalytics       = $this->salesAnalytics();
         $purchaseVsSales      = $this->purchaseVsSales();
@@ -434,8 +421,8 @@ class DashboardController extends Controller
     */
     private function cashierDashboard()
     {
-        $todaySalesCount      = Sale::whereDate('sale_date', today())->count();
-        $todayRevenue         = Sale::whereDate('sale_date', today())->sum('total_amount');
+        $todaySalesCount      = Sale::whereDate('sale_date', Carbon::today())->count();
+        $todayRevenue         = Sale::whereDate('sale_date', Carbon::today())->sum('total_amount');
         $totalMedicines       = Medicine::count();
 
         $recentSales          = Sale::latest()->take(10)->get();
@@ -445,7 +432,7 @@ class DashboardController extends Controller
         for ($h = 0; $h < 24; $h++) {
             $todayHourly[] = [
                 'label' => sprintf('%02d:00', $h),
-                'total' => (float) Sale::whereDate('sale_date', today())
+                'total' => (float) Sale::whereDate('sale_date', Carbon::today())
                     ->whereTime('sale_date', '>=', sprintf('%02d:00:00', $h))
                     ->whereTime('sale_date', '<', sprintf('%02d:00:00', $h + 1))
                     ->sum('total_amount'),

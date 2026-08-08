@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Medicine;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -19,16 +20,28 @@ class ReportController extends Controller
     public function index()
     {
         $medicines = Medicine::orderBy('name')->get();
-        $sales = Sale::orderBy('sale_date', 'desc')->paginate(10);
-        $purchases = PurchaseOrder::with('supplier')->orderBy('created_at', 'desc')->paginate(10);
+        $sales = Sale::orderBy('sale_date', 'desc')->get();
+        $purchases = PurchaseOrder::with('supplier')->orderBy('created_at', 'desc')->get();
 
         $expiring = Medicine::whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [
-                today(),
-                today()->addDays(90)
+                \Carbon\Carbon::today(),
+                \Carbon\Carbon::today()->addDays(90)
             ])
             ->orderBy('expiry_date')
             ->get();
+
+        $lowStock = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+            ->orderBy('quantity')
+            ->get();
+
+        $inventoryChartData = Category::with('medicines')->get()->map(function ($category) {
+            return [
+                'category'       => $category->name,
+                'total_stock'    => (int) $category->medicines->sum('quantity'),
+                'medicine_count' => $category->medicines->count(),
+            ];
+        })->values();
 
         return response()->json([
             'medicines' => $medicines,
@@ -36,6 +49,7 @@ class ReportController extends Controller
             'purchases' => $purchases,
             'lowStock' => $lowStock,
             'expiring' => $expiring,
+            'inventoryChartData' => $inventoryChartData,
         ]);
     }
 
