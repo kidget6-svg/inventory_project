@@ -14,44 +14,47 @@ class UserController extends Controller
      * Display a listing of all users (admin only).
      */
     public function index(Request $request)
-    {
-        $query = User::query();
+{
+    $query = User::query();
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        if ($role = $request->input('role')) {
-            $query->where('role', $role);
-        }
-
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        $users = $query->orderBy('created_at', 'desc')->paginate(10);
-
-        return response()->json($users);
+    if ($search = $request->input('search')) {
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('email', 'like', "%{$search}%");
+        });
     }
 
+    if ($role = $request->input('role')) {
+        if ($role !== 'all') {
+            $query->where('role', $role);
+        }
+    }
+
+    $status = $request->input('status', User::STATUS_APPROVED);
+    if ($status !== 'all') {
+        $query->where('status', $status);
+    }
+
+    $users = $query->orderBy('created_at', 'desc')->paginate(10);
+
+    return response()->json($users);
+}
     /**
      * User counts summary (admin only).
      */
+    
     public function stats()
-    {
-        return response()->json([
-            'total' => User::count(),
-            'pending' => User::where('status', User::STATUS_PENDING)->count(),
-            'approved' => User::where('status', User::STATUS_APPROVED)->count(),
-            'rejected' => User::where('status', User::STATUS_REJECTED)->count(),
-            'admins' => User::where('role', 'admin')->count(),
-            'pharmacists' => User::where('role', 'pharmacist')->count(),
-            'cashiers' => User::where('role', 'cashier')->count(),
-        ]);
-    }
+{
+    return response()->json([
+        'total' => User::where('status', User::STATUS_APPROVED)->count(),
+        'pending' => User::where('status', User::STATUS_PENDING)->count(),
+        'approved' => User::where('status', User::STATUS_APPROVED)->count(),
+        'rejected' => User::where('status', User::STATUS_REJECTED)->count(),
+        'admins' => User::where('role', 'admin')->where('status', User::STATUS_APPROVED)->count(),
+        'pharmacists' => User::where('role', 'pharmacist')->where('status', User::STATUS_APPROVED)->count(),
+        'cashiers' => User::where('role', 'cashier')->where('status', User::STATUS_APPROVED)->count(),
+    ]);
+}
 
     /**
      * Store a newly created user (admin only).

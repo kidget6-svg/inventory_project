@@ -58,6 +58,7 @@ export default function Users(){
 
     const [roleFilter,setRoleFilter] = useState("all");
 
+    const [statusFilter,setStatusFilter] = useState("approved");
 
     const [showModal,setShowModal] = useState(false);
 
@@ -104,8 +105,7 @@ export default function Users(){
 
         try{
 
-            const response = await api.get("/users", { params: { page, search: search, role: roleFilter } });
-
+            const response = await api.get("/users", { params: { page, search: search, role: roleFilter, status: statusFilter } });
             setUsers(response.data.data || response.data);
             setMeta(response.data);
 
@@ -129,10 +129,8 @@ export default function Users(){
 
     };
 
-    useEffect(() => { setPage(1); }, [search, roleFilter]);
-    useEffect(() => { fetchUsers(); }, [page, search, roleFilter]);
-
-
+    useEffect(() => { setPage(1); }, [search, roleFilter, statusFilter]);
+    useEffect(() => { fetchUsers(); }, [page, search, roleFilter, statusFilter]);
 
 
 
@@ -241,6 +239,11 @@ export default function Users(){
     const handleSubmit=async(e)=>{
 
         e.preventDefault();
+
+        if (form.password && form.password !== form.password_confirmation) {
+    setError("Passwords do not match.");
+    return;
+}
 
 
         setSubmitting(true);
@@ -926,7 +929,16 @@ Cashier
 </div>
 
 
-
+<select
+value={statusFilter}
+onChange={(e)=>setStatusFilter(e.target.value)}
+className="border rounded-xl px-4 py-3"
+>
+<option value="approved">Approved</option>
+<option value="pending">Pending Approval</option>
+<option value="rejected">Rejected</option>
+<option value="all">All Statuses</option>
+</select>
 
 
 
@@ -1241,9 +1253,6 @@ value={role.value}
 </div>
 
 
-// ================= PASSWORD FIELDS =================
-
-
 <div>
 
 
@@ -1289,6 +1298,7 @@ onChange={handleChange}
 
 minLength={8}
 
+autoComplete="new-password"
 
 className="
 w-full
@@ -1393,9 +1403,9 @@ name="password_confirmation"
 
 value={form.password_confirmation}
 
-
 onChange={handleChange}
 
+autoComplete="new-password"
 
 className="
 w-full

@@ -16,19 +16,22 @@ export default function AdminDashboard() {
     const [pendingLoading, setPendingLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
 
-    useEffect(() => {
-        api.get('/dashboard')
-            .then(r => {
-                setData(r.data);
-                setError('');
-            })
-            .catch(err => {
-                setError('Failed to load dashboard data');
-                console.error(err);
-            })
-            .finally(() => setLoading(false));
-    }, []);
+   const fetchDashboardData = () => {
+    return api.get('/dashboard')
+        .then(r => {
+            setData(r.data);
+            setError('');
+        })
+        .catch(err => {
+            setError('Failed to load dashboard data');
+            console.error(err);
+        })
+        .finally(() => setLoading(false));
+};
 
+useEffect(() => {
+    fetchDashboardData();
+}, []);
     // Fetch pending users for approval
     useEffect(() => {
         fetchPendingUsers();
@@ -51,6 +54,7 @@ export default function AdminDashboard() {
         try {
             await api.post(`/users/${user.id}/approve`);
             setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+            fetchDashboardData();
             window.showToast?.('User approved successfully. They can now log in.', 'success');
         } catch (err) {
             window.showToast?.(err.response?.data?.message || 'Failed to approve user', 'error');
@@ -64,6 +68,7 @@ export default function AdminDashboard() {
         try {
             await api.post(`/users/${user.id}/reject`);
             setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+            fetchDashboardData();
             window.showToast?.('User rejected successfully.', 'success');
         } catch (err) {
             window.showToast?.(err.response?.data?.message || 'Failed to reject user', 'error');
@@ -78,6 +83,7 @@ export default function AdminDashboard() {
         try {
             await api.delete(`/users/${user.id}`);
             setPendingUsers(prev => prev.filter(u => u.id !== user.id));
+            fetchDashboardData();
             window.showToast?.('User removed successfully.', 'success');
         } catch (err) {
             window.showToast?.(err.response?.data?.message || 'Failed to remove user', 'error');
