@@ -1,0 +1,20 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fffbeb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fef3c7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="yellow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg6)"/>
+  <rect x="60" y="65" width="80" height="95" rx="10" fill="url(#yellow)"/>
+  <rect x="68" y="48" width="64" height="24" rx="6" fill="#f59e0b"/>
+  <rect x="80" y="38" width="40" height="16" rx="4" fill="#fbbf24"/>
+  <circle cx="100" cy="105" r="18" fill="#fffbeb"/>
+  <text x="100" y="100" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" font-family="Arial, sans-serif">SPF</text>
+  <text x="100" y="115" text-anchor="middle" font-size="9" fill="#92400e" font-family="Arial, sans-serif">30</text>
+  <text x="100" y="178" text-anchor="middle" font-size="10" font-weight="600" fill="#b45309" font-family="Arial, sans-serif">SUNSCREEN</text>
+</svg>

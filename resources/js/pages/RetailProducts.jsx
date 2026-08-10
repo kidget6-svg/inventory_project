@@ -278,7 +278,7 @@ export default function RetailProducts() {
                                 <div className="flex-1">
                                     <input
                                         type="file"
-                                        accept="image/jpeg,image/png,image/jpg,image/gif"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
                                         onChange={(e) => {
                                             const file = e.target.files[0];
                                             if (file) {

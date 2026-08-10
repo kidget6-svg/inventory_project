@@ -4,7 +4,7 @@
 // and Retail Sales POS pages.  The same component renders a medicine
 // card (Rx) and an OTC / cosmetic product card — only the props differ.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 
 export default function PosProductCard({
@@ -19,19 +19,18 @@ export default function PosProductCard({
     const stock = Number(item.quantity ?? 0);
     const unitPrice = Number(price ?? 0);
     const inStock = stock > 0;
+    const [imgError, setImgError] = useState(false);
 
     return (
         <div className="pos-card group flex flex-col h-full">
             {/* Image / Icon area */}
             <div className="relative mb-3 flex items-center justify-center h-32 bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
-                {image ? (
+                {image && !imgError ? (
                     <img
                         src={image}
                         alt={imageAlt}
                         className="h-full w-full object-cover object-center"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                        }}
+                        onError={() => setImgError(true)}
                     />
                 ) : (
                     <div className="flex items-center justify-center h-full w-full text-gray-300">

@@ -23,6 +23,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'Cosmetics',
                 'price' => 12.50,
                 'quantity' => 150,
+                'image' => 'images/retail-products/lipstick-ruby-red.svg',
             ],
             [
                 'name' => 'Foundation - Natural Beige',
@@ -30,6 +31,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'Cosmetics',
                 'price' => 24.99,
                 'quantity' => 120,
+                'image' => 'images/retail-products/foundation-natural-beige.svg',
             ],
             [
                 'name' => 'Mascara - Black Volume',
@@ -37,6 +39,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'Cosmetics',
                 'price' => 18.75,
                 'quantity' => 90,
+                'image' => 'images/retail-products/mascara-black-volume.svg',
             ],
             [
                 'name' => 'Nail Polish - Midnight Blue',
@@ -44,6 +47,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'Cosmetics',
                 'price' => 8.50,
                 'quantity' => 200,
+                'image' => 'images/retail-products/nail-polish-midnight-blue.svg',
             ],
             [
                 'name' => 'Face Cream - Moisturizing',
@@ -51,6 +55,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'Cosmetics',
                 'price' => 32.00,
                 'quantity' => 80,
+                'image' => 'images/retail-products/face-cream-moisturizing.svg',
             ],
             [
                 'name' => 'Sunscreen SPF 30',
@@ -58,6 +63,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'Cosmetics',
                 'price' => 19.99,
                 'quantity' => 110,
+                'image' => 'images/retail-products/sunscreen-spf30.svg',
             ],
 
             // OTC (Over-the-Counter)
@@ -67,6 +73,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'OTC',
                 'price' => 15.99,
                 'quantity' => 250,
+                'image' => 'images/retail-products/vitamin-c-tablets-100ct.svg',
             ],
             [
                 'name' => 'Omega-3 Fish Oil 120ct',
@@ -74,6 +81,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'OTC',
                 'price' => 22.50,
                 'quantity' => 180,
+                'image' => 'images/retail-products/omega-3-fish-oil-120ct.svg',
             ],
             [
                 'name' => 'Digestive Enzyme Capsules',
@@ -81,6 +89,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'OTC',
                 'price' => 19.99,
                 'quantity' => 140,
+                'image' => 'images/retail-products/digestive-enzyme-capsules.svg',
             ],
             [
                 'name' => 'Antacid Tablets 50ct',
@@ -88,6 +97,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'OTC',
                 'price' => 7.25,
                 'quantity' => 300,
+                'image' => 'images/retail-products/antacid-tablets-50ct.svg',
             ],
             [
                 'name' => 'Sleep Aid - Melatonin 10mg',
@@ -95,6 +105,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'OTC',
                 'price' => 14.50,
                 'quantity' => 95,
+                'image' => 'images/retail-products/sleep-aid-melatonin-10mg.svg',
             ],
             [
                 'name' => 'First Aid Antiseptic Cream',
@@ -102,6 +113,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'OTC',
                 'price' => 9.99,
                 'quantity' => 160,
+                'image' => 'images/retail-products/first-aid-antiseptic-cream.svg',
             ],
 
             // General / Health & Wellness
@@ -111,6 +123,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'Health & Wellness',
                 'price' => 5.50,
                 'quantity' => 400,
+                'image' => 'images/retail-products/hand-sanitizer-250ml.svg',
             ],
             [
                 'name' => 'Face Masks - Pack of 10',
@@ -118,6 +131,7 @@ class RetailProductSeeder extends Seeder
                 'category' => 'General',
                 'price' => 6.99,
                 'quantity' => 350,
+                'image' => 'images/retail-products/face-masks-pack-of-10.svg',
             ],
         ];
 

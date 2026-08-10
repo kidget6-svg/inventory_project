@@ -1,0 +1,20 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg11" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#faf5ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f3e8ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="purple" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6d28d9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg11)"/>
+  <rect x="65" y="50" width="70" height="105" rx="8" fill="url(#purple)"/>
+  <rect x="72" y="55" width="56" height="22" rx="4" fill="#6d28d9"/>
+  <text x="100" y="70" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff" font-family="Arial, sans-serif">MELATONIN</text>
+  <path d="M78 110 Q100 88 122 110 Q100 132 78 110" fill="#e9d5ff"/>
+  <text x="100" y="118" text-anchor="middle" font-size="12" font-weight="700" fill="#6b21a8" font-family="Arial, sans-serif">10mg</text>
+  <text x="100" y="178" text-anchor="middle" font-size="10" font-weight="600" fill="#ffffff" font-family="Arial, sans-serif">SLEEP AID</text>
+  <text x="100" y="192" text-anchor="middle" font-size="8" fill="#e9d5ff" font-family="Arial, sans-serif">30 Tablets</text>
+</svg>

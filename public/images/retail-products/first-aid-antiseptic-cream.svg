@@ -1,0 +1,21 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg12" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef2f2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fee2e2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="yellow2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#facc15;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg12)"/>
+  <rect x="65" y="60" width="70" height="88" rx="10" fill="url(#yellow2)"/>
+  <rect x="72" y="42" width="56" height="24" rx="4" fill="#f59e0b"/>
+  <rect x="85" y="90" width="30" height="28" rx="4" fill="#ffffff" stroke="#ef4444" stroke-width="2"/>
+  <rect x="92" y="97" width="16" height="14" rx="2" fill="#ef4444"/>
+  <rect x="95" y="100" width="4" height="4" rx="1" fill="#fef2f2"/>
+  <rect x="103" y="100" width="4" height="4" rx="1" fill="#fef2f2"/>
+  <text x="100" y="170" text-anchor="middle" font-size="10" font-weight="600" fill="#92400e" font-family="Arial, sans-serif">ANTISEPTIC</text>
+  <text x="100" y="184" text-anchor="middle" font-size="9" fill="#b45309" font-family="Arial, sans-serif">First Aid Cream</text>
+</svg>

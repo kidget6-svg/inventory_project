@@ -1,0 +1,19 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fefce8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fef9c3;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="jar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f5f5f4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e7e5e4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg5)"/>
+  <rect x="65" y="55" width="70" height="80" rx="14" fill="url(#jar)"/>
+  <rect x="72" y="38" width="56" height="24" rx="6" fill="#d6d3d1"/>
+  <rect x="78" y="32" width="44" height="12" rx="3" fill="#e7e5e4"/>
+  <rect x="80" y="90" width="40" height="28" rx="6" fill="#fefce8"/>
+  <text x="100" y="158" text-anchor="middle" font-size="10" font-weight="600" fill="#78716c" font-family="Arial, sans-serif">FACE CREAM</text>
+  <text x="100" y="172" text-anchor="middle" font-size="9" fill="#a8a29e" font-family="Arial, sans-serif">Moisturizing</text>
+</svg>

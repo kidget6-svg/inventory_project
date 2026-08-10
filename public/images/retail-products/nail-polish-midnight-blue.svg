@@ -1,0 +1,20 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#eff6ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dbeafe;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="blue1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#172554;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg4)"/>
+  <rect x="75" y="65" width="50" height="85" rx="8" fill="url(#blue1)"/>
+  <rect x="82" y="45" width="36" height="25" rx="4" fill="#1e40af"/>
+  <rect x="88" y="35" width="24" height="16" rx="3" fill="#2563eb"/>
+  <rect x="82" y="110" width="36" height="5" rx="2" fill="#93c5fd"/>
+  <rect x="82" y="120" width="36" height="5" rx="2" fill="#60a5fa"/>
+  <text x="100" y="175" text-anchor="middle" font-size="10" font-weight="600" fill="#1e3a8a" font-family="Arial, sans-serif">NAIL POLISH</text>
+  <text x="100" y="189" text-anchor="middle" font-size="9" fill="#3b82f6" font-family="Arial, sans-serif">Midnight Blue</text>
+</svg>
