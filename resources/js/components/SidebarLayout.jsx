@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import logo from '../assets/pharmacy-logo.jpg';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-    LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign,
-    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users,
+import { 
+    LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
+    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText, Receipt
+    ShoppingBag, FileText
 } from 'lucide-react';
 
 const adminMenu = [
@@ -15,13 +14,13 @@ const adminMenu = [
     { section: 'Management' },
     { to: '/users', label: 'Users', icon: Users },
     { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/retail-products', label: 'Retail Products', icon: Package },
     { to: '/categories', label: 'Categories', icon: FolderTree },
     { to: '/suppliers', label: 'Suppliers', icon: Truck },
     { section: 'Operations' },
     { to: '/inventory', label: 'Inventory', icon: Package },
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-    { to: '/sales-history', label: 'Sales History', icon: Receipt },
+    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
+    { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
     { section: 'Reports' },
     { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
@@ -33,7 +32,6 @@ const pharmacistMenu = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { section: 'Sales Queue' },
     { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
-    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag },
     { section: 'Inventory' },
     { to: '/medicines', label: 'Medicines', icon: Pill },
     { to: '/categories', label: 'Categories', icon: FolderTree },
@@ -49,15 +47,15 @@ const cashierMenu = [
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { section: 'Point of Sale' },
-    { to: '/prescription-sales-cashier', label: 'Prescription Sales', icon: FileText },
+    { to: '/prescription-sales', label: 'Prescription Checkout', icon: FileText },
     { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
     { to: '/medicines', label: 'Medicines', icon: Pill },
 ];
 
-const menuByRole = {
-    admin: adminMenu,
-    pharmacist: pharmacistMenu,
-    cashier: cashierMenu
+const menuByRole = { 
+    admin: adminMenu, 
+    pharmacist: pharmacistMenu, 
+    cashier: cashierMenu 
 };
 
 function getMenu(role) {
@@ -116,13 +114,12 @@ export default function SidebarLayout({ children, pageTitle }) {
             >
                 <div className="p-5 border-b border-sky-200 flex items-center justify-between">
                     <div className={`flex items-center gap-3 min-w-0 ${collapsed ? 'md:justify-center md:w-full' : ''}`}>
-                        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-                            <img src={logo} alt="PharmaSys Logo" className="w-full h-full object-cover rounded-lg" />
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-2xl ring-2 ring-sky-400/70 bg-white transform hover:scale-105 transition-transform duration-200">
+                            <img src="/images/sidebar.png" alt="EthioPharmacy" className="w-10 h-10 object-contain" />
                         </div>
                         {!collapsed && (
                             <div className="min-w-0">
-                                <div className="text-base font-bold text-gray-900 tracking-tight truncate">PharmaSys</div>
-                                <div className="text-[10px] text-gray-600 font-medium truncate">Inventory Management</div>
+                                <div className="text-base font-bold text-gray-900 tracking-tight truncate">EthioPharmacy</div>
                             </div>
                         )}
                     </div>
@@ -232,9 +229,9 @@ export default function SidebarLayout({ children, pageTitle }) {
             </main>
 
             {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
-                    onClick={() => setSidebarOpen(false)}
+                <div 
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" 
+                    onClick={() => setSidebarOpen(false)} 
                 />
             )}
         </div>

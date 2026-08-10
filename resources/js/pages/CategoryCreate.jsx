@@ -6,10 +6,32 @@ import { ArrowLeft, Save, X } from 'lucide-react';
 
 export default function CategoryCreate() {
     const navigate = useNavigate();
-    const [form, setForm] = useState({ name: '', description: '' });
+    const [form, setForm] = useState({ name: '', description: '', shelf_location: '' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    // Check if user is admin
+    useEffect(() => {
+        const checkAdmin = async () => {
+            try {
+                const response = await api.get('/user');
+                if (response.data.role !== 'admin') {
+                    window.showToast('Only admins can create categories', 'error');
+                    navigate('/categories');
+                    return;
+                }
+                setIsAdmin(true);
+            } catch (err) {
+                window.showToast('Unauthorized access', 'error');
+                navigate('/categories');
+            } finally {
+                setLoading(false);
+            }
+        };
+        checkAdmin();
+    }, [navigate]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -28,6 +50,10 @@ export default function CategoryCreate() {
             setSubmitting(false);
         }
     };
+
+    if (loading) return <LoadingSpinner text="Checking permissions..." />;
+
+    if (!isAdmin) return null;
 
     return (
         <div className="space-y-6">
@@ -55,12 +81,23 @@ export default function CategoryCreate() {
                             required
                         />
                     </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
+                        <input
+                            name="shelf_location"
+                            value={form.shelf_location}
+                            onChange={handleChange}
+                            placeholder="e.g. A-2-3"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        />
+                    </div>
                     <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                        <input
+                        <textarea
                             name="description"
                             value={form.description}
                             onChange={handleChange}
+                            rows="3"
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                         />
                     </div>

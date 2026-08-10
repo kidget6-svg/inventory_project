@@ -1,50 +1,42 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { LogIn, UserPlus } from "lucide-react";
-import logo from "../assets/pharmacy-logo.jpg";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { LogIn, UserPlus } from 'lucide-react';
 
 export default function Landing() {
     return (
-        <div className="relative min-h-screen overflow-hidden">
-
-            {/* Background Image */}
+        <div className="min-h-screen relative overflow-hidden">
+            {/* Background */}
             <div
                 className="absolute inset-0 bg-cover bg-center"
-                style={{
-                    backgroundImage: "url('/images/landing page.png')",
-                }}
+                style={{ backgroundImage: "url('/images/landing page.png')" }}
             />
-
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-blue-100/70 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-blue-100/70 backdrop-blur-[2px]" />
 
             <div className="relative z-10 flex flex-col min-h-screen">
 
-                {/* ================= Navbar ================= */}
+                {/* Navbar */}
                 <nav className="flex items-center justify-between px-6 lg:px-12 py-5">
 
-                    {/* Logo */}
+                    {/* Logo + Title */}
                     <div className="flex items-center gap-4">
+                        <img
+                            src="/images/sidebar.png"
+                            alt="EthioPharmacy"
+                            className="w-16 h-16 rounded-2xl bg-white shadow-2xl ring-2 ring-sky-400/70 transform hover:scale-105 transition-transform duration-200"
+                        />
 
-                         <img
-    src={logo}
-    alt="PharmaSys Logo"
-    className="w-12 h-12 rounded-xl bg-white shadow object-contain"
-/>
                         <div>
-                            <h1 className="text-4xl font-extrabold text-blue-800 tracking-wide">
-                                EPIS
+                            <h1 className="text-3xl font-bold text-blue-800">
+                               EthioPharmacy
                             </h1>
 
-                            <p className="text-gray-700 text-lg">
-                              Ethio  Pharmacy Inventory  System
+                            <p className="text-sm text-gray-600">
+                                Smart Pharmacy Inventory System
                             </p>
                         </div>
-
                     </div>
 
-                    {/* Navigation Buttons */}
-
+                    {/* Buttons */}
                     <div className="flex items-center gap-3">
                         <Link
                             to="/login"
@@ -62,34 +54,25 @@ export default function Landing() {
                             Register
                         </Link>
                     </div>
-
                 </nav>
 
-                {/* ================= Hero ================= */}
+                {/* Hero Section */}
+                <div className="flex-1 flex items-center justify-center px-1">
+                    <div className="text-center max-w-3xl">
 
-                <div className="flex flex-1 items-center justify-center px-6">
-
-                    <div className="max-w-4xl text-center">
-
-                        <h2 className="text-5xl font-extrabold leading-tight text-blue-900 md:text-6xl">
-                            Welcome to  EPIS
+                        <h2 className="text-2xl lg:text-3xl font-bold text-blue-900 leading-tight">
+                            Manage Your Pharmacy
                             <br />
-                            <span className="text-blue-700">
-
+                            <span className="text-blue-600">
+                                with Confidence
                             </span>
                         </h2>
 
-                        <p className="mx-auto mt-8 max-w-2xl text-xl leading-8 text-gray-700">
-                            Streamline inventory management, monitor medicine
-                            stock, track sales and purchases, manage suppliers,
-                            and generate reports—all from one secure and
-                            user-friendly platform.
-                        </p>
+
 
 
 
                     </div>
-
                 </div>
 
             </div>
