@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import { Search, Filter, Calendar, Download, Printer, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -32,6 +33,9 @@ const STATUS_COLORS = {
 };
 
 export default function SalesHistory() {
+    const { user } = useAuth();
+    const isCashier = user?.role === 'cashier';
+
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -190,7 +194,9 @@ export default function SalesHistory() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">Sales History</h2>
-                    <p className="text-sm text-gray-500">View all completed sales transactions</p>
+                    <p className="text-sm text-gray-500">
+                        {isCashier ? 'View your completed sales transactions' : 'View all completed sales transactions'}
+                    </p>
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -233,19 +239,21 @@ export default function SalesHistory() {
                         />
                     </div>
 
-                    {/* Cashier Filter */}
-                    <div className="w-full sm:w-40">
-                        <select
-                            value={filters.cashier}
-                            onChange={(e) => handleFilterChange('cashier', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none"
-                        >
-                            <option value="">All Cashiers</option>
-                            {cashiers.map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {/* Cashier Filter (Admin only) */}
+                    {!isCashier && (
+                        <div className="w-full sm:w-40">
+                            <select
+                                value={filters.cashier}
+                                onChange={(e) => handleFilterChange('cashier', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                            >
+                                <option value="">All Cashiers</option>
+                                {cashiers.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* Payment Method Filter */}
                     <div className="w-full sm:w-44">

@@ -92,6 +92,17 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
 
         // Purchase Orders
+        Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
+        Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
+        Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
+        Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
+        Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
+        Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);
+        Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
+        Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel']);
+        Route::post('/purchase-orders/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopen']);
+        Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
+        Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
     });
 
@@ -122,7 +133,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // --------------------------------------------------------------------
     // Sales History & Export — Admin Only
     // --------------------------------------------------------------------
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:admin,cashier')->group(function () {
         Route::get('/sales/history', [SaleController::class, 'history']);
         Route::post('/sales/export', [SaleController::class, 'export']);
         Route::get('/sales/export', [SaleController::class, 'export']);

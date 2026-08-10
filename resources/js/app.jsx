@@ -143,9 +143,9 @@ function App() {
                 <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Receipt"><ReceiptPage /></ProtectedRoute>
             } />
 
-            {/* Admin-only: Sales History */}
+            {/* Sales History */}
             <Route path="/sales-history" element={
-                <ProtectedRoute roles={['admin']} title="Sales History"><SalesHistory /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'cashier']} title="Sales History"><SalesHistory /></ProtectedRoute>
             } />
 
             {/* Reports & Tracking */}

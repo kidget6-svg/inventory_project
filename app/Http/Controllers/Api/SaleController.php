@@ -314,6 +314,7 @@ class SaleController extends Controller
             $changeAmount = $service->calculateChange($totalAmount, $amountPaid, $paymentMethod);
 
             $sale->update([
+                'user_id' => $request->user()->id,
                 'status' => $validated['status'],
                 'payment_method' => $paymentMethod,
                 'amount_paid' => $amountPaid,
@@ -444,6 +445,10 @@ class SaleController extends Controller
     {
         $query = Sale::with(['items.itemable', 'user']);
 
+        if ($request->user()->hasRole('cashier')) {
+            $query->where('user_id', $request->user()->id);
+        }
+
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
@@ -483,6 +488,10 @@ class SaleController extends Controller
         $format = $request->input('format', 'csv');
 
         $query = Sale::with(['items.itemable', 'user']);
+
+        if ($request->user()->hasRole('cashier')) {
+            $query->where('user_id', $request->user()->id);
+        }
 
         if ($request->filled('date')) {
             $query->whereDate('sale_date', $request->input('date'));

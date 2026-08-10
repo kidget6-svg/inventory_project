@@ -53,6 +53,7 @@ const cashierMenu = [
     { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText },
     { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
     { to: '/medicines', label: 'Medicines', icon: Pill },
+    { to: '/sales-history', label: 'Sales History', icon: FileText },
 ];
 
 const menuByRole = { 
