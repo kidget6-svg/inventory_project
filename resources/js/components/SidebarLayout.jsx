@@ -19,6 +19,8 @@ const adminMenu = [
     { section: 'Operations' },
     { to: '/inventory', label: 'Inventory', icon: Package },
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
+    { to: '/retail-otc-sales', label: 'Retail Sales', icon: ShoppingBag },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
     { section: 'Reports' },
     { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
