@@ -87,9 +87,18 @@ export default function Medicines() {
         
         api.get('/medicines', { params })
             .then(r => {
-                const data = r.data.data || r.data;
-                setMedicines(Array.isArray(data) ? data : []);
-                setMeta(r.data);
+                let medicinesData = [];
+                if (Array.isArray(r.data.data)) {
+                    medicinesData = r.data.data;
+                } else if (Array.isArray(r.data.medicines?.data)) {
+                    medicinesData = r.data.medicines.data;
+                } else if (Array.isArray(r.data.data?.data)) {
+                    medicinesData = r.data.data.data;
+                } else if (Array.isArray(r.data)) {
+                    medicinesData = r.data;
+                }
+                setMedicines(medicinesData);
+                setMeta(r.data.meta || r.data.medicines || r.data);
             })
             .catch(err => { 
                 console.error(err); 
@@ -864,13 +873,14 @@ export default function Medicines() {
                             <table className="w-full table-fixed">
                                 <colgroup>
                                     <col className="w-[8%]" />
-                                    <col className="w-[20%]" />
+                                    <col className="w-[18%]" />
                                     <col className="w-[10%]" />
-                                    <col className="w-[14%]" />
-                                    <col className="w-[6%]" />
-                                    <col className="w-[12%]" />
-                                    <col className="w-[12%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[8%]" />
                                     <col className="w-[10%]" />
+                                    <col className="w-[12%]" />
+                                    <col className="w-[8%]" />
                                     <col className="w-[8%]" />
                                 </colgroup>
                                 <thead>
@@ -878,6 +888,7 @@ export default function Medicines() {
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Image</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Medicine Name</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Category</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Shelf</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Barcode</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Qty</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Selling Price</th>
@@ -904,6 +915,7 @@ export default function Medicines() {
                                             </td>
                                             <td className="px-4 py-3 text-sm font-medium text-gray-800 truncate">{m.name}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || 'No Category'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.shelf_location || '---'}</td>
                                             <td className="px-4 py-3 text-sm font-mono text-gray-500 truncate">{m.barcode || '---'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-900 font-medium">{m.quantity}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">{m.selling_price ? `$${Number(m.selling_price).toFixed(2)}` : '---'}</td>
@@ -943,7 +955,7 @@ export default function Medicines() {
                                             </td>
                                         </tr>
                                     )) : (
-                                        <tr><td colSpan="9" className="px-4 py-8 text-center text-gray-400">
+                                        <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-400">
                                             No medicines found{isFiltered && <button onClick={resetFilters} className="ml-2 text-sky-600 hover:underline text-sm font-medium">Clear filters</button>}
                                         </td></tr>
                                     )}

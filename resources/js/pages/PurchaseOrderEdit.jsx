@@ -23,7 +23,12 @@ export default function PurchaseOrderEdit() {
     useEffect(() => {
         Promise.all([
             api.get('/suppliers').then(r => setSuppliers(r.data)),
-            api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
+            api.get('/medicines').then(r => {
+                const list = Array.isArray(r.data?.data) ? r.data.data :
+                             Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
+                             Array.isArray(r.data) ? r.data : [];
+                setMedicines(list);
+            }),
             api.get(`/purchase-orders/${id}`).then(r => {
                 const data = r.data;
                 const item = data.items?.[0];

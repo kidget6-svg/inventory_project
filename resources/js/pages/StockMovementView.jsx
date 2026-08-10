@@ -31,6 +31,8 @@ import {
     Phone,
     Image as ImageIcon,
     RefreshCw,
+    ArrowLeftRight,
+    RotateCw,
 } from 'lucide-react';
 
 const typeColors = {
@@ -38,6 +40,12 @@ const typeColors = {
     out: 'bg-red-100 text-red-700 border-red-200',
     adjustment: 'bg-amber-100 text-amber-700 border-amber-200',
     transfer: 'bg-sky-100 text-sky-700 border-sky-200',
+    return: 'bg-sky-100 text-sky-700 border-sky-200',
+    damaged: 'bg-red-100 text-red-700 border-red-200',
+    expired: 'bg-gray-100 text-gray-700 border-gray-200',
+    lost: 'bg-orange-100 text-orange-700 border-orange-200',
+    correction: 'bg-blue-100 text-blue-700 border-blue-200',
+    self: 'bg-teal-100 text-teal-700 border-teal-200',
 };
 
 const typeLabels = {
@@ -45,6 +53,12 @@ const typeLabels = {
     out: 'Stock Out',
     adjustment: 'Adjustment',
     transfer: 'Transfer',
+    return: 'Return',
+    damaged: 'Damaged',
+    expired: 'Expired',
+    lost: 'Lost',
+    correction: 'Correction',
+    self: 'Self Adjustment',
 };
 
 const statusColors = {
@@ -337,6 +351,15 @@ export default function StockMovementView() {
                                 <DetailItem label="Batch Number" value={movement.medicine?.batch_number || movement.batch_number || '---'} icon={Package} mono />
                                 <DetailItem label="Performed By" value={movement.user?.name || movement.performed_by || 'System'} icon={User} />
                                 <DetailItem label="Branch" value={movement.branch?.name || movement.branch || '---'} icon={Building2} />
+                                <DetailItem label="Source Type" value={movement.source_type || '---'} icon={ArrowLeftRight} />
+                                <DetailItem label="Destination Type" value={movement.destination_type || '---'} icon={ArrowLeftRight} />
+                                {movement.source_type === 'self' || movement.destination_type === 'self' ? (
+                                    <div className="md:col-span-2">
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+                                            <RotateCw size={12} /> Self Adjustment
+                                        </span>
+                                    </div>
+                                ) : null}
                                 <DetailItem label="Reason" value={movement.reason || '---'} icon={AlertCircle} />
                                 <DetailItem label="Category" value={movement.medicine?.category?.name || movement.category?.name || '---'} icon={Tag} />
                                 <div className="md:col-span-2">

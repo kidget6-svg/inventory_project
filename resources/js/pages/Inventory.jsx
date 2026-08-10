@@ -51,9 +51,17 @@ export default function Inventory() {
         setFilters(prev => ({ ...prev, [name]: value }));
     };
 
+    const parseMedicines = (r) => {
+        if (Array.isArray(r.data.data)) return r.data.data;
+        if (Array.isArray(r.data.medicines?.data)) return r.data.medicines.data;
+        if (Array.isArray(r.data.data?.data)) return r.data.data.data;
+        if (Array.isArray(r.data)) return r.data;
+        return [];
+    };
+
     const loadMedicines = () => {
         api.get('/medicines', { params: { category_id: filters.category_id || undefined, per_page: 1000 } })
-            .then(r => setMedicines(r.data.data || r.data))
+            .then(r => setMedicines(parseMedicines(r)))
             .catch(err => console.error(err));
     };
 
@@ -76,7 +84,7 @@ export default function Inventory() {
         setLoading(true);
         Promise.all([
             api.get('/medicines', { params: { category_id: filters.category_id || undefined, per_page: 1000 } })
-                .then(r => setMedicines(r.data.data || r.data))
+                .then(r => setMedicines(parseMedicines(r)))
                 .catch(err => console.error(err)),
             api.get('/stock-movements', { params: { page: movementsPage } })
                 .then(r => { setMovements(r.data.movements?.data || r.data.movements || []); setMovementsMeta(r.data.movements || null); })

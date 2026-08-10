@@ -47,6 +47,13 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
         Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
 
+        // Stock Movements Read
+        Route::get('/stock-movements', [StockMovementController::class, 'index']);
+        Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
+        Route::get('/stock-movements/types', [StockMovementController::class, 'getTypes']);
+        Route::get('/stock-movements/summary', [StockMovementController::class, 'getSummary']);
+        Route::get('/stock-movements/export-pdf', [StockMovementController::class, 'exportPdf']);
+
         // Categories Read
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
@@ -67,8 +74,13 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
         // Medicines - Create, Update, Delete
         Route::post('/medicines', [MedicineController::class, 'store']);
+        Route::post('/medicines/{medicine}', [MedicineController::class, 'update']);
         Route::put('/medicines/{medicine}', [MedicineController::class, 'update']);
         Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
+
+        // Stock Movements - Create, Delete
+        Route::post('/stock-movements', [StockMovementController::class, 'store']);
+        Route::delete('/stock-movements/{stockMovement}', [StockMovementController::class, 'destroy']);
     });
 
     // --------------------------------------------------------------------
@@ -98,7 +110,12 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
+        Route::delete('/stock-movements/{stockMovement}', [StockMovementController::class, 'destroy']);
+        Route::get('/stock-movements/types', [StockMovementController::class, 'getTypes']);
+        Route::get('/stock-movements/summary', [StockMovementController::class, 'getSummary']);
+        Route::get('/stock-movements/export-pdf', [StockMovementController::class, 'exportPdf']);
         Route::get('/low-stock', [LowStockController::class, 'index']);
+        Route::get('/low-stock/export-pdf', [LowStockController::class, 'exportPdf']);
         Route::get('/reports', [ReportController::class, 'index']);
     });
 

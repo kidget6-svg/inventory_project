@@ -25,6 +25,7 @@ const movementTypes = [
     { value: 'expired', label: 'Expired', icon: CalendarX, color: 'gray', desc: 'Remove expired stock' },
     { value: 'lost', label: 'Lost', icon: FileWarning, color: 'orange', desc: 'Mark lost stock' },
     { value: 'correction', label: 'Correction', icon: CheckCircle2, color: 'blue', desc: 'Fix data errors' },
+    { value: 'self', label: 'Self Adjustment', icon: RotateCw, color: 'teal', desc: 'Internal self adjustment' },
 ];
 
 const colorMap = {
@@ -36,6 +37,7 @@ const colorMap = {
     orange: 'bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400 hover:shadow-orange-100',
     gray: 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-400 hover:shadow-gray-100',
     blue: 'bg-blue-50 border-blue-200 text-blue-700 hover:border-blue-400 hover:shadow-blue-100',
+    teal: 'bg-teal-50 border-teal-200 text-teal-700 hover:border-teal-400 hover:shadow-teal-100',
 };
 
 const SkeletonCard = () => (
@@ -61,6 +63,7 @@ export default function StockMovementCreate() {
 
     const [form, setForm] = useState({
         medicine_id: '', type: 'in', quantity: '', reference: '', notes: '',
+        source_type: '', destination_type: ''
     });
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -69,8 +72,9 @@ export default function StockMovementCreate() {
     useEffect(() => {
         api.get('/medicines')
             .then(r => {
-                const data = r.data?.data || r.data;
-                const list = Array.isArray(data) ? data : [];
+                const list = Array.isArray(r.data?.data) ? r.data.data :
+                             Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
+                             Array.isArray(r.data) ? r.data : [];
                 setMedicines(list);
                 setFilteredMedicines(list);
             })
@@ -308,6 +312,28 @@ export default function StockMovementCreate() {
                                         className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
                                     />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
+                                <select name="source_type" value={form.source_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                    <option value="">None</option>
+                                    <option value="self">Self</option>
+                                    <option value="supplier">Supplier</option>
+                                    <option value="branch">Branch</option>
+                                    <option value="sale">Sale</option>
+                                    <option value="customer">Customer</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
+                                <select name="destination_type" value={form.destination_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                    <option value="">None</option>
+                                    <option value="self">Self</option>
+                                    <option value="supplier">Supplier</option>
+                                    <option value="branch">Branch</option>
+                                    <option value="sale">Sale</option>
+                                    <option value="customer">Customer</option>
+                                </select>
                             </div>
                         </div>
                     </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Stepper from '../components/Stepper';
-import { Pill, User, Mail, Lock, Eye, EyeOff, Loader2, Phone, Calendar, MapPin, Upload, UserCheck, FileText, GraduationCap, Briefcase, IdCard, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Loader2, Phone, Calendar, MapPin, Upload, UserCheck, FileText, GraduationCap, Briefcase, IdCard, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Register() {
     const { register } = useAuth();
@@ -330,8 +330,8 @@ export default function Register() {
                         <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-sky-600 mb-4 transition-colors">
                             <ArrowLeft size={16} /> Back to Home
                         </Link>
-                        <div className="w-14 h-14 rounded-2xl bg-sky-50 flex items-center justify-center mx-auto mb-4">
-                            <Pill className="text-sky-600" size={28} />
+                        <div className="w-20 h-20 rounded-2xl bg-sky-50 flex items-center justify-center mx-auto mb-4 shadow-2xl ring-2 ring-sky-400/70">
+                            <img src="/images/p1.png" alt="EthioPharmacy" className="w-16 h-16 object-contain" />
                         </div>
                         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Create Account</h1>
                         <p className="text-gray-500 mt-1.5 text-sm">Register as a pharmacist or cashier</p>

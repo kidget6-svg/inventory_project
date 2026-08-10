@@ -83,9 +83,18 @@ export default function Medicines() {
         
         api.get('/medicines', { params })
             .then(r => {
-                const data = r.data.data || r.data;
-                setMedicines(Array.isArray(data) ? data : []);
-                setMeta(r.data);
+                let medicinesData = [];
+                if (Array.isArray(r.data.data)) {
+                    medicinesData = r.data.data;
+                } else if (Array.isArray(r.data.medicines?.data)) {
+                    medicinesData = r.data.medicines.data;
+                } else if (Array.isArray(r.data.data?.data)) {
+                    medicinesData = r.data.data.data;
+                } else if (Array.isArray(r.data)) {
+                    medicinesData = r.data;
+                }
+                setMedicines(medicinesData);
+                setMeta(r.data.meta || r.data.medicines || r.data);
             })
             .catch(err => { 
                 console.error(err); 
