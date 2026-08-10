@@ -136,9 +136,17 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/low-stock', [LowStockController::class, 'index']);
     });
 
-    // Sales Queue & Retail Checkout (cashier only)
-    Route::middleware('role:cashier')->group(function () {
-        Route::apiResource('sales', SaleController::class);
+    // Sales routes
+    Route::middleware('role:admin,cashier,pharmacist')->group(function () {
+        Route::get('/sales', [SaleController::class, 'index']);
+        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
+        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
+        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
+        Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
+        Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
+        Route::get('/sales/stats', [SaleController::class, 'getStats']);
+        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
+        Route::get('/sales/history', [SaleController::class, 'history']);
     });
 });
 

@@ -125,7 +125,7 @@ function App() {
                 <ProtectedRoute roles={['pharmacist']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
             } />
             <Route path="/retail-sales" element={
-                <ProtectedRoute roles={['admin', 'cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+                <ProtectedRoute roles={['cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
             } />
 
             {/* Redirect legacy /sales path to prescription-sales */}
