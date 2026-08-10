@@ -109,6 +109,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/sales', [SaleController::class, 'index']);
         Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
+        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
         Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
         Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
         Route::get('/sales/stats', [SaleController::class, 'getStats']);

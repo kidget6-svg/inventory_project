@@ -116,16 +116,16 @@ function App() {
 
             {/* Sales Routes */}
             <Route path="/prescription-sales" element={
-                <ProtectedRoute roles={['pharmacist']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
             } />
             <Route path="/prescription-sales-cashier" element={
-                <ProtectedRoute roles={['cashier']} title="Prescription Sales"><CashierPrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute roles={['cashier']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
             } />
             <Route path="/retail-otc-sales" element={
-                <ProtectedRoute roles={['pharmacist']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
             } />
             <Route path="/retail-sales" element={
-                <ProtectedRoute roles={['cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
             } />
 
             {/* Redirect legacy /sales path to prescription-sales */}
