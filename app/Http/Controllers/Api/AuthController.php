@@ -103,30 +103,40 @@ class AuthController extends Controller
     }
 
     public function register(Request $request)
-{
-    $request->validate([
-        'first_name' => 'required|string|max:255',
-        'last_name' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:users',
-        'password' => 'required|string|min:8|confirmed',
-        'role' => 'required|in:pharmacist,cashier',
-    ]);
+    {
+        if ((!$request->filled('first_name') || !$request->filled('last_name')) && $request->filled('name')) {
+            $parts = explode(' ', trim($request->input('name')), 2);
+            $request->merge([
+                'first_name' => $request->input('first_name') ?: ($parts[0] ?? $request->input('name')),
+                'last_name'  => $request->input('last_name')  ?: ($parts[1] ?? $parts[0] ?? $request->input('name')),
+            ]);
+        }
 
-    $user = User::create([
-        'name' => $request->first_name . ' ' . $request->last_name,
-        'first_name' => $request->first_name,
-        'last_name' => $request->last_name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'role' => $request->role,
-        'status' => 'pending',
-    ]);
+        $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name'  => 'required|string|max:255',
+            'email'      => 'required|string|email|max:255|unique:users',
+            'password'   => 'required|string|min:8|confirmed',
+            'role'       => 'required|in:admin,pharmacist,cashier',
+        ]);
 
-    return response()->json([
-        'message' => 'Registration successful. Please wait for admin approval.',
-        'user' => $user
-    ], 201);
-}
+        $status = (Auth::check() && Auth::user()?->role === 'admin') ? User::STATUS_APPROVED : 'pending';
+
+        $user = User::create([
+            'name'       => $request->first_name . ' ' . $request->last_name,
+            'first_name' => $request->first_name,
+            'last_name'  => $request->last_name,
+            'email'      => $request->email,
+            'password'   => Hash::make($request->password),
+            'role'       => $request->role,
+            'status'     => $status,
+        ]);
+
+        return response()->json([
+            'message' => $status === User::STATUS_APPROVED ? 'User created successfully.' : 'Registration successful. Please wait for admin approval.',
+            'user'    => $user
+        ], 201);
+    }
     public function logout(Request $request)
     {
         if ($request->user()) {
