@@ -16,14 +16,19 @@ class ReportTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function adminUser()
+    private function adminUser(): User
     {
-        return User::factory()->create(['role' => 'admin']);
+        return User::factory()->create(['role' => 'admin', 'status' => User::STATUS_APPROVED]);
     }
 
-    private function pharmacistUser()
+    private function pharmacistUser(): User
     {
-        return User::factory()->create(['role' => 'pharmacist']);
+        return User::factory()->create(['role' => 'pharmacist', 'status' => User::STATUS_APPROVED]);
+    }
+
+    private function cashierUser(): User
+    {
+        return User::factory()->create(['role' => 'cashier']);
     }
 
     public function test_reports_endpoint_returns_all_five_datasets()
@@ -165,13 +170,13 @@ class ReportTest extends TestCase
         $user = $this->pharmacistUser();
 
         $response = $this->actingAs($user)->getJson('/reports');
-
+        $response = $this->actingAs($user)->getJson('/reports');
         $response->assertOk();
     }
 
     public function test_reports_not_accessible_by_cashier()
     {
-        $cashier = User::factory()->create(['role' => 'cashier']);
+        $cashier = $this->cashierUser();
 
         $response = $this->actingAs($cashier)->getJson('/reports');
 

@@ -31,6 +31,7 @@ class Medicine extends Model
         'barcode',
         'category_id',
         'supplier_id',
+        'shelf_id',
         'quantity',
         'unit_price',
         'purchase_price',
@@ -58,6 +59,11 @@ class Medicine extends Model
         'purchase_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
     ];
+
+    public function shelf()
+    {
+        return $this->belongsTo(Shelf::class);
+    }
 
     public function category()
     {

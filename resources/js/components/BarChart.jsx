@@ -1,59 +1,135 @@
 import React from 'react';
-
+import { Bar } from 'react-chartjs-2';
+import { baseChartOptions } from './chartRegistry';
+/**
+ * Modern BarChart — uses Chart.js (via react-chartjs-2) for a clean,
+ * professional look with rounded bars, smooth animations, and minimal
+ * grid lines.
+ *
+ * Props are identical to the original CSS-only BarChart so the
+ * AdminDashboard can swap it in without any call-site changes:
+ *   title, labels[], values[], color, valuePrefix, valueSuffix, currency
+ */
 export default function BarChart({
     title,
     labels = [],
     values = [],
-    color = 'sky',
+    color = 'blue',
     valuePrefix = '',
     valueSuffix = '',
     currency = false,
 }) {
+    /* Map the semantic `color` prop to a Chart.js hex colour. */
     const colorMap = {
-        sky: 'bg-sky-500 hover:bg-sky-600',
-        indigo: 'bg-sky-500 hover:bg-sky-600',
-        blue: 'bg-sky-500 hover:bg-sky-600',
-        green: 'bg-emerald-500 hover:bg-emerald-600',
-        orange: 'bg-amber-400 hover:bg-amber-500',
-        red: 'bg-red-400 hover:bg-red-500',
-        purple: 'bg-purple-500 hover:bg-purple-600',
+        sky:    '#3b82f6',
+        blue:   '#2563eb',
+        indigo: '#6366f1',
+        green:  '#22c55e',
+        orange: '#f97316',
+        red:    '#ef4444',
+        purple: '#8b5cf6',
+        teal:   '#14b8a3',
+        yellow: '#f59e0b',
     };
-    const barColor = colorMap[color] || colorMap.sky;
+    const barColor = colorMap[color] || colorMap.blue;
 
-    const maxValue = Math.max(...values, 1);
-
+    /* Format a single bar value for the tooltip / y-axis. */
     const formatValue = (val) => {
         if (currency) return `$${Number(val).toFixed(2)}`;
         return `${valuePrefix}${Number(val)}${valueSuffix}`;
     };
 
+    const chartData = {
+        labels,
+        datasets: [
+            {
+                label: title,
+                data: values.map(v => Number(v)),
+                backgroundColor: barColor,
+                borderColor: barColor,
+                borderRadius: 6,
+                borderWidth: 0,
+                barThickness: 24,
+                maxBarThickness: 34,
+            },
+        ],
+    };
+
+    const options = {
+        ...baseChartOptions,
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+            duration: 900,
+            easing: 'easeOutQuart',
+        },
+        plugins: {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                titleFont: { size: 12, weight: '600' },
+                bodyFont: { size: 12 },
+                padding: 10,
+                cornerRadius: 8,
+                displayColors: false,
+                borderColor: 'rgba(' + hexToRgb(barColor) + ', 0.3)',
+                borderWidth: 1,
+                callbacks: {
+                    label: (ctx) => formatValue(ctx.raw),
+                },
+            },
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 }, color: '#9ca3af' },
+                border: { display: false },
+            },
+            y: {
+                grid: {
+                    color: 'rgba(226, 232, 240, 0.6)',
+                    drawBorder: false,
+                },
+                ticks: {
+                    font: { size: 11 },
+                    color: '#9ca3af',
+                    callback: (val) => {
+                        if (currency) return `$${val}`;
+                        return val;
+                    },
+                },
+                border: { display: false },
+            },
+        },
+    };
+
     return (
-        <div className="card p-5">
-            <h3 className="card-header">{title}</h3>
-            <div className="flex items-end justify-between gap-2 h-52">
-                {labels.map((label, i) => {
-                    const height = (values[i] / maxValue) * 100;
-                    return (
-                        <div key={i} className="flex flex-col items-center flex-1 group">
-                            <div className="relative w-full flex justify-center">
-                                <div className={`w-full max-w-[40px] rounded-t-md transition-all duration-200 ${barColor} relative group-hover:brightness-110`}
-                                    style={{ height: `${height}%`, minHeight: values[i] > 0 ? '4px' : '0' }}>
-                                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap shadow-lg">
-                                        {formatValue(values[i])}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
+        <div className="card p-5 h-full flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-600">
+                    {title}
+                </h3>
             </div>
-            <div className="flex justify-between gap-2 mt-3">
-                {labels.map((label, i) => (
-                    <div key={i} className="flex-1 text-center">
-                        <span className="text-xs text-gray-500 truncate block font-medium">{label}</span>
+            <div className="flex-1 h-[230px]">
+                {labels.length > 0 ? (
+                    <Bar data={chartData} options={options} />
+                ) : (
+                    <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+                        No data available
                     </div>
-                ))}
+                )}
             </div>
         </div>
     );
+}
+
+/* Small helper: convert "#2563eb" → "37,99,235" for rgba() usage. */
+function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 2 + h.length - 4), 16) || parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(h.length > 4 ? 4 : 2), 16);
+    return `${r}, ${g}, ${b}`;
 }

@@ -12,15 +12,14 @@ import {
     X,
     Save,
     Loader2,
+    WalletCards,
     ShieldCheck,
     Pill,
-    WalletCards
 } from "lucide-react";
-
-import { useAuth } from "../context/AuthContext";
 import api from "../axios";
-import LoadingSpinner from "../components/LoadingSpinner";
 import Pagination from '../components/Pagination';
+import { useAuth } from '../context/AuthContext';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 
 const roleOptions = [
@@ -58,6 +57,15 @@ export default function Users(){
 
     const [roleFilter,setRoleFilter] = useState("all");
 
+    // Pending registrations state
+    const [pendingUsers, setPendingUsers] = useState([]);
+    const [pendingLoading, setPendingLoading] = useState(true);
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectTarget, setRejectTarget] = useState(null);
+    const [rejectReason, setRejectReason] = useState("");
+    const [processingAction, setProcessingAction] = useState(false);
+    const [userStats, setUserStats] = useState(null);
+
 
     const [showModal,setShowModal] = useState(false);
 
@@ -89,9 +97,10 @@ export default function Users(){
 
 
     useEffect(()=>{
-
+        // Load approved users, pending registrations and stats on mount
         fetchUsers();
-
+        fetchPendingUsers();
+        fetchUserStats();
     },[]);
 
     const handlePageChange = (p) => setPage(p);
@@ -101,32 +110,17 @@ export default function Users(){
 
 
     const fetchUsers = async()=>{
-
-        try{
-
-            const response = await api.get("/users", { params: { page, search: search, role: roleFilter } });
-
+        setLoading(true);
+        try {
+            const response = await api.get("/users", { params: { page, search: search, role: roleFilter, status: 'approved' } });
             setUsers(response.data.data || response.data);
             setMeta(response.data);
-
             setError("");
-
-        }
-
-        catch(error){
-
-            console.log(error);
-
-            setError("Failed to load users");
-
-        }
-
-        finally{
-
+        } catch (e) {
+            setError('Failed to load users');
+        } finally {
             setLoading(false);
-
         }
-
     };
 
     useEffect(() => { setPage(1); }, [search, roleFilter]);
@@ -322,6 +316,49 @@ export default function Users(){
 
 
 
+    const handleApprove = async (user) => {
+        if (!window.confirm(`Approve ${user.name}?`)) return;
+        setProcessingAction(true);
+        try {
+            await api.post(`/users/${user.id}/approve`);
+            window.showToast && window.showToast('User approved successfully.', 'success');
+            // Refresh lists and stats
+            await fetchPendingUsers();
+            await fetchUsers();
+            await fetchUserStats();
+        } catch (error) {
+            setError("Failed to approve user. Please try again.");
+        } finally {
+            setProcessingAction(false);
+        }
+    };
+
+    // Open reject modal (capture reason) for the selected pending user
+    const handleReject = (user) => {
+        setRejectTarget(user);
+        setRejectReason('');
+        setShowRejectModal(true);
+    };
+
+    const submitReject = async () => {
+        if (!rejectTarget) return;
+        if (!window.confirm(`Reject ${rejectTarget.name}?`)) return;
+        setProcessingAction(true);
+        try {
+            await api.post(`/users/${rejectTarget.id}/reject`, { reason: rejectReason });
+            window.showToast && window.showToast('User registration rejected.', 'success');
+            setShowRejectModal(false);
+            setRejectTarget(null);
+            setRejectReason('');
+            await fetchPendingUsers();
+            await fetchUserStats();
+        } catch (error) {
+            setError('Failed to reject user. Please try again.');
+        } finally {
+            setProcessingAction(false);
+        }
+    };
+
     const handleDelete=async(id)=>{
 
 
@@ -348,6 +385,28 @@ export default function Users(){
         }
 
 
+    };
+
+    const fetchPendingUsers = async () => {
+        setPendingLoading(true);
+        try {
+            const r = await api.get('/users', { params: { status: 'pending', page: 1 } });
+            setPendingUsers(r.data.data || r.data || []);
+        } catch (e) {
+            console.error(e);
+            setError('Failed to load pending users');
+        } finally {
+            setPendingLoading(false);
+        }
+    };
+
+    const fetchUserStats = async () => {
+        try {
+            const r = await api.get('/users/stats');
+            setUserStats(r.data);
+        } catch (e) {
+            console.error(e);
+        }
     };
 
 
@@ -1770,19 +1829,27 @@ ID: {user.id}
 
 
 <td className="px-6 py-4 text-gray-500">
-
-
-{
-user.created_at
-?
-new Date(user.created_at)
-.toLocaleDateString()
-:
-"-"
-}
-
-
-
+    <div className="flex flex-col gap-1">
+        <span>
+            {
+            user.created_at
+            ?
+            new Date(user.created_at)
+            .toLocaleDateString()
+            :
+            "-"
+            }
+        </span>
+        <span className="text-xs text-gray-400">
+            {
+            user.created_at
+            ?
+            new Date(user.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            :
+            ""
+            }
+        </span>
+    </div>
 </td>
 
 

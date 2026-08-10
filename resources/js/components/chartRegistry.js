@@ -6,30 +6,29 @@ import {
     Chart as ChartJS,
     CategoryScale,
     LinearScale,
-    PointElement,
-    LineElement,
     BarElement,
+    LineElement,
+    PointElement,
     ArcElement,
     Title,
     Tooltip,
     Legend,
-    Filler,
 } from 'chart.js';
 
 ChartJS.register(
     CategoryScale,
     LinearScale,
-    PointElement,
-    LineElement,
     BarElement,
+    LineElement,
+    PointElement,
     ArcElement,
     Title,
     Tooltip,
-    Legend,
-    Filler
+    Legend
 );
 
-export default ChartJS;
+export { ChartJS };
+
 
 /**
  * Common chart colour palette matching the PharmaSys pharmacy theme.

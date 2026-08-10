@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
-import { Download, FileText, BarChart3 } from 'lucide-react';
+import PieChart from '../components/PieChart';
 
 export default function Reports() {
     const [data, setData] = useState(null);
@@ -94,30 +94,41 @@ export default function Reports() {
         <tr><td colSpan={colSpan} className="px-4 py-8 text-center text-gray-400">{message}</td></tr>
     );
 
-   const inventoryData = useMemo(
-      () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
-      [data, searchTerm, sortKey, sortDirection]
-   );
+    const inventoryData = useMemo(
+        () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
 
-   const salesData = useMemo(
-      () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
-      [data, searchTerm, sortKey, sortDirection]
-   );
+    // Derive labels/values for the Inventory by Category pie chart from the
+    // inventoryChartData returned by the API.
+    const inventoryChartLabels = useMemo(
+        () => data?.inventoryChartData?.map(c => c.category) || [],
+        [data]
+    );
+    const inventoryChartValues = useMemo(
+        () => data?.inventoryChartData?.map(c => c.medicine_count) || [],
+        [data]
+    );
 
-   const purchasesData = useMemo(
-      () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
-      [data, searchTerm, sortKey, sortDirection]
-   );
+    const salesData = useMemo(
+        () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
 
-   const lowStockData = useMemo(
-      () => filterAndSort(data?.lowStock || [], ['name']),
-      [data, searchTerm, sortKey, sortDirection]
-   );
+    const purchasesData = useMemo(
+        () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
 
-   const expiringData = useMemo(
-      () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
-      [data, searchTerm, sortKey, sortDirection]
-   );
+    const lowStockData = useMemo(
+        () => filterAndSort(data?.lowStock || [], ['name']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
+
+    const expiringData = useMemo(
+        () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
 
     if (!data) {
         return (
@@ -135,13 +146,6 @@ export default function Reports() {
         { key: 'expiring', label: 'Expiring' },
     ];
 
-    const handleExport = (type, format) => {
-        const params = new URLSearchParams();
-        params.append('type', type);
-        params.append('format', format);
-        window.open(`${import.meta.env.VITE_API_URL || ''}/api/sales/export?${params.toString()}`, '_blank');
-    };
-
     return (
         <div className="space-y-6">
             <div className="flex gap-2 mb-5 flex-wrap">
@@ -151,63 +155,6 @@ export default function Reports() {
                         {t.label}
                     </button>
                 ))}
-            </div>
-
-            {/* Export Buttons */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <BarChart3 size={16} /> Export Reports
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <button
-                        onClick={() => handleExport('sales', 'pdf')}
-                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                    >
-                        <FileText size={14} /> Sales Report (PDF)
-                    </button>
-                    <button
-                        onClick={() => handleExport('sales', 'csv')}
-                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                    >
-                        <Download size={14} /> Sales Report (CSV)
-                    </button>
-                    <button
-                        onClick={() => handleExport('daily', 'pdf')}
-                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                    >
-                        <FileText size={14} /> Daily Report (PDF)
-                    </button>
-                    <button
-                        onClick={() => handleExport('daily', 'csv')}
-                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                    >
-                        <Download size={14} /> Daily Report (CSV)
-                    </button>
-                    <button
-                        onClick={() => handleExport('monthly', 'pdf')}
-                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                    >
-                        <FileText size={14} /> Monthly Report (PDF)
-                    </button>
-                    <button
-                        onClick={() => handleExport('monthly', 'csv')}
-                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                    >
-                        <Download size={14} /> Monthly Report (CSV)
-                    </button>
-                    <button
-                        onClick={() => handleExport('payment_method', 'pdf')}
-                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                    >
-                        <FileText size={14} /> Payment Method (PDF)
-                    </button>
-                    <button
-                        onClick={() => handleExport('payment_method', 'csv')}
-                        className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                    >
-                        <Download size={14} /> Payment Method (CSV)
-                    </button>
-                </div>
             </div>
 
             {/* Search bar */}
@@ -222,28 +169,42 @@ export default function Reports() {
             </div>
 
             {activeTab === 'inventory' && (
-                <div className="card overflow-hidden">
-                    <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Inventory Report ({inventoryData.length} items)</h3></div>
-                    <table className="w-full">
-                        <thead><tr className="bg-sky-50">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Name{sortIcon('name')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch{sortIcon('batch_number')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Qty{sortIcon('quantity')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('unit_price')}>Price{sortIcon('unit_price')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>Expiry{sortIcon('expiry_date')}</th>
-                        </tr></thead>
-                        <tbody>
-                            {inventoryData.length > 0 ? inventoryData.map(m => (
-                                <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                    <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
-                                    <td className="px-4 py-3 text-sm">{m.batch_number || '---'}</td>
-                                    <td className="px-4 py-3 text-sm">{m.quantity}</td>
-                                    <td className="px-4 py-3 text-sm">${Number(m.unit_price).toFixed(2)}</td>
-                                    <td className="px-4 py-3 text-sm">{m.expiry_date || '---'}</td>
-                                </tr>
-                            )) : emptyRow(5, 'No medicines found')}
-                        </tbody>
-                    </table>
+                <div className="space-y-6">
+                    {/* Inventory by Category — pie chart shows proportions at a glance */}
+                    {inventoryChartLabels.length > 0 && (
+                        <div className="card">
+                            <div className="p-5">
+                                <PieChart
+                                    labels={inventoryChartLabels}
+                                    values={inventoryChartValues}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="card overflow-hidden">
+                        <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Inventory Report ({inventoryData.length} items)</h3></div>
+                        <table className="w-full">
+                            <thead><tr className="bg-sky-50">
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Name{sortIcon('name')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch{sortIcon('batch_number')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Qty{sortIcon('quantity')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('unit_price')}>Price{sortIcon('unit_price')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>Expiry{sortIcon('expiry_date')}</th>
+                            </tr></thead>
+                            <tbody>
+                                {inventoryData.length > 0 ? inventoryData.map(m => (
+                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                        <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
+                                        <td className="px-4 py-3 text-sm">{m.batch_number || '---'}</td>
+                                        <td className="px-4 py-3 text-sm">{m.quantity}</td>
+                                        <td className="px-4 py-3 text-sm">${Number(m.unit_price).toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-sm">{m.expiry_date || '---'}</td>
+                                    </tr>
+                                )) : emptyRow(5, 'No medicines found')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 

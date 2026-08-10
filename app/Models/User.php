@@ -76,6 +76,12 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
+//         User::create([
+//     'name' => 'Admin',
+//     'email' => 'admin@pharmacy.com',
+//     'password' => Hash::make('password'),
+//     'role' => 'admin',
+// ]);
         return $this->role === 'admin';
     }
 

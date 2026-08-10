@@ -60,6 +60,8 @@ class Sale extends Model
     }
 
     protected $fillable = [
+        'user_id',
+        'customer_id',
         'sale_date',
         'total_amount',
         'discount',
