@@ -19,6 +19,8 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
+        Medicine::query()->each->syncAutomaticExpiryState();
+
         if ($user->isAdmin()) {
             return $this->adminDashboard();
         }

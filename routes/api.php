@@ -28,7 +28,7 @@ Route::post('/register', [AuthController::class, 'register']);
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:sanctum', 'approved'])->group(function () {
-    
+
     // Account & Dashboard
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
@@ -58,10 +58,10 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
         Route::get('/medicines', [MedicineController::class, 'index']);
         Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
-        
+
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
-        
+
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
     });
@@ -77,6 +77,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
         Route::post('/medicines', [MedicineController::class, 'store']);
         Route::put('/medicines/{medicine}', [MedicineController::class, 'update']);
+        Route::patch('/medicines/{medicine}/status', [MedicineController::class, 'updateStatus']);
         Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
         Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 
 class Medicine extends Model
 {
@@ -72,6 +73,41 @@ class Medicine extends Model
     public function purchaseOrderItems()
     {
         return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function batches()
+    {
+        return $this->hasMany(Batch::class);
+    }
+
+    public function calculatedExpiryDate(): ?Carbon
+    {
+        $batchExpiry = $this->batches()
+            ->when($this->batch_number, fn ($query) => $query->where('batch_number', $this->batch_number))
+            ->whereNotNull('expiry_date')
+            ->latest('id')
+            ->value('expiry_date');
+
+        return $batchExpiry ? Carbon::parse($batchExpiry) : ($this->expiry_date ? Carbon::parse($this->expiry_date) : null);
+    }
+
+    public function syncAutomaticExpiryState(): void
+    {
+        $calculatedExpiry = $this->calculatedExpiryDate();
+        $changes = [];
+
+        if ($calculatedExpiry && (! $this->expiry_date || ! $this->expiry_date->isSameDay($calculatedExpiry))) {
+            $changes['expiry_date'] = $calculatedExpiry->toDateString();
+        }
+
+        if ($calculatedExpiry && $calculatedExpiry->isBefore(Carbon::today())) {
+            $changes['status'] = self::STATUS_EXPIRED;
+        }
+
+        if ($changes) {
+            $this->forceFill($changes)->saveQuietly();
+            $this->refresh();
+        }
     }
 
     /**

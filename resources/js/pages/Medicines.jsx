@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import Stepper from '../components/Stepper';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
-import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const statusOptions = [
     { value: '', label: 'All Statuses' },
@@ -114,13 +114,35 @@ export default function Medicines() {
         setError('');
         setSubmitting(true);
         try {
-            if (editId) { await api.put(`/medicines/${editId}`, form); window.showToast('Medicine updated successfully', 'success'); }
+            if (editId) {
+                const editableFields = { ...form };
+                delete editableFields.batch_number;
+                delete editableFields.reorder_level;
+                delete editableFields.expiry_date;
+                delete editableFields.status;
+                await api.put(`/medicines/${editId}`, editableFields);
+                window.showToast('Medicine updated successfully', 'success');
+            }
             else { await api.post('/medicines', form); window.showToast('Medicine created successfully', 'success'); }
             setShowModal(false); loadMedicines();
         } catch (err) {
             const msgs = err.response?.data?.errors;
             setError(msgs ? Object.values(msgs).flat().join(' ') : 'Error saving medicine');
         } finally { setSubmitting(false); }
+    };
+
+    const toggleStatus = async () => {
+        if (!editId || form.status === 'expired') return;
+
+        try {
+            const nextStatus = form.status === 'active' ? 'inactive' : 'active';
+            const response = await api.patch(`/medicines/${editId}/status`, { status: nextStatus });
+            setForm(prev => ({ ...prev, status: response.data.status }));
+            loadMedicines();
+            window.showToast(`Medicine ${response.data.status === 'active' ? 'activated' : 'deactivated'}`, 'success');
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to update medicine status', 'error');
+        }
     };
 
     const handleDelete = async (id) => {
@@ -206,10 +228,10 @@ export default function Medicines() {
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Generic Name</label>
                             <input type="text" name="generic_name" value={form.generic_name} onChange={handleChange} placeholder="e.g. Acetaminophen" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                         </div>
-                        <div>
+                        {!editId && <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Batch Number</label>
                             <input type="text" name="batch_number" value={form.batch_number} onChange={handleChange} placeholder="e.g. BATCH-001" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
+                        </div>}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
                             <input type="text" name="manufacturer" value={form.manufacturer} onChange={handleChange} placeholder="e.g. GSK" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
@@ -266,31 +288,39 @@ export default function Medicines() {
                                 <input type="number" name="selling_price" value={form.selling_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                             </div>
                         </div>
-                        <div>
+                        {!editId && <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
                             <input type="number" name="reorder_level" value={form.reorder_level} onChange={handleChange} placeholder="10" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>
+                        </div>}
                     </div>
                 );
             case 2:
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date</label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input type="date" name="expiry_date" value={form.expiry_date} onChange={handleChange} className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        {!editId && <>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date</label>
+                                <input type="date" name="expiry_date" value={form.expiry_date} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                             </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                            <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="expired">Expired</option>
-                                <option value="discontinued">Discontinued</option>
-                            </select>
-                        </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                                <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="expired">Expired</option>
+                                    <option value="discontinued">Discontinued</option>
+                                </select>
+                            </div>
+                        </>}
+                        {editId && <div className="md:col-span-2 flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                                <span className="text-sm font-medium text-gray-700">{form.status === 'active' ? 'Active' : form.status === 'inactive' ? 'Inactive' : form.status === 'discontinued' ? 'Discontinued' : 'Expired'}</span>
+                            </div>
+                            <button type="button" role="switch" aria-checked={form.status === 'active'} aria-label="Toggle medicine active status" onClick={toggleStatus} disabled={!['active', 'inactive'].includes(form.status)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${form.status === 'active' ? 'bg-sky-500' : 'bg-gray-300'}`}>
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.status === 'active' ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                        </div>}
                         <div className="md:col-span-2 p-4 bg-sky-50 rounded-xl border border-sky-200">
                             <h4 className="text-sm font-semibold text-sky-800 mb-2">Review Summary</h4>
                             <div className="grid grid-cols-2 gap-2 text-sm">
