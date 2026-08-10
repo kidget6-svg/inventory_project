@@ -143,15 +143,43 @@ export default function CashierPaymentQueue({ saleType }) {
         }
     };
 
-    const handleDownloadPdf = () => {
-        if (completedSale) {
-            window.open(`${import.meta.env.VITE_API_URL || ''}/api/sales/${completedSale.id}/receipt/pdf`, '_blank');
+    const handleDownloadPdf = async () => {
+        if (!completedSale) return;
+        try {
+            window.showToast('Generating PDF...', 'info');
+            const res = await api.get(`/sales/${completedSale.id}/receipt/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `receipt-${completedSale.receipt_number || completedSale.id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            window.showToast('Receipt PDF downloaded successfully', 'success');
+        } catch (err) {
+            console.error('Download PDF error:', err);
+            window.showToast('Failed to download receipt PDF', 'error');
         }
     };
 
-    const handlePrintReceipt = () => {
-        if (completedSale) {
-            window.open(`${import.meta.env.VITE_API_URL || ''}/api/sales/${completedSale.id}/receipt/print`, '_blank');
+    const handlePrintReceipt = async () => {
+        if (!completedSale) return;
+        try {
+            window.showToast('Preparing printable receipt...', 'info');
+            const res = await api.get(`/sales/${completedSale.id}/receipt/print`);
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            if (printWindow) {
+                printWindow.document.write(res.data);
+                printWindow.document.close();
+                printWindow.focus();
+            } else {
+                window.showToast('Please allow popups to enable printing', 'error');
+            }
+        } catch (err) {
+            console.error('Print receipt error:', err);
+            window.showToast('Failed to print receipt', 'error');
         }
     };
 

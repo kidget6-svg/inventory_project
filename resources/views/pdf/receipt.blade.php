@@ -73,12 +73,12 @@
 
         <!-- Items Table -->
         <div class="section">
-            <div class="section-title">Medicines Sold</div>
+            <div class="section-title">Items Sold</div>
             <table class="items-table">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Medicine</th>
+                        <th>Item Description</th>
                         <th class="text-right">Qty</th>
                         <th class="text-right">Unit Price</th>
                         <th class="text-right">Subtotal</th>

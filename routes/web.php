@@ -136,17 +136,26 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/low-stock', [LowStockController::class, 'index']);
     });
 
-    // Sales routes
-    Route::middleware('role:admin,cashier,pharmacist')->group(function () {
-        Route::get('/sales', [SaleController::class, 'index']);
-        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
-        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
-        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
-        Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
+    // Sales routes — Read-Only (Admin, Pharmacist, Cashier)
+    // Admin can view sales data for reports/history but MUST NOT perform sales.
+    Route::middleware('role:admin,pharmacist,cashier')->group(function () {
         Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
         Route::get('/sales/stats', [SaleController::class, 'getStats']);
-        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
         Route::get('/sales/history', [SaleController::class, 'history']);
+        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
+    });
+
+    // Sales routes — Pharmacist Only (dispatch drafts to cashier queue)
+    // Admin is explicitly excluded: Admin MUST NOT perform sales.
+    Route::middleware('role:pharmacist')->group(function () {
+        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
+        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
+    });
+
+    // Sales routes — Cashier Only (complete payment & finalize sales)
+    Route::middleware('role:cashier')->group(function () {
+        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
+        Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
     });
 });
 

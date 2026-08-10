@@ -69,7 +69,7 @@ class MedicineController extends Controller
             'description' => 'nullable|string',
             'manufacturer' => 'nullable|string|max:255',
             'shelf_location' => 'nullable|string|max:50',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
         $validated = $this->handleImageUpload($validated, null);
@@ -113,7 +113,7 @@ class MedicineController extends Controller
             'description' => 'nullable|string',
             'manufacturer' => 'nullable|string|max:255',
             'shelf_location' => 'nullable|string|max:50',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
         $validated = $this->handleImageUpload($validated, $medicine);

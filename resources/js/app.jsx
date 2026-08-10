@@ -58,6 +58,13 @@ function DashboardRouter() {
     return <CashierDashboard />;
 }
 
+function SalesRedirect() {
+    const { user } = useAuth();
+    if (user?.role === 'pharmacist') return <Navigate to="/prescription-sales" replace />;
+    if (user?.role === 'cashier') return <Navigate to="/retail-sales" replace />;
+    return <Navigate to="/dashboard" replace />;
+}
+
 function App() {
     const { user, loading } = useAuth();
 
@@ -94,9 +101,9 @@ function App() {
                 <ProtectedRoute title="Account Settings"><Settings /></ProtectedRoute>
             } />
 
-            {/* Operations & Inventory */}
+            {/* Product Management & Operations */}
             <Route path="/medicines" element={
-                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Medicines Catalog"><Medicines /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Medicines"><Medicines /></ProtectedRoute>
             } />
             <Route path="/inventory" element={
                 <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Inventory"><Inventory /></ProtectedRoute>
@@ -111,7 +118,7 @@ function App() {
                 <ProtectedRoute roles={['admin']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
             } />
             <Route path="/retail-products" element={
-                <ProtectedRoute roles={['admin']} title="Retail Products"><RetailProducts /></ProtectedRoute>
+                <ProtectedRoute roles={['admin']} title="Retail & OTC Products"><RetailProducts /></ProtectedRoute>
             } />
 
             {/* Sales Routes */}
@@ -128,8 +135,8 @@ function App() {
                 <ProtectedRoute roles={['cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
             } />
 
-            {/* Redirect legacy /sales path to prescription-sales */}
-            <Route path="/sales" element={<Navigate to="/prescription-sales" replace />} />
+            {/* Role-based redirect for legacy /sales path */}
+            <Route path="/sales" element={<ProtectedRoute><SalesRedirect /></ProtectedRoute>} />
 
             {/* Receipt Page */}
             <Route path="/receipt/:id" element={

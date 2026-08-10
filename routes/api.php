@@ -54,6 +54,10 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         // Suppliers Read
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+
+        // Retail Products Read (pharmacist needs this for Retail & OTC Sales page)
+        Route::get('/retail-products', [RetailProductController::class, 'index']);
+        Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
     });
 
     // --------------------------------------------------------------------
@@ -103,17 +107,51 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     });
 
     // --------------------------------------------------------------------
-    // Sales Operations (Admin, Cashier, Pharmacist)
+    // Sales — Read-Only (Admin, Pharmacist, Cashier)
+    // Admin can view sales data for reports/history but MUST NOT perform sales.
     // --------------------------------------------------------------------
-    Route::middleware('role:admin,cashier,pharmacist')->group(function () {
+    Route::middleware('role:admin,pharmacist,cashier')->group(function () {
         Route::get('/sales', [SaleController::class, 'index']);
-        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
-        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
-        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
-        Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
         Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
         Route::get('/sales/stats', [SaleController::class, 'getStats']);
+        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
+        Route::get('/sales/{sale}/receipt/pdf', [SaleController::class, 'download']);
+        Route::get('/sales/{sale}/receipt/print', [SaleController::class, 'print']);
+    });
 
-        Route::apiResource('retail-products', RetailProductController::class);
+    // --------------------------------------------------------------------
+    // Sales History & Export — Admin Only
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/sales/history', [SaleController::class, 'history']);
+        Route::post('/sales/export', [SaleController::class, 'export']);
+        Route::get('/sales/export', [SaleController::class, 'export']);
+    });
+
+    // --------------------------------------------------------------------
+    // Sales — Pharmacist Only (dispatch drafts to cashier queue)
+    // Admin is explicitly excluded: Admin MUST NOT perform sales.
+    // --------------------------------------------------------------------
+    Route::middleware('role:pharmacist')->group(function () {
+        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
+        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
+    });
+
+    // --------------------------------------------------------------------
+    // Sales — Cashier Only (complete payment & finalize sales)
+    // --------------------------------------------------------------------
+    Route::middleware('role:cashier')->group(function () {
+        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
+        Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
+    });
+
+    // --------------------------------------------------------------------
+    // Retail Products — Write (Admin only)
+    // Read routes are already in the shared read-only group above.
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/retail-products', [RetailProductController::class, 'store']);
+        Route::put('/retail-products/{retailProduct}', [RetailProductController::class, 'update']);
+        Route::delete('/retail-products/{retailProduct}', [RetailProductController::class, 'destroy']);
     });
 });

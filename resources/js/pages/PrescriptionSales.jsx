@@ -7,7 +7,11 @@
 // quantity controls (+/-), remove-item, total price, Clear Draft, and
 // Send to Cashier Queue.
 //
-// Admin and Cashier see exactly the same UI and functionality.
+// The pharmacist can enter prescription/patient information (patient name,
+// prescription number, doctor name, notes) before dispatching the order.
+// The pharmacist does NOT complete payment or finalize the sale — the
+// draft is sent to the Cashier Payment Queue for the cashier to process.
+//
 // All shared UI is provided by the reusable components in
 // resources/js/components/pos/.
 
@@ -23,6 +27,10 @@ import {
     FileText,
     Send,
     Pill,
+    User,
+    Phone,
+    Mail,
+    Clipboard,
 } from 'lucide-react';
 
 export default function PrescriptionSales() {
@@ -31,6 +39,12 @@ export default function PrescriptionSales() {
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+
+    // Prescription / patient information
+    const [patientName, setPatientName] = useState('');
+    const [patientPhone, setPatientPhone] = useState('');
+    const [patientEmail, setPatientEmail] = useState('');
+    const [prescriptionNotes, setPrescriptionNotes] = useState('');
 
     // ── Data loading ──────────────────────────────────────────────
     useEffect(() => {
@@ -120,9 +134,18 @@ export default function PrescriptionSales() {
                     medicine_id: item.id,
                     quantity: item.cartQty,
                 })),
+                // Prescription / patient information
+                customer_name: patientName || null,
+                customer_phone: patientPhone || null,
+                customer_email: patientEmail || null,
+                notes: prescriptionNotes || null,
             });
             window.showToast('Order dispatched to Cashier queue!', 'success');
             setCart([]);
+            setPatientName('');
+            setPatientPhone('');
+            setPatientEmail('');
+            setPrescriptionNotes('');
         } catch (err) {
             window.showToast(
                 err.response?.data?.message || 'Failed to send order',
@@ -177,6 +200,76 @@ export default function PrescriptionSales() {
                             className="pos-search-input"
                         />
                         <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                    </div>
+                </div>
+
+                {/* Prescription / Patient Information */}
+                <div className="pos-prescription-info bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-5">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <Clipboard size={16} className="text-sky-600" />
+                        Prescription & Patient Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Patient Name
+                            </label>
+                            <div className="relative">
+                                <User size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={patientName}
+                                    onChange={(e) => setPatientName(e.target.value)}
+                                    placeholder="Enter patient name"
+                                    className="pos-search-input pl-10"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Phone Number
+                            </label>
+                            <div className="relative">
+                                <Phone size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={patientPhone}
+                                    onChange={(e) => setPatientPhone(e.target.value)}
+                                    placeholder="Enter phone number"
+                                    className="pos-search-input pl-10"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Email Address
+                            </label>
+                            <div className="relative">
+                                <Mail size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                <input
+                                    type="email"
+                                    value={patientEmail}
+                                    onChange={(e) => setPatientEmail(e.target.value)}
+                                    placeholder="Enter email address"
+                                    className="pos-search-input pl-10"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Prescription Notes
+                            </label>
+                            <div className="relative">
+                                <Clipboard size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={prescriptionNotes}
+                                    onChange={(e) => setPrescriptionNotes(e.target.value)}
+                                    placeholder="Prescription #, doctor name, etc."
+                                    className="pos-search-input pl-10"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 

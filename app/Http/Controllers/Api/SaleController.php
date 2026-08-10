@@ -53,6 +53,11 @@ class SaleController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'payment_method' => 'nullable|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
             'amount_paid' => 'nullable|numeric|min:0',
+            // Prescription / patient information
+            'customer_name' => 'nullable|string|max:255',
+            'customer_phone' => 'nullable|string|max:50',
+            'customer_email' => 'nullable|email|max:255',
+            'notes' => 'nullable|string',
         ]);
 
         return DB::transaction(function () use ($validated, $request, $service) {
@@ -98,6 +103,10 @@ class SaleController extends Controller
                     : 0,
                 'payment_status' => $hasPaymentInfo ? 'paid' : 'pending',
                 'receipt_number' => $hasPaymentInfo ? Sale::generateReceiptNumber() : null,
+                'customer_name' => $validated['customer_name'] ?? null,
+                'customer_phone' => $validated['customer_phone'] ?? null,
+                'customer_email' => $validated['customer_email'] ?? null,
+                'notes' => $validated['notes'] ?? null,
             ]);
 
             foreach ($itemsToCreate as $itemData) {
@@ -132,6 +141,10 @@ class SaleController extends Controller
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|exists:retail_products,id',
             'items.*.cartQty' => 'required|integer|min:1',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_phone' => 'nullable|string|max:50',
+            'customer_email' => 'nullable|email|max:255',
+            'notes' => 'nullable|string',
         ]);
 
         return DB::transaction(function () use ($validated, $request, $service) {
@@ -173,6 +186,10 @@ class SaleController extends Controller
                 'change_amount' => 0,
                 'payment_status' => 'pending',
                 'receipt_number' => null,
+                'customer_name' => $validated['customer_name'] ?? null,
+                'customer_phone' => $validated['customer_phone'] ?? null,
+                'customer_email' => $validated['customer_email'] ?? null,
+                'notes' => $validated['notes'] ?? null,
             ]);
 
             foreach ($itemsToCreate as $itemData) {

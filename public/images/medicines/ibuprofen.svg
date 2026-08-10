@@ -1,0 +1,18 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg_ibu" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff7ed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffedd5;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="ibup_tab" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ea580c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c2410c;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg_ibu)"/>
+  <ellipse cx="100" cy="90" rx="48" ry="32" fill="url(#ibup_tab)"/>
+  <ellipse cx="100" cy="86" rx="42" ry="26" fill="#f97316" opacity="0.4"/>
+  <text x="100" y="94" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff" font-family="Arial, sans-serif">400mg</text>
+  <text x="100" y="165" text-anchor="middle" font-size="11" font-weight="700" fill="#9a3412" font-family="Arial, sans-serif">IBUPROFEN</text>
+  <text x="100" y="180" text-anchor="middle" font-size="9" fill="#ea580c" font-family="Arial, sans-serif">Anti-inflammatory</text>
+</svg>

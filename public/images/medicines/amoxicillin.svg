@@ -1,0 +1,24 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg_amox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0f9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0f2fe;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="cap_top" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#be185d;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="cap_bot" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0284c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0369a1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg_amox)"/>
+  <g transform="translate(100, 95) rotate(-35)">
+    <rect x="-25" y="-55" width="50" height="55" rx="25" fill="url(#cap_top)"/>
+    <rect x="-25" y="0" width="50" height="55" rx="25" fill="url(#cap_bot)"/>
+    <line x1="-25" y1="0" x2="25" y2="0" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+  </g>
+  <text x="100" y="165" text-anchor="middle" font-size="11" font-weight="700" fill="#0369a1" font-family="Arial, sans-serif">AMOXICILLIN</text>
+  <text x="100" y="180" text-anchor="middle" font-size="9" fill="#0284c7" font-family="Arial, sans-serif">500mg Capsules</text>
+</svg>

@@ -51,12 +51,42 @@ export default function ReceiptPage() {
         fetchSale();
     }, [id]);
 
-    const handleDownloadPdf = () => {
-        window.open(`${import.meta.env.VITE_API_URL || ''}/api/sales/${id}/receipt/pdf`, '_blank');
+    const handleDownloadPdf = async () => {
+        try {
+            window.showToast('Generating PDF...', 'info');
+            const res = await api.get(`/sales/${id}/receipt/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `receipt-${sale?.receipt_number || id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            window.showToast('Receipt PDF downloaded successfully', 'success');
+        } catch (err) {
+            console.error(err);
+            window.showToast('Failed to download receipt PDF', 'error');
+        }
     };
 
-    const handlePrint = () => {
-        window.open(`${import.meta.env.VITE_API_URL || ''}/api/sales/${id}/receipt/print`, '_blank');
+    const handlePrint = async () => {
+        try {
+            window.showToast('Preparing printable receipt...', 'info');
+            const res = await api.get(`/sales/${id}/receipt/print`);
+            const printWindow = window.open('', '_blank', 'width=800,height=600');
+            if (printWindow) {
+                printWindow.document.write(res.data);
+                printWindow.document.close();
+                printWindow.focus();
+            } else {
+                window.showToast('Please allow popups to enable printing', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            window.showToast('Failed to print receipt', 'error');
+        }
     };
 
     if (loading) return <LoadingSpinner text="Loading receipt..." />;

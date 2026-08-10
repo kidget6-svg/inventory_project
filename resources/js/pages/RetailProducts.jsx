@@ -475,26 +475,60 @@ export default function RetailProducts() {
             </Modal>
 
             <Modal open={showViewModal} onClose={() => setShowViewModal(false)} title="Retail Product Details" size="max-w-3xl">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Product Name</label><p className="text-sm font-medium text-gray-800">{viewProduct?.name}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">SKU</label><p className="text-sm text-gray-600">{viewProduct?.sku || '---'}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Barcode</label><p className="text-sm font-mono text-gray-600">{viewProduct?.barcode || '---'}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Category</label><p className="text-sm text-gray-600">{viewProduct?.category || 'General'}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewProduct?.supplier?.name || 'No Supplier'}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Manufacturer</label><p className="text-sm text-gray-600">{viewProduct?.manufacturer || '---'}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Shelf Location</label><p className="text-sm text-gray-600">{viewProduct?.shelf_location || '---'}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Status</label><div className="mt-1">{getStatusBadge(viewProduct?.status)}</div></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label><p className="text-sm font-medium text-gray-800">{viewProduct?.quantity}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label><p className="text-sm text-gray-600">{viewProduct?.reorder_level}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Selling Price</label><p className="text-sm text-gray-600">{viewProduct?.price ? `$${Number(viewProduct.price).toFixed(2)}` : '---'}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Purchase Price</label><p className="text-sm text-gray-600">{viewProduct?.purchase_price ? `$${Number(viewProduct.purchase_price).toFixed(2)}` : '---'}</p></div>
-                    <div><label className="block text-xs font-semibold text-gray-500 mb-1">Expiry Date</label><p className="text-sm text-gray-600">{viewProduct?.expiry_date ? new Date(viewProduct.expiry_date).toLocaleDateString() : '---'}</p></div>
-                    <div className="md:col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Description</label><p className="text-sm text-gray-600">{viewProduct?.description || '---'}</p></div>
-                </div>
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
-                    <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
-                    <button onClick={() => { setShowViewModal(false); openEdit(viewProduct); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Product</button>
-                </div>
+                {viewProduct && (
+                    <>
+                        <div className="flex gap-6 mb-6 pb-6 border-b border-gray-100">
+                            <div className="flex-shrink-0">
+                                {viewProduct.image_url ? (
+                                    <img 
+                                        src={viewProduct.image_url} 
+                                        alt={viewProduct.name} 
+                                        className="w-32 h-32 rounded-xl object-cover border border-gray-200 shadow-sm bg-gray-50"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = '/images/medicine-placeholder.svg';
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="w-32 h-32 rounded-xl bg-gray-100 flex items-center justify-center border border-gray-200">
+                                        <Package size={48} className="text-gray-400" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 flex flex-col justify-center">
+                                <h3 className="text-xl font-bold text-gray-800 mb-1">{viewProduct.name}</h3>
+                                <p className="text-sm text-gray-500 mb-2">SKU: {viewProduct.sku || '---'}</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {getStatusBadge(viewProduct.status)}
+                                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                        {viewProduct.category || 'General'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Product Name</label><p className="text-sm font-medium text-gray-800">{viewProduct.name}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">SKU</label><p className="text-sm text-gray-600">{viewProduct.sku || '---'}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Barcode</label><p className="text-sm font-mono text-gray-600">{viewProduct.barcode || '---'}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Category</label><p className="text-sm text-gray-600">{viewProduct.category || 'General'}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewProduct.supplier?.name || 'No Supplier'}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Manufacturer</label><p className="text-sm text-gray-600">{viewProduct.manufacturer || '---'}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Shelf Location</label><p className="text-sm text-gray-600">{viewProduct.shelf_location || '---'}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Status</label><div className="mt-1">{getStatusBadge(viewProduct.status)}</div></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label><p className="text-sm font-medium text-gray-800">{viewProduct.quantity}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label><p className="text-sm text-gray-600">{viewProduct.reorder_level}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Selling Price</label><p className="text-sm text-gray-600">{viewProduct.price ? `$${Number(viewProduct.price).toFixed(2)}` : '---'}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Purchase Price</label><p className="text-sm text-gray-600">{viewProduct.purchase_price ? `$${Number(viewProduct.purchase_price).toFixed(2)}` : '---'}</p></div>
+                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Expiry Date</label><p className="text-sm text-gray-600">{viewProduct.expiry_date ? new Date(viewProduct.expiry_date).toLocaleDateString() : '---'}</p></div>
+                            <div className="md:col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Description</label><p className="text-sm text-gray-600">{viewProduct.description || '---'}</p></div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
+                            <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
+                            <button onClick={() => { setShowViewModal(false); openEdit(viewProduct); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Product</button>
+                        </div>
+                    </>
+                )}
             </Modal>
         </>
     );
