@@ -118,7 +118,7 @@ function App() {
                 <ProtectedRoute roles={['admin']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
             } />
             <Route path="/retail-products" element={
-                <ProtectedRoute roles={['admin']} title="Retail & OTC Products"><RetailProducts /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Retail & OTC Products"><RetailProducts /></ProtectedRoute>
             } />
 
             {/* Sales Routes */}

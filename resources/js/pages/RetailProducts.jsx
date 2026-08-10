@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import Stepper from '../components/Stepper';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
-import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 
 const statusOptions = [
     { value: '', label: 'All Statuses' },
@@ -27,6 +29,10 @@ const categoryOptions = [
 const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
 export default function RetailProducts() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const isAdmin = user?.role === 'admin';
+
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
@@ -390,7 +396,15 @@ export default function RetailProducts() {
 
             <div className="flex justify-between items-center mb-5">
                 <h3 className="text-base font-semibold text-gray-700">All Retail Products ({products.length})</h3>
-                <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2"><Package size={16} /> Add New Retail Product</button>
+                {isAdmin ? (
+                    <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
+                        <Package size={16} /> Add New Retail Product
+                    </button>
+                ) : (
+                    <button onClick={() => navigate('/retail-otc-sales')} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
+                        <ShoppingBag size={16} /> Create Retail Sale
+                    </button>
+                )}
             </div>
 
             {loading ? <LoadingSpinner text="Loading retail products..." /> : (
@@ -423,7 +437,20 @@ export default function RetailProducts() {
                                 <tbody>
                                     {products.length > 0 ? products.map(p => (
                                         <tr key={p.id} className="border-b border-gray-50 hover:bg-sky-50/30 transition-colors">
-                                            <td className="px-4 py-3 text-sm font-medium text-gray-800 truncate">{p.name}</td>
+                                            <td className="px-4 py-3 text-sm font-medium text-gray-800">
+                                                <div className="flex items-center gap-3">
+                                                    <img
+                                                        src={p.image_url || '/images/medicine-placeholder.svg'}
+                                                        alt={p.name}
+                                                        className="w-8 h-8 rounded-lg object-cover border border-gray-200 bg-gray-50 flex-shrink-0"
+                                                        onError={(e) => {
+                                                            e.target.onerror = null;
+                                                            e.target.src = '/images/medicine-placeholder.svg';
+                                                        }}
+                                                    />
+                                                    <span className="truncate">{p.name}</span>
+                                                </div>
+                                            </td>
                                             <td className="px-4 py-3 text-sm text-gray-500 truncate">{p.category || 'General'}</td>
                                             <td className="px-4 py-3 text-sm font-mono text-gray-500 truncate">{p.barcode || '---'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-900 font-medium">{p.quantity}</td>
@@ -433,8 +460,12 @@ export default function RetailProducts() {
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <button onClick={() => openView(p)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
-                                                    <button onClick={() => openEdit(p)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
-                                                    <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
+                                                    {isAdmin && (
+                                                        <>
+                                                            <button onClick={() => openEdit(p)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
+                                                            <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -451,28 +482,30 @@ export default function RetailProducts() {
                 </>
             )}
 
-            <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Retail Product' : 'Add New Retail Product'} size="max-w-2xl">
-                <Stepper steps={formSteps} currentStep={step} />
-                {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
-                <form onSubmit={(e) => { e.preventDefault(); if (step === formSteps.length - 1) handleSubmit(); else nextStep(); }}>
-                    {renderStepContent()}
-                    <div className="flex justify-between mt-6 pt-4 border-t border-sky-100">
-                        <button type="button" onClick={step === 0 ? () => setShowModal(false) : prevStep} className="btn-secondary flex items-center gap-1.5">
-                            <ChevronLeft size={16} /> {step === 0 ? 'Cancel' : 'Back'}
-                        </button>
-                        {step < formSteps.length - 1 ? (
-                            <button type="submit" className="btn-primary flex items-center gap-1.5">
-                                Next <ChevronRight size={16} />
+            {isAdmin && (
+                <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Retail Product' : 'Add New Retail Product'} size="max-w-2xl">
+                    <Stepper steps={formSteps} currentStep={step} />
+                    {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
+                    <form onSubmit={(e) => { e.preventDefault(); if (step === formSteps.length - 1) handleSubmit(); else nextStep(); }}>
+                        {renderStepContent()}
+                        <div className="flex justify-between mt-6 pt-4 border-t border-sky-100">
+                            <button type="button" onClick={step === 0 ? () => setShowModal(false) : prevStep} className="btn-secondary flex items-center gap-1.5">
+                                <ChevronLeft size={16} /> {step === 0 ? 'Cancel' : 'Back'}
                             </button>
-                        ) : (
-                            <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
-                                {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
-                                    : <><Save size={16} /> {editId ? 'Update Product' : 'Create Product'}</>}
-                            </button>
-                        )}
-                    </div>
-                </form>
-            </Modal>
+                            {step < formSteps.length - 1 ? (
+                                <button type="submit" className="btn-primary flex items-center gap-1.5">
+                                    Next <ChevronRight size={16} />
+                                </button>
+                            ) : (
+                                <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
+                                    {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
+                                        : <><Save size={16} /> {editId ? 'Update Product' : 'Create Product'}</>}
+                                </button>
+                            )}
+                        </div>
+                    </form>
+                </Modal>
+            )}
 
             <Modal open={showViewModal} onClose={() => setShowViewModal(false)} title="Retail Product Details" size="max-w-3xl">
                 {viewProduct && (
@@ -525,7 +558,9 @@ export default function RetailProducts() {
                         </div>
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
                             <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
-                            <button onClick={() => { setShowViewModal(false); openEdit(viewProduct); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Product</button>
+                            {isAdmin && (
+                                <button onClick={() => { setShowViewModal(false); openEdit(viewProduct); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Product</button>
+                            )}
                         </div>
                     </>
                 )}

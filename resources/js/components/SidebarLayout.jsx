@@ -36,6 +36,7 @@ const pharmacistMenu = [
     { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag },
     { section: 'Inventory' },
     { to: '/medicines', label: 'Medicines', icon: Pill },
+    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
     { to: '/categories', label: 'Categories', icon: FolderTree },
     { to: '/inventory', label: 'Inventory', icon: Package },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
