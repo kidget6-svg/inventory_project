@@ -19,12 +19,11 @@ const adminMenu = [
     { section: 'Operations' },
     { to: '/inventory', label: 'Inventory', icon: Package },
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
-    { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
     { section: 'Reports' },
     { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
     { to: '/reports', label: 'Reports', icon: BarChart3 },
+    { to: '/sales-history', label: 'Sales History', icon: FileText },
 ];
 
 const pharmacistMenu = [
@@ -32,6 +31,7 @@ const pharmacistMenu = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { section: 'Sales Queue' },
     { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
+    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag },
     { section: 'Inventory' },
     { to: '/medicines', label: 'Medicines', icon: Pill },
     { to: '/categories', label: 'Categories', icon: FolderTree },
@@ -47,7 +47,7 @@ const cashierMenu = [
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { section: 'Point of Sale' },
-    { to: '/prescription-sales', label: 'Prescription Checkout', icon: FileText },
+    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText },
     { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
     { to: '/medicines', label: 'Medicines', icon: Pill },
 ];
