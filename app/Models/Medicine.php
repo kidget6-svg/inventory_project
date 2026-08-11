@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 
 class Medicine extends Model
 {
@@ -45,12 +46,6 @@ class Medicine extends Model
         'shelf_location',
     ];
 
-    /**
-     * Always append the computed image_url accessor so the frontend
-     * receives a ready-to-use image URL in every JSON response.
-     */
-    protected $appends = ['image_url'];
-
     protected $casts = [
         'expiry_date' => 'date',
         'quantity' => 'integer',
@@ -82,7 +77,37 @@ class Medicine extends Model
 
     public function batches()
     {
-        return $this->hasMany(Batch::class, 'medicine_id');
+        return $this->hasMany(Batch::class);
+    }
+
+    public function calculatedExpiryDate(): ?Carbon
+    {
+        $batchExpiry = $this->batches()
+            ->when($this->batch_number, fn ($query) => $query->where('batch_number', $this->batch_number))
+            ->whereNotNull('expiry_date')
+            ->latest('id')
+            ->value('expiry_date');
+
+        return $batchExpiry ? Carbon::parse($batchExpiry) : ($this->expiry_date ? Carbon::parse($this->expiry_date) : null);
+    }
+
+    public function syncAutomaticExpiryState(): void
+    {
+        $calculatedExpiry = $this->calculatedExpiryDate();
+        $changes = [];
+
+        if ($calculatedExpiry && (! $this->expiry_date || ! $this->expiry_date->isSameDay($calculatedExpiry))) {
+            $changes['expiry_date'] = $calculatedExpiry->toDateString();
+        }
+
+        if ($calculatedExpiry && $calculatedExpiry->isBefore(Carbon::today())) {
+            $changes['status'] = self::STATUS_EXPIRED;
+        }
+
+        if ($changes) {
+            $this->forceFill($changes)->saveQuietly();
+            $this->refresh();
+        }
     }
 
     /**
@@ -92,14 +117,6 @@ class Medicine extends Model
     public function getImageUrlAttribute(): string
     {
         if ($this->image) {
-            if (str_starts_with($this->image, 'http')) {
-                return $this->image;
-            }
-
-            if (str_starts_with($this->image, 'images/')) {
-                return asset($this->image);
-            }
-
             return asset('storage/' . $this->image);
         }
 
