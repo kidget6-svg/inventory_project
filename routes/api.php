@@ -42,11 +42,6 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // Shared Read-Only Access (Admin, Pharmacist, Cashier)
     // --------------------------------------------------------------------
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
-        // Medicines Read
-        Route::get('/medicines', [MedicineController::class, 'index']);
-        Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
-        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
-
         // Categories Read
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
@@ -58,6 +53,15 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         // Retail Products Read (pharmacist needs this for Retail & OTC Sales page)
         Route::get('/retail-products', [RetailProductController::class, 'index']);
         Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
+    });
+
+    // --------------------------------------------------------------------
+    // Medicines - Read-Only (Admin & Pharmacist only, Cashier excluded)
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin,pharmacist')->group(function () {
+        Route::get('/medicines', [MedicineController::class, 'index']);
+        Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
+        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
     });
 
     // --------------------------------------------------------------------
@@ -92,7 +96,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
 
         // Purchase Orders
-        Route::get('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
+        Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
         Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
         Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
         Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
@@ -131,9 +135,9 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     });
 
     // --------------------------------------------------------------------
-    // Sales History & Export — Admin Only
+    // Sales History & Export — Admin & Cashier
     // --------------------------------------------------------------------
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:admin,cashier')->group(function () {
         Route::get('/sales/history', [SaleController::class, 'history']);
         Route::post('/sales/export', [SaleController::class, 'export']);
         Route::get('/sales/export', [SaleController::class, 'export']);

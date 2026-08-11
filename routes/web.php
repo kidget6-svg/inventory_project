@@ -80,7 +80,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // Purchase Orders (admin only)
     Route::middleware('role:admin')->group(function () {
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
-        Route::get('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
+        Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
         Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
         Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
         Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);

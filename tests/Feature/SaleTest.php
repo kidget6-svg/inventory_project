@@ -583,14 +583,20 @@ class SaleTest extends TestCase
     }
 
     /** @test */
-    public function it_prevents_non_admin_from_accessing_sales_history()
+    public function it_allows_cashier_to_access_sales_history()
     {
         Sale::factory()->count(3)->create(['status' => 'completed']);
 
         $response = $this->actingAs($this->cashier)
             ->getJson('/api/sales/history');
 
-        $response->assertForbidden();
+        $response->assertOk();
+    }
+
+    /** @test */
+    public function it_prevents_pharmacist_from_accessing_sales_history()
+    {
+        Sale::factory()->count(3)->create(['status' => 'completed']);
 
         $response = $this->actingAs($this->pharmacist)
             ->getJson('/api/sales/history');
@@ -599,11 +605,22 @@ class SaleTest extends TestCase
     }
 
     /** @test */
-    public function it_prevents_non_admin_from_exporting_sales()
+    public function it_allows_cashier_to_export_sales()
     {
         Sale::factory()->create(['status' => 'completed']);
 
         $response = $this->actingAs($this->cashier)
+            ->get('/api/sales/export?type=sales&format=csv');
+
+        $response->assertOk();
+    }
+
+    /** @test */
+    public function it_prevents_pharmacist_from_exporting_sales()
+    {
+        Sale::factory()->create(['status' => 'completed']);
+
+        $response = $this->actingAs($this->pharmacist)
             ->get('/api/sales/export?type=sales&format=csv');
 
         $response->assertForbidden();
