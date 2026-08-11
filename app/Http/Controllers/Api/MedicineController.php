@@ -74,6 +74,26 @@ class MedicineController extends Controller
     }
 
     /**
+     * PATCH /api/medicines/{medicine}/status
+     */
+    public function updateStatus(Request $request, Medicine $medicine)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        $medicine->syncAutomaticExpiryState();
+
+        if ($medicine->status === Medicine::STATUS_EXPIRED) {
+            return response()->json(['message' => 'Expired medicines cannot be activated or deactivated.'], 422);
+        }
+
+        $medicine->update(['status' => $validated['status']]);
+
+        return response()->json($medicine->fresh());
+    }
+
+    /**
      * GET /api/medicines/low-stock
      */
     public function getLowStock()
