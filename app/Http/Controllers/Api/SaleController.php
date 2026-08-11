@@ -7,6 +7,7 @@ use App\Models\Sale;
 use App\Models\Medicine;
 use App\Models\RetailProduct;
 use App\Models\SaleItem;
+use App\Models\Batch;
 use App\Services\SaleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -112,7 +113,7 @@ class SaleController extends Controller
             foreach ($itemsToCreate as $itemData) {
                 $sale->items()->create($itemData);
                 if ($hasPaymentInfo) {
-                    Medicine::whereKey($itemData['itemable_id'])->decrement('quantity', $itemData['quantity']);
+                    $this->deductMedicineStock($itemData['itemable_id'], $itemData['quantity']);
                 }
             }
 
@@ -300,7 +301,7 @@ class SaleController extends Controller
             'change_amount' => 'nullable|numeric|min:0',
         ]);
 
-        return DB::transaction(function () use ($sale, $validated, $service) {
+        return DB::transaction(function () use ($sale, $validated, $service, $request) {
             $totalAmount = (float) $sale->total_amount;
             $amountPaid = (float) $validated['amount_paid'];
             $paymentMethod = $validated['payment_method'];
@@ -323,11 +324,10 @@ class SaleController extends Controller
                 'receipt_number' => $sale->receipt_number ?? Sale::generateReceiptNumber(),
             ]);
 
-            // Deduct stock if transitioning to completed and not already deducted
             if ($validated['status'] === 'completed') {
                 foreach ($sale->items as $item) {
                     if ($item->itemable_type === Medicine::class) {
-                        Medicine::whereKey($item->itemable_id)->decrement('quantity', $item->quantity);
+                        $this->deductMedicineStock($item->itemable_id, $item->quantity);
                     } elseif ($item->itemable_type === RetailProduct::class) {
                         RetailProduct::whereKey($item->itemable_id)->decrement('quantity', $item->quantity);
                     }
@@ -339,6 +339,33 @@ class SaleController extends Controller
                 'sale' => $sale->load('items.itemable', 'user'),
             ]);
         });
+    }
+
+    private function deductMedicineStock(int $medicineId, int $quantity): void
+    {
+        $batches = Batch::where('medicine_id', $medicineId)
+            ->where('quantity', '>', 0)
+            ->orderBy('expiry_date', 'asc')
+            ->orderBy('id', 'asc')
+            ->lockForUpdate()
+            ->get();
+
+        $remaining = $quantity;
+
+        if ($batches->isNotEmpty()) {
+            foreach ($batches as $batch) {
+                if ($remaining <= 0) {
+                    break;
+                }
+                $deduct = min($remaining, $batch->quantity);
+                $batch->decrement('quantity', $deduct);
+                $remaining -= $deduct;
+            }
+        }
+
+        if ($remaining > 0) {
+            Medicine::whereKey($medicineId)->decrement('quantity', $remaining);
+        }
     }
 
     /**

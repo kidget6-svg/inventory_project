@@ -42,10 +42,35 @@ class PurchaseOrderController extends Controller
             'supplier_id' => 'required|exists:suppliers,id',
             'order_date' => 'required|date',
             'status' => 'required',
-            'medicine_id' => 'required|exists:medicines,id',
+            'medicine_name' => 'nullable|string|max:255',
+            'medicine_id' => 'nullable|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric|min:0',
         ]);
+
+        if (empty($request->medicine_name) && empty($request->medicine_id)) {
+            return redirect()->back()->withErrors(['medicine_name' => 'Medicine name or medicine ID is required']);
+        }
+
+        $medicine = null;
+        if (!empty($request->medicine_id)) {
+            $medicine = Medicine::find($request->medicine_id);
+        }
+        if (!$medicine && !empty($request->medicine_name)) {
+            $medName = trim($request->medicine_name);
+            $medicine = Medicine::where('name', $medName)->first();
+            if (!$medicine) {
+                $defaultCategory = \App\Models\Category::first();
+                $medicine = Medicine::create([
+                    'name' => $medName,
+                    'category_id' => $defaultCategory ? $defaultCategory->id : 1,
+                    'quantity' => 0,
+                    'unit_price' => $request->unit_price,
+                    'selling_price' => $request->unit_price,
+                    'status' => 'active',
+                ]);
+            }
+        }
 
         // Calculate subtotal
         $subtotal = $request->quantity * $request->unit_price;
@@ -60,15 +85,13 @@ class PurchaseOrderController extends Controller
 
         // Create Purchase Order Item
         PurchaseOrderItem::create([
-    'purchase_order_id' => $purchaseOrder->id,
-    'medicine_id' => $request->medicine_id,
-    'quantity' => $request->quantity,
-    'unit_cost' => $request->unit_price,
-]);
+            'purchase_order_id' => $purchaseOrder->id,
+            'medicine_id' => $medicine->id,
+            'quantity' => $request->quantity,
+            'unit_cost' => $request->unit_price,
+        ]);
 
         // Increase medicine stock
-        $medicine = Medicine::find($request->medicine_id);
-
         if ($medicine) {
             $medicine->quantity += $request->quantity;
             $medicine->save();

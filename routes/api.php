@@ -92,7 +92,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
 
         // Purchase Orders
-        Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
+        Route::get('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
         Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
         Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
         Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
@@ -133,7 +133,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // --------------------------------------------------------------------
     // Sales History & Export — Admin Only
     // --------------------------------------------------------------------
-    Route::middleware('role:admin,cashier')->group(function () {
+    Route::middleware('role:admin')->group(function () {
         Route::get('/sales/history', [SaleController::class, 'history']);
         Route::post('/sales/export', [SaleController::class, 'export']);
         Route::get('/sales/export', [SaleController::class, 'export']);

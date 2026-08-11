@@ -80,6 +80,11 @@ class Medicine extends Model
         return $this->hasMany(PurchaseOrderItem::class);
     }
 
+    public function batches()
+    {
+        return $this->hasMany(Batch::class, 'medicine_id');
+    }
+
     /**
      * Get the full public URL to the medicine image.
      * Falls back to a placeholder when no image is set.

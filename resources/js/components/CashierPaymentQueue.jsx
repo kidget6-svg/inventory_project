@@ -131,7 +131,7 @@ export default function CashierPaymentQueue({ saleType }) {
             setPendingSales(prev => prev.filter(s => s.id !== selectedSale.id));
             window.showToast('Payment completed successfully!', 'success');
         } catch (err) {
-            window.showToast('Failed to complete payment', 'error');
+            window.showToast(err.response?.data?.message || 'Failed to complete payment', 'error');
         } finally {
             setProcessingId(null);
         }
