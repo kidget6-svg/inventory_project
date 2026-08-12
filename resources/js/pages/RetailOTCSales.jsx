@@ -19,6 +19,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import {
     PosProductCard,
     PosCartPanel,
+    PosInfoModal,
 } from '../components/pos';
 import {
     Search,
@@ -43,6 +44,9 @@ export default function RetailOTCSales() {
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
     const [customerNotes, setCustomerNotes] = useState('');
+
+    // Customer Information modal (opened before sending to cashier queue)
+    const [showCustomerModal, setShowCustomerModal] = useState(false);
 
     // ── Data loading ──────────────────────────────────────────────
     useEffect(() => {
@@ -117,7 +121,10 @@ export default function RetailOTCSales() {
     );
 
     // ── Submit ────────────────────────────────────────────────────
-    const handleSendToCashier = async () => {
+    // Opening the "Send to Cashier Queue" button first opens the
+    // Customer Information modal.  The actual API call happens only
+    // after the user confirms the information in the modal.
+    const handleSendToCashier = () => {
         if (cart.length === 0) {
             return window.showToast('Cart is empty', 'error');
         }
@@ -125,6 +132,10 @@ export default function RetailOTCSales() {
             return window.showToast('All items must have quantity > 0', 'error');
         }
 
+        setShowCustomerModal(true);
+    };
+
+    const confirmSendToCashier = async () => {
         setSubmitting(true);
         try {
             await api.post('/sales/retail-draft', {
@@ -143,6 +154,7 @@ export default function RetailOTCSales() {
             setCustomerPhone('');
             setCustomerEmail('');
             setCustomerNotes('');
+            setShowCustomerModal(false);
         } catch (err) {
             window.showToast(
                 err.response?.data?.message || 'Failed to send order',
@@ -200,76 +212,6 @@ export default function RetailOTCSales() {
                     </div>
                 </div>
 
-                {/* Customer Information */}
-                <div className="pos-prescription-info bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-5">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                        <User size={16} className="text-emerald-600" />
-                        Customer Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Customer Name
-                            </label>
-                            <div className="relative">
-                                <User size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={customerName}
-                                    onChange={(e) => setCustomerName(e.target.value)}
-                                    placeholder="Enter customer name"
-                                    className="pos-search-input pl-10"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Phone Number
-                            </label>
-                            <div className="relative">
-                                <Phone size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={customerPhone}
-                                    onChange={(e) => setCustomerPhone(e.target.value)}
-                                    placeholder="Enter phone number"
-                                    className="pos-search-input pl-10"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Email Address
-                            </label>
-                            <div className="relative">
-                                <Mail size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                <input
-                                    type="email"
-                                    value={customerEmail}
-                                    onChange={(e) => setCustomerEmail(e.target.value)}
-                                    placeholder="Enter email address"
-                                    className="pos-search-input pl-10"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Customer Notes
-                            </label>
-                            <div className="relative">
-                                <FileText size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={customerNotes}
-                                    onChange={(e) => setCustomerNotes(e.target.value)}
-                                    placeholder="Notes or additional info"
-                                    className="pos-search-input pl-10"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Product cards */}
                 {filtered.length === 0 ? (
                     <div className="text-center py-12 text-gray-400">
@@ -324,6 +266,31 @@ export default function RetailOTCSales() {
                     emptyIcon={ShoppingBag}
                 />
             </div>
+
+            {/* Customer Information modal */}
+            <PosInfoModal
+                open={showCustomerModal}
+                onClose={() => setShowCustomerModal(false)}
+                title="Customer Information"
+                titleIcon={User}
+                titleColor="text-emerald-600"
+                fields={[
+                    { name: 'customerName', label: 'Customer Name', icon: User, placeholder: 'Enter customer name' },
+                    { name: 'customerPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number' },
+                    { name: 'customerEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
+                    { name: 'customerNotes', label: 'Customer Notes', icon: FileText, placeholder: 'Notes or additional info' },
+                ]}
+                values={{ customerName, customerPhone, customerEmail, customerNotes }}
+                onChange={(key, value) => {
+                    if (key === 'customerName') setCustomerName(value);
+                    else if (key === 'customerPhone') setCustomerPhone(value);
+                    else if (key === 'customerEmail') setCustomerEmail(value);
+                    else if (key === 'customerNotes') setCustomerNotes(value);
+                }}
+                onConfirm={confirmSendToCashier}
+                confirmLabel="Confirm & Send to Cashier Queue"
+                submitting={submitting}
+            />
         </div>
     );
 }

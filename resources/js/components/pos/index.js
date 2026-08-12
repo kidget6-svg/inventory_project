@@ -9,6 +9,7 @@ export { default as PosCartItem } from './PosCartItem';
 export { default as PosCartPanel } from './PosCartPanel';
 export { default as PosPaymentModal } from './PosPaymentModal';
 export { default as PosSuccessDialog } from './PosSuccessDialog';
+export { default as PosInfoModal } from './PosInfoModal';
 
 export {
     PAYMENT_METHODS,

@@ -21,6 +21,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import {
     PosProductCard,
     PosCartPanel,
+    PosInfoModal,
 } from '../components/pos';
 import {
     Search,
@@ -45,6 +46,9 @@ export default function PrescriptionSales() {
     const [patientPhone, setPatientPhone] = useState('');
     const [patientEmail, setPatientEmail] = useState('');
     const [prescriptionNotes, setPrescriptionNotes] = useState('');
+
+    // Prescription & Patient Information modal (opened before sending to cashier queue)
+    const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
 
     // ── Data loading ──────────────────────────────────────────────
     useEffect(() => {
@@ -119,7 +123,10 @@ export default function PrescriptionSales() {
     );
 
     // ── Submit ────────────────────────────────────────────────────
-    const handleSendToCashier = async () => {
+    // Clicking "Send to Cashier Queue" first opens the Prescription &
+    // Patient Information modal.  The actual API call happens only
+    // after the user confirms the information in the modal.
+    const handleSendToCashier = () => {
         if (cart.length === 0) {
             return window.showToast('Cart is empty', 'error');
         }
@@ -127,6 +134,10 @@ export default function PrescriptionSales() {
             return window.showToast('All items must have quantity > 0', 'error');
         }
 
+        setShowPrescriptionModal(true);
+    };
+
+    const confirmSendToCashier = async () => {
         setSubmitting(true);
         try {
             await api.post('/sales/prescription', {
@@ -146,6 +157,7 @@ export default function PrescriptionSales() {
             setPatientPhone('');
             setPatientEmail('');
             setPrescriptionNotes('');
+            setShowPrescriptionModal(false);
         } catch (err) {
             window.showToast(
                 err.response?.data?.message || 'Failed to send order',
@@ -203,76 +215,6 @@ export default function PrescriptionSales() {
                     </div>
                 </div>
 
-                {/* Prescription / Patient Information */}
-                <div className="pos-prescription-info bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-5">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                        <Clipboard size={16} className="text-sky-600" />
-                        Prescription & Patient Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Patient Name
-                            </label>
-                            <div className="relative">
-                                <User size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={patientName}
-                                    onChange={(e) => setPatientName(e.target.value)}
-                                    placeholder="Enter patient name"
-                                    className="pos-search-input pl-10"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Phone Number
-                            </label>
-                            <div className="relative">
-                                <Phone size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={patientPhone}
-                                    onChange={(e) => setPatientPhone(e.target.value)}
-                                    placeholder="Enter phone number"
-                                    className="pos-search-input pl-10"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Email Address
-                            </label>
-                            <div className="relative">
-                                <Mail size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                <input
-                                    type="email"
-                                    value={patientEmail}
-                                    onChange={(e) => setPatientEmail(e.target.value)}
-                                    placeholder="Enter email address"
-                                    className="pos-search-input pl-10"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">
-                                Prescription Notes
-                            </label>
-                            <div className="relative">
-                                <Clipboard size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={prescriptionNotes}
-                                    onChange={(e) => setPrescriptionNotes(e.target.value)}
-                                    placeholder="Prescription #, doctor name, etc."
-                                    className="pos-search-input pl-10"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Medicine cards */}
                 {filtered.length === 0 ? (
                     <div className="text-center py-12 text-gray-400">
@@ -327,6 +269,31 @@ export default function PrescriptionSales() {
                     emptyIcon={FileText}
                 />
             </div>
+
+            {/* Prescription & Patient Information modal */}
+            <PosInfoModal
+                open={showPrescriptionModal}
+                onClose={() => setShowPrescriptionModal(false)}
+                title="Prescription & Patient Information"
+                titleIcon={Clipboard}
+                titleColor="text-sky-600"
+                fields={[
+                    { name: 'patientName', label: 'Patient Name', icon: User, placeholder: 'Enter patient name' },
+                    { name: 'patientPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number' },
+                    { name: 'patientEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
+                    { name: 'prescriptionNotes', label: 'Prescription Notes', icon: Clipboard, placeholder: 'Prescription #, doctor name, etc.' },
+                ]}
+                values={{ patientName, patientPhone, patientEmail, prescriptionNotes }}
+                onChange={(key, value) => {
+                    if (key === 'patientName') setPatientName(value);
+                    else if (key === 'patientPhone') setPatientPhone(value);
+                    else if (key === 'patientEmail') setPatientEmail(value);
+                    else if (key === 'prescriptionNotes') setPrescriptionNotes(value);
+                }}
+                onConfirm={confirmSendToCashier}
+                confirmLabel="Confirm & Send to Cashier Queue"
+                submitting={submitting}
+            />
         </div>
     );
 }
