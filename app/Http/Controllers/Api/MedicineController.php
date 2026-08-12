@@ -71,6 +71,105 @@ class MedicineController extends Controller
                 'message' => 'Query Error: ' . $e->getMessage()
             ], 500);
         }
+
+
+        // Filter by category
+        if ($categoryId = $request->input('category_id')) {
+            $query->where('category_id', $categoryId);
+        }
+
+        // Filter by supplier
+        if ($supplierId = $request->input('supplier_id')) {
+            $query->where('supplier_id', $supplierId);
+        }
+
+        // Filter by shelf
+        if ($shelfId = $request->input('shelf_id')) {
+            $query->where('shelf_id', $shelfId);
+        }
+
+        // Filter by status
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $medicines = $query->latest()->paginate($perPage);
+
+        return response()->json($medicines);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'generic_name' => 'nullable|string|max:255',
+            'batch_number' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:255|unique:medicines,barcode',
+            'category_id' => 'required|exists:categories,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'shelf_id' => 'nullable|exists:shelves,id',
+            'quantity' => 'required|integer|min:0',
+            'unit_price' => 'nullable|numeric|min:0',
+            'purchase_price' => 'nullable|numeric|min:0',
+            'selling_price' => 'nullable|numeric|min:0',
+            'reorder_level' => 'required|integer|min:0',
+            'expiry_date' => 'nullable|date',
+            'status' => 'in:active,inactive,expired,discontinued',
+            'description' => 'nullable|string',
+            'manufacturer' => 'nullable|string|max:255',
+            'shelf_location' => 'nullable|string|max:50',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+        ]);
+
+        $validated = $this->handleImageUpload($validated, null);
+
+        $medicine = Medicine::create($validated);
+        return response()->json($medicine->load(['category', 'supplier', 'shelf']), 201);
+    }
+
+    public function show(Medicine $medicine)
+    {
+        return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+    }
+
+    public function getLowStock()
+    {
+        $medicines = Medicine::with(['category', 'supplier'])
+            ->whereColumn('quantity', '<=', 'reorder_level')
+            ->orderBy('quantity')
+            ->paginate(10);
+
+        return response()->json($medicines);
+    }
+
+    public function update(Request $request, Medicine $medicine)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'generic_name' => 'nullable|string|max:255',
+            'batch_number' => 'nullable|string|max:255',
+            'barcode' => ['nullable', 'string', 'max:100', Rule::unique('medicines', 'barcode')->ignore($medicine->id)],
+            'category_id' => 'required|exists:categories,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'shelf_id' => 'nullable|exists:shelves,id',
+            'quantity' => 'required|integer|min:0',
+            'unit_price' => 'nullable|numeric|min:0',
+            'purchase_price' => 'nullable|numeric|min:0',
+            'selling_price' => 'nullable|numeric|min:0',
+            'reorder_level' => 'required|integer|min:0',
+            'expiry_date' => 'nullable|date',
+            'status' => 'in:active,inactive,expired,discontinued',
+            'description' => 'nullable|string',
+            'manufacturer' => 'nullable|string|max:255',
+            'shelf_location' => 'nullable|string|max:50',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+        ]);
+
+        $validated = $this->handleImageUpload($validated, $medicine);
+        $medicine->update($validated);
+        return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+
     }
 
     /**

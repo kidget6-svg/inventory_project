@@ -1,0 +1,14 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg_azi" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fdf2f8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fce7f3;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg_azi)"/>
+  <rect x="56" y="66" width="88" height="48" rx="24" fill="#db2777" />
+  <circle cx="100" cy="90" r="16" fill="#ffffff" opacity="0.3"/>
+  <text x="100" y="94" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff" font-family="Arial, sans-serif">250mg</text>
+  <text x="100" y="165" text-anchor="middle" font-size="11" font-weight="700" fill="#831843" font-family="Arial, sans-serif">AZITHROMYCIN</text>
+  <text x="100" y="180" text-anchor="middle" font-size="9" fill="#be185d" font-family="Arial, sans-serif">Broad Spectrum</text>
+</svg>

@@ -24,7 +24,7 @@ class SupplierTest extends TestCase
         $response = $this->actingAs($user)->getJson('/suppliers');
 
         $response->assertOk()
-            ->assertJsonCount(3, 'data');
+            ->assertJsonCount(3);
     }
 
     public function test_admin_can_create_a_supplier()

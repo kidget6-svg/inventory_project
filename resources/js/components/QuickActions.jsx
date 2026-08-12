@@ -20,15 +20,15 @@ import {
 const adminActions = [
     {
         to: '/medicines',
-        label: 'Add Medicine',
-        description: 'Create new medicine',
-        icon: Plus,
+        label: 'Medicines',
+        description: 'Manage medicines catalog',
+        icon: Pill,
         color: 'blue',
     },
     {
         to: '/retail-products',
-        label: 'Add Retail Product',
-        description: 'Create new retail/OTC product',
+        label: 'Retail & OTC Products',
+        description: 'Manage retail & OTC catalog',
         icon: Package,
         color: 'blue',
     },

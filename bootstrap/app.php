@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // EXCLUDE ALL API ROUTES FROM CSRF VERIFICATION HERE:
         $middleware->validateCsrfTokens(except: [
             'api/*',
+            'sales/*',
         ]);
         
         // Register custom middleware aliases

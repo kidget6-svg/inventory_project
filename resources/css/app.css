@@ -91,4 +91,84 @@
             @apply bg-gray-400;
         }
     }
+
+    /* ─────────────────────────────────────────────────────────
+       POS (Point of Sale) Layout Classes
+       Used by PrescriptionSales.jsx and RetailOTCSales.jsx
+    ────────────────────────────────────────────────────────── */
+
+    /* POS page layout: two-column flex layout */
+    .pos-layout {
+        @apply flex flex-col lg:flex-row gap-6 h-full;
+    }
+
+    /* POS main content area (product grid) */
+    .pos-main {
+        @apply flex-1 min-w-0;
+    }
+
+    /* POS sidebar (cart/draft panel) */
+    .pos-sidebar {
+        @apply lg:w-96 lg:flex-shrink-0;
+    }
+
+    /* POS page header */
+    .pos-page-header {
+        @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-gray-200;
+    }
+
+    /* POS search input */
+    .pos-search-input {
+        @apply w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all duration-200 placeholder:text-gray-400;
+    }
+
+    /* POS product grid */
+    .pos-product-grid {
+        @apply grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4;
+    }
+
+    /* POS product card */
+    .pos-card {
+        @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full transition-all duration-200 hover:shadow-md;
+    }
+
+    /* POS card badge */
+    .pos-badge {
+        @apply px-2 py-0.5 rounded-full;
+    }
+
+    /* POS primary button */
+    .pos-btn-primary {
+        @apply w-full bg-sky-500 hover:bg-sky-600 text-white py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg;
+    }
+
+    /* POS quantity button */
+    .pos-qty-btn {
+        @apply w-7 h-7 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center justify-center;
+    }
+
+    /* POS quantity input */
+    .pos-qty-input {
+        @apply w-12 h-7 text-center text-sm font-semibold border border-gray-200 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none;
+    }
+
+    /* POS remove button */
+    .pos-remove-btn {
+        @apply p-1 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center;
+    }
+
+    /* POS cart panel */
+    .pos-cart-panel {
+        @apply bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden;
+    }
+
+    /* POS cart header */
+    .pos-cart-header {
+        @apply border-b px-5 py-4 flex items-center justify-between;
+    }
+
+    /* POS prescription info section */
+    .pos-prescription-info {
+        @apply border border-gray-200;
+    }
 }

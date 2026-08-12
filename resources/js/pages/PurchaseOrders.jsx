@@ -51,7 +51,7 @@ export default function PurchaseOrders() {
     const [form, setForm] = useState({
         supplier_id: '',
         order_date: '',
-        medicine_id: '',
+        medicine_name: '',
         quantity: '',
         unit_price: '',
     });
@@ -302,7 +302,7 @@ export default function PurchaseOrders() {
     const openCreate = () => {
         setModalMode('create');
         setModalItem(null);
-        setForm({ supplier_id: '', order_date: '', medicine_id: '', quantity: '', unit_price: '' });
+        setForm({ supplier_id: '', order_date: '', medicine_name: '', quantity: '', unit_price: '' });
         setError('');
         setShowModal(true);
         loadFormOptions();
@@ -320,7 +320,7 @@ export default function PurchaseOrders() {
                 setForm({
                     supplier_id: data.supplier_id || '',
                     order_date: data.order_date || '',
-                    medicine_id: orderItem?.medicine_id || '',
+                    medicine_name: orderItem?.medicine?.name || '',
                     quantity: orderItem?.quantity || '',
                     unit_price: orderItem?.unit_price || '',
                 });
@@ -337,7 +337,7 @@ export default function PurchaseOrders() {
     const closeModal = () => {
         setShowModal(false);
         setModalItem(null);
-        setForm({ supplier_id: '', order_date: '', medicine_id: '', quantity: '', unit_price: '' });
+        setForm({ supplier_id: '', order_date: '', medicine_name: '', quantity: '', unit_price: '' });
         setError('');
     };
 
@@ -768,19 +768,21 @@ export default function PurchaseOrders() {
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
-                            <select
-                                name="medicine_id"
-                                value={form.medicine_id}
+                            <input
+                                list="medicine-list"
+                                name="medicine_name"
+                                value={form.medicine_name}
                                 onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                placeholder="Type to search or create new medicine"
                                 required
                                 disabled={formLoading}
-                            >
-                                <option value="">Select Medicine</option>
+                            />
+                            <datalist id="medicine-list">
                                 {medicines.map(m => (
-                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                    <option key={m.id} value={m.name} />
                                 ))}
-                            </select>
+                            </datalist>
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>

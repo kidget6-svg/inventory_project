@@ -91,6 +91,8 @@ class Sale extends Model
         'change_amount' => 'decimal:2',
     ];
 
+    protected $appends = ['cashier_name'];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

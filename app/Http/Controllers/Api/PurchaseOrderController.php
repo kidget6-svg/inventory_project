@@ -24,14 +24,39 @@ class PurchaseOrderController extends Controller
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'order_date' => 'required|date',
-            'medicine_id' => 'required|exists:medicines,id',
+            'medicine_name' => 'nullable|string|max:255',
+            'medicine_id' => 'nullable|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric|min:0',
         ]);
 
+        if (empty($validated['medicine_name']) && empty($validated['medicine_id'])) {
+            return response()->json(['message' => 'Medicine name or medicine ID is required'], 422);
+        }
+
         DB::beginTransaction();
 
         try {
+            $medicine = null;
+            if (!empty($validated['medicine_id'])) {
+                $medicine = Medicine::find($validated['medicine_id']);
+            }
+            if (!$medicine && !empty($validated['medicine_name'])) {
+                $medName = trim($validated['medicine_name']);
+                $medicine = Medicine::where('name', $medName)->first();
+                if (!$medicine) {
+                    $defaultCategory = \App\Models\Category::first();
+                    $medicine = Medicine::create([
+                        'name' => $medName,
+                        'category_id' => $defaultCategory ? $defaultCategory->id : 1,
+                        'quantity' => 0,
+                        'unit_price' => $validated['unit_price'],
+                        'selling_price' => $validated['unit_price'],
+                        'status' => 'active',
+                    ]);
+                }
+            }
+
             $subtotal = $validated['quantity'] * $validated['unit_price'];
 
             $order = PurchaseOrder::create([
@@ -43,7 +68,7 @@ class PurchaseOrderController extends Controller
 
             PurchaseOrderItem::create([
                 'purchase_order_id' => $order->id,
-                'medicine_id' => $validated['medicine_id'],
+                'medicine_id' => $medicine->id,
                 'quantity' => $validated['quantity'],
                 'unit_price' => $validated['unit_price'],
                 'subtotal' => $subtotal,
@@ -51,7 +76,7 @@ class PurchaseOrderController extends Controller
 
             DB::commit();
 
-            return response()->json($order->load('supplier'), 201);
+            return response()->json($order->load('supplier', 'items.medicine'), 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Error creating order: ' . $e->getMessage()], 500);
@@ -75,14 +100,39 @@ class PurchaseOrderController extends Controller
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'order_date' => 'required|date',
-            'medicine_id' => 'required|exists:medicines,id',
+            'medicine_name' => 'nullable|string|max:255',
+            'medicine_id' => 'nullable|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric|min:0',
         ]);
 
+        if (empty($validated['medicine_name']) && empty($validated['medicine_id'])) {
+            return response()->json(['message' => 'Medicine name or medicine ID is required'], 422);
+        }
+
         DB::beginTransaction();
 
         try {
+            $medicine = null;
+            if (!empty($validated['medicine_id'])) {
+                $medicine = Medicine::find($validated['medicine_id']);
+            }
+            if (!$medicine && !empty($validated['medicine_name'])) {
+                $medName = trim($validated['medicine_name']);
+                $medicine = Medicine::where('name', $medName)->first();
+                if (!$medicine) {
+                    $defaultCategory = \App\Models\Category::first();
+                    $medicine = Medicine::create([
+                        'name' => $medName,
+                        'category_id' => $defaultCategory ? $defaultCategory->id : 1,
+                        'quantity' => 0,
+                        'unit_price' => $validated['unit_price'],
+                        'selling_price' => $validated['unit_price'],
+                        'status' => 'active',
+                    ]);
+                }
+            }
+
             $subtotal = $validated['quantity'] * $validated['unit_price'];
 
             // Update the order header (status is NOT changed here - it's workflow-driven)
@@ -96,19 +146,16 @@ class PurchaseOrderController extends Controller
             $item = $purchaseOrder->items()->first();
 
             if ($item) {
-                // Update the item - stock is NOT adjusted here because
-                // stock is only added when the order is completed
                 $item->update([
-                    'medicine_id' => $validated['medicine_id'],
+                    'medicine_id' => $medicine->id,
                     'quantity' => $validated['quantity'],
                     'unit_price' => $validated['unit_price'],
                     'subtotal' => $subtotal,
                 ]);
             } else {
-                // No existing item - create one (stock will be added on completion)
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $purchaseOrder->id,
-                    'medicine_id' => $validated['medicine_id'],
+                    'medicine_id' => $medicine->id,
                     'quantity' => $validated['quantity'],
                     'unit_price' => $validated['unit_price'],
                     'subtotal' => $subtotal,

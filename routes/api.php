@@ -62,6 +62,19 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         // Suppliers Read
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+
+        // Retail Products Read (pharmacist needs this for Retail & OTC Sales page)
+        Route::get('/retail-products', [RetailProductController::class, 'index']);
+        Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
+    });
+
+    // --------------------------------------------------------------------
+    // Medicines - Read-Only (Admin & Pharmacist only, Cashier excluded)
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin,pharmacist')->group(function () {
+        Route::get('/medicines', [MedicineController::class, 'index']);
+        Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
+        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
     });
 
     // --------------------------------------------------------------------
@@ -107,20 +120,65 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
 
         // Purchase Orders
+        Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
+        Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
+        Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
+        Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
+        Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
+        Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);
+        Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
+        Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel']);
+        Route::post('/purchase-orders/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopen']);
+        Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
+        Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
+    });
+
+    // --------------------------------------------------------------------
+    // Sales — Read-Only (Admin, Pharmacist, Cashier)
+    // Admin can view sales data for reports/history but MUST NOT perform sales.
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin,pharmacist,cashier')->group(function () {
+        Route::get('/sales', [SaleController::class, 'index']);
+        Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
+        Route::get('/sales/stats', [SaleController::class, 'getStats']);
+        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
+        Route::get('/sales/{sale}/receipt/pdf', [SaleController::class, 'download']);
+        Route::get('/sales/{sale}/receipt/print', [SaleController::class, 'print']);
+    });
+
+    // --------------------------------------------------------------------
+    // Sales History & Export — Admin & Cashier
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin,cashier')->group(function () {
+        Route::get('/sales/history', [SaleController::class, 'history']);
+        Route::post('/sales/export', [SaleController::class, 'export']);
+        Route::get('/sales/export', [SaleController::class, 'export']);
     });
 
     // --------------------------------------------------------------------
     // Sales Operations (Admin, Cashier, Pharmacist)
     // --------------------------------------------------------------------
-    Route::middleware('role:admin,cashier,pharmacist')->group(function () {
-        Route::get('/sales', [SaleController::class, 'index']);
-        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
+    Route::middleware('role:pharmacist')->group(function () {
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
-        Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
-        Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
-        Route::get('/sales/stats', [SaleController::class, 'getStats']);
+        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
+    });
 
-        Route::apiResource('retail-products', RetailProductController::class);
+    // --------------------------------------------------------------------
+    // Sales — Cashier Only (complete payment & finalize sales)
+    // --------------------------------------------------------------------
+    Route::middleware('role:cashier')->group(function () {
+        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
+        Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
+    });
+
+    // --------------------------------------------------------------------
+    // Retail Products — Write (Admin only)
+    // Read routes are already in the shared read-only group above.
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/retail-products', [RetailProductController::class, 'store']);
+        Route::put('/retail-products/{retailProduct}', [RetailProductController::class, 'update']);
+        Route::delete('/retail-products/{retailProduct}', [RetailProductController::class, 'destroy']);
     });
 });

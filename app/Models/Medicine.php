@@ -59,7 +59,7 @@ class Medicine extends Model
 
     public function batches()
     {
-        return $this->hasMany(Batch::class);
+        return $this->hasMany(Batch::class, 'medicine_id');
     }
 
     public function calculatedExpiryDate(): ?Carbon
@@ -99,6 +99,14 @@ class Medicine extends Model
     public function getImageUrlAttribute(): string
     {
         if ($this->image) {
+            if (str_starts_with($this->image, 'http')) {
+                return $this->image;
+            }
+
+            if (str_starts_with($this->image, 'images/')) {
+                return asset($this->image);
+            }
+
             return asset('storage/' . $this->image);
         }
 

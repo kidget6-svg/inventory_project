@@ -7,9 +7,8 @@
 // products, quantity controls (+/-), remove-item, total price,
 // Clear Draft, and Send to Cashier Queue.
 //
-// The pharmacist cannot complete payment, print receipts, or finalize
-// sales.  The draft is sent to the Cashier Payment Queue where the
-// cashier completes the transaction.
+// The pharmacist can enter Customer Information (customer name, phone, email, notes)
+// before dispatching the order to the Cashier Payment Queue.
 //
 // All shared UI is provided by the reusable components in
 // resources/js/components/pos/.
@@ -26,6 +25,10 @@ import {
     ShoppingBag,
     Send,
     Package,
+    User,
+    Phone,
+    Mail,
+    FileText,
 } from 'lucide-react';
 
 export default function RetailOTCSales() {
@@ -35,9 +38,15 @@ export default function RetailOTCSales() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
+    // Customer Information
+    const [customerName, setCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [customerEmail, setCustomerEmail] = useState('');
+    const [customerNotes, setCustomerNotes] = useState('');
+
     // ── Data loading ──────────────────────────────────────────────
     useEffect(() => {
-        api.get('/retail-products')
+        api.get('/retail-products', { params: { per_page: 100 } })
             .then(res => setProducts(res.data.data || res.data))
             .catch(err => {
                 console.error('Failed to load retail products:', err);
@@ -123,9 +132,17 @@ export default function RetailOTCSales() {
                     id: item.id,
                     cartQty: item.cartQty,
                 })),
+                customer_name: customerName || null,
+                customer_phone: customerPhone || null,
+                customer_email: customerEmail || null,
+                notes: customerNotes || null,
             });
             window.showToast('Order dispatched to Cashier queue!', 'success');
             setCart([]);
+            setCustomerName('');
+            setCustomerPhone('');
+            setCustomerEmail('');
+            setCustomerNotes('');
         } catch (err) {
             window.showToast(
                 err.response?.data?.message || 'Failed to send order',
@@ -162,7 +179,7 @@ export default function RetailOTCSales() {
                         </div>
                         <div>
                             <h2 className="text-2xl font-bold text-gray-800">
-                                Retail &amp; OTC Sales
+                                Retail & OTC Sales
                             </h2>
                             <p className="text-sm text-gray-500">
                                 Browse OTC products and send to cashier queue
@@ -180,6 +197,76 @@ export default function RetailOTCSales() {
                             className="pos-search-input"
                         />
                         <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                    </div>
+                </div>
+
+                {/* Customer Information */}
+                <div className="pos-prescription-info bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-5">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <User size={16} className="text-emerald-600" />
+                        Customer Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Customer Name
+                            </label>
+                            <div className="relative">
+                                <User size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={customerName}
+                                    onChange={(e) => setCustomerName(e.target.value)}
+                                    placeholder="Enter customer name"
+                                    className="pos-search-input pl-10"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Phone Number
+                            </label>
+                            <div className="relative">
+                                <Phone size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={customerPhone}
+                                    onChange={(e) => setCustomerPhone(e.target.value)}
+                                    placeholder="Enter phone number"
+                                    className="pos-search-input pl-10"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Email Address
+                            </label>
+                            <div className="relative">
+                                <Mail size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                <input
+                                    type="email"
+                                    value={customerEmail}
+                                    onChange={(e) => setCustomerEmail(e.target.value)}
+                                    placeholder="Enter email address"
+                                    className="pos-search-input pl-10"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                Customer Notes
+                            </label>
+                            <div className="relative">
+                                <FileText size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={customerNotes}
+                                    onChange={(e) => setCustomerNotes(e.target.value)}
+                                    placeholder="Notes or additional info"
+                                    className="pos-search-input pl-10"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -11,7 +11,7 @@ export default function PurchaseOrderCreate() {
     const [form, setForm] = useState({
         supplier_id: '',
         order_date: '',
-        medicine_id: '',
+        medicine_name: '',
         quantity: '',
         unit_price: '',
     });
@@ -98,18 +98,22 @@ export default function PurchaseOrderCreate() {
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
-                        <select
-                            name="medicine_id"
-                            value={form.medicine_id}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            required
-                        >
-                            <option value="">Select Medicine</option>
-                            {medicines.map(m => (
-                                <option key={m.id} value={m.id}>{m.name}</option>
-                            ))}
-                        </select>
+                        <div className="relative">
+                            <input
+                                list="medicine-list"
+                                name="medicine_name"
+                                value={form.medicine_name}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                placeholder="Type to search or create new medicine"
+                                required
+                            />
+                            <datalist id="medicine-list">
+                                {medicines.map(m => (
+                                    <option key={m.id} value={m.name} />
+                                ))}
+                            </datalist>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
