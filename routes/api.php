@@ -76,6 +76,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         // Medicines - Create, Update, Delete
         Route::post('/medicines', [MedicineController::class, 'store']);
         Route::put('/medicines/{medicine}', [MedicineController::class, 'update']);
+        Route::patch('/medicines/{medicine}/status', [MedicineController::class, 'updateStatus']);
         Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
     });
 
@@ -118,6 +119,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
         Route::get('/low-stock', [LowStockController::class, 'index']);
+        Route::post('/low-stock/order-now/{medicine}', [LowStockController::class, 'orderNow']);
         Route::get('/reports', [ReportController::class, 'index']);
     });
 

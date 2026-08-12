@@ -10,6 +10,7 @@ class Batch extends Model
     use HasFactory;
 
     protected $fillable = [
+        'medicine_id',
         'product_id',
         'supplier_id',
         'batch_number',
@@ -27,6 +28,11 @@ class Batch extends Model
     ];
 
     // Relationships
+    public function medicine()
+    {
+        return $this->belongsTo(Medicine::class);
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);

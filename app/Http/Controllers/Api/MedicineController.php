@@ -80,6 +80,8 @@ class MedicineController extends Controller
 
     public function show(Medicine $medicine)
     {
+        $medicine->syncAutomaticExpiryState();
+
         return response()->json($medicine->load(['category', 'supplier', 'shelf']));
     }
 
@@ -98,7 +100,6 @@ class MedicineController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
-            'batch_number' => 'nullable|string|max:255',
             'barcode' => ['nullable', 'string', 'max:100', Rule::unique('medicines', 'barcode')->ignore($medicine->id)],
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
@@ -107,9 +108,6 @@ class MedicineController extends Controller
             'unit_price' => 'nullable|numeric|min:0',
             'purchase_price' => 'nullable|numeric|min:0',
             'selling_price' => 'nullable|numeric|min:0',
-            'reorder_level' => 'required|integer|min:0',
-            'expiry_date' => 'nullable|date',
-            'status' => 'in:active,inactive,expired,discontinued',
             'description' => 'nullable|string',
             'manufacturer' => 'nullable|string|max:255',
             'shelf_location' => 'nullable|string|max:50',
@@ -118,7 +116,25 @@ class MedicineController extends Controller
 
         $validated = $this->handleImageUpload($validated, $medicine);
         $medicine->update($validated);
+        $medicine->syncAutomaticExpiryState();
         return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+    }
+
+    public function updateStatus(Request $request, Medicine $medicine)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        $medicine->syncAutomaticExpiryState();
+
+        if ($medicine->status === Medicine::STATUS_EXPIRED) {
+            return response()->json(['message' => 'Expired medicines cannot be activated or deactivated.'], 422);
+        }
+
+        $medicine->update(['status' => $validated['status']]);
+
+        return response()->json($medicine->fresh());
     }
 
     /**
