@@ -176,6 +176,12 @@ export default function ReceiptPage() {
                                 <span className="text-xs text-gray-500">Customer</span>
                                 <p className="font-medium text-gray-800">{sale.customer_name || 'Walk-in Customer'}</p>
                             </div>
+                            {sale.notes && (
+                                <div>
+                                    <span className="text-xs text-gray-500">Prescription Notes</span>
+                                    <p className="font-medium text-gray-800">{sale.notes}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 

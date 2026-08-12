@@ -435,6 +435,12 @@ export default function CashierPaymentQueue({ saleType }) {
                                 <span className="text-xs text-gray-500">Customer</span>
                                 <span className="text-sm font-medium text-gray-800">{completedSale.customer_name || 'Walk-in Customer'}</span>
                             </div>
+                            {completedSale.notes && (
+                                <div className="flex justify-between">
+                                    <span className="text-xs text-gray-500">Prescription Notes</span>
+                                    <span className="text-sm font-medium text-gray-800">{completedSale.notes}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between">
                                 <span className="text-xs text-gray-500">Total Amount</span>
                                 <span className="text-sm font-medium text-gray-800">${parseFloat(completedSale.total_amount).toFixed(2)}</span>
