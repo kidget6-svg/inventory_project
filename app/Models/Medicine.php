@@ -119,7 +119,7 @@ class Medicine extends Model
     public function getImageUrlAttribute(): string
     {
         if ($this->image) {
-            return asset('storage/' . $this->image);
+            return asset($this->image);
         }
 
         return asset('images/medicine-placeholder.svg');
