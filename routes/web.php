@@ -12,19 +12,16 @@ use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ShelfController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\RetailProductController;
 use App\Http\Controllers\DashboardController;
 
-// ============================================
-// PUBLIC AUTH ROUTES
-// ============================================
-
-Route::get('/reports/today-sales', [ReportController::class, 'todaySales']);
-Route::get('/csrf-token', function () {
-    return response()->json(['token' => csrf_token()]);
-});
-Route::post('/register', [AuthController::class, 'register']);
-
+/*
+|--------------------------------------------------------------------------
+| Public Auth Routes
+|--------------------------------------------------------------------------
+*/
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/register', [AuthController::class, 'register']);
 
 // ============================================
 // PUBLIC REGISTRATION (Pharmacist & Cashier only)
@@ -47,24 +44,30 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    // User Management (admin only)
-    Route::middleware('role:admin')->group(function () {
+    // ── User Management (admin only) ───────────────────────────────
+    Route::middleware('permission:users.manage')->group(function () {
         Route::get('/users', [UserController::class, 'index']);
         Route::post('/users', [UserController::class, 'store']);
         Route::put('/users/{user}', [UserController::class, 'update']);
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
+    });
+
+    Route::middleware('permission:users.approve')->group(function () {
         Route::post('/users/{user}/approve', [UserController::class, 'approve']);
+    });
+
+    Route::middleware('permission:users.reject')->group(function () {
         Route::post('/users/{user}/reject', [UserController::class, 'reject']);
     });
 
-    // Categories - read-only for admin + pharmacist
-    Route::middleware('role:admin,pharmacist')->group(function () {
+    // ── Categories ─────────────────────────────────────────
+    // Read: admin + pharmacist  |  Write: admin + pharmacist
+    Route::middleware('permission:categories.view')->group(function () {
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
     });
 
-    // Categories - write access admin only
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('permission:categories.manage')->group(function () {
         Route::get('/categories/create', [CategoryController::class, 'create']);
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::get('/categories/{category}/edit', [CategoryController::class, 'edit']);
@@ -72,51 +75,32 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
     });
 
-    // Suppliers (admin only)
-    Route::middleware('role:admin')->group(function () {
-        Route::apiResource('suppliers', SupplierController::class);
+    // ── Suppliers ─────────────────────────────────────────
+    // Read: admin, pharmacist (for medicine assignment), purchasing_staff
+    // Write: admin, purchasing_staff
+    Route::middleware('permission:suppliers.view')->group(function () {
+        Route::get('/suppliers', [SupplierController::class, 'index']);
+        Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
     });
 
-    // Purchase Orders (admin only)
-    Route::middleware('role:admin')->group(function () {
-        Route::apiResource('purchase-orders', PurchaseOrderController::class);
-        Route::get('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
-        Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
-        Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
-        Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
-        Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
-        Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
-        Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
-        Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);
-        Route::post('/purchase-orders/{purchaseOrder}/process', [PurchaseOrderController::class, 'process']);
-        Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
-        Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel']);
-        Route::post('/purchase-orders/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopen']);
+    Route::middleware('permission:suppliers.manage')->group(function () {
+        Route::get('/suppliers/create', [SupplierController::class, 'create']);
+        Route::post('/suppliers', [SupplierController::class, 'store']);
+        Route::get('/suppliers/{supplier}/edit', [SupplierController::class, 'edit']);
+        Route::put('/suppliers/{supplier}', [SupplierController::class, 'update']);
+        Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy']);
     });
 
-    // Reports (admin + pharmacist)
-    Route::middleware('role:admin,pharmacist')->group(function () {
-        Route::get('/reports', [ReportController::class, 'index']);
-        Route::get('/reports/shelves/by-medicine-count', [ReportController::class, 'shelvesByMedicineCount']);
-        Route::get('/reports/medicines-sold-by-shelf', [ReportController::class, 'medicinesSoldByShelf']);
-        Route::get('/reports/shelf-revenue', [ReportController::class, 'shelfRevenue']);
-        Route::get('/reports/medicines-not-sold-this-week', [ReportController::class, 'medicinesNotSoldThisWeek']);
-        Route::get('/reports/shelves/low-stock', [ReportController::class, 'shelvesWithLowStock']);
-    });
-
-    // Shelves (admin + pharmacist)
-    Route::middleware('role:admin,pharmacist')->group(function () {
-        Route::get('/shelves', [ShelfController::class, 'index']);
-    });
-
-    // Medicines - read-only for admin + pharmacist
-    Route::middleware('role:admin,pharmacist')->group(function () {
+    // ── Medicines ─────────────────────────────────────────
+    // Read: admin, pharmacist, cashier, purchasing_staff
+    // Write: admin, pharmacist only
+    Route::middleware('permission:medicines.view')->group(function () {
         Route::get('/medicines', [MedicineController::class, 'index']);
         Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
+        Route::get('/medicines/barcode-label/{medicine}', [MedicineController::class, 'barcodeLabel']);
     });
 
-    // Medicines - write access admin only
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('permission:medicines.manage')->group(function () {
         Route::get('/medicines/create', [MedicineController::class, 'create']);
         Route::post('/medicines', [MedicineController::class, 'store']);
         Route::get('/medicines/{medicine}/edit', [MedicineController::class, 'edit']);
@@ -124,37 +108,145 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
     });
 
-    // Stock Movements (admin + pharmacist)
-    Route::middleware('role:admin,pharmacist')->group(function () {
+    // ── Stock Movements ─────────────────────────────────────────────
+    // Read + Write: admin, pharmacist
+    Route::middleware('permission:stock_movements.view')->group(function () {
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
+    });
+
+    Route::middleware('permission:stock_movements.manage')->group(function () {
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
     });
 
-    // Low Stock (admin + pharmacist)
-    Route::middleware('role:admin,pharmacist')->group(function () {
+    // ── Low Stock Alerts ───────────────────────────────────────────
+    // Admin + Pharmacist
+    Route::middleware('permission:low_stock.view')->group(function () {
         Route::get('/low-stock', [LowStockController::class, 'index']);
     });
 
-    // Sales routes — Read-Only (Admin, Pharmacist, Cashier)
-    // Admin can view sales data for reports/history but MUST NOT perform sales.
-    Route::middleware('role:admin,pharmacist,cashier')->group(function () {
-        Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
-        Route::get('/sales/stats', [SaleController::class, 'getStats']);
-        Route::get('/sales/history', [SaleController::class, 'history']);
-        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
+    Route::middleware('permission:low_stock.order')->group(function () {
+        Route::post('/low-stock/order-now/{medicine}', [LowStockController::class, 'orderNow']);
     });
 
-    // Sales routes — Pharmacist Only (dispatch drafts to cashier queue)
-    // Admin is explicitly excluded: Admin MUST NOT perform sales.
-    Route::middleware('role:pharmacist')->group(function () {
+    // ── Shelves ────────────────────────────────────────────────────
+    // Admin + Pharmacist
+    Route::middleware('permission:shelves.view')->group(function () {
+        Route::get('/shelves', [ShelfController::class, 'index']);
+    });
+
+    // ── Retail / OTC Products ──────────────────────────────────────
+    // Read: admin, pharmacist | Write: admin, pharmacist
+    Route::middleware('permission:retail_products.view')->group(function () {
+        Route::get('/retail-products', [RetailProductController::class, 'index']);
+        Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
+    });
+
+    Route::middleware('permission:retail_products.manage')->group(function () {
+        Route::get('/retail-products/create', [RetailProductController::class, 'create']);
+        Route::post('/retail-products', [RetailProductController::class, 'store']);
+        Route::get('/retail-products/{retailProduct}/edit', [RetailProductController::class, 'edit']);
+        Route::put('/retail-products/{retailProduct}', [RetailProductController::class, 'update']);
+        Route::delete('/retail-products/{retailProduct}', [RetailProductController::class, 'destroy']);
+    });
+
+    // ── Purchase Orders ────────────────────────────────────────────
+    // Admin + Purchasing Staff
+    // ─────────────────────────────────────────────────────────────
+    // Read: view, show, preview PDF, download PDF
+    Route::middleware('permission:purchase_orders.view')->group(function () {
+        Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+        Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
+        Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
+        Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
+    });
+
+    // Write: create, update, delete, process
+    Route::middleware('permission:purchase_orders.manage')->group(function () {
+        Route::get('/purchase-orders/create', [PurchaseOrderController::class, 'create']);
+        Route::get('/purchase-orders/{purchaseOrder}/edit', [PurchaseOrderController::class, 'edit']);
+        Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
+        Route::put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update']);
+        Route::delete('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy']);
+        Route::post('/purchase-orders/{purchaseOrder}/process', [PurchaseOrderController::class, 'process']);
+    });
+
+    // Purchasing History (completed/delivered orders)
+    Route::middleware('permission:purchasing_history.view')->group(function () {
+        Route::get('/purchase-orders/history', [PurchaseOrderController::class, 'history']);
+    });
+
+    // Workflow: Submit (draft -> pending)
+    Route::middleware('permission:purchase_orders.send')->group(function () {
+        Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
+        Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
+        Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
+    });
+
+    // Workflow: Receive (sent -> delivered)
+    Route::middleware('permission:purchase_orders.receive')->group(function () {
+        Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
+    });
+
+    // Workflow: Approve (pending -> approved)
+    Route::middleware('permission:purchase_orders.approve')->group(function () {
+        Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);
+    });
+
+    // Workflow: Complete (approved/delivered -> completed)
+    Route::middleware('permission:purchase_orders.complete')->group(function () {
+        Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
+    });
+
+    // Workflow: Cancel
+    Route::middleware('permission:purchase_orders.cancel')->group(function () {
+        Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel']);
+    });
+
+    // Workflow: Reopen
+    Route::middleware('permission:purchase_orders.reopen')->group(function () {
+        Route::post('/purchase-orders/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopen']);
+    });
+
+    // ── Sales ──────────────────────────────────────────────────────
+    // Read access: admin, pharmacist, cashier
+    Route::middleware('permission:sales.view')->group(function () {
+        Route::get('/sales', [SaleController::class, 'index']);
+    });
+
+    Route::middleware('permission:sales.today')->group(function () {
+        Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
+    });
+
+    Route::middleware('permission:sales.stats')->group(function () {
+        Route::get('/sales/stats', [SaleController::class, 'getStats']);
+    });
+
+    Route::middleware('permission:sales.history')->group(function () {
+        Route::get('/sales/history', [SaleController::class, 'history']);
+        Route::get('/sales/export', [SaleController::class, 'export']);
+    });
+
+    // Receipts (receipt data, PDF, print)
+    Route::middleware('permission:receipts.view')->group(function () {
+        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
+        Route::get('/sales/{sale}/receipt/pdf', [SaleController::class, 'download']);
+        Route::get('/sales/{sale}/receipt/print', [SaleController::class, 'print']);
+    });
+
+    // Prescription Sales Dispatch — Pharmacist only
+    Route::middleware('permission:prescription_sales.dispatch')->group(function () {
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
         Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
     });
 
-    // Sales routes — Cashier Only (complete payment & finalize sales)
-    Route::middleware('role:cashier')->group(function () {
+    // Retail Sales Checkout — Cashier only
+    Route::middleware('permission:retail_sales.manage')->group(function () {
         Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
+    });
+
+    // Prescription Checkout / Status Update — Cashier only
+    Route::middleware('permission:prescription_sales.checkout')->group(function () {
         Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
     });
 });

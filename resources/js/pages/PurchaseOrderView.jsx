@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Edit, Trash2, Calendar, Package, DollarSign, Tag, Send, RefreshCw, CheckCircle, XCircle, Download, FileText } from 'lucide-react';
 
 export default function PurchaseOrderView() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { can, loading: authLoading } = useAuth();
+    const canManage = can('purchase_orders.manage');
+
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -31,6 +35,10 @@ export default function PurchaseOrderView() {
     };
 
     const handleDelete = async () => {
+        if (!canManage) {
+            window.showToast('You do not have permission to delete purchase orders', 'error');
+            return;
+        }
         if (!window.confirm('Delete this purchase order?')) return;
         try {
             await api.delete(`/purchase-orders/${id}`);
@@ -154,90 +162,92 @@ export default function PurchaseOrderView() {
                     </div>
                 </div>
 
-                {/* Status-aware action buttons */}
-                <div className="flex flex-wrap justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-                    {status !== 'draft' && (
-                        <button
-                            onClick={handleDownloadPdf}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2"
-                        >
-                            <Download size={16} />
-                            Download PDF
-                        </button>
-                    )}
-                    {status === 'draft' && (
-                        <button
-                            onClick={() => handleAction('submit', 'Submit')}
-                            className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
-                        >
-                            <Send size={16} />
-                            Submit to Pending
-                        </button>
-                    )}
-                    {status === 'pending' && (
-                        <button
-                            onClick={() => handleAction('send', 'Send to Supplier')}
-                            className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
-                        >
-                            <Send size={16} />
-                            Send to Supplier
-                        </button>
-                    )}
-                    {status === 'sent' && (
-                        <>
+                {/* Status-aware action buttons — only for users with purchase_orders.manage permission */}
+                {canManage && (
+                    <div className="flex flex-wrap justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+                        {status !== 'draft' && (
                             <button
-                                onClick={() => handleAction('deliver', 'Mark as Delivered')}
-                                className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 flex items-center gap-2"
+                                onClick={handleDownloadPdf}
+                                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2"
                             >
-                                <Package size={16} />
-                                Mark as Delivered
+                                <Download size={16} />
+                                Download PDF
                             </button>
+                        )}
+                        {status === 'draft' && (
                             <button
-                                onClick={() => handleAction('resend', 'Resend to Supplier')}
+                                onClick={() => handleAction('submit', 'Submit')}
                                 className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
                             >
-                                <RefreshCw size={16} />
-                                Resend to Supplier
+                                <Send size={16} />
+                                Submit to Pending
                             </button>
-                        </>
-                    )}
-                    {['delivered', 'approved'].includes(status) && (
-                        <button
-                            onClick={() => handleAction('complete', 'Complete Order')}
-                            className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 flex items-center gap-2"
-                        >
-                            <CheckCircle size={16} />
-                            Complete Order
-                        </button>
-                    )}
-                    {['draft', 'pending', 'sent', 'delivered'].includes(status) && (
-                        <button
-                            onClick={() => handleAction('cancel', 'Cancel')}
-                            className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
-                        >
-                            <XCircle size={16} />
-                            Cancel
-                        </button>
-                    )}
-                    {['draft', 'pending'].includes(status) && (
-                        <Link
-                            to={`/purchase-orders/${order.id}/edit`}
-                            className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
-                        >
-                            <Edit size={16} />
-                            Edit
-                        </Link>
-                    )}
-                    {status === 'draft' && (
-                        <button
-                            onClick={handleDelete}
-                            className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
-                        >
-                            <Trash2 size={16} />
-                            Delete
-                        </button>
-                    )}
-                </div>
+                        )}
+                        {status === 'pending' && (
+                            <button
+                                onClick={() => handleAction('send', 'Send to Supplier')}
+                                className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
+                            >
+                                <Send size={16} />
+                                Send to Supplier
+                            </button>
+                        )}
+                        {status === 'sent' && (
+                            <>
+                                <button
+                                    onClick={() => handleAction('deliver', 'Mark as Delivered')}
+                                    className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 flex items-center gap-2"
+                                >
+                                    <Package size={16} />
+                                    Mark as Delivered
+                                </button>
+                                <button
+                                    onClick={() => handleAction('resend', 'Resend to Supplier')}
+                                    className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
+                                >
+                                    <RefreshCw size={16} />
+                                    Resend to Supplier
+                                </button>
+                            </>
+                        )}
+                        {['delivered', 'approved'].includes(status) && (
+                            <button
+                                onClick={() => handleAction('complete', 'Complete Order')}
+                                className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 flex items-center gap-2"
+                            >
+                                <CheckCircle size={16} />
+                                Complete Order
+                            </button>
+                        )}
+                        {['draft', 'pending', 'sent', 'delivered'].includes(status) && (
+                            <button
+                                onClick={() => handleAction('cancel', 'Cancel')}
+                                className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
+                            >
+                                <XCircle size={16} />
+                                Cancel
+                            </button>
+                        )}
+                        {['draft', 'pending'].includes(status) && (
+                            <Link
+                                to={`/purchase-orders/${order.id}/edit`}
+                                className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
+                            >
+                                <Edit size={16} />
+                                Edit
+                            </Link>
+                        )}
+                        {status === 'draft' && (
+                            <button
+                                onClick={handleDelete}
+                                className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
+                            >
+                                <Trash2 size={16} />
+                                Delete
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

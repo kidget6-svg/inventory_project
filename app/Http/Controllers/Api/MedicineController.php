@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreMedicineRequest;
+use App\Http\Requests\UpdateMedicineRequest;
 use App\Models\Medicine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -10,17 +12,31 @@ use Illuminate\Validation\Rule;
 
 class MedicineController extends Controller
 {
+    /**
+     * Display a paginated, searchable list of medicines.
+     *
+     * Supports searching by name, generic name, barcode, or batch number.
+     * Supports filtering by category, supplier, shelf, and prescription flag.
+     */
     public function index(Request $request)
     {
         $query = Medicine::with(['category', 'supplier', 'shelf']);
 
-        // Search by name, generic name, or batch number
+        // Search across multiple fields
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('batch_number', 'like', "%{$search}%");
+                  ->orWhere('barcode', 'like', "%{$search}%")
+                  ->orWhere('batch_number', 'like', "%{$search}%")
+                  ->orWhere('dosage_form', 'like', "%{$search}%")
+                  ->orWhere('strength', 'like', "%{$search}%");
             });
+        }
+
+        // Barcode lookup (exact match via dedicated ?barcode= parameter)
+        if ($barcode = $request->input('barcode')) {
+            $query->where('barcode', $barcode);
         }
 
         // Filter by category
@@ -38,110 +54,97 @@ class MedicineController extends Controller
             $query->where('shelf_id', $shelfId);
         }
 
-        // Filter by status
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
+        // Filter by prescription requirement
+        if ($request->has('prescription')) {
+            $query->where('prescription', (bool) $request->input('prescription'));
         }
 
         $perPage = (int) $request->input('per_page', 10);
         $medicines = $query->latest()->paginate($perPage);
 
-        $medicines->getCollection()->each->syncAutomaticExpiryState();
-
         return response()->json($medicines);
     }
 
-    public function store(Request $request)
+    /**
+     * Store a newly created medicine.
+     */
+    public function store(StoreMedicineRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'generic_name' => 'nullable|string|max:255',
-            'batch_number' => 'nullable|string|max:255',
-            'barcode' => 'nullable|string|max:255|unique:medicines,barcode',
-            'category_id' => 'required|exists:categories,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'shelf_id' => 'nullable|exists:shelves,id',
-            'quantity' => 'required|integer|min:0',
-            'unit_price' => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'selling_price' => 'nullable|numeric|min:0',
-            'reorder_level' => 'required|integer|min:0',
-            'expiry_date' => 'nullable|date',
-            'status' => 'in:active,inactive,expired,discontinued',
-            'description' => 'nullable|string',
-            'manufacturer' => 'nullable|string|max:255',
-            'shelf_location' => 'nullable|string|max:50',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
-        ]);
+        $validated = $request->validated();
 
+        // Upload image if present
         $validated = $this->handleImageUpload($validated, null);
 
         $medicine = Medicine::create($validated);
-        return response()->json($medicine->load(['category', 'supplier', 'shelf']), 201);
+
+        return response()->json(
+            $medicine->load(['category', 'supplier', 'shelf']),
+            201
+        );
     }
 
+    /**
+     * Display the specified medicine.
+     */
     public function show(Medicine $medicine)
     {
-        $medicine->syncAutomaticExpiryState();
-
         return response()->json($medicine->load(['category', 'supplier', 'shelf']));
     }
 
-    public function getLowStock()
+    /**
+     * Update the specified medicine.
+     */
+    public function update(UpdateMedicineRequest $request, Medicine $medicine)
     {
-        $medicines = Medicine::with(['category', 'supplier'])
-            ->whereColumn('quantity', '<=', 'reorder_level')
-            ->orderBy('quantity')
-            ->paginate(10);
+        $validated = $request->validated();
 
-        return response()->json($medicines);
-    }
-
-    public function update(Request $request, Medicine $medicine)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'generic_name' => 'nullable|string|max:255',
-            'barcode' => ['nullable', 'string', 'max:100', Rule::unique('medicines', 'barcode')->ignore($medicine->id)],
-            'category_id' => 'required|exists:categories,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'shelf_id' => 'nullable|exists:shelves,id',
-            'quantity' => 'required|integer|min:0',
-            'unit_price' => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'selling_price' => 'nullable|numeric|min:0',
-            'description' => 'nullable|string',
-            'manufacturer' => 'nullable|string|max:255',
-            'shelf_location' => 'nullable|string|max:50',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
-        ]);
-
-        $validated = $this->handleImageUpload($validated, $medicine);
-        $medicine->update($validated);
-        $medicine->syncAutomaticExpiryState();
-        return response()->json($medicine->load(['category', 'supplier', 'shelf']));
-    }
-
-    public function updateStatus(Request $request, Medicine $medicine)
-    {
-        $validated = $request->validate([
-            'status' => 'required|in:active,inactive',
-        ]);
-
-        $medicine->syncAutomaticExpiryState();
-
-        if ($medicine->status === Medicine::STATUS_EXPIRED) {
-            return response()->json(['message' => 'Expired medicines cannot be activated or deactivated.'], 422);
+        // Handle image removal flag
+        if ($request->boolean('delete_image')) {
+            $this->deleteExistingImage($medicine);
+            $validated['image'] = null;
         }
 
-        $medicine->update(['status' => $validated['status']]);
+        // Upload new image if present (also removes old image)
+        $validated = $this->handleImageUpload($validated, $medicine);
 
-        return response()->json($medicine->fresh());
+        $medicine->update($validated);
+
+        return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+    }
+
+    /**
+     * Delete the specified medicine.
+     * Also removes the associated image file from storage.
+     */
+    public function destroy(Medicine $medicine)
+    {
+        // Delete the medicine image from disk
+        $this->deleteExistingImage($medicine);
+
+        $medicine->delete();
+
+        return response()->json(['message' => 'Medicine deleted']);
+    }
+
+    /**
+     * Print / generate a barcode label for a medicine.
+     *
+     * Returns the medicine data needed to render a barcode label.
+     * The frontend can use this to print or download a label image.
+     */
+    public function barcodeLabel(Medicine $medicine)
+    {
+        return response()->json([
+            'medicine'    => $medicine->load('category'),
+            'barcode_value' => $medicine->barcode ?: $medicine->id,
+        ]);
     }
 
     /**
      * Store an uploaded medicine image (if present) on the public disk.
      * Deletes any previously stored image when updating.
+     *
+     * Generates a unique filename to prevent collisions.
      */
     protected function handleImageUpload(array $validated, ?Medicine $medicine = null): array
     {
@@ -156,15 +159,20 @@ class MedicineController extends Controller
             Storage::disk('public')->delete($medicine->image);
         }
 
+        // Store with a unique filename using Laravel's built-in storage
         $path = $request->file('image')->store('medicine-images', 'public');
         $validated['image'] = $path;
 
         return $validated;
     }
 
-    public function destroy(Medicine $medicine)
+    /**
+     * Delete the image associated with a medicine (if any).
+     */
+    protected function deleteExistingImage(Medicine $medicine): void
     {
-        $medicine->delete();
-        return response()->json(['message' => 'Medicine deleted']);
+        if ($medicine->image && Storage::disk('public')->exists($medicine->image)) {
+            Storage::disk('public')->delete($medicine->image);
+        }
     }
 }

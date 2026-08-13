@@ -91,11 +91,13 @@ export default function LowStockAlert({
 
                         {medicines.map((medicine) => {
 
+                            const qty = Number(medicine.quantity) || 0;
+                            const reorder = Number(medicine.reorder_level) || 1;
                             const percent = Math.min(
                                 100,
                                 Math.round(
-                                    (medicine.quantity /
-                                        medicine.reorder_level) *
+                                    (qty /
+                                        reorder) *
                                         100
                                 )
                             );

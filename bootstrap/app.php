@@ -17,12 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/*',
             'sales/*',
         ]);
-        
-        // Register custom middleware aliases
-        $middleware->alias([
-            'approved' => \App\Http\Middleware\EnsureUserApproved::class,
-            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
-        ]);
+
+         // Register custom middleware aliases
+         $middleware->alias([
+             'approved'  => \App\Http\Middleware\EnsureUserApproved::class,
+             'role'      => \App\Http\Middleware\EnsureUserHasRole::class,
+             'permission'=> \App\Http\Middleware\CheckPermission::class,
+         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

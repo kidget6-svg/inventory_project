@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Save, X, Package, Calendar, DollarSign } from 'lucide-react';
 
 export default function PurchaseOrderCreate() {
     const navigate = useNavigate();
+    const { can, loading: authLoading } = useAuth();
+    const canManage = can('purchase_orders.manage');
+
     const [suppliers, setSuppliers] = useState([]);
     const [medicines, setMedicines] = useState([]);
     const [form, setForm] = useState({
@@ -19,12 +23,22 @@ export default function PurchaseOrderCreate() {
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    // Redirect if user lacks permission
     useEffect(() => {
-        Promise.all([
-            api.get('/suppliers').then(r => setSuppliers(r.data)),
-            api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
-        ]).finally(() => setLoading(false));
-    }, []);
+        if (!authLoading && !canManage) {
+            window.showToast('You do not have permission to create purchase orders', 'error');
+            navigate('/purchase-orders');
+        }
+    }, [authLoading, canManage, navigate]);
+
+    useEffect(() => {
+        if (canManage) {
+            Promise.all([
+                api.get('/suppliers').then(r => setSuppliers(r.data)),
+                api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
+            ]).finally(() => setLoading(false));
+        }
+    }, [canManage]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -44,6 +58,7 @@ export default function PurchaseOrderCreate() {
         }
     };
 
+    if (authLoading || !canManage) return <LoadingSpinner text="Checking permissions..." />;
     if (loading) return <LoadingSpinner text="Loading..." />;
 
     return (

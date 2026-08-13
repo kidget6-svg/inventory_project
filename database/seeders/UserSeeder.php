@@ -18,13 +18,17 @@ class UserSeeder extends Seeder
         User::truncate();
         Schema::enableForeignKeyConstraints();
 
+        // All seeded demo accounts use the password "Admin@123".
+        // These credentials match the login form shown to end users.
+        $defaultPassword = 'Admin@123';
+
         $users = [
             [
                 'name' => 'Admin User',
                 'first_name' => 'Admin',
                 'last_name' => 'User',
                 'email' => 'admin@pharmacy.com',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($defaultPassword),
                 'role' => 'admin',
                 'status' => 'approved',
                 'phone_number' => '+251 911 000 001',
@@ -36,7 +40,7 @@ class UserSeeder extends Seeder
                 'first_name' => 'Pharmacist',
                 'last_name' => 'User',
                 'email' => 'pharmacist@pharmacy.com',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($defaultPassword),
                 'role' => 'pharmacist',
                 'status' => 'approved',
                 'phone_number' => '+251 911 000 002',
@@ -55,7 +59,7 @@ class UserSeeder extends Seeder
                 'first_name' => 'Cashier',
                 'last_name' => 'User',
                 'email' => 'cashier@pharmacy.com',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($defaultPassword),
                 'role' => 'cashier',
                 'status' => 'approved',
                 'phone_number' => '+251 911 000 003',
@@ -67,7 +71,7 @@ class UserSeeder extends Seeder
                 'first_name' => 'Test',
                 'last_name' => 'Pharmacist',
                 'email' => 'test@pharmacy.com',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($defaultPassword),
                 'role' => 'pharmacist',
                 'status' => 'pending',
                 'phone_number' => '+251 911 000 004',

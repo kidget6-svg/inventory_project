@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Save, X, Calendar, DollarSign } from 'lucide-react';
 
 export default function PurchaseOrderEdit() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { can, loading: authLoading } = useAuth();
+    const canManage = can('purchase_orders.manage');
+
     const [suppliers, setSuppliers] = useState([]);
     const [medicines, setMedicines] = useState([]);
     const [form, setForm] = useState({
@@ -20,23 +24,33 @@ export default function PurchaseOrderEdit() {
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    // Redirect if user lacks permission
     useEffect(() => {
-        Promise.all([
-            api.get('/suppliers').then(r => setSuppliers(r.data)),
-            api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
-            api.get(`/purchase-orders/${id}`).then(r => {
-                const data = r.data;
-                const item = data.items?.[0];
-                setForm({
-                    supplier_id: data.supplier_id || '',
-                    order_date: data.order_date || '',
-                    medicine_id: item?.medicine_id || '',
-                    quantity: item?.quantity || '',
-                    unit_price: item?.unit_price || '',
-                });
-            }),
-        ]).finally(() => setLoading(false));
-    }, [id]);
+        if (!authLoading && !canManage) {
+            window.showToast('You do not have permission to edit purchase orders', 'error');
+            navigate('/purchase-orders');
+        }
+    }, [authLoading, canManage, navigate]);
+
+    useEffect(() => {
+        if (canManage) {
+            Promise.all([
+                api.get('/suppliers').then(r => setSuppliers(r.data)),
+                api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
+                api.get(`/purchase-orders/${id}`).then(r => {
+                    const data = r.data;
+                    const item = data.items?.[0];
+                    setForm({
+                        supplier_id: data.supplier_id || '',
+                        order_date: data.order_date || '',
+                        medicine_id: item?.medicine_id || '',
+                        quantity: item?.quantity || '',
+                        unit_price: item?.unit_price || '',
+                    });
+                }),
+            ]).finally(() => setLoading(false));
+        }
+    }, [id, canManage]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -56,6 +70,7 @@ export default function PurchaseOrderEdit() {
         }
     };
 
+    if (authLoading || !canManage) return <LoadingSpinner text="Checking permissions..." />;
     if (loading) return <LoadingSpinner text="Loading purchase order..." />;
 
     return (

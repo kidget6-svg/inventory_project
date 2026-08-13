@@ -16,15 +16,20 @@ class MedicineFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->word() . ' ' . fake()->word(),
-            'generic_name' => fake()->word(),
-            'batch_number' => 'BATCH' . fake()->numberBetween(1000, 9999),
-            'category_id' => Category::factory(),
-            'quantity' => fake()->numberBetween(0, 200),
-            'unit_price' => fake()->randomFloat(2, 1, 500),
-            'reorder_level' => fake()->numberBetween(5, 50),
-            'expiry_date' => fake()->dateTimeBetween('+1 month', '+2 years'),
-            'image' => null,
+            'name'           => fake()->word() . ' ' . fake()->word(),
+            'generic_name'   => fake()->word(),
+            'batch_number'   => 'BATCH' . fake()->numberBetween(1000, 9999),
+            'barcode'        => fake()->unique()->ean13(),
+            'category_id'    => Category::factory(),
+            'supplier_id'    => null,
+            'shelf_id'       => null,
+            'prescription'   => fake()->boolean(30),
+            'dosage_form'    => fake()->randomElement(['tablet', 'capsule', 'syrup', 'injection', 'cream', 'ointment']),
+            'strength'       => fake()->randomElement(['500 mg', '10 mg/5 ml', '1%', '250 mg', '20 mg', '100 mg']),
+            'unit'           => fake()->randomElement(['box', 'bottle', 'tablet', 'capsule', 'tube', 'vial']),
+            'image'          => null,
+            'manufacturer'   => fake()->company(),
+            'shelf_location' => fake()->bothify('??-#'),
         ];
     }
 }

@@ -4,26 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Carbon\Carbon;
 
 class Medicine extends Model
 {
     use HasFactory;
 
-    const STATUS_ACTIVE = 'active';
-    const STATUS_INACTIVE = 'inactive';
-    const STATUS_EXPIRED = 'expired';
-    const STATUS_DISCONTINUED = 'discontinued';
+    /**
+     * Prescription flags – stored as boolean but exposed as readable labels.
+     */
+    public const PRESCRIPTION_LABEL = 'Prescription Required';
+    public const OTC_LABEL         = 'Over-the-Counter';
 
-    public static function statuses(): array
-    {
-        return [
-            self::STATUS_ACTIVE => 'Active',
-            self::STATUS_INACTIVE => 'Inactive',
-            self::STATUS_EXPIRED => 'Expired',
-            self::STATUS_DISCONTINUED => 'Discontinued',
-        ];
-    }
+    /**
+     * Default reorder level (kept for backward compatibility with dashboard UI).
+     * Inventory tracking now lives in the Batch model.
+     */
+    public const DEFAULT_REORDER_LEVEL = 10;
 
     protected $fillable = [
         'name',
@@ -33,81 +29,80 @@ class Medicine extends Model
         'category_id',
         'supplier_id',
         'shelf_id',
-        'quantity',
-        'unit_price',
-        'purchase_price',
-        'selling_price',
-        'reorder_level',
-        'expiry_date',
-        'status',
+        'prescription',
+        'dosage_form',
+        'strength',
+        'unit',
         'image',
-        'description',
         'manufacturer',
         'shelf_location',
     ];
 
     protected $casts = [
-        'expiry_date' => 'date',
-        'quantity' => 'integer',
-        'reorder_level' => 'integer',
-        'unit_price' => 'decimal:2',
-        'purchase_price' => 'decimal:2',
-        'selling_price' => 'decimal:2',
+        'prescription' => 'boolean',
     ];
 
-    public function shelf()
-    {
-        return $this->belongsTo(Shelf::class);
-    }
-
+    /**
+     * A medicine belongs to a category.
+     */
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
+    /**
+     * A medicine may belong to a supplier.
+     */
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
     }
 
-    public function purchaseOrderItems()
+    /**
+     * A medicine may be stored on a shelf.
+     */
+    public function shelf()
     {
-        return $this->hasMany(PurchaseOrderItem::class);
+        return $this->belongsTo(Shelf::class);
     }
 
+    /**
+     * A medicine has many batches.
+     *
+     * Inventory tracking (quantity, expiry date) has moved from the
+     * medicines table to the batches table.  This relationship gives
+     * access to the individual batch records for a medicine.
+     */
     public function batches()
     {
         return $this->hasMany(Batch::class);
     }
 
-    public function calculatedExpiryDate(): ?Carbon
+    /**
+     * Total quantity across all batches.
+     *
+     * Provided as an accessor so legacy dashboard / UI code that reads
+     * $medicine->quantity continues to work.  The value is summed from
+     * the related batches table.
+     */
+    public function getQuantityAttribute(): int
     {
-        $batchExpiry = $this->batches()
-            ->when($this->batch_number, fn ($query) => $query->where('batch_number', $this->batch_number))
-            ->whereNotNull('expiry_date')
-            ->latest('id')
-            ->value('expiry_date');
-
-        return $batchExpiry ? Carbon::parse($batchExpiry) : ($this->expiry_date ? Carbon::parse($this->expiry_date) : null);
+        return (int) ($this->relationLoaded('batches')
+            ? $this->batches->sum('quantity')
+            : $this->batches()->sum('quantity'));
     }
 
-    public function syncAutomaticExpiryState(): void
+    /**
+     * Default reorder level for backward compatibility.
+     *
+     * The per-medicine reorder_level column has been removed from the
+     * database.  Inventory re-ordering is now managed through the
+     * purchasing workflow.  This accessor returns a sensible default
+     * so existing UI code does not break.
+     */
+    public function getReorderLevelAttribute(): int
     {
-        $calculatedExpiry = $this->calculatedExpiryDate();
-        $changes = [];
-
-        if ($calculatedExpiry && (! $this->expiry_date || ! $this->expiry_date->isSameDay($calculatedExpiry))) {
-            $changes['expiry_date'] = $calculatedExpiry->toDateString();
-        }
-
-        if ($calculatedExpiry && $calculatedExpiry->isBefore(Carbon::today())) {
-            $changes['status'] = self::STATUS_EXPIRED;
-        }
-
-        if ($changes) {
-            $this->forceFill($changes)->saveQuietly();
-            $this->refresh();
-        }
+        return self::DEFAULT_REORDER_LEVEL;
     }
 
     /**
@@ -123,14 +118,26 @@ class Medicine extends Model
         return asset('images/medicine-placeholder.svg');
     }
 
-    public function getStatusBadgeClass(): string
+    /**
+     * Human-readable prescription label.
+     */
+    public function getPrescriptionLabelAttribute(): string
     {
-        return match ($this->status) {
-            self::STATUS_ACTIVE => 'bg-green-100 text-green-700',
-            self::STATUS_INACTIVE => 'bg-gray-100 text-gray-700',
-            self::STATUS_EXPIRED => 'bg-red-100 text-red-700',
-            self::STATUS_DISCONTINUED => 'bg-orange-100 text-orange-700',
-            default => 'bg-gray-100 text-gray-600',
-        };
+        return (bool) $this->prescription ? self::PRESCRIPTION_LABEL : self::OTC_LABEL;
+    }
+
+    /**
+     * Full identification string e.g. "Paracetamol - Tablet - 500 mg - Box"
+     */
+    public function getIdentificationAttribute(): string
+    {
+        $parts = array_filter([
+            $this->name,
+            $this->dosage_form,
+            $this->strength,
+            $this->unit,
+        ]);
+
+        return implode(' - ', $parts);
     }
 }

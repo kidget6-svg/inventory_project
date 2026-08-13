@@ -2,23 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
     /**
-     * Display all categories.
+     * Display a listing of categories.
      */
     public function index()
     {
-        $categories = Category::all();
+        $categories = Category::withCount('medicines')->get();
 
         return view('categories.index', compact('categories'));
     }
 
     /**
-     * Show form to create category.
+     * Show the form for creating a new category.
      */
     public function create()
     {
@@ -26,71 +28,56 @@ class CategoryController extends Controller
     }
 
     /**
-     * Store new category.
+     * Store a newly created category.
      */
-    public function store(Request $request)
+    public function store(StoreCategoryRequest $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'description' => 'nullable',
-        ]);
-
-        Category::create([
-            'name' => $request->name,
-            'description' => $request->description,
-        ]);
+        Category::create($request->validated());
 
         return redirect()->route('categories.index')
             ->with('success', 'Category created successfully');
     }
 
     /**
-     * Show single category.
+     * Display the specified category.
      */
-    public function show(string $id)
+    public function show(Category $category)
     {
-        $category = Category::findOrFail($id);
-
         return view('categories.show', compact('category'));
     }
 
     /**
-     * Show edit form.
+     * Show the form for editing the specified category.
      */
-    public function edit(string $id)
+    public function edit(Category $category)
     {
-        $category = Category::findOrFail($id);
-
         return view('categories.edit', compact('category'));
     }
 
     /**
-     * Update category.
+     * Update the specified category.
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateCategoryRequest $request, Category $category)
     {
-        $category = Category::findOrFail($id);
-
-        $request->validate([
-            'name' => 'required',
-            'description' => 'nullable',
-        ]);
-
-        $category->update([
-            'name' => $request->name,
-            'description' => $request->description,
-        ]);
+        $category->update($request->validated());
 
         return redirect()->route('categories.index')
             ->with('success', 'Category updated successfully');
     }
 
     /**
-     * Delete category.
+     * Delete the specified category.
+     *
+     * Category deletion is prevented when the category is associated
+     * with medicines.
      */
-    public function destroy(string $id)
+    public function destroy(Category $category)
     {
-        $category = Category::findOrFail($id);
+        if ($category->isAssociatedWithMedicines()) {
+            return redirect()->route('categories.index')
+                ->with('error', 'Cannot delete "' . $category->name .
+                       '" because it has associated medicines. Reassign or delete those medicines first.');
+        }
 
         $category->delete();
 

@@ -2,82 +2,137 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreMedicineRequest;
+use App\Http\Requests\UpdateMedicineRequest;
 use App\Models\Medicine;
 use App\Models\Category;
+use App\Models\Supplier;
+use App\Models\Shelf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class MedicineController extends Controller
 {
-   public function index()
-{
-    $medicines = Medicine::with('category')
-        ->latest()
-        ->get();
+    /**
+     * Display a listing of medicines.
+     */
+    public function index(Request $request)
+    {
+        $query = Medicine::with(['category', 'supplier', 'shelf']);
 
-    return view('medicines.index', compact('medicines'));
-}
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('generic_name', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
 
+        $medicines = $query->latest()->paginate(10);
 
+        return view('medicines.index', compact('medicines'));
+    }
+
+    /**
+     * Show the form for creating a new medicine.
+     */
     public function create()
     {
         $categories = Category::all();
+        $suppliers  = Supplier::all();
+        $shelves    = Shelf::all();
 
-        return view('medicines.create', compact('categories'));
+        return view('medicines.create', compact('categories', 'suppliers', 'shelves'));
     }
 
-
-    public function store(Request $request)
+    /**
+     * Store a newly created medicine.
+     */
+    public function store(StoreMedicineRequest $request)
     {
-        $validated = $request->validate($this->medicineRules());
+        $validated = $request->validated();
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')
+                ->store('medicine-images', 'public');
+        }
 
         Medicine::create($validated);
 
-        return redirect()
-            ->route('medicines.index')
+        return redirect()->route('medicines.index')
             ->with('success', 'Medicine added successfully.');
     }
 
+    /**
+     * Display the specified medicine.
+     */
+    public function show(Medicine $medicine)
+    {
+        return view('medicines.show', compact('medicine'));
+    }
 
+    /**
+     * Show the form for editing the specified medicine.
+     */
     public function edit(Medicine $medicine)
     {
         $categories = Category::all();
+        $suppliers  = Supplier::all();
+        $shelves    = Shelf::all();
 
-        return view('medicines.edit', compact('medicine', 'categories'));
+        return view('medicines.edit', compact('medicine', 'categories', 'suppliers', 'shelves'));
     }
 
-
-    public function update(Request $request, Medicine $medicine)
+    /**
+     * Update the specified medicine.
+     */
+    public function update(UpdateMedicineRequest $request, Medicine $medicine)
     {
-        $validated = $request->validate($this->medicineRules());
+        $validated = $request->validated();
+
+        // Handle image deletion flag
+        if ($request->boolean('delete_image')) {
+            if ($medicine->image && Storage::disk('public')->exists($medicine->image)) {
+                Storage::disk('public')->delete($medicine->image);
+            }
+            $validated['image'] = null;
+        }
+
+        // Handle new image upload (deletes old one)
+        if ($request->hasFile('image')) {
+            if ($medicine->image && Storage::disk('public')->exists($medicine->image)) {
+                Storage::disk('public')->delete($medicine->image);
+            }
+            $validated['image'] = $request->file('image')
+                ->store('medicine-images', 'public');
+        }
 
         $medicine->update($validated);
 
-        return redirect()
-            ->route('medicines.index')
+        return redirect()->route('medicines.index')
             ->with('success', 'Medicine updated successfully.');
     }
 
-
-   public function destroy(Medicine $medicine)
-{
-    $medicine->delete();
-
-    return redirect()
-        ->route('medicines.index')
-        ->with('success','Medicine deleted successfully');
-}
-
-    private function medicineRules(): array
+    /**
+     * Delete the specified medicine.
+     */
+    public function destroy(Medicine $medicine)
     {
-        return [
-            'name' => 'required|string|max:255',
-            'generic_name' => 'nullable|string|max:255',
-            'batch_number' => 'nullable|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'quantity' => 'required|integer|min:0',
-            'unit_price' => 'required|numeric|min:0',
-            'reorder_level' => 'required|integer|min:0',
-            'expiry_date' => 'nullable|date',
-        ];
+        if ($medicine->image && Storage::disk('public')->exists($medicine->image)) {
+            Storage::disk('public')->delete($medicine->image);
+        }
+
+        $medicine->delete();
+
+        return redirect()->route('medicines.index')
+            ->with('success', 'Medicine deleted successfully');
+    }
+
+    /**
+     * Generate a barcode label for the specified medicine.
+     */
+    public function barcodeLabel(Medicine $medicine)
+    {
+        return view('medicines.barcode-label', compact('medicine'));
     }
 }

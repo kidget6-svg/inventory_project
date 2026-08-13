@@ -448,4 +448,43 @@ class PurchaseOrderController extends Controller
 
         return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
     }
+    /**
+     * Purchasing history - completed/delivered purchase orders.
+     */
+    public function history(Request $request)
+    {
+        $query = PurchaseOrder::with('supplier');
+
+        if ($request->filled('status')) {
+            $statuses = is_array($request->input('status'))
+                ? $request->input('status')
+                : [$request->input('status')];
+            $query->whereIn('status', $statuses);
+        }
+
+        if (! $request->filled('status')) {
+            $query->whereIn('status', ['completed', 'delivered']);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->input('date_from'));
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->input('date_to'));
+        }
+
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->input('supplier_id'));
+        }
+
+        if ($request->filled('medicine_id')) {
+            $query->whereHas('items', function ($q) use ($request) {
+                $q->where('medicine_id', $request->input('medicine_id'));
+            });
+        }
+
+        return response()->json($query->latest()->paginate(15));
+    }
+
 }

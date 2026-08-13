@@ -1,85 +1,94 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-    LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
-    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
+import {
+    LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign,
+    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users,
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText
+    ShoppingBag, FileText, ClipboardList, History, Send, PackageCheck
 } from 'lucide-react';
 
-const adminMenu = [
+/**
+ * Centralised, permission-driven sidebar menu definition.
+ *
+ * Each item declares the permission(s) required to see it.  The
+ * SidebarLayout component filters this list at render-time using
+ * the `can()` / `canAny()` helpers from AuthContext.  Because the
+ * Admin role holds the wildcard "*" permission, all items are
+ * automatically visible to admins.
+ *
+ * `section` entries act as visual dividers.
+ * `permission`    — user must have this permission (any-of).
+ * `permissions`   — user must have ANY of these permissions.
+ * If neither is supplied the item is always visible to authenticated users.
+ */
+const menuItems = [
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { section: 'Product Management' },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories', icon: FolderTree },
-    { to: '/suppliers', label: 'Suppliers', icon: Truck },
-    { section: 'Administration' },
-    { to: '/users', label: 'Users', icon: Users },
-    { section: 'Operations' },
-    { to: '/inventory', label: 'Inventory', icon: Package },
-    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    { section: 'Reports' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
-    { to: '/reports', label: 'Reports', icon: BarChart3 },
-    { to: '/sales-history', label: 'Sales History', icon: FileText },
-];
 
-const pharmacistMenu = [
-    { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    // ── Purchasing Staff ──────────────────────────────────────────
+    { section: 'Purchasing' },
+    { to: '/suppliers', label: 'Suppliers', icon: Truck, permissions: ['suppliers.view', 'suppliers.manage'] },
+    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase_orders.view', 'purchase_orders.manage'] },
+    { to: '/purchase-orders/history', label: 'Purchasing History', icon: History, permission: 'purchasing_history.view' },
+
+    // ── Medicine Management (Pharmacist / Admin) ──────────────────
+    { section: 'Medicine Management' },
+    { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view', 'medicines.manage'] },
+    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail_products.view', 'retail_products.manage'] },
+    { to: '/categories', label: 'Categories', icon: FolderTree, permissions: ['categories.view', 'categories.manage'] },
+
+    // Inventory & Stock (Pharmacist / Admin)
+    { section: 'Inventory & Stock' },
+    { to: '/inventory', label: 'Stock Inventory', icon: Package, permissions: ['inventory.view', 'stock_movements.manage'] },
+    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['stock_movements.view', 'stock_movements.manage'] },
+    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle, permission: 'low_stock.view' },
+
+    // Sales Queue (Pharmacist)
     { section: 'Sales Queue' },
-    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
-    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag },
-    { section: 'Inventory' },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories', icon: FolderTree },
-    { to: '/inventory', label: 'Inventory', icon: Package },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    { section: 'Alerts' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
-    { section: 'Reports' },
-    { to: '/reports', label: 'Reports', icon: BarChart3 },
-];
+    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permission: 'prescription_sales.dispatch' },
+    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permission: 'prescription_sales.dispatch' },
 
-const cashierMenu = [
-    { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    // Point of Sale (Cashier)
     { section: 'Point of Sale' },
-    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText },
-    { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/sales-history', label: 'Sales History', icon: FileText },
+    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permission: 'prescription_sales.checkout' },
+    { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag, permission: 'retail_sales.manage' },
+
+    // Administration (Admin)
+    { section: 'Administration' },
+    { to: '/users', label: 'Users', icon: Users, permission: 'users.manage' },
+
+    // Reports & History
+    { section: 'Reports & History' },
+    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales.history', 'sales.view'] },
+    { to: '/reports', label: 'Reports', icon: BarChart3, permission: 'reports.view' },
 ];
 
-const menuByRole = { 
-    admin: adminMenu, 
-    pharmacist: pharmacistMenu, 
-    cashier: cashierMenu 
-};
-
-function getMenu(role) {
-    return menuByRole[role] || cashierMenu;
-}
-
+// Role badge colour map (kept for the account menu dropdown)
 const roleBadgeStyle = {
     admin: 'bg-sky-100 text-sky-700',
     pharmacist: 'bg-emerald-100 text-emerald-700',
     cashier: 'bg-amber-100 text-amber-700',
+    purchasing_staff: 'bg-indigo-100 text-indigo-700',
 };
 
+function getVisibleMenu(can, canAny) {
+    return menuItems.filter((item) => {
+        if (item.section) return true; // always show section headers
+        if (item.permission) return can(item.permission);
+        if (item.permissions) return canAny(item.permissions);
+        return true; // always-visible items (e.g. Dashboard)
+    });
+}
+
 export default function SidebarLayout({ children, pageTitle }) {
-    const { user, logout } = useAuth();
+    const { user, logout, can, canAny } = useAuth();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const accountMenuRef = useRef(null);
-    const menu = getMenu(user?.role);
+    const menu = getVisibleMenu(can, canAny);
 
     const handleLogout = async () => {
         await logout();
@@ -144,7 +153,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                             collapsed ? (
                                 <div key={`sec-${i}`} className="mx-3 mt-4 mb-1.5 border-t border-sky-200" />
                             ) : (
-                                <div key={`sec-${i}`} className="px-5 pt-4 pb-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+                                <div key={`sec-${i}`} className="px-5 pt-4 pb-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                                     {item.section}
                                 </div>
                             )
@@ -172,7 +181,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                 </nav>
             </aside>
 
-            {/* Main Content */}
+            {/* ── Main Content (sibling of aside) ── */}
             <main className={`flex-1 ${mainMargin} min-h-screen transition-all duration-300`}>
                 <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-sky-200/60 px-8 py-4 flex items-center justify-between">
                     <h2 className="text-xl font-bold text-gray-900 tracking-tight">{pageTitle || 'Dashboard'}</h2>
@@ -233,9 +242,9 @@ export default function SidebarLayout({ children, pageTitle }) {
             </main>
 
             {sidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" 
-                    onClick={() => setSidebarOpen(false)} 
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
+                    onClick={() => setSidebarOpen(false)}
                 />
             )}
         </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Save, X } from 'lucide-react';
 
 const fields = [
@@ -15,6 +16,9 @@ const fields = [
 export default function SupplierEdit() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { can, loading: authLoading } = useAuth();
+    const canManage = can('suppliers.manage');
+
     const [form, setForm] = useState({
         name: '',
         contact_person: '',
@@ -26,18 +30,28 @@ export default function SupplierEdit() {
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    // Redirect if user lacks permission
     useEffect(() => {
-        api.get(`/suppliers/${id}`)
-            .then(r => setForm({
-                name: r.data.name,
-                contact_person: r.data.contact_person || '',
-                phone: r.data.phone || '',
-                email: r.data.email || '',
-                address: r.data.address || '',
-            }))
-            .catch(() => setError('Failed to load supplier'))
-            .finally(() => setLoading(false));
-    }, [id]);
+        if (!authLoading && !canManage) {
+            window.showToast('You do not have permission to edit suppliers', 'error');
+            navigate('/suppliers');
+        }
+    }, [authLoading, canManage, navigate]);
+
+    useEffect(() => {
+        if (canManage) {
+            api.get(`/suppliers/${id}`)
+                .then(r => setForm({
+                    name: r.data.name,
+                    contact_person: r.data.contact_person || '',
+                    phone: r.data.phone || '',
+                    email: r.data.email || '',
+                    address: r.data.address || '',
+                }))
+                .catch(() => setError('Failed to load supplier'))
+                .finally(() => setLoading(false));
+        }
+    }, [id, canManage]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -57,6 +71,7 @@ export default function SupplierEdit() {
         }
     };
 
+    if (authLoading || !canManage) return <LoadingSpinner text="Checking permissions..." />;
     if (loading) return <LoadingSpinner text="Loading supplier..." />;
 
     return (

@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/Api/AuthController.php
 
 namespace App\Http\Controllers\Api;
 
@@ -97,8 +96,23 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'status' => $user->status,
+                'permissions' => $user->getAllPermissions(),
             ],
             'role' => $user->role,
+            'permissions' => $user->getAllPermissions(),
+        ]);
+    }
+
+    /**
+     * Return the authenticated user's permissions and role.
+     */
+    public function permissions(Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'role' => $user->role,
+            'permissions' => $user->getAllPermissions(),
         ]);
     }
 
@@ -112,15 +126,21 @@ class AuthController extends Controller
             ]);
         }
 
+        // Self-registration is restricted to pharmacists and cashiers only.
+        // Admin and purchasing_staff accounts must be created by an admin
+        // via the admin user-management endpoint.
         $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|string|email|max:255|unique:users',
             'password'   => 'required|string|min:8|confirmed',
-            'role'       => 'required|in:admin,pharmacist,cashier',
+            'role'       => 'required|in:pharmacist,cashier',
         ]);
 
-        $status = (Auth::check() && Auth::user()?->role === 'admin') ? User::STATUS_APPROVED : 'pending';
+        // Only an authenticated admin can create approved accounts;
+        // public self-registration always starts with "pending" status.
+        $actingUser = $request->user();
+        $status = ($actingUser && $actingUser->role === 'admin') ? User::STATUS_APPROVED : User::STATUS_PENDING;
 
         $user = User::create([
             'name'       => $request->first_name . ' ' . $request->last_name,
@@ -137,6 +157,7 @@ class AuthController extends Controller
             'user'    => $user
         ], 201);
     }
+
     public function logout(Request $request)
     {
         if ($request->user()) {
@@ -147,6 +168,14 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+
+        // Include permissions so the frontend can build its menu without an
+        // extra round-trip (login already returns them, but /user is used
+        // by the auth-bootstrapping flow).
+        $data = $user->toArray();
+        $data['permissions'] = $user->getAllPermissions();
+
+        return response()->json($data);
     }
 }

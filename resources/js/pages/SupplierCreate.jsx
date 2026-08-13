@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../axios';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Save, X } from 'lucide-react';
 
 const fields = [
@@ -13,6 +15,9 @@ const fields = [
 
 export default function SupplierCreate() {
     const navigate = useNavigate();
+    const { can, loading: authLoading } = useAuth();
+    const canManage = can('suppliers.manage');
+
     const [form, setForm] = useState({
         name: '',
         contact_person: '',
@@ -22,6 +27,14 @@ export default function SupplierCreate() {
     });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+
+    // Redirect if user lacks permission
+    useEffect(() => {
+        if (!authLoading && !canManage) {
+            window.showToast('You do not have permission to create suppliers', 'error');
+            navigate('/suppliers');
+        }
+    }, [authLoading, canManage, navigate]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -40,6 +53,8 @@ export default function SupplierCreate() {
             setSubmitting(false);
         }
     };
+
+    if (authLoading || !canManage) return <LoadingSpinner text="Checking permissions..." />;
 
     return (
         <div className="space-y-6">

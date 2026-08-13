@@ -1,5 +1,5 @@
 // resources/js/context/AuthContext.jsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../axios';
 
 const AuthContext = createContext(null);
@@ -8,25 +8,33 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchUser = useCallback(async () => {
         const token = localStorage.getItem('token') || localStorage.getItem('access_token');
-        
-        // Skip calling /api/user if no token exists yet
+
         if (!token) {
             setUser(null);
             setLoading(false);
             return;
         }
 
-        api.get('/user')
-            .then(res => setUser(res.data))
-            .catch(() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('access_token');
-                setUser(null);
-            })
-            .finally(() => setLoading(false));
+        try {
+            const res = await api.get('/user');
+            const userData = res.data;
+            // Ensure permissions are always present on the user object
+            userData.permissions = userData.permissions || [];
+            setUser(userData);
+        } catch (err) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
+            setUser(null);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchUser();
+    }, [fetchUser]);
 
     const login = async (email, password) => {
         try {
@@ -38,7 +46,9 @@ export function AuthProvider({ children }) {
                 localStorage.setItem('access_token', token);
             }
 
-            setUser(response.data.user || response.data);
+            const userData = response.data.user || response.data;
+            userData.permissions = userData.permissions || response.data.permissions || [];
+            setUser(userData);
             return response.data;
         } catch (error) {
             console.error('Login error:', error.response?.data || error.message);
@@ -48,10 +58,10 @@ export function AuthProvider({ children }) {
 
     const register = async (data) => {
         try {
-            const config = data instanceof FormData 
-                ? { headers: { 'Content-Type': undefined } } 
+            const config = data instanceof FormData
+                ? { headers: { 'Content-Type': undefined } }
                 : {};
-                
+
             const response = await api.post('/register', data, config);
             return response.data;
         } catch (error) {
@@ -72,8 +82,50 @@ export function AuthProvider({ children }) {
         }
     };
 
+    // ─────────────────────────────────────────────────────────────
+    // Permission helpers — available throughout the React app.
+    // These provide *UI-level* permission checks (hiding buttons,
+    // menu items, etc.).  Backend enforcement is done via Laravel
+    // middleware, which cannot be bypassed.
+    // ─────────────────────────────────────────────────────────────
+
+    const permissions = user?.permissions || [];
+
+    /** Check if the user has a single specific permission. */
+    const can = useCallback((permission) => {
+        if (!permissions.length) return false;
+        return permissions.includes(permission) || permissions.includes('*');
+    }, [permissions]);
+
+    /** Check if the user has ANY of the given permissions. */
+    const canAny = useCallback((perms) => {
+        if (!permissions.length || !perms) return false;
+        if (permissions.includes('*')) return true;
+        return perms.some(p => permissions.includes(p));
+    }, [permissions]);
+
+    /** Check if the user has ALL of the given permissions. */
+    const canAll = useCallback((perms) => {
+        if (!permissions.length || !perms) return false;
+        if (permissions.includes('*')) return true;
+        return perms.every(p => permissions.includes(p));
+    }, [permissions]);
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider
+            value={{
+                user,
+                loading,
+                login,
+                register,
+                logout,
+                permissions,
+                can,
+                canAny,
+                canAll,
+                refetchUser: fetchUser,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );
@@ -85,4 +137,10 @@ export const useAuth = () => {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
+};
+
+/** Convenience hook for permission checks in any component. */
+export const usePermission = () => {
+    const { can, canAny, canAll, permissions } = useAuth();
+    return { can, canAny, canAll, permissions };
 };

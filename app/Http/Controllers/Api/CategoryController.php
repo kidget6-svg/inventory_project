@@ -3,54 +3,77 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
+    /**
+     * Display a paginated list of categories with medicine counts.
+     */
     public function index(Request $request)
     {
         $query = Category::withCount('medicines');
 
         if ($request->has('page') || $request->has('per_page')) {
-            return response()->json($query->paginate((int) $request->input('per_page', 10)));
+            return response()->json(
+                $query->orderBy('name')->paginate((int) $request->input('per_page', 10))
+            );
         }
 
-        return response()->json($query->get());
+        return response()->json($query->orderBy('name')->get());
     }
 
-    public function store(Request $request)
+    /**
+     * Store a newly created category.
+     */
+    public function store(StoreCategoryRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'shelf_location' => 'nullable|string|max:255',
-        ]);
+        $category = Category::create($request->validated());
 
-        $category = Category::create($validated);
         return response()->json($category->loadCount('medicines'), 201);
     }
 
+    /**
+     * Display the specified category.
+     */
     public function show(Category $category)
     {
         return response()->json($category->loadCount('medicines'));
     }
 
-    public function update(Request $request, Category $category)
+    /**
+     * Update the specified category.
+     */
+    public function update(UpdateCategoryRequest $request, Category $category)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'shelf_location' => 'nullable|string|max:255',
-        ]);
+        $category->update($request->validated());
 
-        $category->update($validated);
         return response()->json($category->loadCount('medicines'));
     }
 
+    /**
+     * Delete the specified category.
+     *
+     * Category deletion is prevented when the category is already
+     * associated with medicines to avoid orphaned foreign keys.
+     */
     public function destroy(Category $category)
     {
+        if ($category->isAssociatedWithMedicines()) {
+            return response()->json([
+                'message' => 'Cannot delete the category "' . $category->name .
+                             '" because it is associated with ' .
+                             $category->medicines()->count() . ' medicine(s). ' .
+                             'Reassign or delete the associated medicines first.',
+                'error'   => 'category_associated_with_medicines',
+            ], 422);
+        }
+
         $category->delete();
+
         return response()->json(['message' => 'Category deleted successfully']);
     }
 }
