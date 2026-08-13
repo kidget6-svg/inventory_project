@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         // Order matters - seed parent tables first
         $this->call([
+            RolesAndPermissionsSeeder::class, // Roles & permissions first (needed by users)
             UserSeeder::class,          // Users first
             CategorySeeder::class,      // Categories
             SupplierSeeder::class,      // Suppliers
