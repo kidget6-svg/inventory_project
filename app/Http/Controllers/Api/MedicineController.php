@@ -7,7 +7,8 @@ use App\Models\Medicine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class MedicineController extends Controller
 {
@@ -17,9 +18,8 @@ class MedicineController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Medicine::with('category');
+            $query = Medicine::with(['category', 'supplier']);
 
-            // Handle optional search query
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
@@ -37,33 +37,34 @@ class MedicineController extends Controller
                 $query->where('supplier_id', $request->supplier_id);
             }
 
+            if ($request->filled('shelf_id')) {
+                $query->where('shelf_id', $request->shelf_id);
+            }
+
             if ($request->filled('status')) {
                 $query->where('status', $request->status);
             }
 
             $perPage = $request->get('per_page');
+            
+            // If requesting all records
             if ($perPage === 'all' || $perPage == -1) {
                 $allMedicines = $query->latest()->get();
-                return response()->json([
-                    'success'   => true,
-                    'data'      => $allMedicines,
-                    'medicines' => $allMedicines,
-                ], 200);
+                return response()->json($allMedicines);
             }
 
+            // Paginated response
             $medicines = $query->latest()->paginate($perPage ?? 15);
 
             return response()->json([
-                'success'   => true,
-                'data'      => $medicines->items(),
-                'medicines' => $medicines,
-                'meta'      => [
+                'data' => $medicines->items(),
+                'meta' => [
                     'current_page' => $medicines->currentPage(),
-                    'last_page'    => $medicines->lastPage(),
-                    'per_page'     => $medicines->perPage(),
-                    'total'        => $medicines->total(),
+                    'last_page' => $medicines->lastPage(),
+                    'per_page' => $medicines->perPage(),
+                    'total' => $medicines->total(),
                 ]
-            ], 200);
+            ]);
 
         } catch (\Throwable $e) {
             return response()->json([
@@ -71,34 +72,11 @@ class MedicineController extends Controller
                 'message' => 'Query Error: ' . $e->getMessage()
             ], 500);
         }
-
-
-        // Filter by category
-        if ($categoryId = $request->input('category_id')) {
-            $query->where('category_id', $categoryId);
-        }
-
-        // Filter by supplier
-        if ($supplierId = $request->input('supplier_id')) {
-            $query->where('supplier_id', $supplierId);
-        }
-
-        // Filter by shelf
-        if ($shelfId = $request->input('shelf_id')) {
-            $query->where('shelf_id', $shelfId);
-        }
-
-        // Filter by status
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        $perPage = (int) $request->input('per_page', 10);
-        $medicines = $query->latest()->paginate($perPage);
-
-        return response()->json($medicines);
     }
 
+    /**
+     * POST /api/medicines
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -125,24 +103,50 @@ class MedicineController extends Controller
         $validated = $this->handleImageUpload($validated, null);
 
         $medicine = Medicine::create($validated);
-        return response()->json($medicine->load(['category', 'supplier', 'shelf']), 201);
+        return response()->json($medicine->load(['category', 'supplier']), 201);
     }
 
+    /**
+     * GET /api/medicines/{medicine}
+     */
     public function show(Medicine $medicine)
     {
-        return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+        return response()->json($medicine->load(['category', 'supplier']));
     }
 
+    /**
+     * GET /api/medicines/low-stock
+     */
     public function getLowStock()
     {
-        $medicines = Medicine::with(['category', 'supplier'])
-            ->whereColumn('quantity', '<=', 'reorder_level')
-            ->orderBy('quantity')
-            ->paginate(10);
+        try {
+            $medicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+                ->with('category')
+                ->orderBy('quantity')
+                ->paginate(10);
 
-        return response()->json($medicines);
+            return response()->json([
+                'success' => true,
+                'data'    => $medicines->items(),
+                'meta'    => [
+                    'current_page' => $medicines->currentPage(),
+                    'last_page'    => $medicines->lastPage(),
+                    'per_page'     => $medicines->perPage(),
+                    'total'        => $medicines->total(),
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
+    /**
+     * PUT /api/medicines/{medicine}
+     */
     public function update(Request $request, Medicine $medicine)
     {
         $validated = $request->validate([
@@ -168,8 +172,7 @@ class MedicineController extends Controller
 
         $validated = $this->handleImageUpload($validated, $medicine);
         $medicine->update($validated);
-        return response()->json($medicine->load(['category', 'supplier', 'shelf']));
-
+        return response()->json($medicine->load(['category', 'supplier']));
     }
 
     /**
@@ -190,176 +193,6 @@ class MedicineController extends Controller
         $medicine->update(['status' => $validated['status']]);
 
         return response()->json($medicine->fresh());
-    }
-
-    /**
-     * GET /api/medicines/low-stock
-     */
-    public function getLowStock()
-    {
-        try {
-            $medicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
-                ->with('category')
-                ->orderBy('quantity')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data'    => $medicines
-            ], 200);
-
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * GET /api/medicines/{id}
-     */
-    public function show($id)
-    {
-        try {
-            $medicine = Medicine::with(['category', 'supplier'])->find($id);
-
-            if (!$medicine) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Medicine not found'
-                ], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data'    => $medicine
-            ], 200);
-
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * POST /api/medicines
-     */
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name'           => 'required|string|max:255',
-            'generic_name'   => 'nullable|string|max:255',
-            'category_id'    => 'nullable|exists:categories,id',
-            'supplier_id'    => 'nullable|exists:suppliers,id',
-            'quantity'       => 'required|integer|min:0',
-            'selling_price'  => 'required|numeric|min:0',
-            'unit_price'     => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'reorder_level'  => 'nullable|integer|min:0',
-            'expiry_date'    => 'nullable|date',
-            'status'         => 'nullable|in:active,inactive,expired,discontinued',
-            'shelf_location' => 'nullable|string|max:100',
-            'batch_number'   => 'nullable|string|max:100',
-            'barcode'        => 'nullable|string|max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Failed',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $data = $validator->validated();
-            $data['status'] = $data['status'] ?? 'active';
-
-            if ($request->hasFile('image')) {
-                $path = $request->file('image')->store('medicine-images', 'public');
-                $data['image'] = $path;
-            }
-
-            $medicine = Medicine::create($data);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Medicine created successfully',
-                'data'    => $medicine
-            ], 201);
-
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Creation Error: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * PUT/POST /api/medicines/{id}
-     */
-    public function update(Request $request, $id)
-    {
-        $medicine = Medicine::find($id);
-
-        if (!$medicine) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Medicine not found'
-            ], 404);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'name'           => 'required|string|max:255',
-            'generic_name'   => 'nullable|string|max:255',
-            'category_id'    => 'nullable|exists:categories,id',
-            'supplier_id'    => 'nullable|exists:suppliers,id',
-            'quantity'       => 'required|integer|min:0',
-            'selling_price'  => 'required|numeric|min:0',
-            'unit_price'     => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'reorder_level'  => 'nullable|integer|min:0',
-            'expiry_date'    => 'nullable|date',
-            'status'         => 'nullable|in:active,inactive,expired,discontinued',
-            'shelf_location' => 'nullable|string|max:100',
-            'batch_number'   => 'nullable|string|max:100',
-            'barcode'        => 'nullable|string|max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation Failed',
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $data = $validator->validated();
-
-            if ($request->hasFile('image')) {
-                $path = $request->file('image')->store('medicine-images', 'public');
-                $data['image'] = $path;
-            }
-
-            $medicine->update($data);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Medicine updated successfully',
-                'data'    => $medicine->fresh('category')
-            ], 200);
-
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Update Error: ' . $e->getMessage()
-            ], 500);
-        }
     }
 
     /**
@@ -402,5 +235,26 @@ class MedicineController extends Controller
                 'message' => 'Failed to delete medicine: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Store an uploaded medicine image on the public disk.
+     * Deletes any previously stored image when updating.
+     */
+    protected function handleImageUpload(array $validated, ?Medicine $medicine = null): array
+    {
+        $request = request();
+
+        if (! $request->hasFile('image')) {
+            return $validated;
+        }
+
+        if ($medicine && $medicine->image && Storage::disk('public')->exists($medicine->image)) {
+            Storage::disk('public')->delete($medicine->image);
+        }
+
+        $path = $request->file('image')->store('medicine-images', 'public');
+
+        return array_merge($validated, ['image' => $path]);
     }
 }

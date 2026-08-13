@@ -28,6 +28,7 @@ class Medicine extends Model
         'expiry_date',
         'status',
         'shelf_location',
+        'shelf_id',
         'batch_number',
         'barcode',
     ];
@@ -50,6 +51,11 @@ class Medicine extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function shelf()
+    {
+        return $this->belongsTo(Shelf::class);
     }
 
     public function purchaseOrderItems()

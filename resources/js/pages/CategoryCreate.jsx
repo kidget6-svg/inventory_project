@@ -11,6 +11,7 @@ export default function CategoryCreate() {
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [shelves, setShelves] = useState([]);
 
     // Check if user is admin
     useEffect(() => {
@@ -32,6 +33,19 @@ export default function CategoryCreate() {
         };
         checkAdmin();
     }, [navigate]);
+
+    // Load shelves for dropdown
+    useEffect(() => {
+        if (!isAdmin) return;
+        api.get('/shelves')
+            .then(r => {
+                const data = r.data;
+                setShelves(Array.isArray(data) ? data : []);
+            })
+            .catch(() => {
+                window.showToast('Failed to load shelves', 'error');
+            });
+    }, [isAdmin]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -83,13 +97,19 @@ export default function CategoryCreate() {
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
-                        <input
+                        <select
                             name="shelf_location"
                             value={form.shelf_location}
                             onChange={handleChange}
-                            placeholder="e.g. A-2-3"
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                        />
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none bg-white"
+                        >
+                            <option value="">Select Shelf</option>
+                            {shelves.map(shelf => (
+                                <option key={shelf.id} value={shelf.shelf_location}>
+                                    {shelf.name} ({shelf.shelf_location})
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>

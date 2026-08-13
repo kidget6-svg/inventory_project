@@ -45,60 +45,104 @@ export default function Inventory() {
         getUser();
     }, []);
 
-    // --- FIX: Add the missing handleFilterChange function ---
+    // Handle filter changes
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
 
-    const parseMedicines = (r) => {
-        if (Array.isArray(r.data.data)) return r.data.data;
-        if (Array.isArray(r.data.medicines?.data)) return r.data.medicines.data;
-        if (Array.isArray(r.data.data?.data)) return r.data.data.data;
-        if (Array.isArray(r.data)) return r.data;
-        return [];
-    };
-
+    // Load medicines with proper response handling
     const loadMedicines = () => {
-        api.get('/medicines', { params: { category_id: filters.category_id || undefined, per_page: 1000 } })
-            .then(r => setMedicines(parseMedicines(r)))
-            .catch(err => console.error(err));
+        return api.get('/medicines', { 
+            params: { 
+                category_id: filters.category_id || undefined, 
+                per_page: 1000 
+            } 
+        })
+        .then(r => {
+            let medicinesData = [];
+            if (Array.isArray(r.data)) {
+                medicinesData = r.data;
+            } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
+                medicinesData = r.data.data;
+            } else if (r.data && r.data.medicines && Array.isArray(r.data.medicines)) {
+                medicinesData = r.data.medicines;
+            } else {
+                console.warn('Unexpected medicines response format:', r.data);
+            }
+            setMedicines(medicinesData);
+        })
+        .catch(err => console.error('Error loading medicines:', err));
     };
 
+    // Load movements with proper response handling
     const loadMovements = () => {
-        api.get('/stock-movements', { params: { page: movementsPage } })
+        return api.get('/stock-movements', { params: { page: movementsPage } })
             .then(r => {
-                setMovements(r.data.movements?.data || r.data.movements || []);
-                setMovementsMeta(r.data.movements || null);
+                let movementsData = [];
+                let metaData = null;
+                
+                if (r.data && r.data.movements && r.data.movements.data) {
+                    movementsData = r.data.movements.data;
+                    metaData = r.data.movements;
+                } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
+                    movementsData = r.data.data;
+                    metaData = r.data.meta || null;
+                } else if (Array.isArray(r.data)) {
+                    movementsData = r.data;
+                } else {
+                    console.warn('Unexpected movements response format:', r.data);
+                }
+                
+                setMovements(movementsData);
+                setMovementsMeta(metaData);
             })
-            .catch(err => console.error(err));
+            .catch(err => console.error('Error loading movements:', err));
     };
 
+    // Load categories with proper response handling - FIXED
     const loadCategories = () => {
-        api.get('/categories')
-            .then(r => setCategories(r.data))
-            .catch(err => console.error(err));
+        return api.get('/categories', { params: { per_page: -1 } })
+            .then(r => {
+                let categoriesData = [];
+                
+                // Handle different response formats
+                if (Array.isArray(r.data)) {
+                    categoriesData = r.data;
+                } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
+                    categoriesData = r.data.data;
+                } else if (r.data && r.data.categories && Array.isArray(r.data.categories)) {
+                    categoriesData = r.data.categories;
+                } else {
+                    console.warn('Unexpected categories response format:', r.data);
+                }
+                
+                setCategories(categoriesData);
+            })
+            .catch(err => {
+                console.error('Error loading categories:', err);
+                setCategories([]);
+            });
     };
 
+    // Load all data
     useEffect(() => {
         setLoading(true);
         Promise.all([
-            api.get('/medicines', { params: { category_id: filters.category_id || undefined, per_page: 1000 } })
-                .then(r => setMedicines(parseMedicines(r)))
-                .catch(err => console.error(err)),
-            api.get('/stock-movements', { params: { page: movementsPage } })
-                .then(r => { setMovements(r.data.movements?.data || r.data.movements || []); setMovementsMeta(r.data.movements || null); })
-                .catch(err => console.error(err)),
-            api.get('/categories')
-                .then(r => setCategories(r.data))
-                .catch(err => console.error(err)),
+            loadMedicines(),
+            loadMovements(),
+            loadCategories()
         ]).finally(() => setLoading(false));
-    }, [filters, movementsPage]);
+    }, [filters.category_id]);
 
+    // Reload movements when page changes
     useEffect(() => {
-        if (movementsPage !== 1) loadMovements();
+        if (movementsPage !== 1) {
+            loadMovements();
+        }
     }, [movementsPage]);
 
+    // Reset filters
     const resetFilters = () => setFilters({ search: '', category_id: '' });
 
     // Derived data
@@ -126,6 +170,7 @@ export default function Inventory() {
         return searchMatch;
     });
 
+    // Handle restock
     const handleRestock = async (e) => {
         e.preventDefault();
         if (!restockMedicine || !restockQty || Number(restockQty) < 1) return;
@@ -148,8 +193,8 @@ export default function Inventory() {
             setRestockMedicine(null);
             setRestockQty('');
             setRestockNotes('');
-            loadMedicines();
-            loadMovements();
+            await loadMedicines();
+            await loadMovements();
         } catch (err) {
             window.showToast('Failed to restock medicine', 'error');
         } finally {
@@ -251,7 +296,8 @@ export default function Inventory() {
                             className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none appearance-none"
                         >
                             <option value="">All Categories</option>
-                            {categories.map(c => (
+                            {/* FIXED: Added Array.isArray check */}
+                            {Array.isArray(categories) && categories.map(c => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                         </select>

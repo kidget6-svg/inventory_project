@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\ShelfController;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,22 +60,17 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
 
+        // Shelves Read
+        Route::get('/shelves', [ShelfController::class, 'index']);
+        Route::get('/shelves/{shelf}', [ShelfController::class, 'show']);
+
         // Suppliers Read
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
 
-        // Retail Products Read (pharmacist needs this for Retail & OTC Sales page)
+        // Retail Products Read
         Route::get('/retail-products', [RetailProductController::class, 'index']);
         Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
-    });
-
-    // --------------------------------------------------------------------
-    // Medicines - Read-Only (Admin & Pharmacist only, Cashier excluded)
-    // --------------------------------------------------------------------
-    Route::middleware('role:admin,pharmacist')->group(function () {
-        Route::get('/medicines', [MedicineController::class, 'index']);
-        Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
-        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
     });
 
     // --------------------------------------------------------------------
@@ -85,6 +81,11 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{category}', [CategoryController::class, 'update']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+
+        // Shelves - Create, Update, Delete
+        Route::post('/shelves', [ShelfController::class, 'store']);
+        Route::put('/shelves/{shelf}', [ShelfController::class, 'update']);
+        Route::delete('/shelves/{shelf}', [ShelfController::class, 'destroy']);
 
         // Medicines - Create, Update, Delete
         Route::post('/medicines', [MedicineController::class, 'store']);
@@ -136,7 +137,6 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
     // --------------------------------------------------------------------
     // Sales — Read-Only (Admin, Pharmacist, Cashier)
-    // Admin can view sales data for reports/history but MUST NOT perform sales.
     // --------------------------------------------------------------------
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
         Route::get('/sales', [SaleController::class, 'index']);
@@ -157,7 +157,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     });
 
     // --------------------------------------------------------------------
-    // Sales Operations (Admin, Cashier, Pharmacist)
+    // Sales Operations (Pharmacist Only)
     // --------------------------------------------------------------------
     Route::middleware('role:pharmacist')->group(function () {
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
@@ -174,7 +174,6 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
     // --------------------------------------------------------------------
     // Retail Products — Write (Admin only)
-    // Read routes are already in the shared read-only group above.
     // --------------------------------------------------------------------
     Route::middleware('role:admin')->group(function () {
         Route::post('/retail-products', [RetailProductController::class, 'store']);
