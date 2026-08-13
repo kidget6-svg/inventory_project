@@ -89,7 +89,9 @@ export default function BarChart({
             },
             y: {
                 grid: {
-                    color: 'rgba(226, 232, 240, 0.6)',
+                    color: document.documentElement.classList.contains('dark')
+                        ? 'rgba(75, 85, 99, 0.2)'
+                        : 'rgba(226, 232, 240, 0.6)',
                     drawBorder: false,
                 },
                 ticks: {
@@ -108,7 +110,7 @@ export default function BarChart({
     return (
         <div className="card p-5 h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-600">
+                <h3 className="text-sm font-semibold text-gray-600 dark:text-slate-400">
                     {title}
                 </h3>
             </div>

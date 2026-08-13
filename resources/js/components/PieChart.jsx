@@ -53,14 +53,16 @@ const centerTextPlugin = {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
+        const isDark = document.documentElement.classList.contains('dark');
+
         // Total count — large, bold
         ctx.font = 'bold 32px Arial, sans-serif';
-        ctx.fillStyle = '#1f2937'; // gray-800
+        ctx.fillStyle = isDark ? '#ffffff' : '#1f2937';
         ctx.fillText(total, centerX, centerY - 10);
 
         // Descriptive label — small, italic
         ctx.font = 'italic 13px Arial, sans-serif';
-        ctx.fillStyle = '#6b7280'; // gray-500
+        ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
         ctx.fillText('Total Medicines', centerX, centerY + 22);
 
         ctx.restore();
@@ -141,8 +143,8 @@ export default function PieChart({ labels = [], values = [] }) {
     };
 
     return (
-        <div className="bg-white rounded-[16px] shadow p-6 flex flex-col items-center h-full">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-[16px] shadow p-6 flex flex-col items-center h-full border border-gray-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-white mb-4">
                 Inventory by Category
             </h3>
             <div className="relative w-full flex-1 min-h-[200px] flex items-center justify-center">

@@ -30,14 +30,14 @@ const iconMap = {
 };
 
 const colorClasses = {
-    blue:   { bg: 'bg-blue-50',  border: 'border-blue-500',  text: 'text-blue-500',    icon: 'text-blue-500',  ring: 'ring-blue-200' },
-    green:  { bg: 'bg-green-50', border: 'border-green-500', text: 'text-green-500',   icon: 'text-green-500', ring: 'ring-green-200' },
-    orange: { bg: 'bg-orange-50',border: 'border-orange-500',text: 'text-orange-500',  icon: 'text-orange-500',ring: 'ring-orange-200' },
-    red:    { bg: 'bg-red-50',   border: 'border-red-500',   text: 'text-red-500',     icon: 'text-red-500',   ring: 'ring-red-200' },
-    purple: { bg: 'bg-purple-50',border: 'border-purple-500',text: 'text-purple-500',  icon: 'text-purple-500',ring: 'ring-purple-200' },
-    teal:   { bg: 'bg-teal-50',  border: 'border-teal-500',  text: 'text-teal-500',    icon: 'text-teal-500',  ring: 'ring-teal-200' },
-    indigo: { bg: 'bg-indigo-50',border: 'border-indigo-500',text: 'text-indigo-500',  icon: 'text-indigo-500',ring: 'ring-indigo-200' },
-    yellow: { bg: 'bg-yellow-50',border: 'border-yellow-500',text: 'text-yellow-500',  icon: 'text-yellow-500',ring: 'ring-yellow-200' },
+    blue:   { bg: 'bg-blue-50 dark:bg-blue-950/40',  border: 'border-blue-500',  text: 'text-blue-500',    icon: 'text-blue-500 dark:text-blue-400',  ring: 'ring-blue-200' },
+    green:  { bg: 'bg-green-50 dark:bg-green-950/40', border: 'border-green-500', text: 'text-green-500',   icon: 'text-green-500 dark:text-green-400', ring: 'ring-green-200' },
+    orange: { bg: 'bg-orange-50 dark:bg-orange-950/40',border: 'border-orange-500',text: 'text-orange-500',  icon: 'text-orange-500 dark:text-orange-400',ring: 'ring-orange-200' },
+    red:    { bg: 'bg-red-50 dark:bg-red-950/40',   border: 'border-red-500',   text: 'text-red-500',     icon: 'text-red-500 dark:text-red-400',   ring: 'ring-red-200' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-950/40',border: 'border-purple-500',text: 'text-purple-500',  icon: 'text-purple-500 dark:text-purple-400',ring: 'ring-purple-200' },
+    teal:   { bg: 'bg-teal-50 dark:bg-teal-950/40',  border: 'border-teal-500',  text: 'text-teal-500',    icon: 'text-teal-500 dark:text-teal-400',  ring: 'ring-teal-200' },
+    indigo: { bg: 'bg-indigo-50 dark:bg-indigo-950/40',border: 'border-indigo-500',text: 'text-indigo-500',  icon: 'text-indigo-500 dark:text-indigo-400',ring: 'ring-indigo-200' },
+    yellow: { bg: 'bg-yellow-50 dark:bg-yellow-950/40',border: 'border-yellow-500',text: 'text-yellow-500',  icon: 'text-yellow-500 dark:text-yellow-400',ring: 'ring-yellow-200' },
 };
 
 export default function StatCard({
@@ -56,8 +56,8 @@ export default function StatCard({
         <div
             className={`
                 relative overflow-hidden rounded-[16px]
-                border border-gray-200
-                bg-white
+                border border-gray-200 dark:border-slate-700
+                bg-white dark:bg-slate-800
                 shadow-sm
                 hover:shadow-xl
                 hover:-translate-y-1
@@ -77,11 +77,11 @@ export default function StatCard({
                         {loading ? (
                             <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
-                            <div className="text-4xl font-extrabold text-gray-800">
+                            <div className="text-4xl font-extrabold text-gray-800 dark:text-white">
                                 {value}
                             </div>
                         )}
-                        <p className="mt-1 text-sm text-gray-500 font-medium">
+                        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 font-medium">
                             {label}
                         </p>
                     </div>
@@ -121,7 +121,7 @@ export default function StatCard({
                 )}
 
                 {subValue && (
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-400 dark:text-slate-500">
                         {subValue}
                     </p>
                 )}
@@ -135,8 +135,8 @@ export default function StatCard({
                     top-0 right-0
                     w-24 h-24
                     rounded-full
-                    bg-white
-                    opacity-50
+                    bg-white dark:bg-slate-900
+                    opacity-50 dark:opacity-10
                     blur-2xl
                     translate-x-8
                     -translate-y-8
