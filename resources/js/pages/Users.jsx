@@ -27,21 +27,6 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 
-const roleOptions = [
-    {
-        value: "admin",
-        label: "Admin"
-    },
-    {
-        value: "pharmacist",
-        label: "Pharmacist"
-    },
-    {
-        value: "cashier",
-        label: "Cashier"
-    }
-];
-
 
 export default function Users(){
 
@@ -72,6 +57,8 @@ export default function Users(){
     const [rejectReason, setRejectReason] = useState("");
     const [processingAction, setProcessingAction] = useState(false);
     const [userStats, setUserStats] = useState(null);
+
+    const [roles, setRoles] = useState([]);
 
 
     const [showModal,setShowModal] = useState(false);
@@ -106,6 +93,12 @@ export default function Users(){
     useEffect(()=>{
         fetchUsers();
         fetchUserStats();
+    },[]);
+
+    useEffect(()=>{
+        api.get("/roles")
+            .then(r => setRoles(r.data.roles || []))
+            .catch(() => {});
     },[]);
 
     const handlePageChange = (p) => setPage(p);
@@ -1007,25 +1000,9 @@ All Roles
 </option>
 
 
-<option value="admin">
-
-Admin
-
-</option>
-
-
-<option value="pharmacist">
-
-Pharmacist
-
-</option>
-
-
-<option value="cashier">
-
-Cashier
-
-</option>
+{roles.map(role=>(
+<option key={role.slug} value={role.slug}>{role.name}</option>
+))}
 
 
 
@@ -1354,17 +1331,17 @@ rounded-xl
 
 
 {
-roleOptions.map(role=>(
+roles.map(role=>(
 
 <option
 
-key={role.value}
+key={role.slug}
 
-value={role.value}
+value={role.slug}
 
 >
 
-{role.label}
+{role.name}
 
 </option>
 

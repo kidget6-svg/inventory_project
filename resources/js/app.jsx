@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Users from './pages/Users';
+import RolesPermissions from './pages/RolesPermissions';
 import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
@@ -29,8 +30,8 @@ import Settings from './pages/Settings';
 import ReceiptPage from './pages/ReceiptPage';
 import SalesHistory from './pages/SalesHistory';
 
-function ProtectedRoute({ children, roles, title }) {
-    const { user, loading } = useAuth();
+function ProtectedRoute({ children, permissions, title }) {
+    const { user, loading, hasAnyPermission } = useAuth();
 
     if (loading) {
         return (
@@ -44,7 +45,7 @@ function ProtectedRoute({ children, roles, title }) {
         return <Navigate to="/login" replace />;
     }
 
-    if (roles && !roles.includes(user.role)) {
+    if (permissions && !hasAnyPermission(permissions)) {
         return <Navigate to="/dashboard" replace />;
     }
 
@@ -59,9 +60,9 @@ function DashboardRouter() {
 }
 
 function SalesRedirect() {
-    const { user } = useAuth();
-    if (user?.role === 'pharmacist') return <Navigate to="/prescription-sales" replace />;
-    if (user?.role === 'cashier') return <Navigate to="/retail-sales" replace />;
+    const { hasPermission } = useAuth();
+    if (hasPermission('sales.prescription')) return <Navigate to="/prescription-sales" replace />;
+    if (hasPermission('sales.retail')) return <Navigate to="/retail-sales" replace />;
     return <Navigate to="/dashboard" replace />;
 }
 
@@ -88,9 +89,12 @@ function App() {
                 <ProtectedRoute title="Dashboard"><DashboardRouter /></ProtectedRoute>
             } />
 
-            {/* Admin-only: User management */}
+            {/* Administration: Users & Roles */}
             <Route path="/users" element={
-                <ProtectedRoute roles={['admin']} title="User Management"><Users /></ProtectedRoute>
+                <ProtectedRoute permissions={['users.view']} title="User Management"><Users /></ProtectedRoute>
+            } />
+            <Route path="/roles" element={
+                <ProtectedRoute permissions={['roles.manage']} title="Roles & Permissions"><RolesPermissions /></ProtectedRoute>
             } />
 
             {/* Account pages */}
@@ -103,60 +107,60 @@ function App() {
 
             {/* Product Management & Operations */}
             <Route path="/medicines" element={
-                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Medicines"><Medicines /></ProtectedRoute>
+                <ProtectedRoute permissions={['medicines.view']} title="Medicines"><Medicines /></ProtectedRoute>
             } />
             <Route path="/inventory" element={
-                <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Inventory"><Inventory /></ProtectedRoute>
+                <ProtectedRoute permissions={['inventory.view']} title="Stock Inventory"><Inventory /></ProtectedRoute>
             } />
             <Route path="/categories" element={
-                <ProtectedRoute roles={['admin', 'pharmacist']} title="Medicine Categories"><Categories /></ProtectedRoute>
+                <ProtectedRoute permissions={['categories.view']} title="Medicine Categories"><Categories /></ProtectedRoute>
             } />
             <Route path="/suppliers" element={
-                <ProtectedRoute roles={['admin']} title="Suppliers Directory"><Suppliers /></ProtectedRoute>
+                <ProtectedRoute permissions={['suppliers.view']} title="Suppliers Directory"><Suppliers /></ProtectedRoute>
             } />
             <Route path="/purchase-orders" element={
-                <ProtectedRoute roles={['admin']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
+                <ProtectedRoute permissions={['purchase-orders.view']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
             } />
             <Route path="/retail-products" element={
-                <ProtectedRoute roles={['admin', 'pharmacist']} title="Retail & OTC Products"><RetailProducts /></ProtectedRoute>
+                <ProtectedRoute permissions={['retail-products.view']} title="Retail & OTC Products"><RetailProducts /></ProtectedRoute>
             } />
 
             {/* Sales Routes */}
             <Route path="/prescription-sales" element={
-                <ProtectedRoute roles={['pharmacist']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.prescription']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
             } />
             <Route path="/prescription-sales-cashier" element={
-                <ProtectedRoute roles={['cashier']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.checkout']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
             } />
             <Route path="/retail-otc-sales" element={
-                <ProtectedRoute roles={['pharmacist']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.retail']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
             } />
             <Route path="/retail-sales" element={
-                <ProtectedRoute roles={['cashier']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.retail']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
             } />
 
-            {/* Role-based redirect for legacy /sales path */}
+            {/* Permission-based redirect for legacy /sales path */}
             <Route path="/sales" element={<ProtectedRoute><SalesRedirect /></ProtectedRoute>} />
 
             {/* Receipt Page */}
             <Route path="/receipt/:id" element={
-                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Receipt"><ReceiptPage /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.receipt']} title="Receipt"><ReceiptPage /></ProtectedRoute>
             } />
 
             {/* Sales History */}
             <Route path="/sales-history" element={
-                <ProtectedRoute roles={['admin', 'cashier']} title="Sales History"><SalesHistory /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.view']} title="Sales History"><SalesHistory /></ProtectedRoute>
             } />
 
             {/* Reports & Tracking */}
             <Route path="/stock-movements" element={
-                <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Movements"><StockMovements /></ProtectedRoute>
+                <ProtectedRoute permissions={['inventory.view']} title="Stock Movements"><StockMovements /></ProtectedRoute>
             } />
             <Route path="/low-stock" element={
-                <ProtectedRoute roles={['admin', 'pharmacist']} title="Low Stock Alerts"><LowStock /></ProtectedRoute>
+                <ProtectedRoute permissions={['lowstock.view']} title="Low Stock Alerts"><LowStock /></ProtectedRoute>
             } />
             <Route path="/reports" element={
-                <ProtectedRoute roles={['admin', 'pharmacist']} title="System Reports"><Reports /></ProtectedRoute>
+                <ProtectedRoute permissions={['reports.view']} title="System Reports"><Reports /></ProtectedRoute>
             } />
 
             {/* Fallback Catch-all Route */}

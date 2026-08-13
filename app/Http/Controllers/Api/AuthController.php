@@ -4,11 +4,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -97,6 +99,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'status' => $user->status,
+                'permissions' => $user->permissions,
             ],
             'role' => $user->role,
         ]);
@@ -117,10 +120,12 @@ class AuthController extends Controller
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|string|email|max:255|unique:users',
             'password'   => 'required|string|min:8|confirmed',
-            'role'       => 'required|in:admin,pharmacist,cashier',
+            'role'       => ['required', Rule::exists('roles', 'slug')],
         ]);
 
         $status = (Auth::check() && Auth::user()?->role === 'admin') ? User::STATUS_APPROVED : 'pending';
+
+        $role = Role::where('slug', $request->role)->first();
 
         $user = User::create([
             'name'       => $request->first_name . ' ' . $request->last_name,
@@ -129,6 +134,7 @@ class AuthController extends Controller
             'email'      => $request->email,
             'password'   => Hash::make($request->password),
             'role'       => $request->role,
+            'role_id'    => $role?->id,
             'status'     => $status,
         ]);
 

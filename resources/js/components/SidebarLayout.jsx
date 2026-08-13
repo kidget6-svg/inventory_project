@@ -5,65 +5,53 @@ import {
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
     ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText
+    ShoppingBag, FileText, ShieldCheck
 } from 'lucide-react';
 
-const adminMenu = [
-    { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { section: 'Product Management' },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories', icon: FolderTree },
-    { to: '/suppliers', label: 'Suppliers', icon: Truck },
-    { section: 'Administration' },
-    { to: '/users', label: 'Users', icon: Users },
-    { section: 'Operations' },
-    { to: '/inventory', label: 'Inventory', icon: Package },
-    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    { section: 'Reports' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
-    { to: '/reports', label: 'Reports', icon: BarChart3 },
-    { to: '/sales-history', label: 'Sales History', icon: FileText },
-];
-
-const pharmacistMenu = [
-    { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { section: 'Sales Queue' },
-    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
-    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag },
-    { section: 'Inventory' },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories', icon: FolderTree },
-    { to: '/inventory', label: 'Inventory', icon: Package },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    { section: 'Alerts' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
-    { section: 'Reports' },
-    { to: '/reports', label: 'Reports', icon: BarChart3 },
-];
-
-const cashierMenu = [
+// Single permission-driven menu. Admin sees every entry automatically
+// because admins hold every permission.
+const menuItems = [
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { section: 'Point of Sale' },
-    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText },
-    { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/sales-history', label: 'Sales History', icon: FileText },
+    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['sales.prescription'] },
+    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['sales.checkout'] },
+    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['sales.retail'] },
+    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['sales.retail'] },
+    { section: 'Product Management' },
+    { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view'] },
+    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail-products.view'] },
+    { to: '/categories', label: 'Categories', icon: FolderTree, permissions: ['categories.view'] },
+    { to: '/suppliers', label: 'Suppliers', icon: Truck, permissions: ['suppliers.view'] },
+    { section: 'Inventory & Purchasing' },
+    { to: '/inventory', label: 'Inventory', icon: Package, permissions: ['inventory.view'] },
+    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
+    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['inventory.view'] },
+    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle, permissions: ['lowstock.view'] },
+    { section: 'Reports' },
+    { to: '/reports', label: 'Reports', icon: BarChart3, permissions: ['reports.view'] },
+    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales.view'] },
+    { section: 'Administration' },
+    { to: '/users', label: 'Users', icon: Users, permissions: ['users.view'] },
+    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.manage'] },
 ];
 
-const menuByRole = { 
-    admin: adminMenu, 
-    pharmacist: pharmacistMenu, 
-    cashier: cashierMenu 
-};
-
-function getMenu(role) {
-    return menuByRole[role] || cashierMenu;
+function buildMenu(items, hasAnyPermission) {
+    const result = [];
+    let pendingSections = [];
+    for (const item of items) {
+        if (item.section) {
+            pendingSections.push(item);
+        } else {
+            const allowed = !item.permissions || hasAnyPermission(item.permissions);
+            if (allowed) {
+                result.push(...pendingSections);
+                pendingSections = [];
+                result.push(item);
+            }
+        }
+    }
+    return result;
 }
 
 const roleBadgeStyle = {
@@ -73,13 +61,13 @@ const roleBadgeStyle = {
 };
 
 export default function SidebarLayout({ children, pageTitle }) {
-    const { user, logout } = useAuth();
+    const { user, logout, hasAnyPermission } = useAuth();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const accountMenuRef = useRef(null);
-    const menu = getMenu(user?.role);
+    const menu = buildMenu(menuItems, hasAnyPermission);
 
     const handleLogout = async () => {
         await logout();
