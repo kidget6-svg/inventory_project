@@ -77,10 +77,8 @@ class PurchaseOrderTest extends TestCase
 
         $response = $this->actingAs($user)->postJson('/purchase-orders', [
             'supplier_id' => $supplier->id,
-            'order_date' => now()->toDateString(),
             'medicine_id' => $medicine->id,
             'quantity' => 25,
-            'unit_price' => 10.50,
         ]);
 
         $response->assertCreated()
@@ -99,7 +97,7 @@ class PurchaseOrderTest extends TestCase
         $this->assertDatabaseHas('purchase_order_items', [
             'medicine_id' => $medicine->id,
             'quantity' => 25,
-            'unit_price' => 10.50,
+            'unit_price' => 0,
         ]);
 
         // Verify medicine stock did NOT increase (stock is added on completion)
@@ -114,9 +112,7 @@ class PurchaseOrderTest extends TestCase
 
         $response = $this->actingAs($user)->postJson('/purchase-orders', [
             'supplier_id' => $supplier->id,
-            'order_date' => now()->toDateString(),
             'quantity' => 10,
-            'unit_price' => 5.00,
         ]);
 
         $response->assertStatus(422)
@@ -136,10 +132,8 @@ class PurchaseOrderTest extends TestCase
         // Edit the order: change quantity to 30
         $response = $this->actingAs($user)->putJson("/purchase-orders/{$order->id}", [
             'supplier_id' => $order->supplier_id,
-            'order_date' => now()->toDateString(),
             'medicine_id' => $medicine->id,
             'quantity' => 30,
-            'unit_price' => 10.00,
         ]);
 
         $response->assertOk()
@@ -467,10 +461,8 @@ class PurchaseOrderTest extends TestCase
 
         $response = $this->actingAs($user)->putJson("/purchase-orders/{$order->id}", [
             'supplier_id' => $order->supplier_id,
-            'order_date' => now()->toDateString(),
             'medicine_id' => $medicine->id,
             'quantity' => 30,
-            'unit_price' => 10.00,
         ]);
 
         $response->assertStatus(422)

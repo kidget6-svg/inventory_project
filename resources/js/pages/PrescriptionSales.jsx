@@ -22,6 +22,7 @@ import {
     PosProductCard,
     PosCartPanel,
     PosInfoModal,
+    PosPagination,
 } from '../components/pos';
 import {
     Search,
@@ -40,6 +41,10 @@ export default function PrescriptionSales() {
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+
+    // Pagination (client-side, operates on filtered results)
+    const ITEMS_PER_PAGE = 6;
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Prescription / patient information
     const [patientName, setPatientName] = useState('');
@@ -60,6 +65,11 @@ export default function PrescriptionSales() {
             })
             .finally(() => setLoading(false));
     }, []);
+
+    // Reset to first page whenever the search term changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search]);
 
     // ── Cart helpers ────────────────────────────────────────────
     const priceOf = (m) => Number(m.selling_price ?? m.unit_price ?? 0);
@@ -138,6 +148,13 @@ export default function PrescriptionSales() {
     };
 
     const confirmSendToCashier = async () => {
+        if (!patientName.trim()) {
+            return window.showToast('Patient Name is required', 'error');
+        }
+        if (!patientPhone.trim()) {
+            return window.showToast('Phone Number is required', 'error');
+        }
+
         setSubmitting(true);
         try {
             await api.post('/sales/prescription', {
@@ -146,11 +163,12 @@ export default function PrescriptionSales() {
                     quantity: item.cartQty,
                 })),
                 // Prescription / patient information
-                customer_name: patientName || null,
-                customer_phone: patientPhone || null,
+                customer_name: patientName,
+                customer_phone: patientPhone,
                 customer_email: patientEmail || null,
                 notes: prescriptionNotes || null,
             });
+
             window.showToast('Order dispatched to Cashier queue!', 'success');
             setCart([]);
             setPatientName('');
@@ -177,6 +195,11 @@ export default function PrescriptionSales() {
             m.barcode?.toLowerCase().includes(q)
         );
     });
+
+    // ── Pagination ───────────────────────────────────────────────
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedItems = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     if (loading) {
         return <LoadingSpinner text="Opening prescription terminal..." />;
@@ -226,7 +249,7 @@ export default function PrescriptionSales() {
                     </div>
                 ) : (
                     <div className="pos-product-grid">
-                        {filtered.map(med => (
+                        {paginatedItems.map(med => (
                             <PosProductCard
                                 key={med.id}
                                 item={med}
@@ -238,6 +261,17 @@ export default function PrescriptionSales() {
                             />
                         ))}
                     </div>
+                )}
+
+                {/* Pagination */}
+                {filtered.length > 0 && (
+                    <PosPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={filtered.length}
+                        itemsPerPage={ITEMS_PER_PAGE}
+                        onPageChange={setCurrentPage}
+                    />
                 )}
             </div>
 

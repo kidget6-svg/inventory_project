@@ -10,6 +10,7 @@ export { default as PosCartPanel } from './PosCartPanel';
 export { default as PosPaymentModal } from './PosPaymentModal';
 export { default as PosSuccessDialog } from './PosSuccessDialog';
 export { default as PosInfoModal } from './PosInfoModal';
+export { default as PosPagination } from './PosPagination';
 
 export {
     PAYMENT_METHODS,

@@ -55,8 +55,8 @@ class SaleController extends Controller
             'payment_method' => 'nullable|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
             'amount_paid' => 'nullable|numeric|min:0',
             // Prescription / patient information
-            'customer_name' => 'nullable|string|max:255',
-            'customer_phone' => 'nullable|string|max:50',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|max:50',
             'customer_email' => 'nullable|email|max:255',
             'notes' => 'nullable|string',
         ]);

@@ -50,10 +50,8 @@ export default function PurchaseOrders() {
     const [modalItem, setModalItem] = useState(null);
     const [form, setForm] = useState({
         supplier_id: '',
-        order_date: '',
         medicine_name: '',
         quantity: '',
-        unit_price: '',
     });
     const [submitting, setSubmitting] = useState(false);
     const [suppliers, setSuppliers] = useState([]);
@@ -302,7 +300,7 @@ export default function PurchaseOrders() {
     const openCreate = () => {
         setModalMode('create');
         setModalItem(null);
-        setForm({ supplier_id: '', order_date: '', medicine_name: '', quantity: '', unit_price: '' });
+        setForm({ supplier_id: '', medicine_name: '', quantity: '' });
         setError('');
         setShowModal(true);
         loadFormOptions();
@@ -319,10 +317,8 @@ export default function PurchaseOrders() {
                 const orderItem = data.items?.[0];
                 setForm({
                     supplier_id: data.supplier_id || '',
-                    order_date: data.order_date || '',
                     medicine_name: orderItem?.medicine?.name || '',
                     quantity: orderItem?.quantity || '',
-                    unit_price: orderItem?.unit_price || '',
                 });
             });
         });
@@ -337,7 +333,7 @@ export default function PurchaseOrders() {
     const closeModal = () => {
         setShowModal(false);
         setModalItem(null);
-        setForm({ supplier_id: '', order_date: '', medicine_name: '', quantity: '', unit_price: '' });
+        setForm({ supplier_id: '', medicine_name: '', quantity: '' });
         setError('');
     };
 
@@ -748,20 +744,6 @@ export default function PurchaseOrders() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Order Date *</label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="date"
-                                    name="order_date"
-                                    value={form.order_date}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
                             <input
                                 list="medicine-list"
@@ -790,22 +772,6 @@ export default function PurchaseOrders() {
                                 min="1"
                                 required
                             />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Price *</label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    name="unit_price"
-                                    value={form.unit_price}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    min="0"
-                                    required
-                                />
-                            </div>
                         </div>
                         <div className="md:col-span-2 flex justify-end gap-3">
                             <button type="button" onClick={closeModal} className="btn-secondary px-4 py-2 text-sm flex items-center gap-2">

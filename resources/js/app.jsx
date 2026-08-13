@@ -22,7 +22,6 @@ import RetailSales from './pages/RetailSales';
 import RetailOTCSales from './pages/RetailOTCSales';
 import RetailProducts from './pages/RetailProducts';
 import StockMovements from './pages/StockMovements';
-import LowStock from './pages/LowStock';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -151,9 +150,6 @@ function App() {
             {/* Reports & Tracking */}
             <Route path="/stock-movements" element={
                 <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Movements"><StockMovements /></ProtectedRoute>
-            } />
-            <Route path="/low-stock" element={
-                <ProtectedRoute roles={['admin', 'pharmacist']} title="Low Stock Alerts"><LowStock /></ProtectedRoute>
             } />
             <Route path="/reports" element={
                 <ProtectedRoute roles={['admin', 'pharmacist']} title="System Reports"><Reports /></ProtectedRoute>

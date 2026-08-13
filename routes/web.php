@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
-use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ShelfController;
 use App\Http\Controllers\Api\UserController;
@@ -129,11 +128,6 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
-    });
-
-    // Low Stock (admin + pharmacist)
-    Route::middleware('role:admin,pharmacist')->group(function () {
-        Route::get('/low-stock', [LowStockController::class, 'index']);
     });
 
     // Sales routes — Read-Only (Admin, Pharmacist, Cashier)

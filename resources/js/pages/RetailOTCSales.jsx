@@ -20,6 +20,7 @@ import {
     PosProductCard,
     PosCartPanel,
     PosInfoModal,
+    PosPagination,
 } from '../components/pos';
 import {
     Search,
@@ -38,6 +39,10 @@ export default function RetailOTCSales() {
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+
+    // Pagination (client-side, operates on filtered results)
+    const ITEMS_PER_PAGE = 6;
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Customer Information
     const [customerName, setCustomerName] = useState('');
@@ -58,6 +63,11 @@ export default function RetailOTCSales() {
             })
             .finally(() => setLoading(false));
     }, []);
+
+    // Reset to first page whenever the search term changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search]);
 
     // ── Cart helpers ────────────────────────────────────────────
     const priceOf = (p) => Number(p.price ?? 0);
@@ -175,6 +185,11 @@ export default function RetailOTCSales() {
         );
     });
 
+    // ── Pagination ───────────────────────────────────────────────
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedItems = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
     if (loading) {
         return <LoadingSpinner text="Opening retail terminal..." />;
     }
@@ -223,7 +238,7 @@ export default function RetailOTCSales() {
                     </div>
                 ) : (
                     <div className="pos-product-grid">
-                        {filtered.map(prod => (
+                        {paginatedItems.map(prod => (
                             <PosProductCard
                                 key={prod.id}
                                 item={prod}
@@ -235,6 +250,17 @@ export default function RetailOTCSales() {
                             />
                         ))}
                     </div>
+                )}
+
+                {/* Pagination */}
+                {filtered.length > 0 && (
+                    <PosPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={filtered.length}
+                        itemsPerPage={ITEMS_PER_PAGE}
+                        onPageChange={setCurrentPage}
+                    />
                 )}
             </div>
 

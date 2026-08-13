@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
-    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
+    ArrowLeftRight, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
     ShoppingBag, FileText
 } from 'lucide-react';
@@ -23,7 +23,6 @@ const adminMenu = [
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
     { section: 'Reports' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
     { to: '/reports', label: 'Reports', icon: BarChart3 },
     { to: '/sales-history', label: 'Sales History', icon: FileText },
 ];
@@ -40,8 +39,6 @@ const pharmacistMenu = [
     { to: '/categories', label: 'Categories', icon: FolderTree },
     { to: '/inventory', label: 'Inventory', icon: Package },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    { section: 'Alerts' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
     { section: 'Reports' },
     { to: '/reports', label: 'Reports', icon: BarChart3 },
 ];

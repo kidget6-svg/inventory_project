@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\RetailProductController;
 use App\Http\Controllers\Api\StockMovementController;
-use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
 
@@ -118,8 +117,6 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
-        Route::get('/low-stock', [LowStockController::class, 'index']);
-        Route::post('/low-stock/order-now/{medicine}', [LowStockController::class, 'orderNow']);
         Route::get('/reports', [ReportController::class, 'index']);
     });
 
