@@ -116,7 +116,7 @@ class Medicine extends Model
     // Scopes
     public function scopeActive($query)
     {
-        return $this->hasMany(Batch::class);
+        return $query->where('status', 'active');
     }
 
     public function scopeInStock($query)

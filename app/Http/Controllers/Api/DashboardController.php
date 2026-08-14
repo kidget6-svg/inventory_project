@@ -20,10 +20,6 @@ class DashboardController extends Controller
         try {
             $user = Auth::user();
 
-        Medicine::query()->get()->each(function ($medicine) {
-            $medicine->syncAutomaticExpiryState();
-        });
-
             // Use direct role comparison instead of methods
             if ($user->role === 'admin' || $user->role === 'super_admin') {
                 return $this->adminDashboard();

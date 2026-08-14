@@ -87,6 +87,16 @@ class StockMovement extends Model
         return $this->belongsTo(User::class, 'completed_by');
     }
 
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function completer()
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
+
     public function linkedMovement()
     {
         return $this->belongsTo(StockMovement::class, 'linked_movement_id');

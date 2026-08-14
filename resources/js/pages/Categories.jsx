@@ -19,6 +19,9 @@ export default function Categories() {
     const canCreate = hasPermission('categories.create');
     const canEdit = hasPermission('categories.edit');
     const canDelete = hasPermission('categories.delete');
+    const canWrite = canCreate || canEdit || canDelete;
+    const [activeTab, setActiveTab] = useState('categories');
+    const [searchTerm, setSearchTerm] = useState('');
     const [categories, setCategories] = useState([]);
     const [shelves, setShelves] = useState([]);
     const [allShelves, setAllShelves] = useState([]); // For dropdown
