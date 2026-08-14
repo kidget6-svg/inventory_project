@@ -35,21 +35,8 @@ return new class extends Migration
         });
 
         // ── 2. Remove unnecessary columns ────────────────────────────
-        $existingColumns = Schema::getColumnListing('medicines');
-        $columnsToDrop = [
-            'unit_price', 'purchase_price', 'selling_price',
-            'quantity', 'reorder_level', 'expiry_date', 'status', 'description',
-        ];
-        $columnsToDropActual = array_filter(
-            $columnsToDrop,
-            fn ($col) => in_array($col, $existingColumns, true)
-        );
-
-        if (! empty($columnsToDropActual)) {
-            Schema::table('medicines', function (Blueprint $table) use ($columnsToDropActual) {
-                $table->dropColumn($columnsToDropActual);
-            });
-        }
+        // Keep the existing inventory columns. They are still used by stock,
+        // purchase-order, and reporting workflows.
 
         // ── 3. Make name unique (drop plain index → unique) ─────────
         // The original migration created a non-unique index named medicines_name_index
@@ -77,7 +64,12 @@ return new class extends Migration
             // Index doesn't exist — safe to continue
         }
 
-        // Use raw SQL to check & add FK to avoid duplicate-key errors on reruns
+        // SQLite does not expose MySQL's information_schema.
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
+        // Use raw SQL to check & add FK to avoid duplicate-key errors on reruns.
         $fkExists = DB::select(
             "SELECT COUNT(*) AS cnt FROM information_schema.key_column_usage
              WHERE TABLE_SCHEMA = DATABASE()

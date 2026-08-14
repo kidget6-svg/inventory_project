@@ -2,50 +2,77 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class Medicine extends Model
 {
     use HasFactory;
 
-    /**
-     * Prescription flags – stored as boolean but exposed as readable labels.
-     */
-    public const PRESCRIPTION_LABEL = 'Prescription Required';
-    public const OTC_LABEL         = 'Over-the-Counter';
+    // Status Constants
+    const STATUS_ACTIVE = 'active';
+    const STATUS_INACTIVE = 'inactive';
+    const STATUS_EXPIRED = 'expired';
+    const STATUS_DISCONTINUED = 'discontinued';
+    const STATUS_DAMAGED = 'damaged';
+    const STATUS_QUARANTINED = 'quarantined';
 
-    /**
-     * Default reorder level (kept for backward compatibility with dashboard UI).
-     * Inventory tracking now lives in the Batch model.
-     */
-    public const DEFAULT_REORDER_LEVEL = 10;
+    // Stock Status Constants
+    const STOCK_IN_STOCK = 'in_stock';
+    const STOCK_LOW_STOCK = 'low_stock';
+    const STOCK_OUT_OF_STOCK = 'out_of_stock';
+    const STOCK_EXPIRED = 'expired';
+    const DEFAULT_REORDER_LEVEL = 10;
 
     protected $fillable = [
         'name',
         'generic_name',
-        'batch_number',
-        'barcode',
-        'category_id',
-        'supplier_id',
-        'shelf_id',
-        'prescription',
-        'prescription_details',
         'dosage_form',
         'strength',
         'unit',
-        'image',
-        'manufacturer',
+        'category_id',
+        'supplier_id',
+        'shelf_id',
+        'branch_id',
         'shelf_location',
+        'prescription',
+        'manufacturer',
+        'batch_number',
+        'barcode',
+        'serial_number',
+        'image',
+        'quantity',
+        'minimum_stock',
+        'maximum_stock',
+        'unit_price',
+        'purchase_price',
+        'selling_price',
+        'reorder_level',
+        'expiry_date',
+        'manufactured_date',
+        'received_date',
+        'status',
+        'stock_status',
+        'approval_status',
+        'description',
     ];
 
     protected $casts = [
-        'prescription' => 'boolean',
+        'expiry_date' => 'datetime',
+        'manufactured_date' => 'datetime',
+        'received_date' => 'datetime',
+        'quantity' => 'integer',
+        'minimum_stock' => 'integer',
+        'maximum_stock' => 'integer',
+        'unit_price' => 'decimal:2',
+        'purchase_price' => 'decimal:2',
+        'selling_price' => 'decimal:2',
+        'reorder_level' => 'integer',
     ];
 
-    /**
-     * A medicine belongs to a category.
-     */
+    // Relationships
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -59,86 +86,177 @@ class Medicine extends Model
         return $this->belongsTo(Supplier::class);
     }
 
-    /**
-     * A medicine may be stored on a shelf.
-     */
     public function shelf()
     {
         return $this->belongsTo(Shelf::class);
     }
 
-    /**
-     * A medicine has many batches.
-     *
-     * Inventory tracking (quantity, expiry date) has moved from the
-     * medicines table to the batches table.  This relationship gives
-     * access to the individual batch records for a medicine.
-     */
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     public function batches()
     {
         return $this->hasMany(Batch::class);
     }
 
-    /**
-     * Total quantity across all batches.
-     *
-     * Provided as an accessor so legacy dashboard / UI code that reads
-     * $medicine->quantity continues to work.  The value is summed from
-     * the related batches table.
-     */
-    public function getQuantityAttribute(): int
+    public function stockMovements()
     {
-        return (int) ($this->relationLoaded('batches')
-            ? $this->batches->sum('quantity')
-            : $this->batches()->sum('quantity'));
+        return $this->hasMany(StockMovement::class);
     }
 
-    /**
-     * Default reorder level for backward compatibility.
-     *
-     * The per-medicine reorder_level column has been removed from the
-     * database.  Inventory re-ordering is now managed through the
-     * purchasing workflow.  This accessor returns a sensible default
-     * so existing UI code does not break.
-     */
-    public function getReorderLevelAttribute(): int
+    public function saleItems()
     {
-        return self::DEFAULT_REORDER_LEVEL;
+        return $this->morphMany(SaleItem::class, 'itemable');
     }
 
-    /**
-     * Get the full public URL to the medicine image.
-     * Falls back to a placeholder when no image is set.
-     */
-    public function getImageUrlAttribute(): string
+    public function purchaseOrderItems()
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    public function scopeInStock($query)
+    {
+        return $query->where('quantity', '>', 0);
+    }
+
+    public function scopeLowStock($query)
+    {
+        return $query->whereColumn('quantity', '<=', 'reorder_level')
+                     ->where('quantity', '>', 0);
+    }
+
+    public function scopeOutOfStock($query)
+    {
+        return $query->where('quantity', 0);
+    }
+
+    public function scopeExpired($query)
+    {
+        return $query->where('expiry_date', '<', now());
+    }
+
+    public function scopeExpiringSoon($query, $days = 90)
+    {
+        return $query->where('expiry_date', '>=', now())
+                     ->where('expiry_date', '<=', now()->addDays($days));
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('name', 'like', "%{$search}%")
+                     ->orWhere('generic_name', 'like', "%{$search}%")
+                     ->orWhere('barcode', 'like', "%{$search}%")
+                     ->orWhere('batch_number', 'like', "%{$search}%");
+    }
+
+    // Accessors
+    public function getImageUrlAttribute()
     {
         if ($this->image) {
+            if (str_starts_with($this->image, 'http')) {
+                return $this->image;
+            }
             return asset('storage/' . $this->image);
         }
-
         return asset('images/medicine-placeholder.svg');
     }
 
-    /**
-     * Human-readable prescription label.
-     */
-    public function getPrescriptionLabelAttribute(): string
+    public function getFullNameAttribute()
     {
-        return (bool) $this->prescription ? self::PRESCRIPTION_LABEL : self::OTC_LABEL;
+        $parts = [$this->name];
+        if ($this->strength) $parts[] = $this->strength;
+        if ($this->dosage_form) $parts[] = $this->dosage_form;
+        return implode(' ', $parts);
     }
 
-    /**
-     * Full identification string e.g. "Paracetamol - Tablet - 500 mg - Box"
-     */
-    public function getIdentificationAttribute(): string
+    public function getStatusBadgeAttribute()
     {
-        $parts = array_filter([
-            $this->name,
-            $this->dosage_form,
-            $this->strength,
-            $this->unit,
-        ]);
+        $badges = [
+            self::STATUS_ACTIVE => 'bg-green-100 text-green-700',
+            self::STATUS_INACTIVE => 'bg-gray-100 text-gray-700',
+            self::STATUS_EXPIRED => 'bg-red-100 text-red-700',
+            self::STATUS_DISCONTINUED => 'bg-orange-100 text-orange-700',
+            self::STATUS_DAMAGED => 'bg-red-100 text-red-700',
+            self::STATUS_QUARANTINED => 'bg-yellow-100 text-yellow-700',
+        ];
+        return $badges[$this->status] ?? 'bg-gray-100 text-gray-700';
+    }
 
-        return implode(' - ', $parts);
+    public function getStockStatusBadgeAttribute()
+    {
+        $badges = [
+            self::STOCK_IN_STOCK => 'bg-green-100 text-green-700',
+            self::STOCK_LOW_STOCK => 'bg-yellow-100 text-yellow-700',
+            self::STOCK_OUT_OF_STOCK => 'bg-red-100 text-red-700',
+            self::STOCK_EXPIRED => 'bg-gray-100 text-gray-700',
+        ];
+        return $badges[$this->stock_status] ?? 'bg-gray-100 text-gray-700';
+    }
+
+    // Methods
+    public function updateStockStatus()
+    {
+        if ($this->expiry_date && $this->expiry_date < now()) {
+            $this->stock_status = self::STOCK_EXPIRED;
+        } elseif ($this->quantity <= 0) {
+            $this->stock_status = self::STOCK_OUT_OF_STOCK;
+        } elseif ($this->quantity <= $this->reorder_level) {
+            $this->stock_status = self::STOCK_LOW_STOCK;
+        } else {
+            $this->stock_status = self::STOCK_IN_STOCK;
+        }
+        $this->save();
+    }
+
+    public function addStock($quantity, $notes = null, $reference = null)
+    {
+        $oldQuantity = $this->quantity;
+        $this->quantity += $quantity;
+        $this->save();
+        $this->updateStockStatus();
+
+        return StockMovement::create([
+            'medicine_id' => $this->id,
+            'type' => 'in',
+            'quantity' => $quantity,
+            'before_quantity' => $oldQuantity,
+            'after_quantity' => $this->quantity,
+            'user_id' => Auth::id(),
+            'notes' => $notes,
+            'reference' => $reference,
+            'status' => 'completed',
+        ]);
+    }
+
+    public function removeStock($quantity, $notes = null, $reference = null)
+    {
+        if ($this->quantity < $quantity) {
+            throw new \Exception('Insufficient stock');
+        }
+
+        $oldQuantity = $this->quantity;
+        $this->quantity -= $quantity;
+        $this->save();
+        $this->updateStockStatus();
+
+        return StockMovement::create([
+            'medicine_id' => $this->id,
+            'type' => 'out',
+            'quantity' => $quantity,
+            'before_quantity' => $oldQuantity,
+            'after_quantity' => $this->quantity,
+            'user_id' => Auth::id(),
+            'notes' => $notes,
+            'reference' => $reference,
+            'status' => 'completed',
+        ]);
     }
 }

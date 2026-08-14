@@ -6,22 +6,27 @@ import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
 import {
-    Search, Eye, Edit, Trash2, X, Save, Package, Tag,
-    Barcode, Camera, Loader2, Plus, Upload, Image as ImageIcon,
-    Printer, FileText,
+    Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar,
+    Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight,
+    FileText, Plus, Upload, Image as ImageIcon
 } from 'lucide-react';
 
-const dosageForms = ['', 'tablet', 'capsule', 'syrup', 'injection', 'cream', 'ointment', 'drops', 'powder', 'gel'];
+const statusOptions = [
+    { value: '', label: 'All Statuses' },
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'expired', label: 'Expired' },
+    { value: 'discontinued', label: 'Discontinued' },
+];
 
-const strengths = ['', '5 mg', '10 mg', '25 mg', '50 mg', '100 mg', '200 mg', '250 mg', '500 mg', '1 g', '2 g', '5 mg/ml', '10 mg/5 ml', '20 mg/5 ml', '40 mg/5 ml', '1%', '2.5%', '5%', '10%'];
-
-const units = ['', 'tablet', 'capsule', 'bottle', 'box', 'packet', 'tube', 'vial', 'ampoule', 'sachet', 'bottle (5 ml)', 'bottle (15 ml)', 'bottle (30 ml)'];
+const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
 export default function Medicines() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const isAdmin = user?.role === 'admin';
-    const canManage = user?.permissions?.includes('medicines.manage') || user?.permissions?.includes('*');
+    const isPharmacist = user?.role === 'pharmacist';
+    const canWrite = isAdmin || isPharmacist;
 
     const [medicines, setMedicines] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -77,9 +82,18 @@ export default function Medicines() {
 
         api.get('/medicines', { params })
             .then(r => {
-                const data = r.data.data || r.data;
-                setMedicines(Array.isArray(data) ? data : []);
-                setMeta(r.data);
+                let medicinesData = [];
+                if (Array.isArray(r.data.data)) {
+                    medicinesData = r.data.data;
+                } else if (Array.isArray(r.data.medicines?.data)) {
+                    medicinesData = r.data.medicines.data;
+                } else if (Array.isArray(r.data.data?.data)) {
+                    medicinesData = r.data.data.data;
+                } else if (Array.isArray(r.data)) {
+                    medicinesData = r.data;
+                }
+                setMedicines(medicinesData);
+                setMeta(r.data.meta || r.data.medicines || r.data);
             })
             .catch(err => {
                 console.error(err);
@@ -90,13 +104,13 @@ export default function Medicines() {
 
     const loadCategories = () => {
         api.get('/categories')
-            .then(r => setCategories(Array.isArray(r.data) ? r.data : []))
+            .then(r => setCategories(Array.isArray(r.data.data) ? r.data.data : (Array.isArray(r.data.categories?.data) ? r.data.categories.data : (Array.isArray(r.data.categories) ? r.data.categories : []))))
             .catch(err => console.error(err));
     };
 
     const loadSuppliers = () => {
         api.get('/suppliers')
-            .then(r => setSuppliers(Array.isArray(r.data) ? r.data : []))
+            .then(r => setSuppliers(Array.isArray(r.data.data) ? r.data.data : (Array.isArray(r.data.suppliers?.data) ? r.data.suppliers.data : (Array.isArray(r.data.suppliers) ? r.data.suppliers : []))))
             .catch(err => console.error(err));
     };
 
@@ -321,14 +335,207 @@ export default function Medicines() {
 
     useEffect(() => { return () => stopBarcodeScan(); }, []);
 
-    const getPrescriptionBadge = (val) => {
-        const isPrescription = val;
-        return isPrescription
-            ? <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Prescription Required</span>
-            : <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Over-the-Counter</span>;
+    const getStatusBadge = (status) => {
+        const config = {
+            active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' },
+            inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' },
+            expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' },
+            discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' }
+        };
+        const cfg = config[status] || config.active;
+        return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>;
     };
 
-    const isFiltered = filters.search || filters.barcode || filters.category_id || filters.prescription !== '';
+    const isFiltered = filters.search || filters.category_id || filters.supplier_id || filters.status;
+
+    const renderStepContent = () => {
+        switch (step) {
+            case 0:
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
+                            <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                    <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                    <input type="text" name="barcode" value={form.barcode} onChange={handleChange} placeholder="Scan or type barcode" className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono" />
+                                </div>
+                                <button type="button" onClick={startBarcodeScan} disabled={scanning} className="px-3 py-2 bg-sky-500 text-white rounded-lg text-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5 disabled:opacity-60">
+                                    {scanning ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+                                    {scanning ? 'Scanning...' : 'Scan'}
+                                </button>
+                            </div>
+                            {scanning && (
+                                <div className="mt-2 relative">
+                                    <video ref={videoRef} className="w-full max-w-xs rounded-lg border-2 border-sky-400" />
+                                    <button type="button" onClick={stopBarcodeScan} className="mt-1 text-xs text-red-600 hover:underline">Cancel scan</button>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Name *</label>
+                            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Paracetamol Extra" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Generic Name</label>
+                            <input type="text" name="generic_name" value={form.generic_name} onChange={handleChange} placeholder="e.g. Acetaminophen" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
+                            <select name="category_id" value={form.category_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
+                                <option value="">Select Category</option>
+                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
+                            <input type="text" name="manufacturer" value={form.manufacturer} onChange={handleChange} placeholder="e.g. GSK" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
+                            <input type="text" name="shelf_location" value={form.shelf_location} onChange={handleChange} placeholder="e.g. A-2-3" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
+
+                        {!editId && <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Batch Number</label>
+                            <input
+                                type="text"
+                                name="batch_number"
+                                value={form.batch_number}
+                                onChange={handleChange}
+                                placeholder="e.g. BATCH-001"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            />
+                        </div>}
+
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Image</label>
+                            <div className="flex items-center gap-4">
+                                <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                                    {imagePreview ? (
+                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Package className="text-gray-300" size={28} />
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
+                                        onChange={handleImageChange}
+                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 1:
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier</label>
+                            <select name="supplier_id" value={form.supplier_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
+                                <option value="">Select Supplier</option>
+                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+                            <input type="number" name="quantity" value={form.quantity} onChange={handleChange} placeholder="0" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Selling Price *</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input type="number" name="selling_price" value={form.selling_price || form.unit_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Purchase Price</label>
+                            <div className="relative">
+                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input type="number" name="purchase_price" value={form.purchase_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                            </div>
+                        </div>
+                        {!editId && <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
+                            <input
+                                type="number"
+                                name="reorder_level"
+                                value={form.reorder_level}
+                                onChange={handleChange}
+                                placeholder="10"
+                                min="0"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                required
+                            />
+                        </div>}
+                    </div>
+                );
+            case 2:
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {!editId && <>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date</label>
+                                <div className="relative">
+                                    <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="date"
+                                        name="expiry_date"
+                                        value={form.expiry_date}
+                                        onChange={handleChange}
+                                        className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                                <select
+                                    name="status"
+                                    value={form.status}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="expired">Expired</option>
+                                    <option value="discontinued">Discontinued</option>
+                                </select>
+                            </div>
+                        </>}
+                        {editId && <div className="md:col-span-2 flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                                <span className="text-sm font-medium text-gray-700">{form.status === 'active' ? 'Active' : form.status === 'inactive' ? 'Inactive' : form.status === 'discontinued' ? 'Discontinued' : 'Expired'}</span>
+                            </div>
+                            <button type="button" role="switch" aria-checked={form.status === 'active'} aria-label="Toggle medicine active status" onClick={toggleStatus} disabled={!['active', 'inactive'].includes(form.status)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${form.status === 'active' ? 'bg-sky-500' : 'bg-gray-300'}`}>
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.status === 'active' ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                        </div>}
+                        <div className="md:col-span-2 p-4 bg-sky-50 rounded-xl border border-sky-200">
+                            <h4 className="text-sm font-semibold text-sky-800 mb-2">Review Summary</h4>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div><span className="text-gray-500">Name:</span> <span className="font-medium">{form.name || '---'}</span></div>
+                                <div><span className="text-gray-500">Generic Name:</span> <span className="font-medium">{form.generic_name || '---'}</span></div>
+                                <div><span className="text-gray-500">Barcode:</span> <span className="font-medium">{form.barcode || '---'}</span></div>
+                                <div><span className="text-gray-500">Quantity:</span> <span className="font-medium">{form.quantity || '0'}</span></div>
+                                <div><span className="text-gray-500">Selling Price:</span> <span className="font-medium">{form.selling_price || form.unit_price ? `$${form.selling_price || form.unit_price}` : '---'}</span></div>
+                                <div><span className="text-gray-500">Status:</span> <span className="font-medium">{form.status}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            default: return null;
+        }
+    };
 
     return (
         <>
@@ -379,15 +586,14 @@ export default function Medicines() {
             </div>
 
             <div className="flex justify-between items-center mb-5">
-                <h3 className="text-base font-semibold text-gray-700">
-                    All Medicines ({medicines.length})
-                </h3>
-                {canManage && (
-                    <button
-                        onClick={openCreate}
-                        className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2"
-                    >
-                        <Plus size={16} /> Add New Medicine
+                <h3 className="text-base font-semibold text-gray-700">All Medicines ({medicines.length})</h3>
+                {canWrite ? (
+                    <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
+                        <Package size={16} /> Add New Medicine
+                    </button>
+                ) : (
+                    <button onClick={() => navigate('/prescription-sales')} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
+                        <FileText size={16} /> Create Prescription Sale
                     </button>
                 )}
             </div>
@@ -398,26 +604,28 @@ export default function Medicines() {
                         <div className="overflow-x-auto">
                             <table className="w-full table-fixed">
                                 <colgroup>
-                                    <col className="w-[24%]" />
-                                    <col className="w-[12%]" />
-                                    <col className="w-[9%]" />
-                                    <col className="w-[9%]" />
-                                    <col className="w-[10%]" />
-                                    <col className="w-[10%]" />
-                                    <col className="w-[10%]" />
                                     <col className="w-[8%]" />
                                     <col className="w-[18%]" />
+                                    <col className="w-[10%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[10%]" />
+                                    <col className="w-[12%]" />
+                                    <col className="w-[8%]" />
+                                    <col className="w-[8%]" />
                                 </colgroup>
                                 <thead>
                                     <tr className="bg-sky-50 border-b border-sky-100">
-                                        <th className="table-header">Medicine</th>
-                                        <th className="table-header">Category</th>
-                                        <th className="table-header">Form</th>
-                                        <th className="table-header">Strength</th>
-                                        <th className="table-header">Unit</th>
-                                        <th className="table-header">Barcode</th>
-                                        <th className="table-header">Prescription</th>
-                                        <th className="table-header">Image</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Image</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Medicine Name</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Category</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Shelf</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Barcode</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Qty</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Selling Price</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Expiry Date</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Status</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -448,16 +656,18 @@ export default function Medicines() {
                                                     <span className="text-gray-400 text-xs">No image</span>
                                                 )}
                                             </td>
+                                            <td className="px-4 py-3 text-sm font-medium text-gray-800 truncate">{m.name}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || 'No Category'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.shelf_location || '---'}</td>
+                                            <td className="px-4 py-3 text-sm font-mono text-gray-500 truncate">{m.barcode || '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900 font-medium">{m.quantity}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{(m.selling_price || m.unit_price) ? `$${Number(m.selling_price || m.unit_price).toFixed(2)}` : '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}</td>
+                                            <td className="px-4 py-3">{getStatusBadge(m.status)}</td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-1">
-                                                    <button
-                                                        onClick={() => openView(m)}
-                                                        className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                                                        title="View"
-                                                    >
-                                                        <Eye size={16} />
-                                                    </button>
-                                                    {canManage && (
+                                                    <button onClick={() => openView(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
+                                                    {canWrite && (
                                                         <>
                                                             <button
                                                                 onClick={() => openEdit(m)}
@@ -479,19 +689,9 @@ export default function Medicines() {
                                             </td>
                                         </tr>
                                     )) : (
-                                        <tr>
-                                            <td colSpan="9" className="px-4 py-8 text-center text-gray-400">
-                                                No medicines found
-                                                {isFiltered && (
-                                                    <button
-                                                        onClick={resetFilters}
-                                                        className="ml-2 text-sky-600 hover:underline text-sm font-medium"
-                                                    >
-                                                        Clear filters
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-400">
+                                            No medicines found{isFiltered && <button onClick={resetFilters} className="ml-2 text-sky-600 hover:underline text-sm font-medium">Clear filters</button>}
+                                        </td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -501,204 +701,25 @@ export default function Medicines() {
                 </>
             )}
 
-            {/* ── Create / Edit Modal ── */}
-            {canManage && (
-                <Modal
-                    open={showModal}
-                    onClose={() => setShowModal(false)}
-                    title={editId ? 'Edit Medicine' : 'Add New Medicine'}
-                    size="max-w-3xl"
-                >
-                    {error && (
-                        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">
-                            {error}
-                        </div>
-                    )}
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            handleSubmit();
-                        }}
-                        className="space-y-5"
-                    >
-                        {/* ── Basic Info ── */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Medicine Identification *
-                                </label>
-                                <p className="text-xs text-gray-400 mb-2">
-                                    This will display as: {form.name || 'Medicine Name'} - {form.dosage_form || 'Form'} - {form.strength || 'Strength'} - {form.unit || 'Unit'}
-                                </p>
-                            </div>
-
-                            {/* Barcode field with scanner */}
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
-                                <div className="flex gap-2">
-                                    <div className="relative flex-1">
-                                        <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            name="barcode"
-                                            value={form.barcode}
-                                            onChange={handleChange}
-                                            placeholder="Scan or type barcode (optional)"
-                                            className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono"
-                                        />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={startBarcodeScan}
-                                        disabled={scanning}
-                                        className="px-3 py-2 bg-sky-500 text-white rounded-lg text-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5 disabled:opacity-60"
-                                    >
-                                        {scanning ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                                        {scanning ? 'Scanning...' : 'Scan'}
-                                    </button>
-                                </div>
-                                {scanning && (
-                                    <div className="mt-2 relative">
-                                        <video
-                                            ref={videoRef}
-                                            className="w-full max-w-xs rounded-lg border-2 border-sky-400"
-                                            autoPlay
-                                            playsInline
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={stopBarcodeScan}
-                                            className="mt-1 text-xs text-red-600 hover:underline"
-                                        >
-                                            Cancel scan
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Medicine Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={form.name}
-                                    onChange={handleChange}
-                                    placeholder="e.g. Paracetamol"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Generic Name
-                                </label>
-                                <input
-                                    type="text"
-                                    name="generic_name"
-                                    value={form.generic_name}
-                                    onChange={handleChange}
-                                    placeholder="e.g. Acetaminophen"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Category *
-                                </label>
-                                <select
-                                    name="category_id"
-                                    value={form.category_id}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    required
-                                >
-                                    <option value="">Select Category</option>
-                                    {categories.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Dosage Form *
-                                </label>
-                                <select
-                                    name="dosage_form"
-                                    value={form.dosage_form}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    required
-                                >
-                                    <option value="">Select Form</option>
-                                    {dosageForms.map(f => (
-                                        <option key={f || 'empty'} value={f}>
-                                            {f || 'Other'}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Strength *
-                                </label>
-                                <select
-                                    name="strength"
-                                    value={form.strength}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    required
-                                >
-                                    <option value="">Select Strength</option>
-                                    {strengths.map(s => (
-                                        <option key={s || 'empty'} value={s}>
-                                            {s || 'Other'}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="flex items-end">
->>>>>>>
-
-                                <label className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        name="prescription"
-                                        checked={form.prescription}
-                                        onChange={(e) => {
-                                            const checked = e.target.checked;
-                                            setForm(prev => ({
-                                                ...prev,
-                                                prescription: checked,
-                                                prescription_details: checked ? prev.prescription_details : '',
-                                            }));
-                                        }}
-                                        className="w-4 h-4 text-sky-500 focus:ring-sky-400 border-gray-300 rounded"
-                                    />
-                                    <span className="text-sm font-medium text-gray-700">Prescription Required</span>
-                                </label>
-                            </div>
-
-                            {form.prescription && (
-                                <div className="md:col-span-2 mt-3">
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                        Prescription Details
-                                    </label>
-                                    <textarea
-                                        name="prescription_details"
-                                        value={form.prescription_details}
-                                        onChange={handleChange}
-                                        placeholder="Enter prescription instructions or information for this medicine..."
-                                        rows={3}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none resize-y"
-                                    />
-                                </div>
+            {canWrite && (
+                <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Medicine' : 'Add New Medicine'} size="max-w-2xl">
+                    <Stepper steps={formSteps} currentStep={step} />
+                    {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
+                    <form onSubmit={(e) => { e.preventDefault(); if (step === formSteps.length - 1) handleSubmit(); else nextStep(); }}>
+                        {renderStepContent()}
+                        <div className="flex justify-between mt-6 pt-4 border-t border-sky-100">
+                            <button type="button" onClick={step === 0 ? () => setShowModal(false) : prevStep} className="btn-secondary flex items-center gap-1.5">
+                                <ChevronLeft size={16} /> {step === 0 ? 'Cancel' : 'Back'}
+                            </button>
+                            {step < formSteps.length - 1 ? (
+                                <button type="submit" className="btn-primary flex items-center gap-1.5">
+                                    Next <ChevronRight size={16} />
+                                </button>
+                            ) : (
+                                <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
+                                    {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
+                                        : <><Save size={16} /> {editId ? 'Update Medicine' : 'Create Medicine'}</>}
+                                </button>
                             )}
                         </div>
 
@@ -913,24 +934,10 @@ export default function Medicines() {
                                 </div>
                             )}
                         </div>
-
-                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-                            <button
-                                onClick={() => setShowViewModal(false)}
-                                className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
-                            >
-                                <X size={16} /> Close
-                            </button>
-                            {canManage && (
-                                <button
-                                    onClick={() => {
-                                        setShowViewModal(false);
-                                        openEdit(viewMedicine);
-                                    }}
-                                    className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
-                                >
-                                    <Edit size={16} /> Edit Medicine
-                                </button>
+                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
+                            <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
+            {canWrite && (
+                                <button onClick={() => { setShowViewModal(false); openEdit(viewMedicine); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Medicine</button>
                             )}
                         </div>
                     </>

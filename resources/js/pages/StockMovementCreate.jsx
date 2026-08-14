@@ -10,7 +10,9 @@ import {
     ArrowLeft, Save, X, Package, Tag, FileText, Loader2, Search,
     ArrowUpRight, ArrowDownRight, RotateCcw, ClipboardList, AlertTriangle,
     Truck, CalendarX, FileWarning, CheckCircle2, AlertCircle,
-    Warehouse, DollarSign, Upload, ChevronRight
+    Warehouse, DollarSign, Upload, ChevronRight,
+    // ✅ ADDED - Replace RotateCw with RotateCcw (already imported above)
+    // RotateCw doesn't exist, use RotateCcw instead
 } from 'lucide-react';
 
 const steps = ['Select Medicine', 'Movement Type', 'Details & Confirm'];
@@ -25,6 +27,8 @@ const movementTypes = [
     { value: 'expired', label: 'Expired', icon: CalendarX, color: 'gray', desc: 'Remove expired stock' },
     { value: 'lost', label: 'Lost', icon: FileWarning, color: 'orange', desc: 'Mark lost stock' },
     { value: 'correction', label: 'Correction', icon: CheckCircle2, color: 'blue', desc: 'Fix data errors' },
+    // ✅ FIXED: Changed from RotateCw to RotateCcw (which is the correct icon name)
+    { value: 'self', label: 'Self Adjustment', icon: RotateCcw, color: 'teal', desc: 'Internal self adjustment' },
 ];
 
 const colorMap = {
@@ -36,6 +40,7 @@ const colorMap = {
     orange: 'bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400 hover:shadow-orange-100',
     gray: 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-400 hover:shadow-gray-100',
     blue: 'bg-blue-50 border-blue-200 text-blue-700 hover:border-blue-400 hover:shadow-blue-100',
+    teal: 'bg-teal-50 border-teal-200 text-teal-700 hover:border-teal-400 hover:shadow-teal-100',
 };
 
 const SkeletonCard = () => (
@@ -61,6 +66,7 @@ export default function StockMovementCreate() {
 
     const [form, setForm] = useState({
         medicine_id: '', type: 'in', quantity: '', reference: '', notes: '',
+        source_type: '', destination_type: ''
     });
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -69,8 +75,9 @@ export default function StockMovementCreate() {
     useEffect(() => {
         api.get('/medicines')
             .then(r => {
-                const data = r.data?.data || r.data;
-                const list = Array.isArray(data) ? data : [];
+                const list = Array.isArray(r.data?.data) ? r.data.data :
+                             Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
+                             Array.isArray(r.data) ? r.data : [];
                 setMedicines(list);
                 setFilteredMedicines(list);
             })
@@ -181,7 +188,9 @@ export default function StockMovementCreate() {
                             <button
                                 key={medicine.id}
                                 onClick={() => handleSelectMedicine(medicine)}
-                                className={`text-left p-4 rounded-2xl border-2 transition-all duration-200 hover:shadow-lg ${form.medicine_id === medicine.id ? 'border-sky-500 bg-sky-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                                className={`text-left p-4 rounded-2xl border-2 transition-all duration-200 hover:shadow-lg ${
+                                    form.medicine_id === medicine.id ? 'border-sky-500 bg-sky-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
                             >
                                 <div className="flex items-start gap-3">
                                     <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center shrink-0">
@@ -195,7 +204,9 @@ export default function StockMovementCreate() {
                                             {medicine.shelf_location && <span className="text-xs text-gray-500">Shelf: {medicine.shelf_location}</span>}
                                         </div>
                                         {medicine.expiry_date && (
-                                            <p className={`text-xs mt-1 flex items-center gap-1 ${new Date(medicine.expiry_date) < new Date() ? 'text-red-600' : 'text-gray-500'}`}>
+                                            <p className={`text-xs mt-1 flex items-center gap-1 ${
+                                                new Date(medicine.expiry_date) < new Date() ? 'text-red-600' : 'text-gray-500'
+                                            }`}>
                                                 <CalendarX size={12} /> Expires: {new Date(medicine.expiry_date).toLocaleDateString()}
                                             </p>
                                         )}
@@ -227,21 +238,28 @@ export default function StockMovementCreate() {
                         <button onClick={() => setStep(0)} className="ml-auto text-sm text-sky-600 font-semibold hover:underline">Change</button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {movementTypes.map(mt => (
-                            <button
-                                key={mt.value}
-                                onClick={() => handleSelectType(mt.value)}
-                                className={`text-left p-5 rounded-2xl border-2 transition-all duration-200 hover:shadow-lg ${form.type === mt.value ? `border-sky-500 ${colorMap[mt.color].split(' ')[0]} shadow-md` : 'border-gray-200 bg-white hover:border-gray-300'}`}
-                            >
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${form.type === mt.value ? colorMap[mt.color].split(' ')[0] : 'bg-gray-100'}`}>
-                                        <mt.icon size={20} className={form.type === mt.value ? colorMap[mt.color].split(' ')[2] : 'text-gray-500'} />
+                        {movementTypes.map(mt => {
+                            const Icon = mt.icon;
+                            return (
+                                <button
+                                    key={mt.value}
+                                    onClick={() => handleSelectType(mt.value)}
+                                    className={`text-left p-5 rounded-2xl border-2 transition-all duration-200 hover:shadow-lg ${
+                                        form.type === mt.value ? `border-sky-500 ${colorMap[mt.color].split(' ')[0]} shadow-md` : 'border-gray-200 bg-white hover:border-gray-300'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                            form.type === mt.value ? colorMap[mt.color].split(' ')[0] : 'bg-gray-100'
+                                        }`}>
+                                            <Icon size={20} className={form.type === mt.value ? colorMap[mt.color].split(' ')[2] : 'text-gray-500'} />
+                                        </div>
+                                        <span className="font-bold text-gray-800">{mt.label}</span>
                                     </div>
-                                    <span className="font-bold text-gray-800">{mt.label}</span>
-                                </div>
-                                <p className="text-xs text-gray-500 ml-[52px]">{mt.desc}</p>
-                            </button>
-                        ))}
+                                    <p className="text-xs text-gray-500 ml-[52px]">{mt.desc}</p>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -308,6 +326,28 @@ export default function StockMovementCreate() {
                                         className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
                                     />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
+                                <select name="source_type" value={form.source_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                    <option value="">None</option>
+                                    <option value="self">Self</option>
+                                    <option value="supplier">Supplier</option>
+                                    <option value="branch">Branch</option>
+                                    <option value="sale">Sale</option>
+                                    <option value="customer">Customer</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
+                                <select name="destination_type" value={form.destination_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                    <option value="">None</option>
+                                    <option value="self">Self</option>
+                                    <option value="supplier">Supplier</option>
+                                    <option value="branch">Branch</option>
+                                    <option value="sale">Sale</option>
+                                    <option value="customer">Customer</option>
+                                </select>
                             </div>
                         </div>
                     </div>

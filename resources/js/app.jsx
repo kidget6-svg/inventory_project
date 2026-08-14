@@ -13,7 +13,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
 import Medicines from './pages/Medicines';
-import Inventory from './pages/Inventory';
+// 🗑️ REMOVED: Inventory - Merged into StockManagement
+import StockManagement from './pages/StockManagement'; // 🆕 NEW
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
@@ -23,12 +24,20 @@ import RetailSales from './pages/RetailSales';
 import RetailOTCSales from './pages/RetailOTCSales';
 import RetailProducts from './pages/RetailProducts';
 import StockMovements from './pages/StockMovements';
-import LowStock from './pages/LowStock';
+// 🗑️ REMOVED: LowStock - Merged into StockManagement
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import ReceiptPage from './pages/ReceiptPage';
 import SalesHistory from './pages/SalesHistory';
+// 🆕 NEW PAGES
+import Warehouse from './pages/Warehouse';
+import Branches from './pages/Branches';
+import AuditLogs from './pages/AuditLogs';
+import StockMovementCreate from './pages/StockMovementCreate';
+import StockMovementView from './pages/StockMovementView';
+import PurchaseOrderCreate from './pages/PurchaseOrderCreate';
+import PurchaseOrderEdit from './pages/PurchaseOrderEdit';
 
 function ProtectedRoute({ children, permissions, title }) {
     const { user, loading, hasAnyPermission } = useAuth();
@@ -79,12 +88,16 @@ function App() {
 
     return (
         <Routes>
-            {/* Public landing & auth pages */}
+            {/* ============================================================
+                PUBLIC ROUTES
+            ============================================================ */}
             <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
             <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
             <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
 
-            {/* Dashboard Router */}
+            {/* ============================================================
+                DASHBOARD (Role-based)
+            ============================================================ */}
             <Route path="/dashboard" element={
                 <ProtectedRoute title="Dashboard"><DashboardRouter /></ProtectedRoute>
             } />
@@ -97,7 +110,9 @@ function App() {
                 <ProtectedRoute permissions={['roles.manage']} title="Roles & Permissions"><RolesPermissions /></ProtectedRoute>
             } />
 
-            {/* Account pages */}
+            {/* ============================================================
+                ACCOUNT PAGES
+            ============================================================ */}
             <Route path="/profile" element={
                 <ProtectedRoute title="User Profile"><Profile /></ProtectedRoute>
             } />
@@ -105,12 +120,11 @@ function App() {
                 <ProtectedRoute title="Account Settings"><Settings /></ProtectedRoute>
             } />
 
-            {/* Product Management & Operations */}
+            {/* ============================================================
+                PRODUCT MANAGEMENT
+            ============================================================ */}
             <Route path="/medicines" element={
                 <ProtectedRoute permissions={['medicines.view']} title="Medicines"><Medicines /></ProtectedRoute>
-            } />
-            <Route path="/inventory" element={
-                <ProtectedRoute permissions={['inventory.view']} title="Stock Inventory"><Inventory /></ProtectedRoute>
             } />
             <Route path="/categories" element={
                 <ProtectedRoute permissions={['categories.view']} title="Medicine Categories"><Categories /></ProtectedRoute>
@@ -118,14 +132,55 @@ function App() {
             <Route path="/suppliers" element={
                 <ProtectedRoute permissions={['suppliers.view']} title="Suppliers Directory"><Suppliers /></ProtectedRoute>
             } />
-            <Route path="/purchase-orders" element={
-                <ProtectedRoute permissions={['purchase-orders.view']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
-            } />
             <Route path="/retail-products" element={
                 <ProtectedRoute permissions={['retail-products.view']} title="Retail & OTC Products"><RetailProducts /></ProtectedRoute>
             } />
 
-            {/* Sales Routes */}
+            {/* ============================================================
+                WAREHOUSE & INVENTORY (NEW)
+            ============================================================ */}
+            <Route path="/warehouse" element={
+                <ProtectedRoute roles={['admin']} title="Warehouse"><Warehouse /></ProtectedRoute>
+            } />
+            
+            {/* 🆕 Stock Management - Replaces Inventory + LowStock */}
+            <Route path="/stock-management" element={
+                <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Stock Management"><StockManagement /></ProtectedRoute>
+            } />
+            
+            <Route path="/stock-movements" element={
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Movements"><StockMovements /></ProtectedRoute>
+            } />
+            <Route path="/stock-movements/create" element={
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Create Stock Movement"><StockMovementCreate /></ProtectedRoute>
+            } />
+            <Route path="/stock-movements/:id" element={
+                <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Movement Details"><StockMovementView /></ProtectedRoute>
+            } />
+
+            {/* ============================================================
+                BRANCHES (NEW)
+            ============================================================ */}
+            <Route path="/branches" element={
+                <ProtectedRoute roles={['admin']} title="Branches"><Branches /></ProtectedRoute>
+            } />
+
+            {/* ============================================================
+                PURCHASE ORDERS
+            ============================================================ */}
+            <Route path="/purchase-orders" element={
+                <ProtectedRoute roles={['admin']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
+            } />
+            <Route path="/purchase-orders/create" element={
+                <ProtectedRoute roles={['admin']} title="Create Purchase Order"><PurchaseOrderCreate /></ProtectedRoute>
+            } />
+            <Route path="/purchase-orders/:id/edit" element={
+                <ProtectedRoute roles={['admin']} title="Edit Purchase Order"><PurchaseOrderEdit /></ProtectedRoute>
+            } />
+
+            {/* ============================================================
+                SALES
+            ============================================================ */}
             <Route path="/prescription-sales" element={
                 <ProtectedRoute permissions={['sales.prescription']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
             } />
@@ -142,28 +197,43 @@ function App() {
             {/* Permission-based redirect for legacy /sales path */}
             <Route path="/sales" element={<ProtectedRoute><SalesRedirect /></ProtectedRoute>} />
 
-            {/* Receipt Page */}
+            {/* ============================================================
+                RECEIPT & SALES HISTORY
+            ============================================================ */}
             <Route path="/receipt/:id" element={
                 <ProtectedRoute permissions={['sales.receipt']} title="Receipt"><ReceiptPage /></ProtectedRoute>
             } />
-
-            {/* Sales History */}
             <Route path="/sales-history" element={
                 <ProtectedRoute permissions={['sales.view']} title="Sales History"><SalesHistory /></ProtectedRoute>
             } />
 
-            {/* Reports & Tracking */}
-            <Route path="/stock-movements" element={
-                <ProtectedRoute permissions={['inventory.view']} title="Stock Movements"><StockMovements /></ProtectedRoute>
-            } />
-            <Route path="/low-stock" element={
-                <ProtectedRoute permissions={['lowstock.view']} title="Low Stock Alerts"><LowStock /></ProtectedRoute>
-            } />
             <Route path="/reports" element={
                 <ProtectedRoute permissions={['reports.view']} title="System Reports"><Reports /></ProtectedRoute>
             } />
 
-            {/* Fallback Catch-all Route */}
+            {/* ============================================================
+                AUDIT LOGS (NEW - Admin Only)
+            ============================================================ */}
+            <Route path="/audit-logs" element={
+                <ProtectedRoute roles={['admin']} title="Audit Logs"><AuditLogs /></ProtectedRoute>
+            } />
+
+            {/* ============================================================
+                LEGACY REDIRECTS
+                Redirect old paths to new ones
+            ============================================================ */}
+            {/* Inventory → StockManagement */}
+            <Route path="/inventory" element={
+                <Navigate to="/stock-management" replace />
+            } />
+            {/* LowStock → StockManagement */}
+            <Route path="/low-stock" element={
+                <Navigate to="/stock-management" replace />
+            } />
+
+            {/* ============================================================
+                FALLBACK - 404 Not Found
+            ============================================================ */}
             <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} />
         </Routes>
     );

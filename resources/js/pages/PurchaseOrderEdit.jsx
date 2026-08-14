@@ -33,24 +33,27 @@ export default function PurchaseOrderEdit() {
     }, [authLoading, canManage, navigate]);
 
     useEffect(() => {
-        if (canManage) {
-            Promise.all([
-                api.get('/suppliers').then(r => setSuppliers(r.data)),
-                api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
-                api.get(`/purchase-orders/${id}`).then(r => {
-                    const data = r.data;
-                    const item = data.items?.[0];
-                    setForm({
-                        supplier_id: data.supplier_id || '',
-                        order_date: data.order_date || '',
-                        medicine_id: item?.medicine_id || '',
-                        quantity: item?.quantity || '',
-                        unit_price: item?.unit_price || '',
-                    });
-                }),
-            ]).finally(() => setLoading(false));
-        }
-    }, [id, canManage]);
+        Promise.all([
+            api.get('/suppliers').then(r => setSuppliers(r.data)),
+            api.get('/medicines').then(r => {
+                const list = Array.isArray(r.data?.data) ? r.data.data :
+                             Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
+                             Array.isArray(r.data) ? r.data : [];
+                setMedicines(list);
+            }),
+            api.get(`/purchase-orders/${id}`).then(r => {
+                const data = r.data;
+                const item = data.items?.[0];
+                setForm({
+                    supplier_id: data.supplier_id || '',
+                    order_date: data.order_date || '',
+                    medicine_id: item?.medicine_id || '',
+                    quantity: item?.quantity || '',
+                    unit_price: item?.unit_price || '',
+                });
+            }),
+        ]).finally(() => setLoading(false));
+    }, [id]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 

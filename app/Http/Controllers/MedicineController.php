@@ -5,11 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreMedicineRequest;
 use App\Http\Requests\UpdateMedicineRequest;
 use App\Models\Medicine;
-use App\Models\Category;
-use App\Models\Supplier;
-use App\Models\Shelf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class MedicineController extends Controller
 {
@@ -18,121 +16,76 @@ class MedicineController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Medicine::with(['category', 'supplier', 'shelf']);
+        try {
+            // Retrieve medicines safely without breaking on missing relationships
+            $medicines = Medicine::query()
+                ->when($request->filled('search'), function ($q) use ($request) {
+                    $search = $request->search;
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('generic_name', 'like', "%{$search}%")
+                      ->orWhere('shelf_location', 'like', "%{$search}%");
+                })
+                ->latest()
+                ->get();
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
-            });
+            return response()->json([
+                'success' => true,
+                'data'    => $medicines
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Database Query Error: ' . $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine()
+            ], 500);
         }
-
-        $medicines = $query->latest()->paginate(10);
-
-        return view('medicines.index', compact('medicines'));
-    }
-
-    /**
-     * Show the form for creating a new medicine.
-     */
-    public function create()
-    {
-        $categories = Category::all();
-        $suppliers  = Supplier::all();
-        $shelves    = Shelf::all();
-
-        return view('medicines.create', compact('categories', 'suppliers', 'shelves'));
     }
 
     /**
      * Store a newly created medicine.
      */
-    public function store(StoreMedicineRequest $request)
+    public function store(Request $request)
     {
-        $validated = $request->validated();
+        try {
+            // Validation rules matching nullable database fields
+            $validated = $request->validate([
+                'name'           => 'required|string|max:255',
+                'generic_name'   => 'nullable|string|max:255',
+                'category_id'    => 'nullable',
+                'supplier_id'    => 'nullable',
+                'quantity'       => 'required|integer|min:0',
+                'unit_price'     => 'nullable|numeric|min:0',
+                'purchase_price' => 'nullable|numeric|min:0',
+                'selling_price'  => 'required|numeric|min:0',
+                'reorder_level'  => 'nullable|integer|min:0',
+                'expiry_date'    => 'nullable|date',
+                'status'         => 'required|in:active,inactive,expired,discontinued',
+                'shelf_location' => 'nullable|string|max:100',
+                'batch_number'   => 'nullable|string|max:100',
+                'barcode'        => 'nullable|string|max:100',
+            ]);
 
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')
-                ->store('medicine-images', 'public');
+            $medicine = Medicine::create($validated);
+
+            return response()->json([
+                'success'  => true,
+                'message'  => 'Medicine created successfully',
+                'data'     => $medicine
+            ], 201);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error',
+                'errors'  => $e->errors()
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Save Error: ' . $e->getMessage()
+            ], 500);
         }
-
-        Medicine::create($validated);
-
-        return redirect()->route('medicines.index')
-            ->with('success', 'Medicine added successfully.');
-    }
-
-    /**
-     * Display the specified medicine.
-     */
-    public function show(Medicine $medicine)
-    {
-        return view('medicines.show', compact('medicine'));
-    }
-
-    /**
-     * Show the form for editing the specified medicine.
-     */
-    public function edit(Medicine $medicine)
-    {
-        $categories = Category::all();
-        $suppliers  = Supplier::all();
-        $shelves    = Shelf::all();
-
-        return view('medicines.edit', compact('medicine', 'categories', 'suppliers', 'shelves'));
-    }
-
-    /**
-     * Update the specified medicine.
-     */
-    public function update(UpdateMedicineRequest $request, Medicine $medicine)
-    {
-        $validated = $request->validated();
-
-        // Handle image deletion flag
-        if ($request->boolean('delete_image')) {
-            if ($medicine->image && Storage::disk('public')->exists($medicine->image)) {
-                Storage::disk('public')->delete($medicine->image);
-            }
-            $validated['image'] = null;
-        }
-
-        // Handle new image upload (deletes old one)
-        if ($request->hasFile('image')) {
-            if ($medicine->image && Storage::disk('public')->exists($medicine->image)) {
-                Storage::disk('public')->delete($medicine->image);
-            }
-            $validated['image'] = $request->file('image')
-                ->store('medicine-images', 'public');
-        }
-
-        $medicine->update($validated);
-
-        return redirect()->route('medicines.index')
-            ->with('success', 'Medicine updated successfully.');
-    }
-
-    /**
-     * Delete the specified medicine.
-     */
-    public function destroy(Medicine $medicine)
-    {
-        if ($medicine->image && Storage::disk('public')->exists($medicine->image)) {
-            Storage::disk('public')->delete($medicine->image);
-        }
-
-        $medicine->delete();
-
-        return redirect()->route('medicines.index')
-            ->with('success', 'Medicine deleted successfully');
-    }
-
-    /**
-     * Generate a barcode label for the specified medicine.
-     */
-    public function barcodeLabel(Medicine $medicine)
-    {
-        return view('medicines.barcode-label', compact('medicine'));
     }
 }

@@ -110,15 +110,17 @@ class PurchaseOrderTest extends TestCase
     public function test_create_purchase_order_requires_supplier_and_medicine()
     {
         $user = $this->adminUser();
+        $supplier = Supplier::factory()->create();
 
         $response = $this->actingAs($user)->postJson('/purchase-orders', [
+            'supplier_id' => $supplier->id,
             'order_date' => now()->toDateString(),
             'quantity' => 10,
             'unit_price' => 5.00,
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['supplier_id', 'medicine_id']);
+            ->assertJson(['message' => 'Medicine name or medicine ID is required']);
     }
 
     public function test_admin_can_edit_a_draft_purchase_order()

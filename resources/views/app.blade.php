@@ -9,8 +9,8 @@
     <title>{{ config('app.name', 'EthioPharmacy') }}</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" href="{{ asset('p1.png') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('p1.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">

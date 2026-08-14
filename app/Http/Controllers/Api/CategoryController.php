@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
+use App\Models\Shelf;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CategoryController extends Controller
 {
@@ -15,25 +17,82 @@ class CategoryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Category::withCount('medicines');
+        try {
+            $query = Category::withCount('medicines');
 
-        if ($request->has('page') || $request->has('per_page')) {
-            return response()->json(
-                $query->orderBy('name')->paginate((int) $request->input('per_page', 10))
-            );
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('shelf_location', 'like', "%{$search}%");
+                });
+            }
+
+            $perPage = $request->get('per_page');
+
+            if ($perPage === 'all' || $perPage == -1) {
+                $allCategories = $query->latest()->get();
+                return response()->json($allCategories);
+            }
+
+            $categories = $query->latest()->paginate($perPage ?? 15);
+
+            return response()->json([
+                'success' => true,
+                'data' => $categories->items(),
+                'meta' => [
+                    'current_page' => $categories->currentPage(),
+                    'last_page' => $categories->lastPage(),
+                    'per_page' => $categories->perPage(),
+                    'total' => $categories->total(),
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Query Error: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json($query->orderBy('name')->get());
     }
 
-    /**
-     * Store a newly created category.
-     */
-    public function store(StoreCategoryRequest $request)
+    public function store(Request $request)
     {
-        $category = Category::create($request->validated());
+        try {
+            // Check permissions
+            if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
+                return response()->json(['message' => 'Only admin and pharmacists can create categories.'], 403);
+            }
 
-        return response()->json($category->loadCount('medicines'), 201);
+            // Validate the request
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'shelf_location' => 'nullable|string|max:255',
+            ]);
+
+            // Create the category
+            $category = Category::create($validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Category created successfully',
+                'data' => $category->loadCount('medicines')
+            ], 201);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating category: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -44,36 +103,71 @@ class CategoryController extends Controller
         return response()->json($category->loadCount('medicines'));
     }
 
-    /**
-     * Update the specified category.
-     */
-    public function update(UpdateCategoryRequest $request, Category $category)
+    public function update(Request $request, Category $category)
     {
-        $category->update($request->validated());
+        try {
+            // Check permissions
+            if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
+                return response()->json(['message' => 'Only admin and pharmacists can update categories.'], 403);
+            }
 
-        return response()->json($category->loadCount('medicines'));
+            // Validate the request
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'shelf_location' => 'nullable|string|max:255',
+            ]);
+
+            // Update the category
+            $category->update($validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Category updated successfully',
+                'data' => $category->loadCount('medicines')
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating category: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
-    /**
-     * Delete the specified category.
-     *
-     * Category deletion is prevented when the category is already
-     * associated with medicines to avoid orphaned foreign keys.
-     */
-    public function destroy(Category $category)
+    public function destroy(Request $request, Category $category)
     {
-        if ($category->isAssociatedWithMedicines()) {
+        try {
+            // Check permissions
+            if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
+                return response()->json(['message' => 'Only admin and pharmacists can delete categories.'], 403);
+            }
+
+            // Check if category has medicines
+            if ($category->medicines()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete category with existing medicines. Move or delete the medicines first.'
+                ], 422);
+            }
+
+            $category->delete();
             return response()->json([
-                'message' => 'Cannot delete the category "' . $category->name .
-                             '" because it is associated with ' .
-                             $category->medicines()->count() . ' medicine(s). ' .
-                             'Reassign or delete the associated medicines first.',
-                'error'   => 'category_associated_with_medicines',
-            ], 422);
+                'success' => true,
+                'message' => 'Category deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting category: ' . $e->getMessage()
+            ], 500);
         }
-
-        $category->delete();
-
-        return response()->json(['message' => 'Category deleted successfully']);
     }
 }

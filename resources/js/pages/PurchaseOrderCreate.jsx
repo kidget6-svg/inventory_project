@@ -32,13 +32,16 @@ export default function PurchaseOrderCreate() {
     }, [authLoading, canManage, navigate]);
 
     useEffect(() => {
-        if (canManage) {
-            Promise.all([
-                api.get('/suppliers').then(r => setSuppliers(r.data)),
-                api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
-            ]).finally(() => setLoading(false));
-        }
-    }, [canManage]);
+        Promise.all([
+            api.get('/suppliers').then(r => setSuppliers(r.data)),
+            api.get('/medicines').then(r => {
+                const list = Array.isArray(r.data?.data) ? r.data.data :
+                             Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
+                             Array.isArray(r.data) ? r.data : [];
+                setMedicines(list);
+            }),
+        ]).finally(() => setLoading(false));
+    }, []);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 

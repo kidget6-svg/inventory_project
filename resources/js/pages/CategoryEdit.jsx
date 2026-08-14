@@ -16,14 +16,40 @@ export default function CategoryEdit() {
     const [validationErrors, setValidationErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [shelves, setShelves] = useState([]);
 
     // Redirect if user lacks permission
     useEffect(() => {
-        if (!authLoading && !canManage) {
-            window.showToast('You do not have permission to edit categories', 'error');
-            navigate('/categories');
-        }
-    }, [authLoading, canManage, navigate]);
+        const checkAdmin = async () => {
+            try {
+                const response = await api.get('/user');
+                if (response.data.role !== 'admin') {
+                    window.showToast('Only admins can edit categories', 'error');
+                    navigate('/categories');
+                    return;
+                }
+                setIsAdmin(true);
+            } catch (err) {
+                window.showToast('Unauthorized access', 'error');
+                navigate('/categories');
+            }
+        };
+        checkAdmin();
+    }, [navigate]);
+
+    // Load shelves for dropdown
+    useEffect(() => {
+        if (!isAdmin) return;
+        api.get('/shelves')
+            .then(r => {
+                const data = r.data;
+                setShelves(Array.isArray(data) ? data : []);
+            })
+            .catch(() => {
+                window.showToast('Failed to load shelves', 'error');
+            });
+    }, [isAdmin]);
 
     useEffect(() => {
         if (canManage) {
@@ -110,18 +136,19 @@ export default function CategoryEdit() {
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
-                        <input
+                        <select
                             name="shelf_location"
                             value={form.shelf_location}
                             onChange={handleChange}
-                            placeholder="e.g. A-2-3"
-                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
-                                validationErrors.shelf_location ? 'border-red-400 focus:border-red-400' : 'border-gray-200'
-                            }`}
-                        />
-                        {validationErrors.shelf_location && (
-                            <p className="text-xs text-red-500 mt-1">{validationErrors.shelf_location[0]}</p>
-                        )}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none bg-white"
+                        >
+                            <option value="">Select Shelf</option>
+                            {shelves.map(shelf => (
+                                <option key={shelf.id} value={shelf.shelf_location}>
+                                    {shelf.name} ({shelf.shelf_location})
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>

@@ -21,7 +21,7 @@ export default function Settings() {
         setSaving(true);
         try {
             // NOTE: adjust this endpoint to match your actual AuthController route
-            await axios.put('/api/settings/password', {
+            await axios.put('/settings/password', {
                 current_password: currentPassword,
                 new_password: newPassword,
                 new_password_confirmation: confirmPassword,

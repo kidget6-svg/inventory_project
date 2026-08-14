@@ -73,19 +73,82 @@ export default function RetailProducts() {
         if (filters.status) params.status = filters.status;
         api.get('/retail-products', { params })
             .then(r => {
-                setProducts(r.data.data || r.data);
-                setMeta(r.data);
+                // Handle both paginated and non-paginated responses
+                if (r.data && r.data.data) {
+                    setProducts(r.data.data || []);
+                    setMeta(r.data);
+                } else if (Array.isArray(r.data)) {
+                    setProducts(r.data);
+                    setMeta(null);
+                } else {
+                    setProducts([]);
+                    setMeta(null);
+                }
             })
-            .catch(err => { console.error(err); setError('Failed to load retail products'); })
+            .catch(err => { 
+                console.error(err); 
+                setError('Failed to load retail products');
+                setProducts([]);
+            })
             .finally(() => setLoading(false));
     };
 
-    const loadCategories = () => { api.get('/categories').then(r => setCategories(r.data)).catch(err => console.error(err)); };
-    const loadSuppliers = () => { api.get('/suppliers').then(r => setSuppliers(r.data)).catch(err => console.error(err)); };
+    const loadCategories = () => { 
+        api.get('/categories', { params: { per_page: -1 } })
+            .then(r => {
+                // Handle different response formats
+                let categoriesData = [];
+                if (Array.isArray(r.data)) {
+                    categoriesData = r.data;
+                } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
+                    categoriesData = r.data.data;
+                } else if (r.data && r.data.categories && Array.isArray(r.data.categories)) {
+                    categoriesData = r.data.categories;
+                } else {
+                    console.warn('Unexpected categories response format:', r.data);
+                }
+                setCategories(categoriesData);
+            })
+            .catch(err => { 
+                console.error('Error loading categories:', err); 
+                setCategories([]);
+            }); 
+    };
 
-    useEffect(() => { loadCategories(); loadSuppliers(); }, []);
-    useEffect(() => { setPage(1); }, [filters.search, filters.category, filters.supplier_id, filters.status]);
-    useEffect(() => { loadProducts(); }, [filters, page]);
+    const loadSuppliers = () => { 
+        api.get('/suppliers', { params: { per_page: -1 } })
+            .then(r => {
+                // Handle different response formats
+                let suppliersData = [];
+                if (Array.isArray(r.data)) {
+                    suppliersData = r.data;
+                } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
+                    suppliersData = r.data.data;
+                } else if (r.data && r.data.suppliers && Array.isArray(r.data.suppliers)) {
+                    suppliersData = r.data.suppliers;
+                } else {
+                    console.warn('Unexpected suppliers response format:', r.data);
+                }
+                setSuppliers(suppliersData);
+            })
+            .catch(err => { 
+                console.error('Error loading suppliers:', err); 
+                setSuppliers([]);
+            }); 
+    };
+
+    useEffect(() => { 
+        loadCategories(); 
+        loadSuppliers(); 
+    }, []);
+
+    useEffect(() => { 
+        setPage(1); 
+    }, [filters.search, filters.category, filters.supplier_id, filters.status]);
+
+    useEffect(() => { 
+        loadProducts(); 
+    }, [filters, page]);
 
     const handlePageChange = (p) => setPage(p);
 
@@ -102,10 +165,16 @@ export default function RetailProducts() {
     const resetFilters = () => setFilters({ search: '', category: '', supplier_id: '', status: '' });
 
     const resetForm = () => {
-        setForm({ name: '', sku: '', barcode: '', category: 'General', supplier_id: '', quantity: '', price: '', purchase_price: '', reorder_level: '', expiry_date: '', status: 'active', description: '', manufacturer: '', shelf_location: '' });
+        setForm({ 
+            name: '', sku: '', barcode: '', category: 'General', supplier_id: '', 
+            quantity: '', price: '', purchase_price: '', reorder_level: '', 
+            expiry_date: '', status: 'active', description: '', manufacturer: '', shelf_location: '' 
+        });
         setImageFile(null);
         setImagePreview('');
-        setEditId(null); setError(''); setStep(0);
+        setEditId(null); 
+        setError(''); 
+        setStep(0);
     };
 
     const openCreate = () => { resetForm(); setShowModal(true); };
@@ -121,7 +190,10 @@ export default function RetailProducts() {
         });
         setImageFile(null);
         setImagePreview(p.image_url || '');
-        setEditId(p.id); setShowModal(true); setError(''); setStep(0);
+        setEditId(p.id); 
+        setShowModal(true); 
+        setError(''); 
+        setStep(0);
     };
 
     const openView = (p) => { setViewProduct(p); setShowViewModal(true); };
@@ -153,10 +225,16 @@ export default function RetailProducts() {
                     window.showToast('Retail product created successfully', 'success');
                 }
             } else {
-                if (editId) { await api.put(`/retail-products/${editId}`, form); window.showToast('Retail product updated successfully', 'success'); }
-                else { await api.post('/retail-products', form); window.showToast('Retail product created successfully', 'success'); }
+                if (editId) { 
+                    await api.put(`/retail-products/${editId}`, form); 
+                    window.showToast('Retail product updated successfully', 'success'); 
+                } else { 
+                    await api.post('/retail-products', form); 
+                    window.showToast('Retail product created successfully', 'success'); 
+                }
             }
-            setShowModal(false); loadProducts();
+            setShowModal(false); 
+            loadProducts();
         } catch (err) {
             const msgs = err.response?.data?.errors;
             setError(msgs ? Object.values(msgs).flat().join(' ') : 'Error saving retail product');
@@ -165,18 +243,32 @@ export default function RetailProducts() {
 
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this retail product?')) return;
-        try { await api.delete(`/retail-products/${id}`); window.showToast('Retail product deleted successfully', 'success'); loadProducts(); }
-        catch (err) { window.showToast('Failed to delete retail product', 'error'); }
+        try { 
+            await api.delete(`/retail-products/${id}`); 
+            window.showToast('Retail product deleted successfully', 'success'); 
+            loadProducts(); 
+        } catch (err) { 
+            window.showToast('Failed to delete retail product', 'error'); 
+        }
     };
 
     const startBarcodeScan = async () => {
-        if (!('BarcodeDetector' in window)) { window.showToast('Barcode scanning is not supported in this browser.', 'error'); return; }
+        if (!('BarcodeDetector' in window)) { 
+            window.showToast('Barcode scanning is not supported in this browser.', 'error'); 
+            return; 
+        }
         setScanning(true);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+            if (videoRef.current) { 
+                videoRef.current.srcObject = stream; 
+                await videoRef.current.play(); 
+            }
             scanLoop();
-        } catch (err) { window.showToast('Could not access camera: ' + err.message, 'error'); setScanning(false); }
+        } catch (err) { 
+            window.showToast('Could not access camera: ' + err.message, 'error'); 
+            setScanning(false); 
+        }
     };
 
     const scanLoop = useCallback(async () => {
@@ -193,7 +285,9 @@ export default function RetailProducts() {
                 }
             }
             requestAnimationFrame(scanLoop);
-        } catch (err) { requestAnimationFrame(scanLoop); }
+        } catch (err) { 
+            requestAnimationFrame(scanLoop); 
+        }
     }, [scanning]);
 
     const stopBarcodeScan = () => {
@@ -204,10 +298,17 @@ export default function RetailProducts() {
         }
     };
 
-    useEffect(() => { return () => stopBarcodeScan(); }, []);
+    useEffect(() => { 
+        return () => stopBarcodeScan(); 
+    }, []);
 
     const getStatusBadge = (status) => {
-        const config = { active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' }, inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' }, expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }, discontinued: { bg: 'bg-orange-100', text: 'orange-700', label: 'Discontinued' } };
+        const config = { 
+            active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' }, 
+            inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' }, 
+            expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }, 
+            discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' } 
+        };
         const cfg = config[status] || config.active;
         return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>;
     };
@@ -264,7 +365,9 @@ export default function RetailProducts() {
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier</label>
                             <select name="supplier_id" value={form.supplier_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
                                 <option value="">Select Supplier</option>
-                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {Array.isArray(suppliers) && suppliers.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
                             </select>
                         </div>
                         <div className="md:col-span-2">
@@ -381,7 +484,9 @@ export default function RetailProducts() {
                         <Package className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                         <select name="supplier_id" value={filters.supplier_id} onChange={handleFilterChange} className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none appearance-none">
                             <option value="">All Suppliers</option>
-                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {Array.isArray(suppliers) && suppliers.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
                         </select>
                     </div>
                     <div className="relative w-full md:w-48">

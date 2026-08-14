@@ -6,23 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
+        Schema::dropIfExists('shelves');
+        
         Schema::create('shelves', function (Blueprint $table) {
-    $table->id();
-    $table->string('shelf_code'); // Example: A1, B2
-    $table->string('location');   // Example: Store Room Left
-    $table->timestamps();
-});
-       
+            $table->id();
+            $table->string('name');
+            $table->string('shelf_location')->unique();
+            $table->text('description')->nullable();
+            $table->integer('capacity')->default(100);
+            $table->timestamps();
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('shelves');
