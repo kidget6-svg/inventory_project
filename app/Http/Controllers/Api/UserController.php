@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -42,19 +43,18 @@ class UserController extends Controller
     /**
      * User counts summary (admin only).
      */
-
+    
     public function stats()
 {
-        return response()->json([
-            'total' => User::count(),
-            'pending' => User::where('status', User::STATUS_PENDING)->count(),
-            'approved' => User::where('status', User::STATUS_APPROVED)->count(),
-            'rejected' => User::where('status', User::STATUS_REJECTED)->count(),
-            'admins' => User::where('role', 'admin')->where('status', User::STATUS_APPROVED)->count(),
-            'pharmacists' => User::where('role', 'pharmacist')->where('status', User::STATUS_APPROVED)->count(),
-            'cashiers' => User::where('role', 'cashier')->where('status', User::STATUS_APPROVED)->count(),
-            'purchasing_staff' => User::where('role', 'purchasing_staff')->where('status', User::STATUS_APPROVED)->count(),
-        ]);
+    return response()->json([
+        'total' => User::count(),
+        'pending' => User::where('status', User::STATUS_PENDING)->count(),
+        'approved' => User::where('status', User::STATUS_APPROVED)->count(),
+        'rejected' => User::where('status', User::STATUS_REJECTED)->count(),
+        'admins' => User::where('role', 'admin')->where('status', User::STATUS_APPROVED)->count(),
+        'pharmacists' => User::where('role', 'pharmacist')->where('status', User::STATUS_APPROVED)->count(),
+        'cashiers' => User::where('role', 'cashier')->where('status', User::STATUS_APPROVED)->count(),
+    ]);
 }
 
     /**
@@ -77,7 +77,7 @@ class UserController extends Controller
             'email'                             => 'required|email|unique:users,email',
             'phone_number'                      => 'nullable|string|max:20',
             'password'                          => 'required|confirmed|min:8',
-            'role'                              => 'required|in:admin,pharmacist,cashier,purchasing_staff',
+            'role'                              => ['required', Rule::exists('roles', 'slug')],
             'gender'                            => 'nullable|in:male,female,other',
             'date_of_birth'                     => 'nullable|date',
             'address'                           => 'nullable|string',
@@ -104,6 +104,7 @@ class UserController extends Controller
             'phone_number'  => $request->phone_number,
             'password'      => Hash::make($request->password),
             'role'          => $request->role,
+            'role_id'       => Role::where('slug', $request->role)->value('id'),
             'status'        => User::STATUS_APPROVED,
             'gender'        => $request->gender,
             'date_of_birth' => $request->date_of_birth,
@@ -165,7 +166,7 @@ class UserController extends Controller
             'email'                             => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'phone_number'                      => 'nullable|string|max:20',
             'password'                          => 'nullable|confirmed|min:8',
-            'role'                              => 'required|in:admin,pharmacist,cashier,purchasing_staff',
+            'role'                              => ['required', Rule::exists('roles', 'slug')],
             'status'                            => 'nullable|in:pending,approved,rejected',
             'gender'                            => 'nullable|in:male,female,other',
             'date_of_birth'                     => 'nullable|date',
@@ -192,6 +193,7 @@ class UserController extends Controller
             'email'         => $request->email,
             'phone_number'  => $request->phone_number,
             'role'          => $request->role,
+            'role_id'       => Role::where('slug', $request->role)->value('id'),
             'gender'        => $request->gender,
             'date_of_birth' => $request->date_of_birth,
             'address'       => $request->address,

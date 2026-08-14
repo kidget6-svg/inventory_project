@@ -1,13 +1,16 @@
 <?php
+// app/Http/Controllers/Api/AuthController.php
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -96,23 +99,9 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'status' => $user->status,
-                'permissions' => $user->getAllPermissions(),
+                'permissions' => $user->permissions,
             ],
             'role' => $user->role,
-            'permissions' => $user->getAllPermissions(),
-        ]);
-    }
-
-    /**
-     * Return the authenticated user's permissions and role.
-     */
-    public function permissions(Request $request)
-    {
-        $user = $request->user();
-
-        return response()->json([
-            'role' => $user->role,
-            'permissions' => $user->getAllPermissions(),
         ]);
     }
 
@@ -126,21 +115,17 @@ class AuthController extends Controller
             ]);
         }
 
-        // Self-registration is restricted to pharmacists and cashiers only.
-        // Admin and purchasing_staff accounts must be created by an admin
-        // via the admin user-management endpoint.
         $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|string|email|max:255|unique:users',
             'password'   => 'required|string|min:8|confirmed',
-            'role'       => 'required|in:pharmacist,cashier',
+            'role'       => ['required', Rule::exists('roles', 'slug')],
         ]);
 
-        // Only an authenticated admin can create approved accounts;
-        // public self-registration always starts with "pending" status.
-        $actingUser = $request->user();
-        $status = ($actingUser && $actingUser->role === 'admin') ? User::STATUS_APPROVED : User::STATUS_PENDING;
+        $status = (Auth::check() && Auth::user()?->role === 'admin') ? User::STATUS_APPROVED : 'pending';
+
+        $role = Role::where('slug', $request->role)->first();
 
         $user = User::create([
             'name'       => $request->first_name . ' ' . $request->last_name,
@@ -149,6 +134,7 @@ class AuthController extends Controller
             'email'      => $request->email,
             'password'   => Hash::make($request->password),
             'role'       => $request->role,
+            'role_id'    => $role?->id,
             'status'     => $status,
         ]);
 
@@ -157,7 +143,6 @@ class AuthController extends Controller
             'user'    => $user
         ], 201);
     }
-
     public function logout(Request $request)
     {
         if ($request->user()) {
@@ -168,14 +153,6 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        $user = $request->user();
-
-        // Include permissions so the frontend can build its menu without an
-        // extra round-trip (login already returns them, but /user is used
-        // by the auth-bootstrapping flow).
-        $data = $user->toArray();
-        $data['permissions'] = $user->getAllPermissions();
-
-        return response()->json($data);
+        return response()->json($request->user());
     }
 }
