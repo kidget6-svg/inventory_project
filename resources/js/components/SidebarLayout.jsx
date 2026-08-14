@@ -5,152 +5,53 @@ import {
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
     ArrowLeftRight, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText, Warehouse, AlertTriangle, Building2, ClipboardList,
-    Boxes, ShoppingCart as CartIcon, History, Home, Layers, Tag
+    ShoppingBag, FileText, ShieldCheck
 } from 'lucide-react';
 
-// ============================================================
-// ADMIN MENU - Full Access
-// ============================================================
-const adminMenu = [
-    // Main
+// Single permission-driven menu. Admin sees every entry automatically
+// because admins hold every permission.
+const menuItems = [
     { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    
-    // Product Management
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['dashboard.view'] },
+    { section: 'Point of Sale' },
+    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['prescription-sales.view'] },
+    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['prescription-checkout.view'] },
+    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['retail-otc-sales.view'] },
+    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['retail-pos.view'] },
     { section: 'Product Management' },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories & Shelves', icon: FolderTree },
-    { to: '/suppliers', label: 'Suppliers', icon: Truck },
-    
-    // Warehouse & Inventory
-    { section: 'Warehouse & Inventory' },
-    { to: '/warehouse', label: 'Warehouse', icon: Warehouse },
-    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    
-    // Operations
-    { section: 'Operations' },
-    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-    { to: '/branches', label: 'Branches', icon: Building2 },
-    
-    // Reports
-    { section: 'Reports & Analytics' },
-    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3 },
-    { to: '/sales-history', label: 'Sales History', icon: FileText },
-    
-    // Administration
-    { section: 'Administration' },
-    { to: '/users', label: 'User Management', icon: Users },
-    { to: '/audit-logs', label: 'Audit Logs', icon: ClipboardList },
-];
-
-// ============================================================
-// PHARMACIST MENU
-// ============================================================
-const pharmacistMenu = [
-    // Main
-    { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    
-    // Sales
-    { section: 'Sales' },
-    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
-    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag },
-    
-    // Product Management
-    { section: 'Product Management' },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories & Shelves', icon: FolderTree },
-    
-    // Inventory
-    { section: 'Inventory' },
-    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    
-    // Reports
+    { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view'] },
+    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail-products.view'] },
+    { to: '/categories', label: 'Categories', icon: FolderTree, permissions: ['categories.view'] },
+    { to: '/suppliers', label: 'Suppliers', icon: Truck, permissions: ['suppliers.view'] },
+    { section: 'Inventory & Purchasing' },
+    { to: '/inventory', label: 'Inventory', icon: Package, permissions: ['inventory.view'] },
+    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
+    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['stock-movements.view'] },
+    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle, permissions: ['lowstock.view'] },
     { section: 'Reports' },
-    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3 },
-    { to: '/sales-history', label: 'Sales History', icon: FileText },
-];
-
-// ============================================================
-// CASHIER MENU
-// ============================================================
-const cashierMenu = [
-    // Main
-    { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    
-    // Sales
-    { section: 'Sales' },
-    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText },
-    { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
-    
-    // History
-    { section: 'History' },
-    { to: '/sales-history', label: 'Sales History', icon: History },
-    
-    // Inventory (Read-Only)
-    { section: 'Inventory' },
-    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
-];
-
-// ============================================================
-// SUPER ADMIN MENU - Full System Access
-// ============================================================
-const superAdminMenu = [
-    // Main
-    { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    
-    // System Configuration
-    { section: 'System Configuration' },
-    { to: '/system-settings', label: 'System Settings', icon: Settings },
-    { to: '/branches', label: 'Branches', icon: Building2 },
-    
-    // Product Management
-    { section: 'Product Management' },
-    { to: '/medicines', label: 'Medicines', icon: Pill },
-    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories & Shelves', icon: FolderTree },
-    { to: '/suppliers', label: 'Suppliers', icon: Truck },
-    
-    // Warehouse & Inventory
-    { section: 'Warehouse & Inventory' },
-    { to: '/warehouse', label: 'Warehouse', icon: Warehouse },
-    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    
-    // Operations
-    { section: 'Operations' },
-    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-    
-    // Reports
-    { section: 'Reports & Analytics' },
-    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3 },
-    { to: '/sales-history', label: 'Sales History', icon: FileText },
-    
-    // Administration
+    { to: '/reports', label: 'Reports', icon: BarChart3, permissions: ['reports.view'] },
+    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales-history.view'] },
     { section: 'Administration' },
-    { to: '/users', label: 'User Management', icon: Users },
-    { to: '/audit-logs', label: 'Audit Logs', icon: ClipboardList },
+    { to: '/users', label: 'Users', icon: Users, permissions: ['users.view'] },
+    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.view'] },
 ];
 
-// ============================================================
-// ROLE TO MENU MAPPING
-// ============================================================
-const menuByRole = { 
-    super_admin: superAdminMenu,
-    admin: adminMenu, 
-    pharmacist: pharmacistMenu, 
-    cashier: cashierMenu 
-};
-
-function getMenu(role) {
-    return menuByRole[role] || cashierMenu;
+function buildMenu(items, hasAnyPermission) {
+    const result = [];
+    let pendingSections = [];
+    for (const item of items) {
+        if (item.section) {
+            pendingSections.push(item);
+        } else {
+            const allowed = !item.permissions || hasAnyPermission(item.permissions);
+            if (allowed) {
+                result.push(...pendingSections);
+                pendingSections = [];
+                result.push(item);
+            }
+        }
+    }
+    return result;
 }
 
 // ============================================================
@@ -174,15 +75,13 @@ const roleLabel = {
 };
 
 export default function SidebarLayout({ children, pageTitle }) {
-    const { user, logout } = useAuth();
+    const { user, logout, hasAnyPermission } = useAuth();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const accountMenuRef = useRef(null);
-    const menu = getMenu(user?.role);
-    const userRole = user?.role || 'guest';
-    const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+    const menu = buildMenu(menuItems, hasAnyPermission);
 
     const handleLogout = async () => {
         await logout();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import Stepper from '../components/Stepper';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -21,6 +22,10 @@ const statusOptions = [
 const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
 export default function Medicines() {
+    const { user, hasPermission } = useAuth();
+    const canCreate = hasPermission('medicines.create');
+    const canEdit = hasPermission('medicines.edit');
+    const canDelete = hasPermission('medicines.delete');
     const [medicines, setMedicines] = useState([]);
     const [categories, setCategories] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
@@ -39,8 +44,6 @@ export default function Medicines() {
     const fileInputRef = useRef(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
-    const [userRole, setUserRole] = useState(null);
-    const [isAdmin, setIsAdmin] = useState(false);
     const [frequentlySearched, setFrequentlySearched] = useState([]);
     const [searchHistory, setSearchHistory] = useState([]);
 
@@ -56,22 +59,6 @@ export default function Medicines() {
     });
 
     const [searchTimeout, setSearchTimeout] = useState(null);
-
-    // Get current user role
-    useEffect(() => {
-        const getUser = async () => {
-            try {
-                const response = await api.get('/user');
-                const role = response.data.role;
-                setUserRole(role);
-                setIsAdmin(role === 'admin');
-                console.log('User role:', role, 'Is Admin:', role === 'admin');
-            } catch (err) {
-                console.error('Failed to get user role:', err);
-            }
-        };
-        getUser();
-    }, []);
 
     const loadMedicines = () => {
         setLoading(true);
@@ -237,8 +224,8 @@ export default function Medicines() {
     };
 
     const openCreate = () => {
-        if (!isAdmin) {
-            window.showToast('Only admins can add medicines', 'error');
+        if (!canCreate) {
+            window.showToast('You do not have permission to add medicines', 'error');
             return;
         }
         resetForm(); 
@@ -246,8 +233,8 @@ export default function Medicines() {
     };
 
     const openEdit = (m) => {
-        if (!isAdmin) {
-            window.showToast('Only admins can edit medicines', 'error');
+        if (!canEdit) {
+            window.showToast('You do not have permission to edit medicines', 'error');
             return;
         }
         setForm({
@@ -349,8 +336,8 @@ export default function Medicines() {
     };
 
     const handleDelete = async (id) => {
-        if (!isAdmin) {
-            window.showToast('Only admins can delete medicines', 'error');
+        if (!canDelete) {
+            window.showToast('You do not have permission to delete medicines', 'error');
             return;
         }
         if (!window.confirm('Are you sure you want to delete this medicine?')) return;
@@ -864,13 +851,13 @@ export default function Medicines() {
             <div className="flex justify-between items-center mb-5">
                 <h3 className="text-base font-semibold text-gray-700">
                     All Medicines ({medicines.length})
-                    {userRole && (
+                    {user?.role && (
                         <span className="ml-2 text-xs font-normal text-gray-500">
-                            ({userRole === 'admin' ? 'Admin - Full Access' : 'View Only'})
+                            ({user?.role === 'admin' ? 'Admin - Full Access' : 'View Only'})
                         </span>
                     )}
                 </h3>
-                {isAdmin && (
+                {canCreate && (
                     <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <Package size={16} /> Add New Medicine
                     </button>
@@ -942,30 +929,34 @@ export default function Medicines() {
                                                     >
                                                         <Eye size={16} />
                                                     </button>
-                                                    {isAdmin && (
+                                                    {(canEdit || canDelete) && (
                                                         <>
-                                                            <button
-                                                                onClick={() => {
-                                                                    console.log('Edit clicked:', m.id);
-                                                                    openEdit(m);
-                                                                }}
-                                                                className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                                                                title="Edit Medicine"
-                                                                type="button"
-                                                            >
-                                                                <Edit size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    console.log('Delete clicked:', m.id);
-                                                                    handleDelete(m.id);
-                                                                }}
-                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                                title="Delete Medicine"
-                                                                type="button"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
+                                                            {canEdit && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        console.log('Edit clicked:', m.id);
+                                                                        openEdit(m);
+                                                                    }}
+                                                                    className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                                                                    title="Edit Medicine"
+                                                                    type="button"
+                                                                >
+                                                                    <Edit size={16} />
+                                                                </button>
+                                                            )}
+                                                            {canDelete && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        console.log('Delete clicked:', m.id);
+                                                                        handleDelete(m.id);
+                                                                    }}
+                                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                                    title="Delete Medicine"
+                                                                    type="button"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
@@ -1059,7 +1050,7 @@ export default function Medicines() {
                         </div>
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
                             <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
-                            {isAdmin && (
+                            {canEdit && (
                                 <button onClick={() => { setShowViewModal(false); openEdit(viewMedicine); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2">
                                     <Edit size={16} /> Edit Medicine
                                 </button>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -30,8 +31,8 @@ class UserController extends Controller
         }
     }
 
-    $status = $request->input('status', User::STATUS_APPROVED);
-    if ($status !== 'all') {
+    $status = $request->input('status', 'all');
+    if ($status && $status !== 'all') {
         $query->where('status', $status);
     }
 
@@ -46,7 +47,7 @@ class UserController extends Controller
     public function stats()
 {
     return response()->json([
-        'total' => User::where('status', User::STATUS_APPROVED)->count(),
+        'total' => User::count(),
         'pending' => User::where('status', User::STATUS_PENDING)->count(),
         'approved' => User::where('status', User::STATUS_APPROVED)->count(),
         'rejected' => User::where('status', User::STATUS_REJECTED)->count(),
@@ -62,29 +63,37 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        if ((!$request->filled('first_name') || !$request->filled('last_name')) && $request->filled('name')) {
+            $parts = explode(' ', trim($request->input('name')), 2);
+            $request->merge([
+                'first_name' => $request->input('first_name') ?: ($parts[0] ?? $request->input('name')),
+                'last_name'  => $request->input('last_name')  ?: ($parts[1] ?? $parts[0] ?? $request->input('name')),
+            ]);
+        }
+
         $request->validate([
-            'first_name'     => 'required|string|max:255',
-            'last_name'      => 'required|string|max:255',
-            'email'          => 'required|email|unique:users,email',
-            'phone_number'   => 'nullable|string|max:20',
-            'password'       => 'required|confirmed|min:8',
-            'role'           => 'required|in:admin,pharmacist,cashier',
-            'gender'         => 'nullable|in:male,female,other',
-            'date_of_birth'  => 'nullable|date',
-            'address'        => 'nullable|string',
-            'profile_photo'  => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'license_number'                => 'required_if:role,pharmacist|string|max:255',
-            'license_expiry_date'           => 'required_if:role,pharmacist|date',
-            'professional_registration_number' => 'required_if:role,pharmacist|string|max:255',
-            'university'                    => 'required_if:role,pharmacist|string|max:255',
-            'degree'                        => 'required_if:role,pharmacist|string|max:255',
-            'years_of_experience'           => 'required_if:role,pharmacist|integer|min:0',
-            'national_id'                   => 'required_if:role,pharmacist|string|max:255',
-            'pharmacy_license'              => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
-            'degree_certificate'            => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
-            'qualification'                 => 'required_if:role,pharmacist|string|max:255',
-            'license_document'              => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
-            'qualification_document'        => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'first_name'                        => 'required|string|max:255',
+            'last_name'                         => 'required|string|max:255',
+            'email'                             => 'required|email|unique:users,email',
+            'phone_number'                      => 'nullable|string|max:20',
+            'password'                          => 'required|confirmed|min:8',
+            'role'                              => ['required', Rule::exists('roles', 'slug')],
+            'gender'                            => 'nullable|in:male,female,other',
+            'date_of_birth'                     => 'nullable|date',
+            'address'                           => 'nullable|string',
+            'profile_photo'                     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'license_number'                    => 'nullable|string|max:255',
+            'license_expiry_date'               => 'nullable|date',
+            'professional_registration_number' => 'nullable|string|max:255',
+            'university'                        => 'nullable|string|max:255',
+            'degree'                            => 'nullable|string|max:255',
+            'years_of_experience'               => 'nullable|integer|min:0',
+            'national_id'                       => 'nullable|string|max:255',
+            'pharmacy_license'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'degree_certificate'                => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'qualification'                     => 'nullable|string|max:255',
+            'license_document'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'qualification_document'            => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
         ]);
 
         $data = [
@@ -95,6 +104,7 @@ class UserController extends Controller
             'phone_number'  => $request->phone_number,
             'password'      => Hash::make($request->password),
             'role'          => $request->role,
+            'role_id'       => Role::where('slug', $request->role)->value('id'),
             'status'        => User::STATUS_APPROVED,
             'gender'        => $request->gender,
             'date_of_birth' => $request->date_of_birth,
@@ -142,30 +152,38 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
+        if ((!$request->filled('first_name') || !$request->filled('last_name')) && $request->filled('name')) {
+            $parts = explode(' ', trim($request->input('name')), 2);
+            $request->merge([
+                'first_name' => $request->input('first_name') ?: ($parts[0] ?? $request->input('name')),
+                'last_name'  => $request->input('last_name')  ?: ($parts[1] ?? $parts[0] ?? $request->input('name')),
+            ]);
+        }
+
         $request->validate([
-            'first_name'    => 'required|string|max:255',
-            'last_name'     => 'required|string|max:255',
-            'email'         => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
-            'phone_number'  => 'nullable|string|max:20',
-            'password'      => 'nullable|confirmed|min:8',
-            'role'          => 'required|in:admin,pharmacist,cashier',
-            'status'        => 'nullable|in:pending,approved,rejected',
-            'gender'        => 'nullable|in:male,female,other',
-            'date_of_birth' => 'nullable|date',
-            'address'       => 'nullable|string',
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'license_number'                => 'required_if:role,pharmacist|string|max:255',
-            'license_expiry_date'           => 'required_if:role,pharmacist|date',
-            'professional_registration_number' => 'required_if:role,pharmacist|string|max:255',
-            'university'                    => 'required_if:role,pharmacist|string|max:255',
-            'degree'                        => 'required_if:role,pharmacist|string|max:255',
-            'years_of_experience'           => 'required_if:role,pharmacist|integer|min:0',
-            'national_id'                   => 'required_if:role,pharmacist|string|max:255',
-            'pharmacy_license'              => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
-            'degree_certificate'            => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
-            'qualification'                 => 'required_if:role,pharmacist|string|max:255',
-            'license_document'              => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
-            'qualification_document'        => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'first_name'                        => 'required|string|max:255',
+            'last_name'                         => 'required|string|max:255',
+            'email'                             => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone_number'                      => 'nullable|string|max:20',
+            'password'                          => 'nullable|confirmed|min:8',
+            'role'                              => ['required', Rule::exists('roles', 'slug')],
+            'status'                            => 'nullable|in:pending,approved,rejected',
+            'gender'                            => 'nullable|in:male,female,other',
+            'date_of_birth'                     => 'nullable|date',
+            'address'                           => 'nullable|string',
+            'profile_photo'                     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'license_number'                    => 'nullable|string|max:255',
+            'license_expiry_date'               => 'nullable|date',
+            'professional_registration_number' => 'nullable|string|max:255',
+            'university'                        => 'nullable|string|max:255',
+            'degree'                            => 'nullable|string|max:255',
+            'years_of_experience'               => 'nullable|integer|min:0',
+            'national_id'                       => 'nullable|string|max:255',
+            'pharmacy_license'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'degree_certificate'                => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'qualification'                     => 'nullable|string|max:255',
+            'license_document'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'qualification_document'            => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
         ]);
 
         $user->update([
@@ -175,6 +193,7 @@ class UserController extends Controller
             'email'         => $request->email,
             'phone_number'  => $request->phone_number,
             'role'          => $request->role,
+            'role_id'       => Role::where('slug', $request->role)->value('id'),
             'gender'        => $request->gender,
             'date_of_birth' => $request->date_of_birth,
             'address'       => $request->address,

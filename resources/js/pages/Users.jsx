@@ -15,27 +15,16 @@ import {
     WalletCards,
     ShieldCheck,
     Pill,
+    Check,
+    Ban,
+    CheckCircle2,
+    Clock,
+    XCircle,
 } from "lucide-react";
 import api from "../axios";
 import Pagination from '../components/Pagination';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-
-
-const roleOptions = [
-    {
-        value: "admin",
-        label: "Admin"
-    },
-    {
-        value: "pharmacist",
-        label: "Pharmacist"
-    },
-    {
-        value: "cashier",
-        label: "Cashier"
-    }
-];
 
 
 
@@ -57,14 +46,19 @@ export default function Users(){
 
     const [roleFilter,setRoleFilter] = useState("all");
 
-    // Pending registrations state
-    const [pendingUsers, setPendingUsers] = useState([]);
-    const [pendingLoading, setPendingLoading] = useState(true);
+    // Status filter (All Statuses / Approved / Pending Approval / Rejected)
+    const [statusFilter, setStatusFilter] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("status") || "all";
+    });
+
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectTarget, setRejectTarget] = useState(null);
     const [rejectReason, setRejectReason] = useState("");
     const [processingAction, setProcessingAction] = useState(false);
     const [userStats, setUserStats] = useState(null);
+
+    const [roles, setRoles] = useState([]);
 
 
     const [showModal,setShowModal] = useState(false);
@@ -97,10 +91,14 @@ export default function Users(){
 
 
     useEffect(()=>{
-        // Load approved users, pending registrations and stats on mount
         fetchUsers();
-        fetchPendingUsers();
         fetchUserStats();
+    },[]);
+
+    useEffect(()=>{
+        api.get("/roles")
+            .then(r => setRoles(r.data.roles || []))
+            .catch(() => {});
     },[]);
 
     const handlePageChange = (p) => setPage(p);
@@ -112,7 +110,14 @@ export default function Users(){
     const fetchUsers = async()=>{
         setLoading(true);
         try {
-            const response = await api.get("/users", { params: { page, search: search, role: roleFilter, status: 'approved' } });
+            const response = await api.get("/users", {
+                params: {
+                    page,
+                    search: search,
+                    role: roleFilter,
+                    status: statusFilter,
+                }
+            });
             setUsers(response.data.data || response.data);
             setMeta(response.data);
             setError("");
@@ -123,8 +128,8 @@ export default function Users(){
         }
     };
 
-    useEffect(() => { setPage(1); }, [search, roleFilter]);
-    useEffect(() => { fetchUsers(); }, [page, search, roleFilter]);
+    useEffect(() => { setPage(1); }, [search, roleFilter, statusFilter]);
+    useEffect(() => { fetchUsers(); }, [page, search, roleFilter, statusFilter]);
 
 
 
@@ -236,39 +241,43 @@ export default function Users(){
 
         e.preventDefault();
 
-
         setSubmitting(true);
 
+        const nameParts = (form.name || "").trim().split(/\s+/);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || nameParts[0] || "";
 
+        const payload = {
+            ...form,
+            first_name: firstName,
+            last_name: lastName,
+        };
 
         try{
 
-
             if(editingUser){
-
 
                 await api.put(
                     `/users/${editingUser.id}`,
-                    form
+                    payload
                 );
-
 
             }
 
             else{
 
-
                 await api.post(
                     "/register",
-                    form
+                    payload
                 );
-
 
             }
 
 
 
             await fetchUsers();
+
+            await fetchUserStats();
 
 
             closeModal();
@@ -322,8 +331,6 @@ export default function Users(){
         try {
             await api.post(`/users/${user.id}/approve`);
             window.showToast && window.showToast('User approved successfully.', 'success');
-            // Refresh lists and stats
-            await fetchPendingUsers();
             await fetchUsers();
             await fetchUserStats();
         } catch (error) {
@@ -340,6 +347,12 @@ export default function Users(){
         setShowRejectModal(true);
     };
 
+    const closeRejectModal = () => {
+        setShowRejectModal(false);
+        setRejectTarget(null);
+        setRejectReason('');
+    };
+
     const submitReject = async () => {
         if (!rejectTarget) return;
         if (!window.confirm(`Reject ${rejectTarget.name}?`)) return;
@@ -347,10 +360,8 @@ export default function Users(){
         try {
             await api.post(`/users/${rejectTarget.id}/reject`, { reason: rejectReason });
             window.showToast && window.showToast('User registration rejected.', 'success');
-            setShowRejectModal(false);
-            setRejectTarget(null);
-            setRejectReason('');
-            await fetchPendingUsers();
+            closeRejectModal();
+            await fetchUsers();
             await fetchUserStats();
         } catch (error) {
             setError('Failed to reject user. Please try again.');
@@ -375,6 +386,8 @@ export default function Users(){
 
             fetchUsers();
 
+            fetchUserStats();
+
 
         }
 
@@ -385,19 +398,6 @@ export default function Users(){
         }
 
 
-    };
-
-    const fetchPendingUsers = async () => {
-        setPendingLoading(true);
-        try {
-            const r = await api.get('/users', { params: { status: 'pending', page: 1 } });
-            setPendingUsers(r.data.data || r.data || []);
-        } catch (e) {
-            console.error(e);
-            setError('Failed to load pending users');
-        } finally {
-            setPendingLoading(false);
-        }
     };
 
     const fetchUserStats = async () => {
@@ -420,22 +420,26 @@ export default function Users(){
 
 
 
-    const totalUsers = meta?.total || users.length;
+    const approvedUsers = userStats?.approved ?? users.filter(user => user.status === "approved" || !user.status).length;
+    const totalUsers = userStats?.total ?? meta?.total ?? users.length;
 
 
     const adminCount =
+    userStats?.admin ??
     users.filter(
         user=>user.role==="admin"
     ).length;
 
 
     const pharmacistCount =
+    userStats?.pharmacist ??
     users.filter(
         user=>user.role==="pharmacist"
     ).length;
 
 
     const cashierCount =
+    userStats?.cashier ??
     users.filter(
         user=>user.role==="cashier"
     ).length;
@@ -481,6 +485,49 @@ export default function Users(){
 
         );
 
+
+    };
+
+    const getStatusBadge=(status)=>{
+
+        if(!status) return null;
+
+        const styles={
+            approved: "bg-green-100 text-green-700",
+            pending: "bg-amber-100 text-amber-700",
+            rejected: "bg-red-100 text-red-700",
+        };
+
+        const labels={
+            approved: "Approved",
+            pending: "Pending",
+            rejected: "Rejected",
+        };
+
+        const icons={
+            approved: <CheckCircle2 size={14}/>,
+            pending: <Clock size={14}/>,
+            rejected: <XCircle size={14}/>,
+        };
+
+        return (
+            <span
+            className={`
+            inline-flex
+            items-center
+            gap-1
+            px-3
+            py-1
+            rounded-full
+            text-xs
+            font-semibold
+            ${styles[status] || "bg-gray-100 text-gray-700"}
+            `}
+            >
+                {icons[status]}
+                {labels[status] || status}
+            </span>
+        );
 
     };
 // ================= MODAL FORM =================
@@ -846,9 +893,6 @@ size={35}
 </div>
 
 
-            <Pagination meta={meta} onPageChange={handlePageChange} />
-
-
 </div>
 
 
@@ -956,27 +1000,35 @@ All Roles
 </option>
 
 
-<option value="admin">
-
-Admin
-
-</option>
+{roles.map(role=>(
+<option key={role.slug} value={role.slug}>{role.name}</option>
+))}
 
 
-<option value="pharmacist">
 
-Pharmacist
-
-</option>
+</select>
 
 
-<option value="cashier">
 
-Cashier
+<select
 
-</option>
+value={statusFilter}
 
+onChange={(e)=>setStatusFilter(e.target.value)}
 
+className="
+border
+rounded-xl
+px-4
+py-3
+"
+
+>
+
+<option value="all">All Statuses</option>
+<option value="approved">Approved</option>
+<option value="pending">Pending Approval</option>
+<option value="rejected">Rejected</option>
 
 </select>
 
@@ -1082,6 +1134,8 @@ hover:text-gray-600
 <form
 
 onSubmit={handleSubmit}
+
+autoComplete="off"
 
 className="
 grid
@@ -1207,6 +1261,9 @@ value={form.email}
 onChange={handleChange}
 
 
+autoComplete="off"
+
+
 required
 
 
@@ -1274,17 +1331,17 @@ rounded-xl
 
 
 {
-roleOptions.map(role=>(
+roles.map(role=>(
 
 <option
 
-key={role.value}
+key={role.slug}
 
-value={role.value}
+value={role.slug}
 
 >
 
-{role.label}
+{role.name}
 
 </option>
 
@@ -1299,8 +1356,6 @@ value={role.value}
 
 </div>
 
-
-// ================= PASSWORD FIELDS =================
 
 
 <div>
@@ -1344,6 +1399,9 @@ value={form.password}
 
 
 onChange={handleChange}
+
+
+autoComplete="new-password"
 
 
 minLength={8}
@@ -1454,6 +1512,9 @@ value={form.password_confirmation}
 
 
 onChange={handleChange}
+
+
+autoComplete="new-password"
 
 
 className="
@@ -1644,6 +1705,163 @@ editingUser
 
 
 
+{/* REJECT MODAL */}
+
+{
+showRejectModal &&
+
+<div className="
+fixed
+inset-0
+bg-black
+bg-opacity-40
+flex
+items-center
+justify-center
+z-50
+px-4
+">
+
+<div className="
+bg-white
+rounded-2xl
+shadow-xl
+w-full
+max-w-md
+p-6
+">
+
+<div className="
+flex
+justify-between
+items-center
+mb-5
+">
+
+<h2 className="text-xl font-bold text-gray-800">
+
+Reject {rejectTarget?.name}
+
+</h2>
+
+<button
+
+onClick={closeRejectModal}
+
+className="text-gray-400 hover:text-gray-600"
+
+>
+
+<X size={22}/>
+
+</button>
+
+</div>
+
+<label className="text-sm font-medium">
+
+Reason (optional)
+
+</label>
+
+<textarea
+
+value={rejectReason}
+
+onChange={(e)=>setRejectReason(e.target.value)}
+
+rows={3}
+
+className="
+w-full
+mt-1
+p-3
+border
+rounded-xl
+"
+
+placeholder="Let this applicant know why their registration was rejected..."
+
+/>
+
+<div className="
+flex
+justify-end
+gap-3
+mt-5
+">
+
+<button
+
+type="button"
+
+onClick={closeRejectModal}
+
+className="
+px-5
+py-3
+border
+rounded-xl
+hover:bg-gray-50
+"
+
+>
+
+Cancel
+
+</button>
+
+<button
+
+type="button"
+
+disabled={processingAction}
+
+onClick={submitReject}
+
+className="
+flex
+items-center
+gap-2
+px-5
+py-3
+bg-red-600
+text-white
+rounded-xl
+hover:bg-red-700
+disabled:opacity-50
+"
+
+>
+
+{
+processingAction
+
+?
+
+<>
+<Loader2 size={18} className="animate-spin"/>
+Rejecting...
+</>
+
+:
+
+"Reject"
+
+}
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+}
+
+
+
 {/* USERS TABLE */}
 
 
@@ -1683,6 +1901,13 @@ Email
 <th className="px-6 py-4 text-left text-sm">
 
 Role
+
+</th>
+
+
+<th className="px-6 py-4 text-left text-sm">
+
+Status
 
 </th>
 
@@ -1823,6 +2048,16 @@ ID: {user.id}
 
 
 
+<td className="px-6 py-4">
+
+
+{getStatusBadge(user.status)}
+
+
+</td>
+
+
+
 
 
 
@@ -1869,6 +2104,63 @@ gap-2
 ">
 
 
+{
+
+user.status === "pending"
+
+?
+
+<>
+
+<button
+
+onClick={()=>handleApprove(user)}
+
+disabled={processingAction}
+
+className="
+p-2
+text-green-600
+hover:bg-green-50
+rounded-lg
+disabled:opacity-50
+"
+
+title="Approve"
+
+>
+
+<Check size={18}/>
+
+</button>
+
+<button
+
+onClick={()=>handleReject(user)}
+
+disabled={processingAction}
+
+className="
+p-2
+text-red-600
+hover:bg-red-50
+rounded-lg
+disabled:opacity-50
+"
+
+title="Reject"
+
+>
+
+<Ban size={18}/>
+
+</button>
+
+</>
+
+:
+
+<>
 
 <button
 
@@ -1894,9 +2186,6 @@ title="Edit"
 
 
 </button>
-
-
-
 
 
 
@@ -1934,6 +2223,10 @@ title="Delete"
 
 }
 
+</>
+
+}
+
 
 
 </div>
@@ -1960,7 +2253,7 @@ title="Delete"
 <td
 
 
-colSpan="5"
+colSpan="6"
 
 
 className="
@@ -1994,7 +2287,7 @@ No users found
 </div>
 
 
-
+<Pagination meta={meta} onPageChange={handlePageChange} />
 
 
 </div>

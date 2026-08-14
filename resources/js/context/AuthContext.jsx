@@ -72,8 +72,21 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const getUserPermissions = () => Array.isArray(user?.permissions) ? user.permissions : [];
+
+    const hasPermission = (permission) => {
+        if (!permission) return true;
+        return getUserPermissions().includes(permission);
+    };
+
+    const hasAnyPermission = (permissions = []) => {
+        if (!Array.isArray(permissions) || permissions.length === 0) return true;
+        const userPermissions = getUserPermissions();
+        return permissions.some(p => userPermissions.includes(p));
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, hasPermission, hasAnyPermission }}>
             {children}
         </AuthContext.Provider>
     );

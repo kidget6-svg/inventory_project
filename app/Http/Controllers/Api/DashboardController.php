@@ -20,9 +20,9 @@ class DashboardController extends Controller
         try {
             $user = Auth::user();
 
-            if (!$user) {
-                return response()->json(['error' => 'Unauthenticated'], 401);
-            }
+        Medicine::query()->get()->each(function ($medicine) {
+            $medicine->syncAutomaticExpiryState();
+        });
 
             // Use direct role comparison instead of methods
             if ($user->role === 'admin' || $user->role === 'super_admin') {

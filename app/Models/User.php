@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -38,6 +40,7 @@ class User extends Authenticatable
         'approved_by',
         'approved_at',
         'rejection_reason',
+        'role_id',
     ];
 
     protected $hidden = [
@@ -51,6 +54,8 @@ class User extends Authenticatable
         'license_expiry_date' => 'date',
         'approved_at' => 'datetime',
     ];
+
+    protected $appends = ['permissions'];
 
     /**
      * Check if the user account is approved.
@@ -95,5 +100,69 @@ class User extends Authenticatable
     public function isCashier(): bool
     {
         return $this->role === 'cashier';
+    }
+
+    /**
+     * The role row this user belongs to (for permission lookups).
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    /**
+     * The permissions granted to the user's role.
+     */
+    public function rolePermissions(): BelongsToMany
+    {
+        return $this->role()->with('permissions');
+    }
+
+    /**
+     * Flat list of permission slugs the user currently holds.
+     * Admins automatically hold every permission in the system.
+     */
+    public function permissions(): array
+    {
+        if ($this->role === 'admin') {
+            return Permission::pluck('slug')->all();
+        }
+
+        $role = $this->role;
+        if ($role) {
+            return $role->permissions()->pluck('permissions.slug')->all();
+        }
+
+        return [];
+    }
+
+    /**
+     * Get the resolved permission slugs for API responses.
+     */
+    public function getPermissionsAttribute(): array
+    {
+        return $this->permissions();
+    }
+
+    /**
+     * Check whether the user holds a specific permission.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        return in_array($permission, $this->permissions(), true);
+    }
+
+    /**
+     * Check whether the user holds any of the given permissions.
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

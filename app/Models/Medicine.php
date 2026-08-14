@@ -55,6 +55,8 @@ class Medicine extends Model
         'stock_status',
         'approval_status',
         'description',
+        'manufacturer',
+        'shelf_location',
     ];
 
     protected $casts = [
@@ -114,7 +116,7 @@ class Medicine extends Model
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('status', self::STATUS_ACTIVE);
+        return $this->hasMany(Batch::class);
     }
 
     public function scopeInStock($query)
@@ -135,30 +137,30 @@ class Medicine extends Model
 
     public function scopeExpired($query)
     {
-        return $query->where('expiry_date', '<', now());
+        $calculatedExpiry = $this->calculatedExpiryDate();
+        $changes = [];
+
+        if ($calculatedExpiry && (! $this->expiry_date || ! $this->expiry_date->isSameDay($calculatedExpiry))) {
+            $changes['expiry_date'] = $calculatedExpiry->toDateString();
+        }
+
+        if ($calculatedExpiry && $calculatedExpiry->isBefore(Carbon::today())) {
+            $changes['status'] = self::STATUS_EXPIRED;
+        }
+
+        if ($changes) {
+            $this->forceFill($changes)->saveQuietly();
+            $this->refresh();
+        }
     }
 
-    public function scopeExpiringSoon($query, $days = 90)
-    {
-        return $query->where('expiry_date', '>=', now())
-                     ->where('expiry_date', '<=', now()->addDays($days));
-    }
-
-    public function scopeSearch($query, $search)
-    {
-        return $query->where('name', 'like', "%{$search}%")
-                     ->orWhere('generic_name', 'like', "%{$search}%")
-                     ->orWhere('barcode', 'like', "%{$search}%")
-                     ->orWhere('batch_number', 'like', "%{$search}%");
-    }
-
-    // Accessors
-    public function getImageUrlAttribute()
+    /**
+     * Get the full public URL to the medicine image.
+     * Falls back to a placeholder when no image is set.
+     */
+    public function getImageUrlAttribute(): string
     {
         if ($this->image) {
-            if (str_starts_with($this->image, 'http')) {
-                return $this->image;
-            }
             return asset('storage/' . $this->image);
         }
         return asset('images/medicine-placeholder.svg');
