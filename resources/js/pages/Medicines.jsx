@@ -23,9 +23,11 @@ const statusOptions = [
 const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
 export default function Medicines() {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const navigate = useNavigate();
-    const isAdmin = user?.role === 'admin';
+    const canCreate = hasPermission('medicines.create');
+    const canEdit = hasPermission('medicines.edit');
+    const canDelete = hasPermission('medicines.delete');
 
     const [medicines, setMedicines] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -487,15 +489,15 @@ export default function Medicines() {
 
             <div className="flex justify-between items-center mb-5">
                 <h3 className="text-base font-semibold text-gray-700">All Medicines ({medicines.length})</h3>
-                {isAdmin ? (
+                {canCreate ? (
                     <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <Package size={16} /> Add New Medicine
                     </button>
-                ) : (
+                ) : hasPermission('prescription-sales.dispense') ? (
                     <button onClick={() => navigate('/prescription-sales')} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <FileText size={16} /> Create Prescription Sale
                     </button>
-                )}
+                ) : null}
             </div>
 
             {loading ? <LoadingSpinner text="Loading medicines..." /> : (
@@ -551,10 +553,10 @@ export default function Medicines() {
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <button onClick={() => openView(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
-                                                    {isAdmin && (
+                                                    {(canEdit || canDelete) && (
                                                         <>
-                                                            <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
-                                                            <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
+                                                            {canEdit && <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>}
+                                                            {canDelete && <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>}
                                                         </>
                                                     )}
                                                 </div>
@@ -573,7 +575,7 @@ export default function Medicines() {
                 </>
             )}
 
-            {isAdmin && (
+            {(canCreate || canEdit) && (
                 <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Medicine' : 'Add New Medicine'} size="max-w-2xl">
                     <Stepper steps={formSteps} currentStep={step} />
                     {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
@@ -649,7 +651,7 @@ export default function Medicines() {
                         </div>
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
                             <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
-                            {isAdmin && (
+                            {canEdit && (
                                 <button onClick={() => { setShowViewModal(false); openEdit(viewMedicine); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Medicine</button>
                             )}
                         </div>

@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Eye, Edit, Trash2, Plus, Save, X, Calendar, Tag } from 'lucide-react';
 import Pagination from '../components/Pagination';
 
 export default function Categories() {
+    const { user, hasPermission } = useAuth();
+    const canCreate = hasPermission('categories.create');
+    const canEdit = hasPermission('categories.edit');
+    const canDelete = hasPermission('categories.delete');
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [meta, setMeta] = useState(null);
     const [page, setPage] = useState(1);
-    const [userRole, setUserRole] = useState(null);
-    const [canWrite, setCanWrite] = useState(false);
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -21,22 +24,6 @@ export default function Categories() {
     const [form, setForm] = useState({ name: '', description: '', shelf_location: '' });
     const [submitting, setSubmitting] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
-
-    // Get current user role
-    useEffect(() => {
-        const getUser = async () => {
-            try {
-                const response = await api.get('/user');
-                const role = response.data.role;
-                setUserRole(role);
-                setCanWrite(role === 'admin' || role === 'pharmacist');
-                console.log('User role:', role, 'Can write:', role === 'admin' || role === 'pharmacist');
-            } catch (err) {
-                console.error('Failed to get user role:', err);
-            }
-        };
-        getUser();
-    }, []);
 
     const load = () => {
         setLoading(true);

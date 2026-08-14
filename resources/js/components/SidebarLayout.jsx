@@ -12,12 +12,12 @@ import {
 // because admins hold every permission.
 const menuItems = [
     { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['dashboard.view'] },
     { section: 'Point of Sale' },
-    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['sales.prescription'] },
-    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['sales.checkout'] },
-    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['sales.retail'] },
-    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['sales.retail'] },
+    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['prescription-sales.view'] },
+    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['prescription-checkout.view'] },
+    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['retail-otc-sales.view'] },
+    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['retail-pos.view'] },
     { section: 'Product Management' },
     { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view'] },
     { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail-products.view'] },
@@ -26,14 +26,14 @@ const menuItems = [
     { section: 'Inventory & Purchasing' },
     { to: '/inventory', label: 'Inventory', icon: Package, permissions: ['inventory.view'] },
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['inventory.view'] },
+    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['stock-movements.view'] },
     { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle, permissions: ['lowstock.view'] },
     { section: 'Reports' },
     { to: '/reports', label: 'Reports', icon: BarChart3, permissions: ['reports.view'] },
-    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales.view'] },
+    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales-history.view'] },
     { section: 'Administration' },
     { to: '/users', label: 'Users', icon: Users, permissions: ['users.view'] },
-    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.manage'] },
+    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.view'] },
 ];
 
 function buildMenu(items, hasAnyPermission) {
