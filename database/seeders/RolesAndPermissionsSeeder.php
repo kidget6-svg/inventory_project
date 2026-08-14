@@ -4,63 +4,107 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     /**
-     * Core permission catalog (slug => [group, display name]).
+     * Permission catalog grouped by page (group => page name).
+     * Each page has a "view" permission plus one permission per button/action.
      * Adding new permissions here makes them appear on the Roles page.
      */
     protected array $catalog = [
-        // Dashboard
+        // Page: Dashboard
         'dashboard.view' => ['Dashboard', 'View Dashboard'],
 
-        // Medicines
-        'medicines.view' => ['Medicines', 'View Medicines'],
-        'medicines.manage' => ['Medicines', 'Add & Edit Medicines'],
+        // Page: Medicines
+        'medicines.view' => ['Medicines', 'View medicines page'],
+        'medicines.create' => ['Medicines', 'Add a medicine'],
+        'medicines.edit' => ['Medicines', 'Edit a medicine'],
+        'medicines.delete' => ['Medicines', 'Delete a medicine'],
+        'medicines.toggle-status' => ['Medicines', 'Enable / disable a medicine'],
 
-        // Categories
-        'categories.view' => ['Categories', 'View Categories'],
-        'categories.manage' => ['Categories', 'Add & Edit Categories'],
+        // Page: Categories
+        'categories.view' => ['Categories', 'View categories page'],
+        'categories.create' => ['Categories', 'Add a category'],
+        'categories.edit' => ['Categories', 'Edit a category'],
+        'categories.delete' => ['Categories', 'Delete a category'],
 
-        // Suppliers
-        'suppliers.view' => ['Suppliers', 'View Suppliers'],
-        'suppliers.manage' => ['Suppliers', 'Add & Edit Suppliers'],
+        // Page: Suppliers
+        'suppliers.view' => ['Suppliers', 'View suppliers page'],
+        'suppliers.create' => ['Suppliers', 'Add a supplier'],
+        'suppliers.edit' => ['Suppliers', 'Edit a supplier'],
+        'suppliers.delete' => ['Suppliers', 'Delete a supplier'],
 
-        // Retail / OTC products
-        'retail-products.view' => ['Retail Products', 'View Retail & OTC Products'],
-        'retail-products.manage' => ['Retail Products', 'Add & Edit Retail & OTC Products'],
+        // Page: Retail & OTC Products
+        'retail-products.view' => ['Retail & OTC Products', 'View retail products page'],
+        'retail-products.create' => ['Retail & OTC Products', 'Add a retail product'],
+        'retail-products.edit' => ['Retail & OTC Products', 'Edit a retail product'],
+        'retail-products.delete' => ['Retail & OTC Products', 'Delete a retail product'],
 
-        // Inventory & stock
-        'inventory.view' => ['Inventory', 'View Inventory'],
-        'stock.manage' => ['Inventory', 'Record Stock Movements'],
+        // Page: Inventory
+        'inventory.view' => ['Inventory', 'View inventory page'],
+        'stock-movements.view' => ['Inventory', 'View stock movements'],
+        'stock-movements.create' => ['Inventory', 'Record a stock movement'],
+        'stock-movements.delete' => ['Inventory', 'Delete a stock movement'],
 
-        // Low stock
-        'lowstock.view' => ['Low Stock', 'View Low Stock Alerts'],
-        'lowstock.order' => ['Low Stock', 'Create Purchase Order From Alert'],
+        // Page: Low Stock
+        'lowstock.view' => ['Low Stock', 'View low stock alerts'],
+        'lowstock.order-now' => ['Low Stock', 'Order from alert (create purchase order)'],
 
-        // Purchase orders
-        'purchase-orders.view' => ['Purchase Orders', 'View Purchase Orders'],
-        'purchase-orders.manage' => ['Purchase Orders', 'Create & Edit Purchase Orders'],
-        'purchase-orders.workflow' => ['Purchase Orders', 'Submit, Approve, Deliver & Complete'],
-        'purchase-orders.email' => ['Purchase Orders', 'Email & Download PDF'],
+        // Page: Purchase Orders
+        'purchase-orders.view' => ['Purchase Orders', 'View purchase orders page'],
+        'purchase-orders.create' => ['Purchase Orders', 'Create a purchase order'],
+        'purchase-orders.edit' => ['Purchase Orders', 'Edit a purchase order'],
+        'purchase-orders.delete' => ['Purchase Orders', 'Delete a purchase order'],
+        'purchase-orders.submit' => ['Purchase Orders', 'Submit order'],
+        'purchase-orders.approve' => ['Purchase Orders', 'Approve order'],
+        'purchase-orders.deliver' => ['Purchase Orders', 'Mark as delivered'],
+        'purchase-orders.complete' => ['Purchase Orders', 'Mark as completed'],
+        'purchase-orders.cancel' => ['Purchase Orders', 'Cancel order'],
+        'purchase-orders.reopen' => ['Purchase Orders', 'Reopen order'],
+        'purchase-orders.send' => ['Purchase Orders', 'Email PDF to supplier'],
+        'purchase-orders.download' => ['Purchase Orders', 'Preview / download PDF'],
 
-        // Sales
-        'sales.view' => ['Sales', 'View Sales & History'],
-        'sales.prescription' => ['Sales', 'Dispense Prescriptions'],
-        'sales.retail' => ['Sales', 'Process Retail Sales'],
-        'sales.checkout' => ['Sales', 'Complete Checkout'],
-        'sales.receipt' => ['Sales', 'View Receipts'],
+        // Page: Prescription Sales (pharmacist)
+        'prescription-sales.view' => ['Prescription Sales', 'View prescription sales page'],
+        'prescription-sales.dispense' => ['Prescription Sales', 'Dispense & send to cashier'],
 
-        // Reports
-        'reports.view' => ['Reports', 'View Reports'],
+        // Page: Retail & OTC Sales (pharmacist)
+        'retail-otc-sales.view' => ['Retail & OTC Sales', 'View retail & OTC sales page'],
+        'retail-otc-sales.draft' => ['Retail & OTC Sales', 'Create a retail draft'],
 
-        // Administration
-        'users.view' => ['Administration', 'View Users'],
-        'users.manage' => ['Administration', 'Add, Edit & Delete Users'],
-        'users.approve' => ['Administration', 'Approve & Reject Users'],
-        'roles.manage' => ['Administration', 'Manage Roles & Permissions'],
+        // Page: Retail POS (cashier)
+        'retail-pos.view' => ['Retail POS', 'View retail point of sale'],
+        'retail-pos.checkout' => ['Retail POS', 'Complete a retail sale'],
+
+        // Page: Prescription Checkout (cashier)
+        'prescription-checkout.view' => ['Prescription Checkout', 'View checkout queue'],
+        'prescription-checkout.complete' => ['Prescription Checkout', 'Complete payment'],
+
+        // Page: Sales History
+        'sales-history.view' => ['Sales History', 'View sales history page'],
+        'sales-history.receipt' => ['Sales History', 'View a sale / receipt'],
+        'sales-history.download' => ['Sales History', 'Download receipt PDF'],
+        'sales-history.print' => ['Sales History', 'Print receipt'],
+        'sales-history.export' => ['Sales History', 'Export sales report'],
+
+        // Page: Reports
+        'reports.view' => ['Reports', 'View reports page'],
+
+        // Page: Users
+        'users.view' => ['Users', 'View users page'],
+        'users.create' => ['Users', 'Add a user'],
+        'users.edit' => ['Users', 'Edit a user'],
+        'users.delete' => ['Users', 'Delete a user'],
+        'users.approve' => ['Users', 'Approve / reject a user'],
+
+        // Page: Roles & Permissions
+        'roles.view' => ['Roles & Permissions', 'View roles page'],
+        'roles.create' => ['Roles & Permissions', 'Create a role'],
+        'roles.edit' => ['Roles & Permissions', 'Edit a role'],
+        'roles.delete' => ['Roles & Permissions', 'Delete a role'],
     ];
 
     /**
@@ -69,24 +113,68 @@ class RolesAndPermissionsSeeder extends Seeder
     protected array $defaults = [
         'pharmacist' => [
             'dashboard.view',
-            'medicines.view', 'medicines.manage',
-            'categories.view', 'categories.manage',
+
+            'medicines.view',
+            'medicines.create',
+            'medicines.edit',
+            'medicines.delete',
+            'medicines.toggle-status',
+
+            'categories.view',
+            'categories.create',
+            'categories.edit',
+            'categories.delete',
+
             'suppliers.view',
-            'retail-products.view', 'retail-products.manage',
-            'inventory.view', 'stock.manage',
-            'lowstock.view', 'lowstock.order',
-            'sales.view', 'sales.prescription', 'sales.retail', 'sales.receipt',
+
+            'retail-products.view',
+            'retail-products.create',
+            'retail-products.edit',
+            'retail-products.delete',
+
+            'inventory.view',
+            'stock-movements.view',
+            'stock-movements.create',
+            'stock-movements.delete',
+
+            'lowstock.view',
+            'lowstock.order-now',
+
+            'prescription-sales.view',
+            'prescription-sales.dispense',
+
+            'retail-otc-sales.view',
+            'retail-otc-sales.draft',
+
+            'sales-history.view',
+            'sales-history.receipt',
+            'sales-history.download',
+            'sales-history.print',
+
             'reports.view',
         ],
         'cashier' => [
             'dashboard.view',
+
             'medicines.view',
             'categories.view',
             'suppliers.view',
             'retail-products.view',
             'inventory.view',
+            'stock-movements.view',
             'lowstock.view',
-            'sales.view', 'sales.retail', 'sales.checkout', 'sales.receipt',
+
+            'retail-pos.view',
+            'retail-pos.checkout',
+
+            'prescription-checkout.view',
+            'prescription-checkout.complete',
+
+            'sales-history.view',
+            'sales-history.receipt',
+            'sales-history.download',
+            'sales-history.print',
+            'sales-history.export',
         ],
     ];
 
@@ -100,6 +188,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 ['name' => $name, 'group' => $group],
             );
         }
+
+        // Remove any stale permissions that are no longer in the catalog.
+        Permission::whereNotIn('slug', array_keys($this->catalog))->delete();
 
         // Core roles. Admin is implicit (no mapping needed - sees everything).
         $roleDefs = [
@@ -123,6 +214,15 @@ class RolesAndPermissionsSeeder extends Seeder
                 fn ($s) => $permissionBySlug[$s]->id,
                 array_filter($permissionSlugs, fn ($s) => isset($permissionBySlug[$s])),
             ));
+        }
+
+        // Backfill role_id for existing users based on their role slug.
+        foreach (User::all(['id', 'role']) as $user) {
+            $role = $roleBySlug[$user->role] ?? null;
+            if ($role) {
+                $user->role_id = $role->id;
+                $user->save();
+            }
         }
 
         $this->command->info('Roles & permissions seeded.');

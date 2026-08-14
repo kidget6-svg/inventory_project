@@ -1,29 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Save, X } from 'lucide-react';
 
 export default function CategoryCreate() {
     const navigate = useNavigate();
+    const { hasPermission } = useAuth();
+    const canCreate = hasPermission('categories.create');
     const [form, setForm] = useState({ name: '', description: '', shelf_location: '' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [shelves, setShelves] = useState([]);
 
-    // Check if user is admin
+    // Check if user can create categories
     useEffect(() => {
-        const checkAdmin = async () => {
+        const checkPermission = async () => {
             try {
-                const response = await api.get('/user');
-                if (response.data.role !== 'admin') {
-                    window.showToast('Only admins can create categories', 'error');
+                if (!canCreate) {
+                    window.showToast('You do not have permission to create categories', 'error');
                     navigate('/categories');
                     return;
                 }
-                setIsAdmin(true);
             } catch (err) {
                 window.showToast('Unauthorized access', 'error');
                 navigate('/categories');
@@ -31,21 +30,8 @@ export default function CategoryCreate() {
                 setLoading(false);
             }
         };
-        checkAdmin();
-    }, [navigate]);
-
-    // Load shelves for dropdown
-    useEffect(() => {
-        if (!isAdmin) return;
-        api.get('/shelves')
-            .then(r => {
-                const data = r.data;
-                setShelves(Array.isArray(data) ? data : []);
-            })
-            .catch(() => {
-                window.showToast('Failed to load shelves', 'error');
-            });
-    }, [isAdmin]);
+        checkPermission();
+    }, [navigate, canCreate]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -67,7 +53,7 @@ export default function CategoryCreate() {
 
     if (loading) return <LoadingSpinner text="Checking permissions..." />;
 
-    if (!isAdmin) return null;
+    if (!canCreate) return null;
 
     return (
         <div className="space-y-6">
@@ -97,19 +83,13 @@ export default function CategoryCreate() {
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
-                        <select
+                        <input
                             name="shelf_location"
                             value={form.shelf_location}
                             onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none bg-white"
-                        >
-                            <option value="">Select Shelf</option>
-                            {shelves.map(shelf => (
-                                <option key={shelf.id} value={shelf.shelf_location}>
-                                    {shelf.name} ({shelf.shelf_location})
-                                </option>
-                            ))}
-                        </select>
+                            placeholder="e.g. A-2-3"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        />
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>

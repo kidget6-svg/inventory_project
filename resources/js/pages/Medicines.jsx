@@ -23,11 +23,11 @@ const statusOptions = [
 const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
 export default function Medicines() {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const navigate = useNavigate();
-    const isAdmin = user?.role === 'admin';
-    const isPharmacist = user?.role === 'pharmacist';
-    const canWrite = isAdmin || isPharmacist;
+    const canCreate = hasPermission('medicines.create');
+    const canEdit = hasPermission('medicines.edit');
+    const canDelete = hasPermission('medicines.delete');
 
     const [medicines, setMedicines] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -71,18 +71,9 @@ export default function Medicines() {
         
         api.get('/medicines', { params })
             .then(r => {
-                let medicinesData = [];
-                if (Array.isArray(r.data.data)) {
-                    medicinesData = r.data.data;
-                } else if (Array.isArray(r.data.medicines?.data)) {
-                    medicinesData = r.data.medicines.data;
-                } else if (Array.isArray(r.data.data?.data)) {
-                    medicinesData = r.data.data.data;
-                } else if (Array.isArray(r.data)) {
-                    medicinesData = r.data;
-                }
-                setMedicines(medicinesData);
-                setMeta(r.data.meta || r.data.medicines || r.data);
+                const data = r.data.data || r.data;
+                setMedicines(Array.isArray(data) ? data : []);
+                setMeta(r.data);
             })
             .catch(err => { 
                 console.error(err); 
@@ -93,13 +84,13 @@ export default function Medicines() {
 
     const loadCategories = () => { 
         api.get('/categories')
-            .then(r => setCategories(Array.isArray(r.data.data) ? r.data.data : (Array.isArray(r.data.categories?.data) ? r.data.categories.data : (Array.isArray(r.data.categories) ? r.data.categories : []))))
+            .then(r => setCategories(Array.isArray(r.data) ? r.data : []))
             .catch(err => console.error(err)); 
     };
     
     const loadSuppliers = () => { 
         api.get('/suppliers')
-            .then(r => setSuppliers(Array.isArray(r.data.data) ? r.data.data : (Array.isArray(r.data.suppliers?.data) ? r.data.suppliers.data : (Array.isArray(r.data.suppliers) ? r.data.suppliers : []))))
+            .then(r => setSuppliers(Array.isArray(r.data) ? r.data : []))
             .catch(err => console.error(err)); 
     };
 
@@ -238,20 +229,6 @@ export default function Medicines() {
         }
     };
 
-    const toggleStatus = async () => {
-        if (!editId || form.status === 'expired') return;
-
-        try {
-            const nextStatus = form.status === 'active' ? 'inactive' : 'active';
-            const response = await api.patch(`/medicines/${editId}/status`, { status: nextStatus });
-            setForm(prev => ({ ...prev, status: response.data.status }));
-            loadMedicines();
-            window.showToast(`Medicine ${response.data.status === 'active' ? 'activated' : 'deactivated'}`, 'success');
-        } catch (err) {
-            window.showToast(err.response?.data?.message || 'Failed to update medicine status', 'error');
-        }
-    };
-
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this medicine?')) return;
         try { 
@@ -368,19 +345,10 @@ export default function Medicines() {
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
                             <input type="text" name="shelf_location" value={form.shelf_location} onChange={handleChange} placeholder="e.g. A-2-3" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                         </div>
-
-                        {!editId && <div>
+                        <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Batch Number</label>
-                            <input 
-                                type="text" 
-                                name="batch_number" 
-                                value={form.batch_number} 
-                                onChange={handleChange} 
-                                placeholder="e.g. BATCH-001" 
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
-                            />
-                        </div>}
-
+                            <input type="text" name="batch_number" value={form.batch_number} onChange={handleChange} placeholder="e.g. BATCH-001" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
                         <div className="md:col-span-2">
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
                             <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
@@ -437,18 +405,9 @@ export default function Medicines() {
                                 <input type="number" name="purchase_price" value={form.purchase_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                             </div>
                         </div>
-                        {!editId && <div>
+                        <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
-                            <input 
-                                type="number" 
-                                name="reorder_level" 
-                                value={form.reorder_level} 
-                                onChange={handleChange} 
-                                placeholder="10" 
-                                min="0" 
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
-                                required 
-                            />
+                            <input type="number" name="reorder_level" value={form.reorder_level} onChange={handleChange} placeholder="10" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
                         </div>}
                     </div>
                 );
@@ -458,25 +417,11 @@ export default function Medicines() {
                         {!editId && <>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date</label>
-                                <div className="relative">
-                                    <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input 
-                                        type="date" 
-                                        name="expiry_date" 
-                                        value={form.expiry_date} 
-                                        onChange={handleChange} 
-                                        className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
-                                    />
-                                </div>
+                                <input type="date" name="expiry_date" value={form.expiry_date} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                                <select 
-                                    name="status" 
-                                    value={form.status} 
-                                    onChange={handleChange} 
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                >
+                                <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
                                     <option value="active">Active</option>
                                     <option value="inactive">Inactive</option>
                                     <option value="expired">Expired</option>
@@ -544,15 +489,15 @@ export default function Medicines() {
 
             <div className="flex justify-between items-center mb-5">
                 <h3 className="text-base font-semibold text-gray-700">All Medicines ({medicines.length})</h3>
-                {canWrite ? (
+                {canCreate ? (
                     <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <Package size={16} /> Add New Medicine
                     </button>
-                ) : (
+                ) : hasPermission('prescription-sales.dispense') ? (
                     <button onClick={() => navigate('/prescription-sales')} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <FileText size={16} /> Create Prescription Sale
                     </button>
-                )}
+                ) : null}
             </div>
 
             {loading ? <LoadingSpinner text="Loading medicines..." /> : (
@@ -561,28 +506,24 @@ export default function Medicines() {
                         <div className="overflow-x-auto">
                             <table className="w-full table-fixed">
                                 <colgroup>
-                                    <col className="w-[8%]" />
-                                    <col className="w-[18%]" />
-                                    <col className="w-[10%]" />
-                                    <col className="w-[8%]" />
-                                    <col className="w-[8%]" />
-                                    <col className="w-[8%]" />
-                                    <col className="w-[10%]" />
+                                    <col className="w-[22%]" />
+                                    <col className="w-[11%]" />
+                                    <col className="w-[14%]" />
+                                    <col className="w-[6%]" />
                                     <col className="w-[12%]" />
-                                    <col className="w-[8%]" />
-                                    <col className="w-[8%]" />
+                                    <col className="w-[12%]" />
+                                    <col className="w-[10%]" />
+                                    <col className="w-[13%]" />
                                 </colgroup>
                                 <thead>
                                     <tr className="bg-sky-50 border-b border-sky-100">
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Image</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Medicine Name</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Category</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Shelf</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Barcode</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Qty</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Selling Price</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Expiry Date</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase tracking-wider">Status</th>
+                                        <th className="table-header">Medicine Name</th>
+                                        <th className="table-header">Category</th>
+                                        <th className="table-header">Generic Name</th>
+                                        <th className="table-header">Qty</th>
+                                        <th className="table-header">Selling Price</th>
+                                        <th className="table-header">Expiry Date</th>
+                                        <th className="table-header">Status</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -603,10 +544,8 @@ export default function Medicines() {
                                                     <span className="truncate">{m.name}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-sm font-medium text-gray-800 truncate">{m.name}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || 'No Category'}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.shelf_location || '---'}</td>
-                                            <td className="px-4 py-3 text-sm font-mono text-gray-500 truncate">{m.barcode || '---'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || m.category || 'General'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.generic_name || '---'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-900 font-medium">{m.quantity}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">{(m.selling_price || m.unit_price) ? `$${Number(m.selling_price || m.unit_price).toFixed(2)}` : '---'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">{m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}</td>
@@ -614,17 +553,17 @@ export default function Medicines() {
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <button onClick={() => openView(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
-                                                    {canWrite && (
+                                                    {(canEdit || canDelete) && (
                                                         <>
-                                                            <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
-                                                            <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
+                                                            {canEdit && <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>}
+                                                            {canDelete && <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>}
                                                         </>
                                                     )}
                                                 </div>
                                             </td>
                                         </tr>
                                     )) : (
-                                        <tr><td colSpan="10" className="px-4 py-8 text-center text-gray-400">
+                                        <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">
                                             No medicines found{isFiltered && <button onClick={resetFilters} className="ml-2 text-sky-600 hover:underline text-sm font-medium">Clear filters</button>}
                                         </td></tr>
                                     )}
@@ -636,7 +575,7 @@ export default function Medicines() {
                 </>
             )}
 
-            {canWrite && (
+            {(canCreate || canEdit) && (
                 <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Medicine' : 'Add New Medicine'} size="max-w-2xl">
                     <Stepper steps={formSteps} currentStep={step} />
                     {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
@@ -712,7 +651,7 @@ export default function Medicines() {
                         </div>
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
                             <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
-            {canWrite && (
+                            {canEdit && (
                                 <button onClick={() => { setShowViewModal(false); openEdit(viewMedicine); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Medicine</button>
                             )}
                         </div>

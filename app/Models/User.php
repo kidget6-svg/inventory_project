@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -112,7 +113,7 @@ class User extends Authenticatable
     /**
      * The permissions granted to the user's role.
      */
-    public function rolePermissions(): BelongsTo
+    public function rolePermissions(): BelongsToMany
     {
         return $this->role()->with('permissions');
     }
@@ -127,12 +128,9 @@ class User extends Authenticatable
             return Permission::pluck('slug')->all();
         }
 
-        // Resolve the Role model: prefer the role_id relationship,
-        // fall back to looking up by the role string slug.
-        $role = $this->role()->first();
-        if (!$role && $this->role) {
-            $role = Role::where('slug', $this->role)->first();
-        }
+        $role = $this->role_id
+            ? $this->role()->first()
+            : Role::where('slug', $this->getAttribute('role'))->first();
 
         if ($role) {
             return $role->permissions()->pluck('permissions.slug')->all();

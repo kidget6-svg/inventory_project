@@ -60,8 +60,8 @@ function DashboardRouter() {
 
 function SalesRedirect() {
     const { hasPermission } = useAuth();
-    if (hasPermission('sales.prescription')) return <Navigate to="/prescription-sales" replace />;
-    if (hasPermission('sales.retail')) return <Navigate to="/retail-sales" replace />;
+    if (hasPermission('prescription-sales.dispense')) return <Navigate to="/prescription-sales" replace />;
+    if (hasPermission('retail-pos.checkout')) return <Navigate to="/retail-sales" replace />;
     return <Navigate to="/dashboard" replace />;
 }
 
@@ -85,7 +85,7 @@ function App() {
 
             {/* Dashboard Router */}
             <Route path="/dashboard" element={
-                <ProtectedRoute title="Dashboard"><DashboardRouter /></ProtectedRoute>
+                <ProtectedRoute permissions={['dashboard.view']} title="Dashboard"><DashboardRouter /></ProtectedRoute>
             } />
 
             {/* Administration: Users & Roles */}
@@ -93,7 +93,7 @@ function App() {
                 <ProtectedRoute permissions={['users.view']} title="User Management"><Users /></ProtectedRoute>
             } />
             <Route path="/roles" element={
-                <ProtectedRoute permissions={['roles.manage']} title="Roles & Permissions"><RolesPermissions /></ProtectedRoute>
+                <ProtectedRoute permissions={['roles.view']} title="Roles & Permissions"><RolesPermissions /></ProtectedRoute>
             } />
 
             {/* Account pages */}
@@ -126,16 +126,16 @@ function App() {
 
             {/* Sales Routes */}
             <Route path="/prescription-sales" element={
-                <ProtectedRoute permissions={['sales.prescription']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['prescription-sales.view']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
             } />
             <Route path="/prescription-sales-cashier" element={
-                <ProtectedRoute permissions={['sales.checkout']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['prescription-checkout.view']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
             } />
             <Route path="/retail-otc-sales" element={
-                <ProtectedRoute permissions={['sales.retail']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['retail-otc-sales.view']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
             } />
             <Route path="/retail-sales" element={
-                <ProtectedRoute permissions={['sales.retail']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['retail-pos.view']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
             } />
 
             {/* Permission-based redirect for legacy /sales path */}
@@ -143,17 +143,17 @@ function App() {
 
             {/* Receipt Page */}
             <Route path="/receipt/:id" element={
-                <ProtectedRoute permissions={['sales.receipt']} title="Receipt"><ReceiptPage /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales-history.receipt']} title="Receipt"><ReceiptPage /></ProtectedRoute>
             } />
 
             {/* Sales History */}
             <Route path="/sales-history" element={
-                <ProtectedRoute permissions={['sales.view']} title="Sales History"><SalesHistory /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales-history.view']} title="Sales History"><SalesHistory /></ProtectedRoute>
             } />
 
             {/* Reports & Tracking */}
             <Route path="/stock-movements" element={
-                <ProtectedRoute permissions={['inventory.view']} title="Stock Movements"><StockMovements /></ProtectedRoute>
+                <ProtectedRoute permissions={['stock-movements.view']} title="Stock Movements"><StockMovements /></ProtectedRoute>
             } />
 
             <Route path="/reports" element={

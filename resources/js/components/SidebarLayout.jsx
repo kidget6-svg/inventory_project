@@ -3,38 +3,37 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
-    ArrowLeftRight, BarChart3, Menu, X, LogOut, Users, 
+    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
     ShoppingBag, FileText, ShieldCheck
 } from 'lucide-react';
+
+// Single permission-driven menu. Admin sees every entry automatically
+// because admins hold every permission.
 const menuItems = [
     { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['dashboard.view'] },
     { section: 'Point of Sale' },
-    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['sales.prescription'] },
-    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['sales.checkout'] },
-    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['sales.retail'] },
-    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['sales.retail'] },
-
+    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['prescription-sales.view'] },
+    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['prescription-checkout.view'] },
+    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['retail-otc-sales.view'] },
+    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['retail-pos.view'] },
     { section: 'Product Management' },
     { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view'] },
     { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail-products.view'] },
     { to: '/categories', label: 'Categories', icon: FolderTree, permissions: ['categories.view'] },
     { to: '/suppliers', label: 'Suppliers', icon: Truck, permissions: ['suppliers.view'] },
-
     { section: 'Inventory & Purchasing' },
     { to: '/inventory', label: 'Inventory', icon: Package, permissions: ['inventory.view'] },
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['inventory.view'] },
-
+    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['stock-movements.view'] },
+    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle, permissions: ['lowstock.view'] },
     { section: 'Reports' },
     { to: '/reports', label: 'Reports', icon: BarChart3, permissions: ['reports.view'] },
-    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales.view'] },
-
+    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales-history.view'] },
     { section: 'Administration' },
     { to: '/users', label: 'Users', icon: Users, permissions: ['users.view'] },
-    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.manage'] },
+    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.view'] },
 ];
 
 function buildMenu(items, hasAnyPermission) {
@@ -108,7 +107,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                 <div className="p-5 border-b border-sky-200 flex items-center justify-between">
                     <div className={`flex items-center gap-3 min-w-0 ${collapsed ? 'md:justify-center md:w-full' : ''}`}>
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-2xl ring-2 ring-sky-400/70 bg-white transform hover:scale-105 transition-transform duration-200">
-                            <img src="/images/p1.png" alt="EthioPharmacy" className="w-10 h-10 object-contain" />
+                            <img src="/images/sidebar.png" alt="EthioPharmacy" className="w-10 h-10 object-contain" />
                         </div>
                         {!collapsed && (
                             <div className="min-w-0">

@@ -33,8 +33,12 @@ const STATUS_COLORS = {
 };
 
 export default function SalesHistory() {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const isCashier = user?.role === 'cashier';
+    const canExport = hasPermission('sales-history.export');
+    const canViewReceipt = hasPermission('sales-history.receipt');
+    const canDownload = hasPermission('sales-history.download');
+    const canPrint = hasPermission('sales-history.print');
 
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -199,18 +203,22 @@ export default function SalesHistory() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => handleExport('sales', 'pdf')}
-                        className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
-                    >
-                        <Download size={14} /> Export PDF
-                    </button>
-                    <button
-                        onClick={() => handleExport('sales', 'csv')}
-                        className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
-                    >
-                        <Download size={14} /> Export CSV
-                    </button>
+                    {canExport && (
+                        <>
+                            <button
+                                onClick={() => handleExport('sales', 'pdf')}
+                                className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
+                            >
+                                <Download size={14} /> Export PDF
+                            </button>
+                            <button
+                                onClick={() => handleExport('sales', 'csv')}
+                                className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
+                            >
+                                <Download size={14} /> Export CSV
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -338,27 +346,33 @@ export default function SalesHistory() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex justify-center gap-1.5">
-                                                <button
-                                                    onClick={() => handleViewReceipt(sale.id)}
-                                                    className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
-                                                    title="View Sale Details"
-                                                >
-                                                    <Eye size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDownloadPdf(sale.id, sale.receipt_number)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Download PDF Receipt"
-                                                >
-                                                    <Download size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handlePrint(sale.id)}
-                                                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                    title="Print Receipt"
-                                                >
-                                                    <Printer size={14} />
-                                                </button>
+                                                {canViewReceipt && (
+                                                    <button
+                                                        onClick={() => handleViewReceipt(sale.id)}
+                                                        className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
+                                                        title="View Sale Details"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button>
+                                                )}
+                                                {canDownload && (
+                                                    <button
+                                                        onClick={() => handleDownloadPdf(sale.id, sale.receipt_number)}
+                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="Download PDF Receipt"
+                                                    >
+                                                        <Download size={14} />
+                                                    </button>
+                                                )}
+                                                {canPrint && (
+                                                    <button
+                                                        onClick={() => handlePrint(sale.id)}
+                                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                        title="Print Receipt"
+                                                    >
+                                                        <Printer size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -516,18 +530,22 @@ export default function SalesHistory() {
 
                         {/* Actions */}
                         <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
-                            <button
-                                onClick={() => handleDownloadPdf(selectedSale.id, selectedSale.receipt_number)}
-                                className="btn-secondary px-3 py-2 text-sm flex items-center gap-1.5"
-                            >
-                                <Download size={14} /> Download PDF
-                            </button>
-                            <button
-                                onClick={() => handlePrint(selectedSale.id)}
-                                className="btn-primary px-3 py-2 text-sm flex items-center gap-1.5"
-                            >
-                                <Printer size={14} /> Print Receipt
-                            </button>
+                            {canDownload && (
+                                <button
+                                    onClick={() => handleDownloadPdf(selectedSale.id, selectedSale.receipt_number)}
+                                    className="btn-secondary px-3 py-2 text-sm flex items-center gap-1.5"
+                                >
+                                    <Download size={14} /> Download PDF
+                                </button>
+                            )}
+                            {canPrint && (
+                                <button
+                                    onClick={() => handlePrint(selectedSale.id)}
+                                    className="btn-primary px-3 py-2 text-sm flex items-center gap-1.5"
+                                >
+                                    <Printer size={14} /> Print Receipt
+                                </button>
+                            )}
                         </div>
                     </div>
                 ) : null}
