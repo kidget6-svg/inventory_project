@@ -135,7 +135,6 @@ class PurchaseOrderTest extends TestCase
             'medicine_id' => $medicine->id,
             'quantity' => 30,
         ]);
-
         $response->assertOk()
             ->assertJsonFragment([
                 'status' => 'draft',
