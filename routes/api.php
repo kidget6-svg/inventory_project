@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ShelfController;
 use App\Http\Controllers\Api\StockManagementController;
+use App\Http\Controllers\Api\WarehouseController;
+use App\Http\Controllers\Api\BranchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +73,17 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         // Retail Products Read
         Route::get('/retail-products', [RetailProductController::class, 'index']);
         Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
+
+        // Warehouse Read
+        Route::get('/warehouse/stats', [WarehouseController::class, 'stats']);
+        Route::get('/warehouse/shelves', [WarehouseController::class, 'shelves']);
+        Route::get('/warehouse/stock', [WarehouseController::class, 'stock']);
+        Route::get('/warehouse/receiving-history', [WarehouseController::class, 'receivingHistory']);
+        Route::get('/warehouse/transfer-requests', [WarehouseController::class, 'transferRequests']);
+
+        // Branches Read
+        Route::get('/branches', [BranchController::class, 'index']);
+        Route::get('/branches/stats', [BranchController::class, 'stats']);
     });
 
     // --------------------------------------------------------------------
@@ -107,6 +120,11 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
         // Reports
         Route::get('/reports', [ReportController::class, 'index']);
+
+        // Warehouse Write
+        Route::post('/warehouse/receive', [WarehouseController::class, 'receive']);
+        Route::post('/warehouse/transfer/{id}/approve', [WarehouseController::class, 'approveTransfer']);
+        Route::post('/warehouse/transfer/{id}/complete', [WarehouseController::class, 'completeTransfer']);
     });
 
     // --------------------------------------------------------------------
@@ -181,6 +199,11 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // Retail Products — Write (Admin only)
     // --------------------------------------------------------------------
     Route::middleware('role:admin')->group(function () {
+        // Branches Write (Admin only)
+        Route::post('/branches', [BranchController::class, 'store']);
+        Route::put('/branches/{branch}', [BranchController::class, 'update']);
+        Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
+
         Route::post('/retail-products', [RetailProductController::class, 'store']);
         Route::put('/retail-products/{retailProduct}', [RetailProductController::class, 'update']);
         Route::delete('/retail-products/{retailProduct}', [RetailProductController::class, 'destroy']);

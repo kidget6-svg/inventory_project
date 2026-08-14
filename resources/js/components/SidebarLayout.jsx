@@ -5,7 +5,7 @@ import {
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
     ArrowLeftRight, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText, ShieldCheck
+    ShoppingBag, FileText, ShieldCheck, Warehouse, Building2, Boxes
 } from 'lucide-react';
 const menuItems = [
     { section: 'Main' },
@@ -24,7 +24,8 @@ const menuItems = [
     { to: '/suppliers', label: 'Suppliers', icon: Truck, permissions: ['suppliers.view'] },
 
     { section: 'Inventory & Purchasing' },
-    { to: '/inventory', label: 'Inventory', icon: Package, permissions: ['inventory.view'] },
+    { to: '/inventory', label: 'Stock Management', icon: Boxes, permissions: ['inventory.view'] },
+    { to: '/warehouse', label: 'Warehouse', icon: Warehouse, permissions: ['inventory.view'] },
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['inventory.view'] },
 
@@ -35,6 +36,7 @@ const menuItems = [
     { section: 'Administration' },
     { to: '/users', label: 'Users', icon: Users, permissions: ['users.view'] },
     { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.manage'] },
+    { to: '/branches', label: 'Branches', icon: Building2 },
 ];
 
 function buildMenu(items, hasAnyPermission) {

@@ -35,7 +35,9 @@ export default function Branches() {
         setError('');
         try {
             const res = await api.get('/branches', { params: { search: searchTerm } });
-            setBranches(res.data.data || []);
+            const d = res.data;
+            const items = Array.isArray(d) ? d : (d && Array.isArray(d.data) ? d.data : []);
+            setBranches(items);
         } catch (err) {
             setError('Failed to load branches');
             console.error(err);

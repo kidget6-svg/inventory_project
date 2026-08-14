@@ -46,6 +46,14 @@ export default function WarehousePage() {
         date_to: '',
     });
 
+    // Helper to safely extract array from API response
+    const asArray = (res) => {
+        const d = res.data;
+        if (Array.isArray(d)) return d;
+        if (d && Array.isArray(d.data)) return d.data;
+        return [];
+    };
+
     // Load all warehouse data
     const loadWarehouseData = useCallback(async () => {
         setLoading(true);
@@ -61,11 +69,11 @@ export default function WarehousePage() {
             ]);
 
             setStats(statsRes.data);
-            setShelves(shelvesRes.data?.data || shelvesRes.data || []);
-            setStock(stockRes.data?.data || stockRes.data || []);
-            setReceivingHistory(receivingRes.data?.data || receivingRes.data || []);
-            setTransferRequests(transfersRes.data?.data || transfersRes.data || []);
-            setPurchaseOrders(poRes.data?.data || poRes.data || []);
+            setShelves(asArray(shelvesRes));
+            setStock(asArray(stockRes));
+            setReceivingHistory(asArray(receivingRes));
+            setTransferRequests(asArray(transfersRes));
+            setPurchaseOrders(asArray(poRes));
         } catch (err) {
             setError('Failed to load warehouse data');
             console.error(err);

@@ -13,7 +13,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
 import Medicines from './pages/Medicines';
-import Inventory from './pages/Inventory';
+import StockManagement from './pages/StockManagement';
+import WarehousePage from './pages/Warehouse';
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
@@ -28,6 +29,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import ReceiptPage from './pages/ReceiptPage';
 import SalesHistory from './pages/SalesHistory';
+import Branches from './pages/Branches';
 
 function ProtectedRoute({ children, permissions, title }) {
     const { user, loading, hasAnyPermission } = useAuth();
@@ -95,6 +97,9 @@ function App() {
             <Route path="/roles" element={
                 <ProtectedRoute permissions={['roles.manage']} title="Roles & Permissions"><RolesPermissions /></ProtectedRoute>
             } />
+            <Route path="/branches" element={
+                <ProtectedRoute title="Branch Management"><Branches /></ProtectedRoute>
+            } />
 
             {/* Account pages */}
             <Route path="/profile" element={
@@ -109,7 +114,7 @@ function App() {
                 <ProtectedRoute permissions={['medicines.view']} title="Medicines"><Medicines /></ProtectedRoute>
             } />
             <Route path="/inventory" element={
-                <ProtectedRoute permissions={['inventory.view']} title="Stock Inventory"><Inventory /></ProtectedRoute>
+                <ProtectedRoute permissions={['inventory.view']} title="Stock Inventory"><StockManagement /></ProtectedRoute>
             } />
             <Route path="/categories" element={
                 <ProtectedRoute permissions={['categories.view']} title="Medicine Categories"><Categories /></ProtectedRoute>
@@ -154,6 +159,9 @@ function App() {
             {/* Reports & Tracking */}
             <Route path="/stock-movements" element={
                 <ProtectedRoute permissions={['inventory.view']} title="Stock Movements"><StockMovements /></ProtectedRoute>
+            } />
+            <Route path="/warehouse" element={
+                <ProtectedRoute permissions={['inventory.view']} title="Warehouse"><WarehousePage /></ProtectedRoute>
             } />
 
             <Route path="/reports" element={

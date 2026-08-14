@@ -77,6 +77,15 @@ class BranchController extends Controller
         ]);
     }
 
+    public function stats()
+    {
+        return response()->json([
+            'total' => Branch::count(),
+            'active' => Branch::where('status', 'active')->count(),
+            'inactive' => Branch::where('status', 'inactive')->count(),
+        ]);
+    }
+
     public function update(Request $request, Branch $branch)
     {
         try {
