@@ -19,16 +19,14 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        Medicine::query()->get()->each(function ($medicine) {
-            $medicine->syncAutomaticExpiryState();
-        });
-
         if ($user->isAdmin()) {
             return $this->adminDashboard();
         }
+
         if ($user->isPharmacist()) {
             return $this->pharmacistDashboard();
         }
+
         return $this->cashierDashboard();
     }
 
@@ -39,7 +37,7 @@ class DashboardController extends Controller
     */
     private function lowStockMedicines()
     {
-        return Medicine::whereColumn('quantity', '<=', 'reorder_level', 'and')
+        return Medicine::whereColumn('quantity', '<=', 'reorder_level')
             ->with('category')
             ->orderBy('quantity')
             ->get();
@@ -52,8 +50,8 @@ class DashboardController extends Controller
     */
     private function expiredMedicines()
     {
-        return Medicine::whereNotNull('expiry_date', 'and')
-            ->where('expiry_date', '<', Carbon::today(null), 'and')
+        return Medicine::whereNotNull('expiry_date')
+            ->where('expiry_date', '<', Carbon::today())
             ->orderBy('expiry_date')
             ->get();
     }
@@ -65,8 +63,8 @@ class DashboardController extends Controller
     */
     private function expiringMedicines(int $days)
     {
-        return Medicine::whereNotNull('expiry_date', 'and')
-            ->whereBetween('expiry_date', [Carbon::today(null), Carbon::today(null)->addDays($days)], 'and')
+        return Medicine::whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->addDays($days)])
             ->with('category')
             ->orderBy('expiry_date')
             ->get();
@@ -80,21 +78,22 @@ class DashboardController extends Controller
     private function inventoryStatus(): array
     {
         return [
-                                'inStock'    => Medicine::where('quantity', '>', 0, 'and')
-                                ->whereColumn('quantity', '>', 'reorder_level', 'and')
-                                ->where(function ($q) {
-                                        $q->whereNull('expiry_date')
-                                            ->orWhere('expiry_date', '>=', Carbon::today(null));
-                                })->count(),
-                                'lowStock'   => Medicine::where('quantity', '>', 0, 'and')
-                                ->whereColumn('quantity', '<=', 'reorder_level', 'and')
-                                ->where(function ($q) {
-                                        $q->whereNull('expiry_date')
-                                            ->orWhere('expiry_date', '>=', Carbon::today(null));
-                                })->count(),
+            'inStock' => Medicine::where('quantity', '>', 0)
+                ->whereColumn('quantity', '>', 'reorder_level')
+                ->where(function ($q) {
+                    $q->whereNull('expiry_date')
+                        ->orWhere('expiry_date', '>=', Carbon::today());
+                })->count(),
+            'lowStock' => Medicine::where('quantity', '>', 0)
+                ->whereColumn('quantity', '<=', 'reorder_level')
+                ->where(function ($q) {
+                    $q->whereNull('expiry_date')
+                        ->orWhere('expiry_date', '>=', Carbon::today());
+                })->count(),
             'outOfStock' => Medicine::where('quantity', 0)->count(),
-            'expired'    => Medicine::whereNotNull('expiry_date')
-                ->where('expiry_date', '<', Carbon::today())->count(),
+            'expired' => Medicine::whereNotNull('expiry_date')
+                ->where('expiry_date', '<', Carbon::today())
+                ->count(),
         ];
     }
 

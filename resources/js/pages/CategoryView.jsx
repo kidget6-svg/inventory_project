@@ -86,6 +86,10 @@ export default function CategoryView() {
                         <p className="text-sm text-gray-600">{category.description || '---'}</p>
                     </div>
                     <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">Shelf Location</label>
+                        <p className="text-sm text-gray-600">{category.shelf_location || '---'}</p>
+                    </div>
+                    <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1">Created</label>
                         <p className="text-sm text-gray-600 flex items-center gap-1">
                             <Calendar size={14} />

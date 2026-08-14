@@ -10,8 +10,10 @@ use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\RetailProductController;
 use App\Http\Controllers\Api\StockMovementController;
+use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\ShelfController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,32 +37,40 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // Account & Dashboard
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/settings/password', [AuthController::class, 'updatePassword']);
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
     // --------------------------------------------------------------------
     // Shared Read-Only Access (Admin, Pharmacist, Cashier)
     // --------------------------------------------------------------------
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
+        // Medicines Read
+        Route::get('/medicines', [MedicineController::class, 'index']);
+        Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
+        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
+
+        // Stock Movements Read
+        Route::get('/stock-movements', [StockMovementController::class, 'index']);
+        Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
+        Route::get('/stock-movements/types', [StockMovementController::class, 'getTypes']);
+        Route::get('/stock-movements/summary', [StockMovementController::class, 'getSummary']);
+        Route::get('/stock-movements/export-pdf', [StockMovementController::class, 'exportPdf']);
+
         // Categories Read
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
+
+        // Shelves Read
+        Route::get('/shelves', [ShelfController::class, 'index']);
+        Route::get('/shelves/{shelf}', [ShelfController::class, 'show']);
 
         // Suppliers Read
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
 
-        // Retail Products Read (pharmacist needs this for Retail & OTC Sales page)
+        // Retail Products Read
         Route::get('/retail-products', [RetailProductController::class, 'index']);
         Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
-    });
-
-    // --------------------------------------------------------------------
-    // Medicines - Read-Only (Admin & Pharmacist only, Cashier excluded)
-    // --------------------------------------------------------------------
-    Route::middleware('role:admin,pharmacist')->group(function () {
-        Route::get('/medicines', [MedicineController::class, 'index']);
-        Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
-        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
     });
 
     // --------------------------------------------------------------------
@@ -72,11 +82,26 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::put('/categories/{category}', [CategoryController::class, 'update']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
+        // Shelves - Create, Update, Delete
+        Route::post('/shelves', [ShelfController::class, 'store']);
+        Route::put('/shelves/{shelf}', [ShelfController::class, 'update']);
+        Route::delete('/shelves/{shelf}', [ShelfController::class, 'destroy']);
+
         // Medicines - Create, Update, Delete
         Route::post('/medicines', [MedicineController::class, 'store']);
+        Route::post('/medicines/{medicine}', [MedicineController::class, 'update']);
         Route::put('/medicines/{medicine}', [MedicineController::class, 'update']);
         Route::patch('/medicines/{medicine}/status', [MedicineController::class, 'updateStatus']);
         Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
+
+        // Stock Movements - Create, Delete
+        Route::post('/stock-movements', [StockMovementController::class, 'store']);
+        Route::delete('/stock-movements/{stockMovement}', [StockMovementController::class, 'destroy']);
+
+        // Low Stock & Reports
+        Route::get('/low-stock', [LowStockController::class, 'index']);
+        Route::get('/low-stock/export-pdf', [LowStockController::class, 'exportPdf']);
+        Route::get('/reports', [ReportController::class, 'index']);
     });
 
     // --------------------------------------------------------------------
@@ -111,18 +136,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     });
 
     // --------------------------------------------------------------------
-    // Inventory Operations (Admin & Pharmacist)
-    // --------------------------------------------------------------------
-    Route::middleware('role:admin,pharmacist')->group(function () {
-        Route::get('/stock-movements', [StockMovementController::class, 'index']);
-        Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
-        Route::post('/stock-movements', [StockMovementController::class, 'store']);
-        Route::get('/reports', [ReportController::class, 'index']);
-    });
-
-    // --------------------------------------------------------------------
     // Sales — Read-Only (Admin, Pharmacist, Cashier)
-    // Admin can view sales data for reports/history but MUST NOT perform sales.
     // --------------------------------------------------------------------
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
         Route::get('/sales', [SaleController::class, 'index']);
@@ -143,8 +157,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     });
 
     // --------------------------------------------------------------------
-    // Sales — Pharmacist Only (dispatch drafts to cashier queue)
-    // Admin is explicitly excluded: Admin MUST NOT perform sales.
+    // Sales Operations (Pharmacist Only)
     // --------------------------------------------------------------------
     Route::middleware('role:pharmacist')->group(function () {
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
@@ -161,7 +174,6 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
     // --------------------------------------------------------------------
     // Retail Products — Write (Admin only)
-    // Read routes are already in the shared read-only group above.
     // --------------------------------------------------------------------
     Route::middleware('role:admin')->group(function () {
         Route::post('/retail-products', [RetailProductController::class, 'store']);

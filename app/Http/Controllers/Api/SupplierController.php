@@ -10,17 +10,41 @@ class SupplierController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Supplier::query();
+        try {
+            $query = Supplier::query();
 
-        if ($search = $request->input('search')) {
-            $query->where('name', 'like', "%{$search}%");
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where('name', 'like', "%{$search}%");
+            }
+
+            $perPage = $request->get('per_page');
+            
+            // If requesting all records
+            if ($perPage === 'all' || $perPage == -1) {
+                $allSuppliers = $query->latest()->get();
+                return response()->json($allSuppliers); // Return direct array
+            }
+
+            // Paginated response
+            $suppliers = $query->latest()->paginate($perPage ?? 15);
+
+            return response()->json([
+                'data' => $suppliers->items(),
+                'meta' => [
+                    'current_page' => $suppliers->currentPage(),
+                    'last_page' => $suppliers->lastPage(),
+                    'per_page' => $suppliers->perPage(),
+                    'total' => $suppliers->total(),
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Query Error: ' . $e->getMessage()
+            ], 500);
         }
-
-        if ($request->has('page') || $request->has('per_page')) {
-            return response()->json($query->paginate((int) $request->input('per_page', 10)));
-        }
-
-        return response()->json($query->get());
     }
 
     public function store(Request $request)

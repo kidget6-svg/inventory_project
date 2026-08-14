@@ -21,7 +21,12 @@ export default function PurchaseOrderCreate() {
     useEffect(() => {
         Promise.all([
             api.get('/suppliers').then(r => setSuppliers(r.data)),
-            api.get('/medicines').then(r => setMedicines(r.data?.data || r.data)),
+            api.get('/medicines').then(r => {
+                const list = Array.isArray(r.data?.data) ? r.data.data :
+                             Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
+                             Array.isArray(r.data) ? r.data : [];
+                setMedicines(list);
+            }),
         ]).finally(() => setLoading(false));
     }, []);
 

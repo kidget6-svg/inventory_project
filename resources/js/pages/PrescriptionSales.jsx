@@ -58,7 +58,12 @@ export default function PrescriptionSales() {
     // ── Data loading ──────────────────────────────────────────────
     useEffect(() => {
         api.get('/medicines', { params: { per_page: 100 } })
-            .then(res => setMedicines(res.data.data || res.data))
+            .then(res => {
+                const list = Array.isArray(res.data?.data) ? res.data.data :
+                             Array.isArray(res.data?.medicines?.data) ? res.data.medicines.data :
+                             Array.isArray(res.data) ? res.data : [];
+                setMedicines(list);
+            })
             .catch(err => {
                 console.error('Failed to load medicines:', err);
                 window.showToast('Failed to load medicines', 'error');

@@ -19,11 +19,9 @@ export default function Landing() {
 
                     {/* Logo + Title */}
                     <div className="flex items-center gap-4">
-                        <img
-                            src="/images/sidebar.png"
-                            alt="EthioPharmacy"
-                            className="w-16 h-16 rounded-2xl bg-white shadow-2xl ring-2 ring-sky-400/70 transform hover:scale-105 transition-transform duration-200"
-                        />
+                        <div className="w-16 h-16 rounded-2xl bg-white shadow-2xl ring-2 ring-sky-400/70 transform hover:scale-105 transition-transform duration-200 flex items-center justify-center">
+                            <img src="/images/p1.png" alt="EthioPharmacy" className="w-14 h-14 object-contain" />
+                        </div>
 
                         <div>
                             <h1 className="text-3xl font-bold text-blue-800">

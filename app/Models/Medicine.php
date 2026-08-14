@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 
 class Medicine extends Model
@@ -15,24 +15,11 @@ class Medicine extends Model
     const STATUS_EXPIRED = 'expired';
     const STATUS_DISCONTINUED = 'discontinued';
 
-    public static function statuses(): array
-    {
-        return [
-            self::STATUS_ACTIVE => 'Active',
-            self::STATUS_INACTIVE => 'Inactive',
-            self::STATUS_EXPIRED => 'Expired',
-            self::STATUS_DISCONTINUED => 'Discontinued',
-        ];
-    }
-
     protected $fillable = [
         'name',
         'generic_name',
-        'batch_number',
-        'barcode',
         'category_id',
         'supplier_id',
-        'shelf_id',
         'quantity',
         'unit_price',
         'purchase_price',
@@ -40,28 +27,22 @@ class Medicine extends Model
         'reorder_level',
         'expiry_date',
         'status',
-        'image',
-        'description',
-        'manufacturer',
         'shelf_location',
+        'shelf_id',
+        'batch_number',
+        'barcode',
     ];
 
-    protected $appends = ['image_url'];
+    // Explicitly clear $with so Eloquent doesn't query missing relationships like 'shelf'
+    protected $with = [];
 
     protected $casts = [
         'expiry_date' => 'date',
-        'quantity' => 'integer',
-        'reorder_level' => 'integer',
-        'unit_price' => 'decimal:2',
-        'purchase_price' => 'decimal:2',
-        'selling_price' => 'decimal:2',
     ];
 
-    public function shelf()
-    {
-        return $this->belongsTo(Shelf::class);
-    }
-
+    /**
+     * Category Relationship (Optional)
+     */
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -72,6 +53,11 @@ class Medicine extends Model
         return $this->belongsTo(Supplier::class);
     }
 
+    public function shelf()
+    {
+        return $this->belongsTo(Shelf::class);
+    }
+
     public function purchaseOrderItems()
     {
         return $this->hasMany(PurchaseOrderItem::class);
@@ -79,7 +65,7 @@ class Medicine extends Model
 
     public function batches()
     {
-        return $this->hasMany(Batch::class);
+        return $this->hasMany(Batch::class, 'medicine_id');
     }
 
     public function calculatedExpiryDate(): ?Carbon
@@ -119,7 +105,15 @@ class Medicine extends Model
     public function getImageUrlAttribute(): string
     {
         if ($this->image) {
-            return asset($this->image);
+            if (str_starts_with($this->image, 'http')) {
+                return $this->image;
+            }
+
+            if (str_starts_with($this->image, 'images/')) {
+                return asset($this->image);
+            }
+
+            return asset('storage/' . $this->image);
         }
 
         return asset('images/medicine-placeholder.svg');

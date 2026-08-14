@@ -19,12 +19,28 @@ class StockMovement extends Model
         'after_quantity',
         'reference',
         'notes',
+        'source_type',
+        'source_id',
+        'destination_type',
+        'destination_id',
+        'branch_id',
+        'status',
+        'approved_at',
+        'approved_by',
+        'completed_at',
+        'completed_by',
+        'ip_address',
+        'device_info',
+        'attachments',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'before_quantity' => 'integer',
         'after_quantity' => 'integer',
+        'attachments' => 'array',
+        'approved_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     // Relationships
@@ -38,6 +54,16 @@ class StockMovement extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function completer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
+
     // Accessors
     public function getTypeLabelAttribute(): string
     {
@@ -46,7 +72,12 @@ class StockMovement extends Model
             'out' => 'Stock Out',
             'adjustment' => 'Adjustment',
             'return' => 'Return',
+            'transfer' => 'Transfer',
             'damaged' => 'Damaged',
+            'expired' => 'Expired',
+            'lost' => 'Lost',
+            'correction' => 'Correction',
+            'self' => 'Self Adjustment',
         ][$this->type] ?? $this->type;
     }
 
@@ -57,7 +88,12 @@ class StockMovement extends Model
             'out' => 'red',
             'adjustment' => 'orange',
             'return' => 'blue',
+            'transfer' => 'purple',
             'damaged' => 'red',
+            'expired' => 'gray',
+            'lost' => 'orange',
+            'correction' => 'sky',
+            'self' => 'emerald',
         ][$this->type] ?? 'gray';
     }
 
@@ -68,7 +104,37 @@ class StockMovement extends Model
             'out' => '↑',
             'adjustment' => '↔',
             'return' => '↩',
+            'transfer' => '⇄',
             'damaged' => '✕',
+            'expired' => '⏳',
+            'lost' => '?',
+            'correction' => '✓',
+            'self' => '↻',
         ][$this->type] ?? '•';
+    }
+
+    public function getIsSelfAttribute(): bool
+    {
+        return $this->source_type === 'self' || $this->destination_type === 'self';
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return [
+            'pending' => 'Pending',
+            'approved' => 'Approved',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled',
+        ][$this->status] ?? $this->status ?? 'Pending';
+    }
+
+    public function getStatusColorAttribute(): string
+    {
+        return [
+            'pending' => 'amber',
+            'approved' => 'sky',
+            'completed' => 'emerald',
+            'cancelled' => 'red',
+        ][$this->status] ?? 'gray';
     }
 }
