@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -14,13 +13,13 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     // Role Constants
-    public const ROLE_ADMIN            = 'admin';
-    public const ROLE_PHARMACIST       = 'pharmacist';
-    public const ROLE_CASHIER          = 'cashier';
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_PHARMACIST = 'pharmacist';
+    public const ROLE_CASHIER = 'cashier';
     public const ROLE_PURCHASING_STAFF = 'purchasing_staff';
 
     // Status Constants
-    public const STATUS_PENDING  = 'pending';
+    public const STATUS_PENDING = 'pending';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
 
@@ -117,30 +116,71 @@ class User extends Authenticatable
     }
 
     /**
+     * The role row this user belongs to.
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    /**
      * Get all permissions for the user's role.
      */
     public function getAllPermissions(): array
     {
+        return $this->permissions();
+    }
+
+    /**
+     * Get the user's resolved permission slugs.
+     */
+    public function permissions(): array
+    {
+        // Admin has every permission.
         if ($this->role === self::ROLE_ADMIN) {
-            return array_keys(config('permissions.labels', []));
+            return Permission::pluck('slug')->all();
         }
 
-        return config('permissions.permissions.' . $this->role, []);
+        // If the user has a role_id, get permissions
+        // from the related Role model.
+        if ($this->role_id) {
+            $role = $this->role()->with('permissions')->first();
+
+            if ($role) {
+                return $role->permissions
+                    ->pluck('slug')
+                    ->all();
+            }
+        }
+
+        // Fallback to config-based permissions.
+        return config(
+            'permissions.permissions.' . $this->role,
+            []
+        );
+    }
+
+    /**
+     * Get permissions for API responses.
+     */
+    public function getPermissionsAttribute(): array
+    {
+        return $this->permissions();
     }
 
     /**
      * Check if the user has a specific permission.
-     *
-     * @param  string  $permission  Dot-notation permission string
      */
     public function hasPermission(string $permission): bool
     {
+        // Admin automatically has every permission.
         if ($this->role === self::ROLE_ADMIN) {
             return true;
         }
 
-        $permissions = config('permissions.permissions.' . $this->role, []);
+        $permissions = $this->permissions();
 
+        // Wildcard permission.
         if (in_array('*', $permissions, true)) {
             return true;
         }
@@ -149,7 +189,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if the user has ANY of the given permissions.
+     * Check whether the user has ANY of the given permissions.
      */
     public function hasAnyPermission(array $permissions): bool
     {
@@ -163,7 +203,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if the user has ALL of the given permissions.
+     * Check whether the user has ALL of the given permissions.
      */
     public function hasAllPermissions(array $permissions): bool
     {
@@ -174,69 +214,5 @@ class User extends Authenticatable
         }
 
         return true;
-    }
-
-    /**
-     * The role row this user belongs to (for permission lookups).
-     */
-    public function role(): BelongsTo
-    {
-        return $this->belongsTo(Role::class, 'role_id');
-    }
-
-    /**
-     * The permissions granted to the user's role.
-     */
-    public function rolePermissions(): BelongsToMany
-    {
-        return $this->role()->with('permissions');
-    }
-
-    /**
-     * Flat list of permission slugs the user currently holds.
-     * Admins automatically hold every permission in the system.
-     */
-    public function permissions(): array
-    {
-        if ($this->role === 'admin') {
-            return Permission::pluck('slug')->all();
-        }
-
-        $role = $this->role;
-        if ($role) {
-            return $role->permissions()->pluck('permissions.slug')->all();
-        }
-
-        return [];
-    }
-
-    /**
-     * Get the resolved permission slugs for API responses.
-     */
-    public function getPermissionsAttribute(): array
-    {
-        return $this->permissions();
-    }
-
-    /**
-     * Check whether the user holds a specific permission.
-     */
-    public function hasPermission(string $permission): bool
-    {
-        return in_array($permission, $this->permissions(), true);
-    }
-
-    /**
-     * Check whether the user holds any of the given permissions.
-     */
-    public function hasAnyPermission(array $permissions): bool
-    {
-        foreach ($permissions as $permission) {
-            if ($this->hasPermission($permission)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

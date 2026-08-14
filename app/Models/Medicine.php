@@ -30,6 +30,7 @@ class Medicine extends Model
         'supplier_id',
         'shelf_id',
         'prescription',
+        'prescription_details',
         'dosage_form',
         'strength',
         'unit',

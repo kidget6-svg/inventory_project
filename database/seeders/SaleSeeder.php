@@ -42,11 +42,11 @@ class SaleSeeder extends Seeder
         for ($i = 0; $i < 20; $i++) {
             $user = $users->random();
             $saleDate = Carbon::now()->subDays(rand(0, 30))->setTime(rand(8, 20), rand(0, 59), 0);
-            
+
             // Select 1-4 random medicines
             $numItems = rand(1, 4);
             $selectedMedicines = $medicines->random(min($numItems, $medicines->count()));
-            
+
             $totalAmount = 0;
             $items = [];
 
@@ -55,11 +55,11 @@ class SaleSeeder extends Seeder
                 $price = $medicine->selling_price ?? rand(50, 200);
                 $subtotal = $quantity * $price;
                 $totalAmount += $subtotal;
-                
+
                 $items[] = [
                     'medicine_id' => $medicine->id,
                     'quantity' => $quantity,
-                    'price' => $price,
+                    'unit_price' => $price,
                     'subtotal' => $subtotal,
                 ];
             }
@@ -112,7 +112,7 @@ class SaleSeeder extends Seeder
             try {
                 // Create the sale
                 $sale = Sale::create($saleData);
-                
+
                 if ($sale) {
                     $salesCreated++;
 
@@ -122,16 +122,16 @@ class SaleSeeder extends Seeder
                             'sale_id' => $sale->id,
                             'medicine_id' => $item['medicine_id'],
                             'quantity' => $item['quantity'],
-                            'price' => $item['price'],
+                            'unit_price' => $item['unit_price'],
                         ];
 
                         // Check if 'total' or 'subtotal' column exists in sale_items
                         $itemColumns = Schema::getColumnListing('sale_items');
-                        
+
                         if (in_array('total', $itemColumns)) {
                             $itemData['total'] = $item['subtotal'];
                         }
-                        
+
                         if (in_array('subtotal', $itemColumns)) {
                             $itemData['subtotal'] = $item['subtotal'];
                         }
@@ -148,7 +148,7 @@ class SaleSeeder extends Seeder
 
         $this->command->info('✅ Sales created: ' . $salesCreated);
         $this->command->info('✅ Sale items created: ' . $itemsCreated);
-        
+
         // Show sample data
         $sampleSale = Sale::with('items')->first();
         if ($sampleSale) {

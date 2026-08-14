@@ -13,6 +13,10 @@ import {
 
 const dosageForms = ['', 'tablet', 'capsule', 'syrup', 'injection', 'cream', 'ointment', 'drops', 'powder', 'gel'];
 
+const strengths = ['', '5 mg', '10 mg', '25 mg', '50 mg', '100 mg', '200 mg', '250 mg', '500 mg', '1 g', '2 g', '5 mg/ml', '10 mg/5 ml', '20 mg/5 ml', '40 mg/5 ml', '1%', '2.5%', '5%', '10%'];
+
+const units = ['', 'tablet', 'capsule', 'bottle', 'box', 'packet', 'tube', 'vial', 'ampoule', 'sachet', 'bottle (5 ml)', 'bottle (15 ml)', 'bottle (30 ml)'];
+
 export default function Medicines() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -42,16 +46,15 @@ export default function Medicines() {
     const [form, setForm] = useState({
         name: '',
         generic_name: '',
-        batch_number: '',
         barcode: '',
         category_id: '',
         supplier_id: '',
         shelf_id: '',
         prescription: false,
+        prescription_details: '',
         dosage_form: '',
         strength: '',
         unit: '',
-        manufacturer: '',
         shelf_location: '',
     });
 
@@ -140,10 +143,10 @@ export default function Medicines() {
 
     const resetForm = () => {
         setForm({
-            name: '', generic_name: '', batch_number: '', barcode: '',
+            name: '', generic_name: '', barcode: '',
             category_id: '', supplier_id: '', shelf_id: '',
-            prescription: false, dosage_form: '', strength: '', unit: '',
-            manufacturer: '', shelf_location: '',
+            prescription: false, prescription_details: '', dosage_form: '', strength: '', unit: '',
+            shelf_location: '',
         });
         setEditId(null);
         setError('');
@@ -161,16 +164,15 @@ export default function Medicines() {
         setForm({
             name: m.name || '',
             generic_name: m.generic_name || '',
-            batch_number: m.batch_number || '',
             barcode: m.barcode || '',
             category_id: m.category_id || '',
             supplier_id: m.supplier_id || '',
             shelf_id: m.shelf_id || '',
             prescription: m.prescription || false,
+            prescription_details: m.prescription_details || '',
             dosage_form: m.dosage_form || '',
             strength: m.strength || '',
             unit: m.unit || '',
-            manufacturer: m.manufacturer || '',
             shelf_location: m.shelf_location || '',
         });
         setEditId(m.id);
@@ -396,26 +398,26 @@ export default function Medicines() {
                         <div className="overflow-x-auto">
                             <table className="w-full table-fixed">
                                 <colgroup>
-                                    <col className="w-[22%]" />
+                                    <col className="w-[24%]" />
                                     <col className="w-[12%]" />
-                                    <col className="w-[12%]" />
-                                    <col className="w-[10%]" />
+                                    <col className="w-[9%]" />
+                                    <col className="w-[9%]" />
                                     <col className="w-[10%]" />
                                     <col className="w-[10%]" />
                                     <col className="w-[10%]" />
                                     <col className="w-[8%]" />
-                                    <col className="w-[13%]" />
+                                    <col className="w-[18%]" />
                                 </colgroup>
                                 <thead>
                                     <tr className="bg-sky-50 border-b border-sky-100">
                                         <th className="table-header">Medicine</th>
                                         <th className="table-header">Category</th>
-                                        <th className="table-header">Form / Strength</th>
+                                        <th className="table-header">Form</th>
+                                        <th className="table-header">Strength</th>
                                         <th className="table-header">Unit</th>
                                         <th className="table-header">Barcode</th>
-                                        <th className="table-header">Rx</th>
+                                        <th className="table-header">Prescription</th>
                                         <th className="table-header">Image</th>
-                                        <th className="table-header">MedManufacturer</th>
                                         <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -426,11 +428,8 @@ export default function Medicines() {
                                                 {m.name}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.category?.name || '—'}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-500">
-                                                {m.dosage_form && m.strength
-                                                    ? `${m.dosage_form} - ${m.strength}`
-                                                    : '—'}
-                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.dosage_form || '—'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-500">{m.strength || '—'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">{m.unit || '—'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500 font-mono">{m.barcode || '—'}</td>
                                             <td className="px-4 py-3">{getPrescriptionBadge(m.prescription)}</td>
@@ -449,7 +448,6 @@ export default function Medicines() {
                                                     <span className="text-gray-400 text-xs">No image</span>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-500 truncate">{m.manufacturer || '—'}</td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <button
@@ -649,72 +647,59 @@ export default function Medicines() {
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">
                                     Strength *
                                 </label>
-                                <input
-                                    type="text"
+                                <select
                                     name="strength"
                                     value={form.strength}
                                     onChange={handleChange}
-                                    placeholder="e.g. 500 mg, 10 mg/5 ml, 1%"
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                     required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Unit *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="unit"
-                                    value={form.unit}
-                                    onChange={handleChange}
-                                    placeholder="e.g. box, bottle, tablet"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Manufacturer
-                                </label>
-                                <input
-                                    type="text"
-                                    name="manufacturer"
-                                    value={form.manufacturer}
-                                    onChange={handleChange}
-                                    placeholder="e.g. GSK"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    Batch Number
-                                </label>
-                                <input
-                                    type="text"
-                                    name="batch_number"
-                                    value={form.batch_number}
-                                    onChange={handleChange}
-                                    placeholder="e.g. BATCH-001"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                />
+                                >
+                                    <option value="">Select Strength</option>
+                                    {strengths.map(s => (
+                                        <option key={s || 'empty'} value={s}>
+                                            {s || 'Other'}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="flex items-end">
+>>>>>>>
+
                                 <label className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
                                         name="prescription"
                                         checked={form.prescription}
-                                        onChange={(e) => setForm(prev => ({ ...prev, prescription: e.target.checked }))}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked;
+                                            setForm(prev => ({
+                                                ...prev,
+                                                prescription: checked,
+                                                prescription_details: checked ? prev.prescription_details : '',
+                                            }));
+                                        }}
                                         className="w-4 h-4 text-sky-500 focus:ring-sky-400 border-gray-300 rounded"
                                     />
                                     <span className="text-sm font-medium text-gray-700">Prescription Required</span>
                                 </label>
                             </div>
+
+                            {form.prescription && (
+                                <div className="md:col-span-2 mt-3">
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                        Prescription Details
+                                    </label>
+                                    <textarea
+                                        name="prescription_details"
+                                        value={form.prescription_details}
+                                        onChange={handleChange}
+                                        placeholder="Enter prescription instructions or information for this medicine..."
+                                        rows={3}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none resize-y"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* ── Image Upload ── */}
@@ -877,6 +862,12 @@ export default function Medicines() {
                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Prescription</label>
                                 <p className="text-sm text-gray-600">{viewMedicine.getPrescriptionLabel?.() || (viewMedicine.prescription ? 'Prescription Required' : 'Over-the-Counter')}</p>
                             </div>
+                            {viewMedicine.prescription && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 mb-1">Prescription Details</label>
+                                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{viewMedicine.prescription_details || '—'}</p>
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Created</label>
                                 <p className="text-sm text-gray-600">
