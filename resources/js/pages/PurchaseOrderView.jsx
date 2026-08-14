@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Edit, Trash2, Calendar, Package, DollarSign, Tag, Send, RefreshCw, CheckCircle, XCircle, Download, FileText } from 'lucide-react';
@@ -7,6 +8,15 @@ import { ArrowLeft, Edit, Trash2, Calendar, Package, DollarSign, Tag, Send, Refr
 export default function PurchaseOrderView() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { hasPermission } = useAuth();
+    const canEdit = hasPermission('purchase-orders.edit');
+    const canDelete = hasPermission('purchase-orders.delete');
+    const canSubmit = hasPermission('purchase-orders.submit');
+    const canDeliver = hasPermission('purchase-orders.deliver');
+    const canComplete = hasPermission('purchase-orders.complete');
+    const canCancel = hasPermission('purchase-orders.cancel');
+    const canSend = hasPermission('purchase-orders.send');
+    const canDownload = hasPermission('purchase-orders.download');
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -156,7 +166,7 @@ export default function PurchaseOrderView() {
 
                 {/* Status-aware action buttons */}
                 <div className="flex flex-wrap justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-                    {status !== 'draft' && (
+                    {status !== 'draft' && canDownload && (
                         <button
                             onClick={handleDownloadPdf}
                             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2"
@@ -165,7 +175,7 @@ export default function PurchaseOrderView() {
                             Download PDF
                         </button>
                     )}
-                    {status === 'draft' && (
+                    {status === 'draft' && canSubmit && (
                         <button
                             onClick={() => handleAction('submit', 'Submit')}
                             className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
@@ -174,7 +184,7 @@ export default function PurchaseOrderView() {
                             Submit to Pending
                         </button>
                     )}
-                    {status === 'pending' && (
+                    {status === 'pending' && canSend && (
                         <button
                             onClick={() => handleAction('send', 'Send to Supplier')}
                             className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
@@ -185,23 +195,27 @@ export default function PurchaseOrderView() {
                     )}
                     {status === 'sent' && (
                         <>
-                            <button
-                                onClick={() => handleAction('deliver', 'Mark as Delivered')}
-                                className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 flex items-center gap-2"
-                            >
-                                <Package size={16} />
-                                Mark as Delivered
-                            </button>
-                            <button
-                                onClick={() => handleAction('resend', 'Resend to Supplier')}
-                                className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
-                            >
-                                <RefreshCw size={16} />
-                                Resend to Supplier
-                            </button>
+                            {canDeliver && (
+                                <button
+                                    onClick={() => handleAction('deliver', 'Mark as Delivered')}
+                                    className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 flex items-center gap-2"
+                                >
+                                    <Package size={16} />
+                                    Mark as Delivered
+                                </button>
+                            )}
+                            {canSend && (
+                                <button
+                                    onClick={() => handleAction('resend', 'Resend to Supplier')}
+                                    className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
+                                >
+                                    <RefreshCw size={16} />
+                                    Resend to Supplier
+                                </button>
+                            )}
                         </>
                     )}
-                    {['delivered', 'approved'].includes(status) && (
+                    {['delivered', 'approved'].includes(status) && canComplete && (
                         <button
                             onClick={() => handleAction('complete', 'Complete Order')}
                             className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 flex items-center gap-2"
@@ -210,7 +224,7 @@ export default function PurchaseOrderView() {
                             Complete Order
                         </button>
                     )}
-                    {['draft', 'pending', 'sent', 'delivered'].includes(status) && (
+                    {['draft', 'pending', 'sent', 'delivered'].includes(status) && canCancel && (
                         <button
                             onClick={() => handleAction('cancel', 'Cancel')}
                             className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
@@ -219,7 +233,7 @@ export default function PurchaseOrderView() {
                             Cancel
                         </button>
                     )}
-                    {['draft', 'pending'].includes(status) && (
+                    {['draft', 'pending'].includes(status) && canEdit && (
                         <Link
                             to={`/purchase-orders/${order.id}/edit`}
                             className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
@@ -228,7 +242,7 @@ export default function PurchaseOrderView() {
                             Edit
                         </Link>
                     )}
-                    {status === 'draft' && (
+                    {status === 'draft' && canDelete && (
                         <button
                             onClick={handleDelete}
                             className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"

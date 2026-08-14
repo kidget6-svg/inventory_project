@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Save, X } from 'lucide-react';
 
 export default function CategoryCreate() {
     const navigate = useNavigate();
+    const { hasPermission } = useAuth();
+    const canCreate = hasPermission('categories.create');
     const [form, setForm] = useState({ name: '', description: '', shelf_location: '' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
 
-    // Check if user is admin
+    // Check if user can create categories
     useEffect(() => {
-        const checkAdmin = async () => {
+        const checkPermission = async () => {
             try {
-                const response = await api.get('/user');
-                if (response.data.role !== 'admin') {
-                    window.showToast('Only admins can create categories', 'error');
+                if (!canCreate) {
+                    window.showToast('You do not have permission to create categories', 'error');
                     navigate('/categories');
                     return;
                 }
-                setIsAdmin(true);
             } catch (err) {
                 window.showToast('Unauthorized access', 'error');
                 navigate('/categories');
@@ -30,8 +30,8 @@ export default function CategoryCreate() {
                 setLoading(false);
             }
         };
-        checkAdmin();
-    }, [navigate]);
+        checkPermission();
+    }, [navigate, canCreate]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -53,7 +53,7 @@ export default function CategoryCreate() {
 
     if (loading) return <LoadingSpinner text="Checking permissions..." />;
 
-    if (!isAdmin) return null;
+    if (!canCreate) return null;
 
     return (
         <div className="space-y-6">

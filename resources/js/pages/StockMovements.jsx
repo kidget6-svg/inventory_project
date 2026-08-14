@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
@@ -40,6 +41,9 @@ const SkeletonTable = () => (
 );
 
 export default function StockMovements() {
+    const { hasPermission } = useAuth();
+    const canCreate = hasPermission('stock-movements.create');
+    const canDelete = hasPermission('stock-movements.delete');
     const [movements, setMovements] = useState([]);
     const [meta, setMeta] = useState(null);
     const [page, setPage] = useState(1);
@@ -335,9 +339,11 @@ export default function StockMovements() {
                     <button onClick={handlePrint} className="px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 transition-all duration-200 hover:shadow-sm flex items-center gap-2">
                         <Printer size={16} /> Print
                     </button>
-                    <button onClick={openCreate} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 hover:shadow-xl hover:shadow-sky-500/30 transition-all duration-300 flex items-center gap-2">
-                        <Plus size={18} /> New Movement
-                    </button>
+                    {canCreate && (
+                        <button onClick={openCreate} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 hover:shadow-xl hover:shadow-sky-500/30 transition-all duration-300 flex items-center gap-2">
+                            <Plus size={18} /> New Movement
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -599,12 +605,16 @@ export default function StockMovements() {
                                                 <button onClick={() => openView(m)} className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors" title="View">
                                                     <Eye size={16} />
                                                 </button>
-                                                <button onClick={() => handleDuplicate(m)} className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors" title="Duplicate">
-                                                    <Copy size={16} />
-                                                </button>
-                                                <button onClick={() => handleDelete(m.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                {canCreate && (
+                                                    <button onClick={() => handleDuplicate(m)} className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors" title="Duplicate">
+                                                        <Copy size={16} />
+                                                    </button>
+                                                )}
+                                                {canDelete && (
+                                                    <button onClick={() => handleDelete(m.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -618,7 +628,7 @@ export default function StockMovements() {
                                                 <Package className="w-8 h-8 text-gray-400" />
                                             </div>
                                             <p className="text-gray-500 font-medium">No stock movements recorded</p>
-                                            <button onClick={openCreate} className="text-sm text-sky-600 font-semibold hover:underline">Record your first movement</button>
+                                            {canCreate && <button onClick={openCreate} className="text-sm text-sky-600 font-semibold hover:underline">Record your first movement</button>}
                                         </div>
                                     </td>
                                 </tr>

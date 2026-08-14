@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
@@ -102,6 +103,8 @@ const DonutChart = ({
 // MAIN COMPONENT
 // ============================================================
 export default function LowStock() {
+    const { hasPermission } = useAuth();
+    const canOrder = hasPermission('lowstock.order-now');
     const [medicines, setMedicines] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -581,9 +584,11 @@ export default function LowStock() {
                                                 <button onClick={(e) => { e.stopPropagation(); setSelectedMedicine(medicine); setShowModal(true); }} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors" title="View">
                                                     <Eye size={16} />
                                                 </button>
-                                                <button onClick={(e) => { e.stopPropagation(); handleOrderNow(medicine.id); }} disabled={ordering === medicine.id} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors disabled:opacity-50" title="Reorder">
-                                                    <ShoppingCart size={16} />
-                                                </button>
+                                                {canOrder && (
+                                                    <button onClick={(e) => { e.stopPropagation(); handleOrderNow(medicine.id); }} disabled={ordering === medicine.id} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors disabled:opacity-50" title="Reorder">
+                                                        <ShoppingCart size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -628,9 +633,11 @@ export default function LowStock() {
                             </div>
                         </div>
                         <div className="flex gap-2 pt-2">
-                            <button onClick={() => { handleOrderNow(selectedMedicine.id); }} className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2">
-                                <ShoppingCart size={16} /> Order Now
-                            </button>
+                            {canOrder && (
+                                <button onClick={() => { handleOrderNow(selectedMedicine.id); }} className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2">
+                                    <ShoppingCart size={16} /> Order Now
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}

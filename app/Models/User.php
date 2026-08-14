@@ -128,7 +128,10 @@ class User extends Authenticatable
             return Permission::pluck('slug')->all();
         }
 
-        $role = $this->role;
+        $role = $this->role_id
+            ? $this->role()->first()
+            : Role::where('slug', $this->getAttribute('role'))->first();
+
         if ($role) {
             return $role->permissions()->pluck('permissions.slug')->all();
         }

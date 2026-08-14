@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Edit, Trash2, Calendar, Tag } from 'lucide-react';
@@ -7,24 +8,12 @@ import { ArrowLeft, Edit, Trash2, Calendar, Tag } from 'lucide-react';
 export default function CategoryView() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { hasPermission } = useAuth();
+    const canEdit = hasPermission('categories.edit');
+    const canDelete = hasPermission('categories.delete');
     const [category, setCategory] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isAdmin, setIsAdmin] = useState(false);
-
-    // Check if user is admin
-    useEffect(() => {
-        const checkAdmin = async () => {
-            try {
-                const response = await api.get('/user');
-                setIsAdmin(response.data.role === 'admin');
-            } catch (err) {
-                console.error('Failed to get user role:', err);
-                setIsAdmin(false);
-            }
-        };
-        checkAdmin();
-    }, []);
 
     useEffect(() => {
         api.get(`/categories/${id}`)
@@ -34,8 +23,8 @@ export default function CategoryView() {
     }, [id]);
 
     const handleDelete = async () => {
-        if (!isAdmin) {
-            window.showToast('Only admins can delete categories', 'error');
+        if (!canDelete) {
+            window.showToast('You do not have permission to delete categories', 'error');
             return;
         }
         if (!window.confirm('Delete this category?')) return;
@@ -101,23 +90,27 @@ export default function CategoryView() {
                     </div>
                 </div>
 
-                {/* ONLY SHOW EDIT/DELETE FOR ADMIN */}
-                {isAdmin && (
+                {/* ONLY SHOW EDIT/DELETE FOR USERS WITH PERMISSION */}
+                {(canEdit || canDelete) && (
                     <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-                        <button
-                            onClick={handleDelete}
-                            className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
-                        >
-                            <Trash2 size={16} />
-                            Delete
-                        </button>
-                        <Link
-                            to={`/categories/${category.id}/edit`}
-                            className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
-                        >
-                            <Edit size={16} />
-                            Edit
-                        </Link>
+                        {canDelete && (
+                            <button
+                                onClick={handleDelete}
+                                className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
+                            >
+                                <Trash2 size={16} />
+                                Delete
+                            </button>
+                        )}
+                        {canEdit && (
+                            <Link
+                                to={`/categories/${category.id}/edit`}
+                                className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
+                            >
+                                <Edit size={16} />
+                                Edit
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>

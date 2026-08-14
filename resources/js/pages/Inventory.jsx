@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
 import { Package, AlertTriangle, TrendingDown, Calendar, History, RefreshCw, Search, Filter, X, Save, Tag } from 'lucide-react';
@@ -15,6 +16,8 @@ const TABS = [
 ];
 
 export default function Inventory() {
+    const { hasPermission } = useAuth();
+    const canRecordMovement = hasPermission('stock-movements.create');
     const [medicines, setMedicines] = useState([]);
     const [movements, setMovements] = useState([]);
     const [movementsMeta, setMovementsMeta] = useState(null);
@@ -27,23 +30,6 @@ export default function Inventory() {
     const [restockQty, setRestockQty] = useState('');
     const [restockNotes, setRestockNotes] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const [userRole, setUserRole] = useState(null);
-    const [canWrite, setCanWrite] = useState(false);
-
-    // Get user role
-    useEffect(() => {
-        const getUser = async () => {
-            try {
-                const response = await api.get('/user');
-                const role = response.data.role;
-                setUserRole(role);
-                setCanWrite(role === 'admin' || role === 'pharmacist');
-            } catch (err) {
-                console.error('Failed to get user role:', err);
-            }
-        };
-        getUser();
-    }, []);
 
     // --- FIX: Add the missing handleFilterChange function ---
     const handleFilterChange = (e) => {
@@ -122,8 +108,8 @@ export default function Inventory() {
         e.preventDefault();
         if (!restockMedicine || !restockQty || Number(restockQty) < 1) return;
         
-        if (!canWrite) {
-            window.showToast('Only admins and pharmacists can restock medicines', 'error');
+        if (!canRecordMovement) {
+            window.showToast('You do not have permission to record stock movements', 'error');
             return;
         }
         
@@ -195,12 +181,16 @@ export default function Inventory() {
                                 )}
                                 <td className="px-4 py-3">{getStatusBadge(m.status)}</td>
                                 <td className="px-4 py-3 text-right">
-                                    <button
-                                        onClick={() => { setRestockMedicine(m); setRestockQty(''); setRestockNotes(''); }}
-                                        className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
-                                    >
-                                        Restock
-                                    </button>
+                                    {canRecordMovement ? (
+                                        <button
+                                            onClick={() => { setRestockMedicine(m); setRestockQty(''); setRestockNotes(''); }}
+                                            className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
+                                        >
+                                            Restock
+                                        </button>
+                                    ) : (
+                                        <span className="text-xs text-gray-400">View only</span>
+                                    )}
                                 </td>
                             </tr>
                         )) : (
@@ -351,12 +341,14 @@ export default function Inventory() {
                                             <p className="text-sm font-medium">{m.name}</p>
                                             <p className="text-xs text-gray-500">Qty: {m.quantity} / Reorder: {m.reorder_level}</p>
                                         </div>
-                                        <button
-                                            onClick={() => { setRestockMedicine(m); setRestockQty(''); setRestockNotes(''); setActiveTab('all'); }}
-                                            className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
-                                        >
-                                            Restock
-                                        </button>
+                                        {canRecordMovement && (
+                                            <button
+                                                onClick={() => { setRestockMedicine(m); setRestockQty(''); setRestockNotes(''); setActiveTab('all'); }}
+                                                className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
+                                            >
+                                                Restock
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                                 {lowStockMedicines.length === 0 && (

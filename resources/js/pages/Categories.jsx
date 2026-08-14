@@ -43,8 +43,8 @@ export default function Categories() {
     useEffect(() => { load(); }, [page]);
 
     const handleDelete = async (id) => {
-        if (!canWrite) {
-            window.showToast('Only admins and pharmacists can delete categories', 'error');
+        if (!canDelete) {
+            window.showToast('You do not have permission to delete categories', 'error');
             return;
         }
         if (!confirm('Delete this category? This will not delete associated medicines.')) return;
@@ -60,8 +60,8 @@ export default function Categories() {
     };
 
     const openCreate = () => {
-        if (!canWrite) {
-            window.showToast('Only admins and pharmacists can create categories', 'error');
+        if (!canCreate) {
+            window.showToast('You do not have permission to create categories', 'error');
             return;
         }
         setModalMode('create');
@@ -73,8 +73,8 @@ export default function Categories() {
     };
 
     const openEdit = (item) => {
-        if (!canWrite) {
-            window.showToast('Only admins and pharmacists can edit categories', 'error');
+        if (!canEdit) {
+            window.showToast('You do not have permission to edit categories', 'error');
             return;
         }
         setModalMode('edit');
@@ -156,13 +156,13 @@ export default function Categories() {
             <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-700">
                     All Categories ({categories.length})
-                    {userRole && (
+                    {user?.role && (
                         <span className="ml-2 text-xs font-normal text-gray-500">
-                            ({userRole === 'admin' ? 'Admin - Full Access' : userRole === 'pharmacist' ? 'Pharmacist - Edit Access' : 'Cashier - View Only'})
+                            ({user?.role === 'admin' ? 'Admin - Full Access' : user?.role === 'pharmacist' ? 'Pharmacist - Edit Access' : 'View Only'})
                         </span>
                     )}
                 </h3>
-                {canWrite && (
+                {canCreate && (
                     <button onClick={openCreate} className="btn-primary flex items-center gap-2">
                         <Plus size={16} />
                         New Category
@@ -205,22 +205,26 @@ export default function Categories() {
                                             >
                                                 <Eye size={16} />
                                             </button>
-                                            {canWrite && (
+                                            {(canEdit || canDelete) && (
                                                 <>
-                                                    <button
-                                                        onClick={() => openEdit(c)}
-                                                        className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(c.id)}
-                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    {canEdit && (
+                                                        <button
+                                                            onClick={() => openEdit(c)}
+                                                            className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    )}
+                                                    {canDelete && (
+                                                        <button
+                                                            onClick={() => handleDelete(c.id)}
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
                                                 </>
                                             )}
                                         </div>
@@ -230,7 +234,7 @@ export default function Categories() {
                             {categories.length === 0 && (
                                 <tr><td colSpan="4" className="px-4 py-8 text-center text-gray-400">
                                     No categories found
-                                    {canWrite && (
+                                    {canCreate && (
                                         <button onClick={openCreate} className="ml-2 text-sky-600 hover:underline text-sm font-medium">
                                             Create one
                                         </button>
@@ -286,7 +290,7 @@ export default function Categories() {
                         </div>
                         <div className="flex justify-end gap-3 pt-2">
                             <button onClick={closeModal} className="btn-secondary">Close</button>
-                            {canWrite && (
+                            {canEdit && (
                                 <button onClick={() => { closeModal(); openEdit(modalItem); }} className="btn-primary">
                                     Edit
                                 </button>
