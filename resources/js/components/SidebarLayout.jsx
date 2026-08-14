@@ -5,46 +5,36 @@ import {
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
     ArrowLeftRight, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText, ShieldCheck,
-    AlertTriangle, History, Warehouse, Building2, Boxes, ClipboardList, Layers, Tag
+    ShoppingBag, FileText, ShieldCheck
 } from 'lucide-react';
-
-// Single permission-driven menu. Admin sees every entry automatically
-// because admins hold every permission.
 const menuItems = [
     { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['dashboard.view'] },
-    
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+
     { section: 'Point of Sale' },
-    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['prescription-sales.view'] },
-    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['prescription-checkout.view'] },
-    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['retail-otc-sales.view'] },
-    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['retail-pos.view'] },
-    
+    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['sales.prescription'] },
+    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['sales.checkout'] },
+    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['sales.retail'] },
+    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['sales.retail'] },
+
     { section: 'Product Management' },
     { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view'] },
     { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail-products.view'] },
     { to: '/categories', label: 'Categories', icon: FolderTree, permissions: ['categories.view'] },
     { to: '/suppliers', label: 'Suppliers', icon: Truck, permissions: ['suppliers.view'] },
-    
-    { section: 'Warehouse & Inventory' },
-    { to: '/warehouse', label: 'Warehouse', icon: Warehouse, permissions: ['warehouse.view'] },
-    { to: '/stock-management', label: 'Stock Management', icon: Boxes, permissions: ['inventory.view'] },
-    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['stock-movements.view'] },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle, permissions: ['lowstock.view'] },
-    { to: '/branches', label: 'Branches', icon: Building2, permissions: ['branches.view'] },
-    
-    { section: 'Operations' },
+
+    { section: 'Inventory & Purchasing' },
+    { to: '/inventory', label: 'Inventory', icon: Package, permissions: ['inventory.view'] },
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
-    
-    { section: 'Reports & Analytics' },
-    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3, permissions: ['reports.view'] },
-    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales-history.view'] },
-    { to: '/audit-logs', label: 'Audit Logs', icon: ClipboardList, permissions: ['audit.view'] },
-    
+    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['inventory.view'] },
+
+    { section: 'Reports' },
+    { to: '/reports', label: 'Reports', icon: BarChart3, permissions: ['reports.view'] },
+    { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales.view'] },
+
     { section: 'Administration' },
-    { to: '/users', label: 'User Management', icon: Users, permissions: ['users.view'] },
-    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.view'] },
+    { to: '/users', label: 'Users', icon: Users, permissions: ['users.view'] },
+    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.manage'] },
 ];
 
 function buildMenu(items, hasAnyPermission) {
@@ -65,24 +55,10 @@ function buildMenu(items, hasAnyPermission) {
     return result;
 }
 
-// ============================================================
-// ROLE BADGE STYLES
-// ============================================================
 const roleBadgeStyle = {
-    super_admin: 'bg-purple-100 text-purple-700',
     admin: 'bg-sky-100 text-sky-700',
     pharmacist: 'bg-emerald-100 text-emerald-700',
     cashier: 'bg-amber-100 text-amber-700',
-};
-
-// ============================================================
-// ROLE LABEL FOR DISPLAY
-// ============================================================
-const roleLabel = {
-    super_admin: 'Super Admin',
-    admin: 'Admin',
-    pharmacist: 'Pharmacist',
-    cashier: 'Cashier',
 };
 
 export default function SidebarLayout({ children, pageTitle }) {
@@ -93,9 +69,6 @@ export default function SidebarLayout({ children, pageTitle }) {
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const accountMenuRef = useRef(null);
     const menu = buildMenu(menuItems, hasAnyPermission);
-    
-    const userRole = user?.role || 'guest';
-    const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
     const handleLogout = async () => {
         await logout();
@@ -114,6 +87,7 @@ export default function SidebarLayout({ children, pageTitle }) {
 
     const sidebarWidth = collapsed ? 'md:w-20' : 'md:w-64';
     const mainMargin = collapsed ? 'md:ml-20' : 'md:ml-64';
+    const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -131,7 +105,6 @@ export default function SidebarLayout({ children, pageTitle }) {
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0`}
             >
-                {/* Logo Section */}
                 <div className="p-5 border-b border-sky-200 flex items-center justify-between">
                     <div className={`flex items-center gap-3 min-w-0 ${collapsed ? 'md:justify-center md:w-full' : ''}`}>
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-2xl ring-2 ring-sky-400/70 bg-white transform hover:scale-105 transition-transform duration-200">
@@ -140,9 +113,6 @@ export default function SidebarLayout({ children, pageTitle }) {
                         {!collapsed && (
                             <div className="min-w-0">
                                 <div className="text-base font-bold text-gray-900 tracking-tight truncate">EthioPharmacy</div>
-                                <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                                    {roleLabel[userRole] || 'Pharmacy'}
-                                </div>
                             </div>
                         )}
                     </div>
@@ -157,7 +127,6 @@ export default function SidebarLayout({ children, pageTitle }) {
                     </button>
                 </div>
 
-                {/* Navigation */}
                 <nav className="flex-1 py-3 overflow-y-auto overflow-x-hidden">
                     {menu.map((item, i) =>
                         item.section ? (
@@ -190,20 +159,10 @@ export default function SidebarLayout({ children, pageTitle }) {
                         )
                     )}
                 </nav>
-
-                {/* Footer - Role Badge */}
-                {!collapsed && (
-                    <div className="p-4 border-t border-sky-200">
-                        <div className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider ${roleBadgeStyle[userRole] || 'bg-gray-100 text-gray-600'}`}>
-                            {roleLabel[userRole] || 'Guest'}
-                        </div>
-                    </div>
-                )}
             </aside>
 
             {/* Main Content */}
             <main className={`flex-1 ${mainMargin} min-h-screen transition-all duration-300`}>
-                {/* Top Bar */}
                 <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-sky-200/60 px-8 py-4 flex items-center justify-between">
                     <h2 className="text-xl font-bold text-gray-900 tracking-tight">{pageTitle || 'Dashboard'}</h2>
 
@@ -217,8 +176,8 @@ export default function SidebarLayout({ children, pageTitle }) {
                             </div>
                             <div className="hidden sm:block text-left">
                                 <div className="text-sm font-semibold text-gray-900 leading-tight">{user?.name || 'User'}</div>
-                                <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${roleBadgeStyle[userRole] || 'bg-gray-100 text-gray-600'}`}>
-                                    {roleLabel[userRole] || 'Guest'}
+                                <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${roleBadgeStyle[user?.role] || 'bg-gray-100 text-gray-600'}`}>
+                                    {user?.role || 'Guest'}
                                 </div>
                             </div>
                             <ChevronDown size={16} className={`text-gray-500 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
@@ -229,7 +188,6 @@ export default function SidebarLayout({ children, pageTitle }) {
                                 <div className="px-4 py-2 border-b border-sky-100 mb-1">
                                     <div className="text-sm font-semibold text-gray-900 truncate">{user?.name || 'User'}</div>
                                     <div className="text-xs text-gray-500 truncate">{user?.email || ''}</div>
-                                    <div className="text-xs text-gray-400 mt-1">{roleLabel[userRole]}</div>
                                 </div>
                                 <button
                                     onClick={() => { setAccountMenuOpen(false); navigate('/profile'); }}
@@ -258,14 +216,11 @@ export default function SidebarLayout({ children, pageTitle }) {
                         )}
                     </div>
                 </div>
-                
-                {/* Page Content */}
                 <div className="p-6 lg:p-8">
                     {children}
                 </div>
             </main>
 
-            {/* Mobile Overlay */}
             {sidebarOpen && (
                 <div 
                     className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" 

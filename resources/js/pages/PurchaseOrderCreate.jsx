@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { ArrowLeft, Save, X, Package, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, X, Package } from 'lucide-react';
 
 export default function PurchaseOrderCreate() {
     const navigate = useNavigate();
@@ -10,10 +11,8 @@ export default function PurchaseOrderCreate() {
     const [medicines, setMedicines] = useState([]);
     const [form, setForm] = useState({
         supplier_id: '',
-        order_date: '',
         medicine_name: '',
         quantity: '',
-        unit_price: '',
     });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -83,20 +82,6 @@ export default function PurchaseOrderCreate() {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Order Date *</label>
-                        <div className="relative">
-                            <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                            <input
-                                type="date"
-                                name="order_date"
-                                value={form.order_date}
-                                onChange={handleChange}
-                                className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
                         <div className="relative">
                             <input
@@ -126,22 +111,6 @@ export default function PurchaseOrderCreate() {
                             min="1"
                             required
                         />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Price *</label>
-                        <div className="relative">
-                            <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                            <input
-                                type="number"
-                                step="0.01"
-                                name="unit_price"
-                                value={form.unit_price}
-                                onChange={handleChange}
-                                className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                min="0"
-                                required
-                            />
-                        </div>
                     </div>
                     <div className="md:col-span-2 flex justify-end gap-3">
                         <Link to="/purchase-orders" className="btn-secondary px-4 py-2 text-sm flex items-center gap-2">

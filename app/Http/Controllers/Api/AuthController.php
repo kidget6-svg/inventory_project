@@ -4,13 +4,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -99,50 +97,60 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'status' => $user->status,
-                'permissions' => $user->permissions,
             ],
             'role' => $user->role,
         ]);
     }
 
     public function register(Request $request)
-    {
-        if ((!$request->filled('first_name') || !$request->filled('last_name')) && $request->filled('name')) {
-            $parts = explode(' ', trim($request->input('name')), 2);
-            $request->merge([
-                'first_name' => $request->input('first_name') ?: ($parts[0] ?? $request->input('name')),
-                'last_name'  => $request->input('last_name')  ?: ($parts[1] ?? $parts[0] ?? $request->input('name')),
-            ]);
-        }
+{
+    $request->validate([
+        'first_name' => 'required|string|max:255',
+        'last_name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:8|confirmed',
+        'role' => 'required|in:pharmacist,cashier',
+    ]);
 
+    $user = User::create([
+        'name' => $request->first_name . ' ' . $request->last_name,
+        'first_name' => $request->first_name,
+        'last_name' => $request->last_name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'role' => $request->role,
+        'status' => 'pending',
+    ]);
+
+    return response()->json([
+        'message' => 'Registration successful. Please wait for admin approval.',
+        'user' => $user
+    ], 201);
+}
+    public function updatePassword(Request $request)
+    {
         $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name'  => 'required|string|max:255',
-            'email'      => 'required|string|email|max:255|unique:users',
-            'password'   => 'required|string|min:8|confirmed',
-            'role'       => ['required', Rule::exists('roles', 'slug')],
+            'current_password' => 'required',
+            'new_password' => 'required|min:8|confirmed',
         ]);
 
-        $status = (Auth::check() && Auth::user()?->role === 'admin') ? User::STATUS_APPROVED : 'pending';
+        $user = $request->user();
 
-        $role = Role::where('slug', $request->role)->first();
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Current password does not match.',
+            ], 400);
+        }
 
-        $user = User::create([
-            'name'       => $request->first_name . ' ' . $request->last_name,
-            'first_name' => $request->first_name,
-            'last_name'  => $request->last_name,
-            'email'      => $request->email,
-            'password'   => Hash::make($request->password),
-            'role'       => $request->role,
-            'role_id'    => $role?->id,
-            'status'     => $status,
+        $user->update([
+            'password' => Hash::make($request->new_password),
         ]);
 
         return response()->json([
-            'message' => $status === User::STATUS_APPROVED ? 'User created successfully.' : 'Registration successful. Please wait for admin approval.',
-            'user'    => $user
-        ], 201);
+            'message' => 'Password updated successfully.',
+        ]);
     }
+
     public function logout(Request $request)
     {
         if ($request->user()) {

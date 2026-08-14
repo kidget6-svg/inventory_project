@@ -8,7 +8,6 @@ import {
     BarChart3,
     Pill,
     Warehouse,
-    AlertTriangle,
     Clock,
     Truck,
     FolderTree,
@@ -104,13 +103,6 @@ const pharmacistActions = [
         label: 'Stock Movement',
         description: 'Track stock',
         icon: Warehouse,
-        color: 'blue',
-    },
-    {
-        to: '/low-stock',
-        label: 'Low Stock',
-        description: 'Check alerts',
-        icon: AlertTriangle,
         color: 'blue',
     },
     {

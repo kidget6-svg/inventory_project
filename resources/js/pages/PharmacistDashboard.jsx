@@ -46,12 +46,6 @@ export default function PharmacistDashboard() {
                     color="blue"
                 />
                 <StatCard
-                    value={data.totalStock}
-                    label="Total Stock Quantity"
-                    icon="boxes"
-                    color="green"
-                />
-                <StatCard
                     value={data.lowStockCount}
                     label="Low Stock Medicines"
                     icon="alert"

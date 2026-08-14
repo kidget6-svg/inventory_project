@@ -5,23 +5,36 @@
     <title>Purchase Order {{ $purchaseOrder->id }}</title>
     <style>
         body { font-family: 'DejaVu Sans', sans-serif; margin: 0; padding: 0; color: #333; }
-        .container { max-width: 800px; margin: 0 auto; padding: 40px; }
-        .header { border-bottom: 3px solid #0287ce; padding-bottom: 20px; margin-bottom: 30px; }
-        .pharmacy-name { font-size: 24px; font-weight: bold; color: #0287ce; }
-        .pharmacy-sub { font-size: 13px; color: #666; margin-top: 4px; }
-        .po-title { font-size: 20px; font-weight: bold; color: #333; margin: 20px 0; }
-        .section { margin-bottom: 20px; }
-        .section-title { font-size: 14px; font-weight: bold; color: #0287ce; margin-bottom: 8px; text-transform: uppercase; }
-        .info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .info-table td { padding: 4px 8px; vertical-align: top; }
-        .info-table .label { font-weight: bold; color: #555; width: 140px; }
-        .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-        .items-table th { background-color: #e6f0fa; color: #0287ce; padding: 8px 10px; text-align: left; border: 1px solid #ddd; font-weight: bold; }
-        .items-table td { padding: 8px 10px; border: 1px solid #ddd; vertical-align: top; }
+        .container { max-width: 800px; margin: 0 auto; padding: 18px; }
+        .header { border-bottom: 2px solid #0287ce; padding-bottom: 12px; margin-bottom: 14px; }
+        .header-content { display: flex; align-items: center; gap: 12px; }
+        .logo-container {
+            width: 48px; height: 48px; border-radius: 12px; background: #ffffff;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #38bdf8;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        .logo-container img { width: 40px; height: 40px; object-fit: contain; }
+        .pharmacy-name { font-size: 20px; font-weight: bold; color: #1e3a8a; }
+        .pharmacy-sub { font-size: 12px; color: #4b5563; margin-top: 2px; }
+        .po-title { font-size: 17px; font-weight: bold; color: #333; margin: 14px 0 6px; }
+        .section { margin-bottom: 12px; }
+        .section-title { font-size: 12px; font-weight: bold; color: #0287ce; margin-bottom: 5px; text-transform: uppercase; }
+        .info-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .info-table td { padding: 3px 6px; vertical-align: top; }
+        .info-table .label { font-weight: bold; color: #555; width: 125px; }
+        .items-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11px; }
+        .items-table th { background-color: #e6f0fa; color: #0287ce; padding: 5px 8px; text-align: left; border: 1px solid #ddd; font-weight: bold; }
+        .items-table td { padding: 5px 8px; border: 1px solid #ddd; vertical-align: top; }
         .items-table .text-right { text-align: right; }
-        .total-row { font-weight: bold; background-color: #f0f8ff; }
-        .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 12px; color: #777; }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        /* Plain supplier message — no border, card, or shaded background */
+        .supplier-message { font-size: 11px; line-height: 1.5; color: #333; }
+        .supplier-message .subject { font-weight: bold; margin-bottom: 8px; }
+        .supplier-message .body { margin-bottom: 5px; }
+        .supplier-message .closing { margin-top: 10px; }
+        .footer { margin-top: 14px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #777; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
         .badge-sent { background-color: #fef3c7; color: #92400e; }
         .text-muted { color: #999; }
     </style>
@@ -30,14 +43,37 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="pharmacy-name">{{ config('app.name', 'PharmaSys') }}</div>
-            <div class="pharmacy-sub">Pharmacy Inventory Management System</div>
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="{{ public_path('images/p1.png') }}" alt="EthioPharmacy" />
+                </div>
+                <div>
+                    <div class="pharmacy-name">EthioPharmacy</div>
+                    <div class="pharmacy-sub">Smart Pharmacy Inventory System</div>
+                </div>
+            </div>
         </div>
 
         <!-- PO Title -->
         <div class="po-title">
-            Purchase Order {{ $purchaseOrder->id }}
+            Purchase Order PO-{{ str_pad($purchaseOrder->id, 6, '0', STR_PAD_LEFT) }}
             <span class="badge badge-sent">{{ ucfirst($purchaseOrder->status) }}</span>
+        </div>
+
+        <!-- Subject & Professional Supplier Message (plain text, no box) -->
+        <div class="section">
+            <div class="supplier-message">
+                <div class="subject">Subject: Purchase Order Request – PO-{{ str_pad($purchaseOrder->id, 6, '0', STR_PAD_LEFT) }}</div>
+                <div class="body">Dear {{ $purchaseOrder->supplier->name ?? 'Supplier' }},</div>
+                <div class="body">We would like to request the medicines listed in the purchase order above. Kindly review the requested quantities and confirm their availability and expected delivery date.</div>
+                <div class="body">Please let us know if any of the requested medicines are unavailable or require an alternative arrangement.</div>
+                <div class="body">Thank you for your cooperation and continued partnership.</div>
+                <div class="closing">
+                    Best regards,<br>
+                    EthioPharmacy Team<br>
+                    Smart Pharmacy Inventory System
+                </div>
+            </div>
         </div>
 
         <!-- Supplier & Order Info -->
@@ -70,15 +106,9 @@
                 </tr>
                 <tr>
                     <td class="label">Sent At:</td>
-                    <td>{{ $purchaseOrder->sent_at ? \Carbon\Carbon::parse($purchaseOrder->sent_at)->format('M d, Y h:i A') : 'Not sent yet' }}</td>
+                    <td>{{ $purchaseOrder->sentAtDisplay() }}</td>
                     <td class="label">Delivered At:</td>
-                    <td>{{ $purchaseOrder->delivered_at ? \Carbon\Carbon::parse($purchaseOrder->delivered_at)->format('M d, Y h:i A') : 'Not delivered yet' }}</td>
-                </tr>
-                <tr>
-                    <td class="label">Completed At:</td>
-                    <td>{{ $purchaseOrder->completed_at ? \Carbon\Carbon::parse($purchaseOrder->completed_at)->format('M d, Y h:i A') : 'Not completed yet' }}</td>
-                    <td class="label">PO Number:</td>
-                    <td>PO-{{ str_pad($purchaseOrder->id, 6, '0', STR_PAD_LEFT) }}</td>
+                    <td>{{ $purchaseOrder->deliveredAtDisplay() }}</td>
                 </tr>
             </table>
         </div>
@@ -93,8 +123,6 @@
                         <th>Medicine</th>
                         <th>Generic Name</th>
                         <th class="text-right">Quantity</th>
-                        <th class="text-right">Unit Price</th>
-                        <th class="text-right">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -104,24 +132,16 @@
                         <td>{{ $item->medicine->name ?? 'N/A' }}</td>
                         <td>{{ $item->medicine->generic_name ?? 'N/A' }}</td>
                         <td class="text-right">{{ $item->quantity }}</td>
-                        <td class="text-right">${{ number_format($item->unit_price, 2) }}</td>
-                        <td class="text-right">${{ number_format($item->subtotal, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
-                <tfoot>
-                    <tr class="total-row">
-                        <td colspan="5" class="text-right">Total Amount:</td>
-                        <td class="text-right">${{ number_format($purchaseOrder->total_amount, 2) }}</td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
 
         <!-- Footer -->
         <div class="footer">
             <p>This is a computer-generated Purchase Order. No signature is required.</p>
-            <p>Generated on: {{ \Carbon\Carbon::now()->format('M d, Y h:i A') }} | Pharmacy: {{ config('app.name', 'PharmaSys') }}</p>
+            <p>Generated on: {{ \Carbon\Carbon::now()->format('M d, Y h:i A') }} | EthioPharmacy</p>
         </div>
     </div>
 </body>

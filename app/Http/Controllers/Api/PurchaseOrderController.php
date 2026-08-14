@@ -23,11 +23,9 @@ class PurchaseOrderController extends Controller
     {
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
-            'order_date' => 'required|date',
             'medicine_name' => 'nullable|string|max:255',
             'medicine_id' => 'nullable|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
-            'unit_price' => 'required|numeric|min:0',
         ]);
 
         if (empty($validated['medicine_name']) && empty($validated['medicine_id'])) {
@@ -50,18 +48,19 @@ class PurchaseOrderController extends Controller
                         'name' => $medName,
                         'category_id' => $defaultCategory ? $defaultCategory->id : 1,
                         'quantity' => 0,
-                        'unit_price' => $validated['unit_price'],
-                        'selling_price' => $validated['unit_price'],
+                        'unit_price' => 0,
+                        'selling_price' => 0,
                         'status' => 'active',
                     ]);
                 }
             }
 
-            $subtotal = $validated['quantity'] * $validated['unit_price'];
+            $unitPrice = $request->input('unit_price', 0);
+            $subtotal = $validated['quantity'] * $unitPrice;
 
             $order = PurchaseOrder::create([
                 'supplier_id' => $validated['supplier_id'],
-                'order_date' => $validated['order_date'],
+                'order_date' => now()->toDateString(),
                 'status' => 'draft',
                 'total_amount' => $subtotal,
             ]);
@@ -70,7 +69,7 @@ class PurchaseOrderController extends Controller
                 'purchase_order_id' => $order->id,
                 'medicine_id' => $medicine->id,
                 'quantity' => $validated['quantity'],
-                'unit_price' => $validated['unit_price'],
+                'unit_price' => $unitPrice,
                 'subtotal' => $subtotal,
             ]);
 
@@ -99,11 +98,9 @@ class PurchaseOrderController extends Controller
 
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
-            'order_date' => 'required|date',
             'medicine_name' => 'nullable|string|max:255',
             'medicine_id' => 'nullable|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
-            'unit_price' => 'required|numeric|min:0',
         ]);
 
         if (empty($validated['medicine_name']) && empty($validated['medicine_id'])) {
@@ -126,19 +123,20 @@ class PurchaseOrderController extends Controller
                         'name' => $medName,
                         'category_id' => $defaultCategory ? $defaultCategory->id : 1,
                         'quantity' => 0,
-                        'unit_price' => $validated['unit_price'],
-                        'selling_price' => $validated['unit_price'],
+                        'unit_price' => 0,
+                        'selling_price' => 0,
                         'status' => 'active',
                     ]);
                 }
             }
 
-            $subtotal = $validated['quantity'] * $validated['unit_price'];
+            $unitPrice = $request->input('unit_price', 0);
+            $subtotal = $validated['quantity'] * $unitPrice;
 
             // Update the order header (status is NOT changed here - it's workflow-driven)
+            // order_date is preserved from creation and not editable by the user
             $purchaseOrder->update([
                 'supplier_id' => $validated['supplier_id'],
-                'order_date' => $validated['order_date'],
                 'total_amount' => $subtotal,
             ]);
 
@@ -149,7 +147,7 @@ class PurchaseOrderController extends Controller
                 $item->update([
                     'medicine_id' => $medicine->id,
                     'quantity' => $validated['quantity'],
-                    'unit_price' => $validated['unit_price'],
+                    'unit_price' => $unitPrice,
                     'subtotal' => $subtotal,
                 ]);
             } else {
@@ -157,7 +155,7 @@ class PurchaseOrderController extends Controller
                     'purchase_order_id' => $purchaseOrder->id,
                     'medicine_id' => $medicine->id,
                     'quantity' => $validated['quantity'],
-                    'unit_price' => $validated['unit_price'],
+                    'unit_price' => $unitPrice,
                     'subtotal' => $subtotal,
                 ]);
             }

@@ -23,11 +23,11 @@ const statusOptions = [
 const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
 export default function Medicines() {
-    const { user, hasPermission } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
-    const canCreate = hasPermission('medicines.create');
-    const canEdit = hasPermission('medicines.edit');
-    const canDelete = hasPermission('medicines.delete');
+    const isAdmin = user?.role === 'admin';
+    const isPharmacist = user?.role === 'pharmacist';
+    const canWrite = isAdmin || isPharmacist;
 
     const [medicines, setMedicines] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -238,6 +238,20 @@ export default function Medicines() {
         }
     };
 
+    const toggleStatus = async () => {
+        if (!editId || form.status === 'expired') return;
+
+        try {
+            const nextStatus = form.status === 'active' ? 'inactive' : 'active';
+            const response = await api.patch(`/medicines/${editId}/status`, { status: nextStatus });
+            setForm(prev => ({ ...prev, status: response.data.status }));
+            loadMedicines();
+            window.showToast(`Medicine ${response.data.status === 'active' ? 'activated' : 'deactivated'}`, 'success');
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to update medicine status', 'error');
+        }
+    };
+
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this medicine?')) return;
         try { 
@@ -423,7 +437,7 @@ export default function Medicines() {
                                 <input type="number" name="purchase_price" value={form.purchase_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                             </div>
                         </div>
-                        <div>
+                        {!editId && <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
                             <input 
                                 type="number" 
@@ -530,15 +544,15 @@ export default function Medicines() {
 
             <div className="flex justify-between items-center mb-5">
                 <h3 className="text-base font-semibold text-gray-700">All Medicines ({medicines.length})</h3>
-                {canCreate ? (
+                {canWrite ? (
                     <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <Package size={16} /> Add New Medicine
                     </button>
-                ) : hasPermission('prescription-sales.dispense') ? (
+                ) : (
                     <button onClick={() => navigate('/prescription-sales')} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <FileText size={16} /> Create Prescription Sale
                     </button>
-                ) : null}
+                )}
             </div>
 
             {loading ? <LoadingSpinner text="Loading medicines..." /> : (
@@ -600,10 +614,10 @@ export default function Medicines() {
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <button onClick={() => openView(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
-                                                    {(canEdit || canDelete) && (
+                                                    {canWrite && (
                                                         <>
-                                                            {canEdit && <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>}
-                                                            {canDelete && <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>}
+                                                            <button onClick={() => openEdit(m)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
+                                                            <button onClick={() => handleDelete(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
                                                         </>
                                                     )}
                                                 </div>
@@ -622,7 +636,7 @@ export default function Medicines() {
                 </>
             )}
 
-            {(canCreate || canEdit) && (
+            {canWrite && (
                 <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Medicine' : 'Add New Medicine'} size="max-w-2xl">
                     <Stepper steps={formSteps} currentStep={step} />
                     {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
@@ -698,7 +712,7 @@ export default function Medicines() {
                         </div>
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
                             <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
-                            {canEdit && (
+            {canWrite && (
                                 <button onClick={() => { setShowViewModal(false); openEdit(viewMedicine); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Medicine</button>
                             )}
                         </div>

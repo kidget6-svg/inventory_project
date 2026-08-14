@@ -13,13 +13,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
 import Medicines from './pages/Medicines';
-
-// 🆕 NEW PAGES
-import StockManagement from './pages/StockManagement';
-import Warehouse from './pages/Warehouse';
-import Branches from './pages/Branches';
-import AuditLogs from './pages/AuditLogs';
-
+import Inventory from './pages/Inventory';
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
@@ -66,8 +60,8 @@ function DashboardRouter() {
 
 function SalesRedirect() {
     const { hasPermission } = useAuth();
-    if (hasPermission('prescription-sales.dispense')) return <Navigate to="/prescription-sales" replace />;
-    if (hasPermission('retail-pos.checkout')) return <Navigate to="/retail-sales" replace />;
+    if (hasPermission('sales.prescription')) return <Navigate to="/prescription-sales" replace />;
+    if (hasPermission('sales.retail')) return <Navigate to="/retail-sales" replace />;
     return <Navigate to="/dashboard" replace />;
 }
 
@@ -84,18 +78,14 @@ function App() {
 
     return (
         <Routes>
-            {/* ============================================================
-                PUBLIC ROUTES
-            ============================================================ */}
+            {/* Public landing & auth pages */}
             <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
             <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
             <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
 
-            {/* ============================================================
-                DASHBOARD (Role-based)
-            ============================================================ */}
+            {/* Dashboard Router */}
             <Route path="/dashboard" element={
-                <ProtectedRoute permissions={['dashboard.view']} title="Dashboard"><DashboardRouter /></ProtectedRoute>
+                <ProtectedRoute title="Dashboard"><DashboardRouter /></ProtectedRoute>
             } />
 
             {/* Administration: Users & Roles */}
@@ -103,12 +93,10 @@ function App() {
                 <ProtectedRoute permissions={['users.view']} title="User Management"><Users /></ProtectedRoute>
             } />
             <Route path="/roles" element={
-                <ProtectedRoute permissions={['roles.view']} title="Roles & Permissions"><RolesPermissions /></ProtectedRoute>
+                <ProtectedRoute permissions={['roles.manage']} title="Roles & Permissions"><RolesPermissions /></ProtectedRoute>
             } />
 
-            {/* ============================================================
-                ACCOUNT PAGES
-            ============================================================ */}
+            {/* Account pages */}
             <Route path="/profile" element={
                 <ProtectedRoute title="User Profile"><Profile /></ProtectedRoute>
             } />
@@ -116,49 +104,19 @@ function App() {
                 <ProtectedRoute title="Account Settings"><Settings /></ProtectedRoute>
             } />
 
-            {/* ============================================================
-                PRODUCT MANAGEMENT
-            ============================================================ */}
+            {/* Product Management & Operations */}
             <Route path="/medicines" element={
                 <ProtectedRoute permissions={['medicines.view']} title="Medicines"><Medicines /></ProtectedRoute>
             } />
-            
-            {/* ✅ NEW: Stock Management - Replaces Inventory */}
-            <Route path="/stock-management" element={
-                <ProtectedRoute permissions={['inventory.view']} title="Stock Management"><StockManagement /></ProtectedRoute>
+            <Route path="/inventory" element={
+                <ProtectedRoute permissions={['inventory.view']} title="Stock Inventory"><Inventory /></ProtectedRoute>
             } />
-            
             <Route path="/categories" element={
                 <ProtectedRoute permissions={['categories.view']} title="Medicine Categories"><Categories /></ProtectedRoute>
             } />
             <Route path="/suppliers" element={
                 <ProtectedRoute permissions={['suppliers.view']} title="Suppliers Directory"><Suppliers /></ProtectedRoute>
             } />
-
-            {/* ============================================================
-                WAREHOUSE (NEW)
-            ============================================================ */}
-            <Route path="/warehouse" element={
-                <ProtectedRoute permissions={['warehouse.view']} title="Warehouse"><Warehouse /></ProtectedRoute>
-            } />
-
-            {/* ============================================================
-                BRANCHES (NEW)
-            ============================================================ */}
-            <Route path="/branches" element={
-                <ProtectedRoute permissions={['branches.view']} title="Branches"><Branches /></ProtectedRoute>
-            } />
-
-            {/* ============================================================
-                AUDIT LOGS (NEW)
-            ============================================================ */}
-            <Route path="/audit-logs" element={
-                <ProtectedRoute permissions={['audit.view']} title="Audit Logs"><AuditLogs /></ProtectedRoute>
-            } />
-
-            {/* ============================================================
-                PURCHASE ORDERS
-            ============================================================ */}
             <Route path="/purchase-orders" element={
                 <ProtectedRoute permissions={['purchase-orders.view']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
             } />
@@ -166,64 +124,43 @@ function App() {
                 <ProtectedRoute permissions={['retail-products.view']} title="Retail & OTC Products"><RetailProducts /></ProtectedRoute>
             } />
 
-            {/* ============================================================
-                SALES
-            ============================================================ */}
+            {/* Sales Routes */}
             <Route path="/prescription-sales" element={
-                <ProtectedRoute permissions={['prescription-sales.view']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.prescription']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
             } />
             <Route path="/prescription-sales-cashier" element={
-                <ProtectedRoute permissions={['prescription-checkout.view']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.checkout']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
             } />
             <Route path="/retail-otc-sales" element={
-                <ProtectedRoute permissions={['retail-otc-sales.view']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.retail']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
             } />
             <Route path="/retail-sales" element={
-                <ProtectedRoute permissions={['retail-pos.view']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.retail']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
             } />
 
             {/* Permission-based redirect for legacy /sales path */}
             <Route path="/sales" element={<ProtectedRoute><SalesRedirect /></ProtectedRoute>} />
 
-            {/* ============================================================
-                RECEIPT & SALES HISTORY
-            ============================================================ */}
+            {/* Receipt Page */}
             <Route path="/receipt/:id" element={
-                <ProtectedRoute permissions={['sales-history.receipt']} title="Receipt"><ReceiptPage /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.receipt']} title="Receipt"><ReceiptPage /></ProtectedRoute>
             } />
+
+            {/* Sales History */}
             <Route path="/sales-history" element={
-                <ProtectedRoute permissions={['sales-history.view']} title="Sales History"><SalesHistory /></ProtectedRoute>
+                <ProtectedRoute permissions={['sales.view']} title="Sales History"><SalesHistory /></ProtectedRoute>
             } />
 
-            {/* ============================================================
-                STOCK MOVEMENTS
-            ============================================================ */}
+            {/* Reports & Tracking */}
             <Route path="/stock-movements" element={
-                <ProtectedRoute permissions={['stock-movements.view']} title="Stock Movements"><StockMovements /></ProtectedRoute>
+                <ProtectedRoute permissions={['inventory.view']} title="Stock Movements"><StockMovements /></ProtectedRoute>
             } />
 
-            {/* ============================================================
-                REPORTS
-            ============================================================ */}
             <Route path="/reports" element={
                 <ProtectedRoute permissions={['reports.view']} title="System Reports"><Reports /></ProtectedRoute>
             } />
 
-            {/* ============================================================
-                LEGACY REDIRECTS
-            ============================================================ */}
-            {/* Inventory → StockManagement */}
-            <Route path="/inventory" element={
-                <Navigate to="/stock-management" replace />
-            } />
-            {/* LowStock → StockManagement */}
-            <Route path="/low-stock" element={
-                <Navigate to="/stock-management" replace />
-            } />
-
-            {/* ============================================================
-                FALLBACK - 404 Not Found
-            ============================================================ */}
+            {/* Fallback Catch-all Route */}
             <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} />
         </Routes>
     );
@@ -232,12 +169,7 @@ function App() {
 function RootApp() {
     return (
         <AuthProvider>
-            <BrowserRouter
-                future={{
-                    v7_startTransition: true,
-                    v7_relativeSplatPath: true,
-                }}
-            >
+            <BrowserRouter>
                 <App />
             </BrowserRouter>
             <ToastContainer />

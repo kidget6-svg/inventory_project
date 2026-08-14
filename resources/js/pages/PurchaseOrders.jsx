@@ -50,10 +50,8 @@ export default function PurchaseOrders() {
     const [modalItem, setModalItem] = useState(null);
     const [form, setForm] = useState({
         supplier_id: '',
-        order_date: '',
         medicine_name: '',
         quantity: '',
-        unit_price: '',
     });
     const [submitting, setSubmitting] = useState(false);
     const [suppliers, setSuppliers] = useState([]);
@@ -148,8 +146,22 @@ export default function PurchaseOrders() {
         setShowPdfPreview(true);
         try {
             const res = await api.get(`/purchase-orders/${order.id}/preview`);
+            // Convert the base64 PDF returned by the API into a Blob URL.
+            // A data: URL (data:application/pdf;base64,...) is subject to a
+            // browser-imposed size limit, which causes the iframe to render
+            // completely blank for larger PDFs. A Blob URL has no such limit
+            // and renders the exact same PDF that the Download button uses.
+            const base64 = res.data.pdf;
+            const byteChars = atob(base64);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) {
+                byteNumbers[i] = byteChars.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
             setPdfPreviewData({
-                pdf: res.data.pdf,
+                pdfUrl: url,
                 purchase_order: res.data.purchase_order,
             });
         } catch (err) {
@@ -302,7 +314,7 @@ export default function PurchaseOrders() {
     const openCreate = () => {
         setModalMode('create');
         setModalItem(null);
-        setForm({ supplier_id: '', order_date: '', medicine_name: '', quantity: '', unit_price: '' });
+        setForm({ supplier_id: '', medicine_name: '', quantity: '' });
         setError('');
         setShowModal(true);
         loadFormOptions();
@@ -319,10 +331,8 @@ export default function PurchaseOrders() {
                 const orderItem = data.items?.[0];
                 setForm({
                     supplier_id: data.supplier_id || '',
-                    order_date: data.order_date || '',
                     medicine_name: orderItem?.medicine?.name || '',
                     quantity: orderItem?.quantity || '',
-                    unit_price: orderItem?.unit_price || '',
                 });
             });
         });
@@ -337,11 +347,14 @@ export default function PurchaseOrders() {
     const closeModal = () => {
         setShowModal(false);
         setModalItem(null);
-        setForm({ supplier_id: '', order_date: '', medicine_name: '', quantity: '', unit_price: '' });
+        setForm({ supplier_id: '', medicine_name: '', quantity: '' });
         setError('');
     };
 
     const closePdfPreview = () => {
+        if (pdfPreviewData?.pdfUrl) {
+            URL.revokeObjectURL(pdfPreviewData.pdfUrl);
+        }
         setShowPdfPreview(false);
         setPdfPreviewData(null);
     };
@@ -467,6 +480,8 @@ export default function PurchaseOrders() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Supplier</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Date</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Sent At</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Delivered At</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Amount</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">Actions</th>
                                 </tr>
@@ -481,7 +496,7 @@ export default function PurchaseOrders() {
                                             key={o.id}
                                             className="border-b hover:bg-sky-50/30"
                                         >
-                                                                    <td className="px-4 py-3 text-sm">{displayIndex}</td>
+                                            <td className="px-4 py-3 text-sm">{displayIndex}</td>
                                             <td className="px-4 py-3 text-sm">
                                                 <div className="overflow-hidden whitespace-nowrap text-ellipsis truncate">
                                                     {o.supplier?.name || "---"}
@@ -490,6 +505,12 @@ export default function PurchaseOrders() {
                                             <td className="px-4 py-3 text-sm">{formatDate(o.order_date)}</td>
                                             <td className="px-4 py-3">
                                                 <span className={statusBadge(status)}>{statusLabel(status)}</span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-600">
+                                                {o.sent_at_display || 'Not sent yet.'}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-600">
+                                                {o.delivered_at_display || 'Delivery confirmation unavailable'}
                                             </td>
                                             <td className="px-4 py-3 text-sm">${Number(o.total_amount || 0).toFixed(2)}</td>
                                             <td className="px-4 py-3">
@@ -511,11 +532,12 @@ export default function PurchaseOrders() {
                                 })}
                                 {orders.length === 0 && (
                                     <tr>
-                                        <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+                                        <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
                                             No purchase orders found
                                         </td>
                                     </tr>
                                 )}
+
                             </tbody>
                         </table>
                     </div>
@@ -554,7 +576,7 @@ export default function PurchaseOrders() {
                         <div className="border border-gray-200 rounded-xl overflow-hidden">
                             <iframe
                                 title="Purchase Order PDF Preview"
-                                src={`data:application/pdf;base64,${pdfPreviewData.pdf}`}
+                                src={pdfPreviewData.pdfUrl}
                                 className="w-full h-[600px]"
                             />
                         </div>
@@ -596,7 +618,20 @@ export default function PurchaseOrders() {
                                 <span className={statusBadge(modalItem.status?.toLowerCase())}>{statusLabel(modalItem.status)}</span>
                             </div>
                             <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Sent At</label>
+                                <p className="text-sm text-gray-600">
+                                    {modalItem.sent_at_display || 'Not sent yet.'}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Delivered At</label>
+                                <p className="text-sm text-gray-600">
+                                    {modalItem.delivered_at_display || 'Delivery confirmation unavailable'}
+                                </p>
+                            </div>
+                            <div>
                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Total Amount</label>
+
                                 <p className="text-sm text-gray-600 flex items-center gap-1">
                                     <DollarSign size={14} />
                                     ${Number(modalItem.total_amount || 0).toFixed(2)}
@@ -753,20 +788,6 @@ export default function PurchaseOrders() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Order Date *</label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="date"
-                                    name="order_date"
-                                    value={form.order_date}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
                             <input
                                 list="medicine-list"
@@ -795,22 +816,6 @@ export default function PurchaseOrders() {
                                 min="1"
                                 required
                             />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Unit Price *</label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    name="unit_price"
-                                    value={form.unit_price}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                    min="0"
-                                    required
-                                />
-                            </div>
                         </div>
                         <div className="md:col-span-2 flex justify-end gap-3">
                             <button type="button" onClick={closeModal} className="btn-secondary px-4 py-2 text-sm flex items-center gap-2">

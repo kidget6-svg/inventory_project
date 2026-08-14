@@ -1,3 +1,4 @@
+
 // resources/js/components/CashierPaymentQueue.jsx
 //
 // Reusable Cashier Payment Queue component.
@@ -30,6 +31,7 @@ import {
     Download,
     Printer,
     X,
+    Send,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,6 +71,13 @@ export default function CashierPaymentQueue({ saleType }) {
     const [amountPaid, setAmountPaid] = useState('');
     const [successDialogOpen, setSuccessDialogOpen] = useState(false);
     const [completedSale, setCompletedSale] = useState(null);
+
+    // Telebirr payment flow state
+    const [telebirrPhone, setTelebirrPhone] = useState('');
+    const [telebirrCode, setTelebirrCode] = useState('');
+    const [telebirrStep, setTelebirrStep] = useState('phone'); // 'phone' | 'verify' | 'confirmed'
+    const [telebirrProcessing, setTelebirrProcessing] = useState(false);
+
     const navigate = useNavigate();
 
     const fetchPendingSales = async () => {
@@ -96,11 +105,47 @@ export default function CashierPaymentQueue({ saleType }) {
         setPaymentMethod('cash');
         setAmountPaid(parseFloat(sale.total_amount).toFixed(2));
         setPaymentModalOpen(true);
+        // Auto-populate Telebirr phone from the customer info attached to the sale
+        setTelebirrPhone(sale.customer_phone || '');
+        setTelebirrCode('');
+        setTelebirrStep('phone');
     };
 
     const closePaymentModal = () => {
         setPaymentModalOpen(false);
         setSelectedSale(null);
+    };
+
+    const handlePaymentMethodChange = (method) => {
+        setPaymentMethod(method);
+        if (method === 'telebirr') {
+            // Auto-populate phone from the customer info attached to the sale
+            setTelebirrPhone(selectedSale?.customer_phone || '');
+            setTelebirrCode('');
+            setTelebirrStep('phone');
+        } else {
+            // Reset Telebirr state when switching away from Telebirr
+            setTelebirrPhone('');
+            setTelebirrCode('');
+            setTelebirrStep('phone');
+        }
+    };
+
+    const handleTelebirrPay = () => {
+        if (!telebirrPhone.trim()) {
+            window.showToast('Customer phone number is required', 'error');
+            return;
+        }
+
+        setTelebirrProcessing(true);
+        // Simulate sending SMS with verification code
+        setTimeout(() => {
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            setTelebirrCode(code);
+            setTelebirrStep('verify');
+            setTelebirrProcessing(false);
+            window.showToast(`Verification code sent to ${telebirrPhone}`, 'success');
+        }, 1000);
     };
 
     const handleCompleteSale = async () => {
@@ -110,8 +155,14 @@ export default function CashierPaymentQueue({ saleType }) {
         const paid = parseFloat(amountPaid);
         const isCash = paymentMethod === 'cash';
 
-        if (paid < total) {
+        if (isCash && paid < total) {
             window.showToast('Amount paid cannot be less than the total amount', 'error');
+            return;
+        }
+
+        // For Telebirr, ensure the payment has been processed
+        if (paymentMethod === 'telebirr' && telebirrStep !== 'verify') {
+            window.showToast('Please complete the Telebirr payment first', 'error');
             return;
         }
 
@@ -191,6 +242,11 @@ export default function CashierPaymentQueue({ saleType }) {
     const changeAmount = paymentMethod === 'cash'
         ? Math.max(0, parseFloat(amountPaid) - parseFloat(selectedSale?.total_amount || 0))
         : 0;
+
+    // Determine if the Confirm Payment button should be disabled
+    const isTelebirrReady = paymentMethod === 'telebirr'
+        ? telebirrStep === 'verify' && telebirrPhone.trim() !== ''
+        : true;
 
     if (loading) return <LoadingSpinner text="Fetching cashier queue..." />;
 
@@ -338,7 +394,7 @@ export default function CashierPaymentQueue({ saleType }) {
                                         <button
                                             key={pm.value}
                                             type="button"
-                                            onClick={() => setPaymentMethod(pm.value)}
+                                            onClick={() => handlePaymentMethodChange(pm.value)}
                                             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                                                 paymentMethod === pm.value
                                                     ? 'bg-sky-500 text-white ring-2 ring-sky-500'
@@ -353,6 +409,7 @@ export default function CashierPaymentQueue({ saleType }) {
                             </div>
                         </div>
 
+                        {/* Cash: Amount Paid input */}
                         {paymentMethod === 'cash' && (
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -374,16 +431,80 @@ export default function CashierPaymentQueue({ saleType }) {
                             </div>
                         )}
 
+                        {/* Telebirr: Phone number + Pay flow */}
+                        {paymentMethod === 'telebirr' && (
+                            <div className="space-y-3">
+                                {/* Step 1: Phone number (auto-populated from pharmacist, editable by cashier) */}
+                                {telebirrStep === 'phone' && (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                Customer Phone Number
+                                            </label>
+                                            <input
+                                                type="tel"
+                                                value={telebirrPhone}
+                                                onChange={(e) => setTelebirrPhone(e.target.value)}
+                                                placeholder="Enter customer phone number"
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none"
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleTelebirrPay}
+                                            disabled={telebirrProcessing || !telebirrPhone.trim()}
+                                            className="w-full btn-primary px-4 py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {telebirrProcessing ? (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <Send size={14} />
+                                            )}
+                                            {telebirrProcessing ? 'Processing...' : 'Pay'}
+                                        </button>
+                                    </>
+                                )}
+
+                                {/* Step 2: Verification code shown after Pay */}
+                                {telebirrStep === 'verify' && (
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Smartphone size={16} className="text-green-600" />
+
+                                            <span className="text-xs font-medium text-green-700">
+                                                Verification code sent to {telebirrPhone}
+                                            </span>
+                                        </div>
+                                        <div className="text-center">
+                                            <span className="text-2xl font-bold text-green-700 tracking-wider">
+                                                {telebirrCode}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-2 text-center">
+                                            Enter this code on the customer's Telebirr app to complete the payment.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Action buttons */}
                         <div className="flex gap-3 pt-2">
                             <button
+                                type="button"
                                 onClick={closePaymentModal}
                                 className="flex-1 btn-secondary px-4 py-2 text-sm"
                             >
                                 Cancel
                             </button>
                             <button
+                                type="button"
                                 onClick={handleCompleteSale}
-                                disabled={processingId === selectedSale?.id}
+                                disabled={
+                                    processingId === selectedSale?.id ||
+                                    !isTelebirrReady
+                                }
                                 className="flex-1 btn-primary px-4 py-2 text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
                             >
                                 {processingId === selectedSale?.id ? (
@@ -435,6 +556,12 @@ export default function CashierPaymentQueue({ saleType }) {
                                 <span className="text-xs text-gray-500">Customer</span>
                                 <span className="text-sm font-medium text-gray-800">{completedSale.customer_name || 'Walk-in Customer'}</span>
                             </div>
+                            {completedSale.notes && (
+                                <div className="flex justify-between">
+                                    <span className="text-xs text-gray-500">Prescription Notes</span>
+                                    <span className="text-sm font-medium text-gray-800">{completedSale.notes}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between">
                                 <span className="text-xs text-gray-500">Total Amount</span>
                                 <span className="text-sm font-medium text-gray-800">${parseFloat(completedSale.total_amount).toFixed(2)}</span>

@@ -3,6 +3,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -84,6 +85,9 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($users as $user) {
+            // Set role_id by looking up the Role model by slug,
+            // so both the role string and role_id relationship are populated.
+            $user['role_id'] = Role::where('slug', $user['role'])->value('id');
             User::create($user);
         }
 
