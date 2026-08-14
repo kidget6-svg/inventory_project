@@ -3,59 +3,147 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
-    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
+    ArrowLeftRight, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText
+    ShoppingBag, FileText, Warehouse, AlertTriangle, Building2, ClipboardList,
+    Boxes, ShoppingCart as CartIcon, History, Home, Layers, Tag
 } from 'lucide-react';
 
+// ============================================================
+// ADMIN MENU - Full Access
+// ============================================================
 const adminMenu = [
+    // Main
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    
+    // Product Management
     { section: 'Product Management' },
     { to: '/medicines', label: 'Medicines', icon: Pill },
     { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories', icon: FolderTree },
+    { to: '/categories', label: 'Categories & Shelves', icon: FolderTree },
     { to: '/suppliers', label: 'Suppliers', icon: Truck },
-    { section: 'Administration' },
-    { to: '/users', label: 'Users', icon: Users },
-    { section: 'Operations' },
-    { to: '/inventory', label: 'Inventory', icon: Package },
-    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+    
+    // Warehouse & Inventory
+    { section: 'Warehouse & Inventory' },
+    { to: '/warehouse', label: 'Warehouse', icon: Warehouse },
+    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    { section: 'Reports' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
-    { to: '/reports', label: 'Reports', icon: BarChart3 },
+    
+    // Operations
+    { section: 'Operations' },
+    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+    { to: '/branches', label: 'Branches', icon: Building2 },
+    
+    // Reports
+    { section: 'Reports & Analytics' },
+    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3 },
     { to: '/sales-history', label: 'Sales History', icon: FileText },
+    
+    // Administration
+    { section: 'Administration' },
+    { to: '/users', label: 'User Management', icon: Users },
+    { to: '/audit-logs', label: 'Audit Logs', icon: ClipboardList },
 ];
 
+// ============================================================
+// PHARMACIST MENU
+// ============================================================
 const pharmacistMenu = [
+    // Main
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { section: 'Sales Queue' },
+    
+    // Sales
+    { section: 'Sales' },
     { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText },
     { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag },
-    { section: 'Inventory' },
+    
+    // Product Management
+    { section: 'Product Management' },
     { to: '/medicines', label: 'Medicines', icon: Pill },
     { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
-    { to: '/categories', label: 'Categories', icon: FolderTree },
-    { to: '/inventory', label: 'Inventory', icon: Package },
+    { to: '/categories', label: 'Categories & Shelves', icon: FolderTree },
+    
+    // Inventory
+    { section: 'Inventory' },
+    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
-    { section: 'Alerts' },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle },
+    
+    // Reports
     { section: 'Reports' },
-    { to: '/reports', label: 'Reports', icon: BarChart3 },
-];
-
-const cashierMenu = [
-    { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { section: 'Point of Sale' },
-    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText },
-    { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
+    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3 },
     { to: '/sales-history', label: 'Sales History', icon: FileText },
 ];
 
+// ============================================================
+// CASHIER MENU
+// ============================================================
+const cashierMenu = [
+    // Main
+    { section: 'Main' },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    
+    // Sales
+    { section: 'Sales' },
+    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText },
+    { to: '/retail-sales', label: 'Retail Sales', icon: ShoppingBag },
+    
+    // History
+    { section: 'History' },
+    { to: '/sales-history', label: 'Sales History', icon: History },
+    
+    // Inventory (Read-Only)
+    { section: 'Inventory' },
+    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
+];
+
+// ============================================================
+// SUPER ADMIN MENU - Full System Access
+// ============================================================
+const superAdminMenu = [
+    // Main
+    { section: 'Main' },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    
+    // System Configuration
+    { section: 'System Configuration' },
+    { to: '/system-settings', label: 'System Settings', icon: Settings },
+    { to: '/branches', label: 'Branches', icon: Building2 },
+    
+    // Product Management
+    { section: 'Product Management' },
+    { to: '/medicines', label: 'Medicines', icon: Pill },
+    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
+    { to: '/categories', label: 'Categories & Shelves', icon: FolderTree },
+    { to: '/suppliers', label: 'Suppliers', icon: Truck },
+    
+    // Warehouse & Inventory
+    { section: 'Warehouse & Inventory' },
+    { to: '/warehouse', label: 'Warehouse', icon: Warehouse },
+    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
+    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
+    
+    // Operations
+    { section: 'Operations' },
+    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+    
+    // Reports
+    { section: 'Reports & Analytics' },
+    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3 },
+    { to: '/sales-history', label: 'Sales History', icon: FileText },
+    
+    // Administration
+    { section: 'Administration' },
+    { to: '/users', label: 'User Management', icon: Users },
+    { to: '/audit-logs', label: 'Audit Logs', icon: ClipboardList },
+];
+
+// ============================================================
+// ROLE TO MENU MAPPING
+// ============================================================
 const menuByRole = { 
+    super_admin: superAdminMenu,
     admin: adminMenu, 
     pharmacist: pharmacistMenu, 
     cashier: cashierMenu 
@@ -65,10 +153,24 @@ function getMenu(role) {
     return menuByRole[role] || cashierMenu;
 }
 
+// ============================================================
+// ROLE BADGE STYLES
+// ============================================================
 const roleBadgeStyle = {
+    super_admin: 'bg-purple-100 text-purple-700',
     admin: 'bg-sky-100 text-sky-700',
     pharmacist: 'bg-emerald-100 text-emerald-700',
     cashier: 'bg-amber-100 text-amber-700',
+};
+
+// ============================================================
+// ROLE LABEL FOR DISPLAY
+// ============================================================
+const roleLabel = {
+    super_admin: 'Super Admin',
+    admin: 'Admin',
+    pharmacist: 'Pharmacist',
+    cashier: 'Cashier',
 };
 
 export default function SidebarLayout({ children, pageTitle }) {
@@ -79,6 +181,8 @@ export default function SidebarLayout({ children, pageTitle }) {
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const accountMenuRef = useRef(null);
     const menu = getMenu(user?.role);
+    const userRole = user?.role || 'guest';
+    const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
     const handleLogout = async () => {
         await logout();
@@ -95,9 +199,18 @@ export default function SidebarLayout({ children, pageTitle }) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Check if user has access to a route
+    const hasAccess = (path) => {
+        // Super Admin has access to everything
+        if (userRole === 'super_admin') return true;
+        
+        // Check if path exists in user's menu
+        const userMenu = getMenu(userRole);
+        return userMenu.some(item => item.to === path);
+    };
+
     const sidebarWidth = collapsed ? 'md:w-20' : 'md:w-64';
     const mainMargin = collapsed ? 'md:ml-20' : 'md:ml-64';
-    const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -115,6 +228,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0`}
             >
+                {/* Logo Section */}
                 <div className="p-5 border-b border-sky-200 flex items-center justify-between">
                     <div className={`flex items-center gap-3 min-w-0 ${collapsed ? 'md:justify-center md:w-full' : ''}`}>
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-2xl ring-2 ring-sky-400/70 bg-white transform hover:scale-105 transition-transform duration-200">
@@ -123,6 +237,9 @@ export default function SidebarLayout({ children, pageTitle }) {
                         {!collapsed && (
                             <div className="min-w-0">
                                 <div className="text-base font-bold text-gray-900 tracking-tight truncate">EthioPharmacy</div>
+                                <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                                    {roleLabel[userRole] || 'Pharmacy'}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -137,6 +254,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                     </button>
                 </div>
 
+                {/* Navigation */}
                 <nav className="flex-1 py-3 overflow-y-auto overflow-x-hidden">
                     {menu.map((item, i) =>
                         item.section ? (
@@ -169,10 +287,20 @@ export default function SidebarLayout({ children, pageTitle }) {
                         )
                     )}
                 </nav>
+
+                {/* Footer - Role Badge */}
+                {!collapsed && (
+                    <div className="p-4 border-t border-sky-200">
+                        <div className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider ${roleBadgeStyle[userRole] || 'bg-gray-100 text-gray-600'}`}>
+                            {roleLabel[userRole] || 'Guest'}
+                        </div>
+                    </div>
+                )}
             </aside>
 
             {/* Main Content */}
             <main className={`flex-1 ${mainMargin} min-h-screen transition-all duration-300`}>
+                {/* Top Bar */}
                 <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-sky-200/60 px-8 py-4 flex items-center justify-between">
                     <h2 className="text-xl font-bold text-gray-900 tracking-tight">{pageTitle || 'Dashboard'}</h2>
 
@@ -186,8 +314,8 @@ export default function SidebarLayout({ children, pageTitle }) {
                             </div>
                             <div className="hidden sm:block text-left">
                                 <div className="text-sm font-semibold text-gray-900 leading-tight">{user?.name || 'User'}</div>
-                                <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${roleBadgeStyle[user?.role] || 'bg-gray-100 text-gray-600'}`}>
-                                    {user?.role || 'Guest'}
+                                <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${roleBadgeStyle[userRole] || 'bg-gray-100 text-gray-600'}`}>
+                                    {roleLabel[userRole] || 'Guest'}
                                 </div>
                             </div>
                             <ChevronDown size={16} className={`text-gray-500 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
@@ -198,6 +326,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                                 <div className="px-4 py-2 border-b border-sky-100 mb-1">
                                     <div className="text-sm font-semibold text-gray-900 truncate">{user?.name || 'User'}</div>
                                     <div className="text-xs text-gray-500 truncate">{user?.email || ''}</div>
+                                    <div className="text-xs text-gray-400 mt-1">{roleLabel[userRole]}</div>
                                 </div>
                                 <button
                                     onClick={() => { setAccountMenuOpen(false); navigate('/profile'); }}
@@ -226,11 +355,14 @@ export default function SidebarLayout({ children, pageTitle }) {
                         )}
                     </div>
                 </div>
+                
+                {/* Page Content */}
                 <div className="p-6 lg:p-8">
                     {children}
                 </div>
             </main>
 
+            {/* Mobile Overlay */}
             {sidebarOpen && (
                 <div 
                     className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" 

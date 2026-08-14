@@ -10,39 +10,67 @@ class Medicine extends Model
 {
     use HasFactory;
 
+    // Status Constants
     const STATUS_ACTIVE = 'active';
     const STATUS_INACTIVE = 'inactive';
     const STATUS_EXPIRED = 'expired';
     const STATUS_DISCONTINUED = 'discontinued';
+    const STATUS_DAMAGED = 'damaged';
+    const STATUS_QUARANTINED = 'quarantined';
+
+    // Stock Status Constants
+    const STOCK_IN_STOCK = 'in_stock';
+    const STOCK_LOW_STOCK = 'low_stock';
+    const STOCK_OUT_OF_STOCK = 'out_of_stock';
+    const STOCK_EXPIRED = 'expired';
 
     protected $fillable = [
         'name',
         'generic_name',
+        'dosage_form',
+        'strength',
+        'unit',
         'category_id',
         'supplier_id',
+        'shelf_id',
+        'branch_id',
+        'shelf_location',
+        'prescription',
+        'manufacturer',
+        'batch_number',
+        'barcode',
+        'serial_number',
+        'image',
         'quantity',
+        'minimum_stock',
+        'maximum_stock',
         'unit_price',
         'purchase_price',
         'selling_price',
         'reorder_level',
         'expiry_date',
+        'manufactured_date',
+        'received_date',
         'status',
-        'shelf_location',
-        'shelf_id',
-        'batch_number',
-        'barcode',
+        'stock_status',
+        'approval_status',
+        'description',
     ];
-
-    // Explicitly clear $with so Eloquent doesn't query missing relationships like 'shelf'
-    protected $with = [];
 
     protected $casts = [
-        'expiry_date' => 'date',
+        'expiry_date' => 'datetime',
+        'manufactured_date' => 'datetime',
+        'received_date' => 'datetime',
+        'quantity' => 'integer',
+        'minimum_stock' => 'integer',
+        'maximum_stock' => 'integer',
+        'unit_price' => 'decimal:2',
+        'purchase_price' => 'decimal:2',
+        'selling_price' => 'decimal:2',
+        'reorder_level' => 'integer',
     ];
 
-    /**
-     * Category Relationship (Optional)
-     */
+    // Relationships
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -58,75 +86,172 @@ class Medicine extends Model
         return $this->belongsTo(Shelf::class);
     }
 
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function batches()
+    {
+        return $this->hasMany(Batch::class);
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    public function saleItems()
+    {
+        return $this->morphMany(SaleItem::class, 'itemable');
+    }
+
     public function purchaseOrderItems()
     {
         return $this->hasMany(PurchaseOrderItem::class);
     }
 
-    public function batches()
+    // Scopes
+    public function scopeActive($query)
     {
-        return $this->hasMany(Batch::class, 'medicine_id');
+        return $query->where('status', self::STATUS_ACTIVE);
     }
 
-    public function calculatedExpiryDate(): ?Carbon
+    public function scopeInStock($query)
     {
-        $batchExpiry = $this->batches()
-            ->when($this->batch_number, fn ($query) => $query->where('batch_number', $this->batch_number))
-            ->whereNotNull('expiry_date')
-            ->latest('id')
-            ->value('expiry_date');
-
-        return $batchExpiry ? Carbon::parse($batchExpiry) : ($this->expiry_date ? Carbon::parse($this->expiry_date) : null);
+        return $query->where('quantity', '>', 0);
     }
 
-    public function syncAutomaticExpiryState(): void
+    public function scopeLowStock($query)
     {
-        $calculatedExpiry = $this->calculatedExpiryDate();
-        $changes = [];
-
-        if ($calculatedExpiry && (! $this->expiry_date || ! $this->expiry_date->isSameDay($calculatedExpiry))) {
-            $changes['expiry_date'] = $calculatedExpiry->toDateString();
-        }
-
-        if ($calculatedExpiry && $calculatedExpiry->isBefore(Carbon::today())) {
-            $changes['status'] = self::STATUS_EXPIRED;
-        }
-
-        if ($changes) {
-            $this->forceFill($changes)->saveQuietly();
-            $this->refresh();
-        }
+        return $query->whereColumn('quantity', '<=', 'reorder_level')
+                     ->where('quantity', '>', 0);
     }
 
-    /**
-     * Get the full public URL to the medicine image.
-     * Falls back to a placeholder when no image is set.
-     */
-    public function getImageUrlAttribute(): string
+    public function scopeOutOfStock($query)
+    {
+        return $query->where('quantity', 0);
+    }
+
+    public function scopeExpired($query)
+    {
+        return $query->where('expiry_date', '<', now());
+    }
+
+    public function scopeExpiringSoon($query, $days = 90)
+    {
+        return $query->where('expiry_date', '>=', now())
+                     ->where('expiry_date', '<=', now()->addDays($days));
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('name', 'like', "%{$search}%")
+                     ->orWhere('generic_name', 'like', "%{$search}%")
+                     ->orWhere('barcode', 'like', "%{$search}%")
+                     ->orWhere('batch_number', 'like', "%{$search}%");
+    }
+
+    // Accessors
+    public function getImageUrlAttribute()
     {
         if ($this->image) {
             if (str_starts_with($this->image, 'http')) {
                 return $this->image;
             }
-
-            if (str_starts_with($this->image, 'images/')) {
-                return asset($this->image);
-            }
-
             return asset('storage/' . $this->image);
         }
-
         return asset('images/medicine-placeholder.svg');
     }
 
-    public function getStatusBadgeClass(): string
+    public function getFullNameAttribute()
     {
-        return match ($this->status) {
+        $parts = [$this->name];
+        if ($this->strength) $parts[] = $this->strength;
+        if ($this->dosage_form) $parts[] = $this->dosage_form;
+        return implode(' ', $parts);
+    }
+
+    public function getStatusBadgeAttribute()
+    {
+        $badges = [
             self::STATUS_ACTIVE => 'bg-green-100 text-green-700',
             self::STATUS_INACTIVE => 'bg-gray-100 text-gray-700',
             self::STATUS_EXPIRED => 'bg-red-100 text-red-700',
             self::STATUS_DISCONTINUED => 'bg-orange-100 text-orange-700',
-            default => 'bg-gray-100 text-gray-600',
-        };
+            self::STATUS_DAMAGED => 'bg-red-100 text-red-700',
+            self::STATUS_QUARANTINED => 'bg-yellow-100 text-yellow-700',
+        ];
+        return $badges[$this->status] ?? 'bg-gray-100 text-gray-700';
+    }
+
+    public function getStockStatusBadgeAttribute()
+    {
+        $badges = [
+            self::STOCK_IN_STOCK => 'bg-green-100 text-green-700',
+            self::STOCK_LOW_STOCK => 'bg-yellow-100 text-yellow-700',
+            self::STOCK_OUT_OF_STOCK => 'bg-red-100 text-red-700',
+            self::STOCK_EXPIRED => 'bg-gray-100 text-gray-700',
+        ];
+        return $badges[$this->stock_status] ?? 'bg-gray-100 text-gray-700';
+    }
+
+    // Methods
+    public function updateStockStatus()
+    {
+        if ($this->expiry_date && $this->expiry_date < now()) {
+            $this->stock_status = self::STOCK_EXPIRED;
+        } elseif ($this->quantity <= 0) {
+            $this->stock_status = self::STOCK_OUT_OF_STOCK;
+        } elseif ($this->quantity <= $this->reorder_level) {
+            $this->stock_status = self::STOCK_LOW_STOCK;
+        } else {
+            $this->stock_status = self::STOCK_IN_STOCK;
+        }
+        $this->save();
+    }
+
+    public function addStock($quantity, $notes = null, $reference = null)
+    {
+        $oldQuantity = $this->quantity;
+        $this->quantity += $quantity;
+        $this->save();
+        $this->updateStockStatus();
+
+        return StockMovement::create([
+            'medicine_id' => $this->id,
+            'type' => 'in',
+            'quantity' => $quantity,
+            'before_quantity' => $oldQuantity,
+            'after_quantity' => $this->quantity,
+            'user_id' => auth()->id(),
+            'notes' => $notes,
+            'reference' => $reference,
+            'status' => 'completed',
+        ]);
+    }
+
+    public function removeStock($quantity, $notes = null, $reference = null)
+    {
+        if ($this->quantity < $quantity) {
+            throw new \Exception('Insufficient stock');
+        }
+
+        $oldQuantity = $this->quantity;
+        $this->quantity -= $quantity;
+        $this->save();
+        $this->updateStockStatus();
+
+        return StockMovement::create([
+            'medicine_id' => $this->id,
+            'type' => 'out',
+            'quantity' => $quantity,
+            'before_quantity' => $oldQuantity,
+            'after_quantity' => $this->quantity,
+            'user_id' => auth()->id(),
+            'notes' => $notes,
+            'reference' => $reference,
+            'status' => 'completed',
+        ]);
     }
 }

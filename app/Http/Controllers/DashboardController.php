@@ -1,42 +1,40 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
-use App\Models\PurchaseOrder;
 use App\Models\Sale;
-use App\Models\StockMovement;
 use App\Models\Supplier;
+use App\Models\PurchaseOrder;
+use App\Models\StockMovement;
+use App\Models\Category;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index(): JsonResponse
+    public function index()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
-        if ($user->isAdmin()) {
-            return response()->json(
-                $this->adminDashboard()
-            );
+        // Check role using direct comparison
+        if ($user->role === 'admin' || $user->role === 'super_admin') {
+            return $this->adminDashboard();
         }
 
-        if ($user->isPharmacist()) {
-            return response()->json(
-                $this->pharmacistDashboard()
-            );
+        if ($user->role === 'pharmacist') {
+            return $this->pharmacistDashboard();
         }
 
-        return response()->json(
-            $this->cashierDashboard()
-        );
+        return $this->cashierDashboard();
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Shared helper: low-stock medicines
+    |--------------------------------------------------------------------------
     */
     private function lowStockMedicines()
     {
@@ -47,60 +45,70 @@ class DashboardController extends Controller
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Shared helper: expired medicines
+    |--------------------------------------------------------------------------
     */
     private function expiredMedicines()
     {
         return Medicine::whereNotNull('expiry_date')
-            ->where('expiry_date', '<', today())
+            ->where('expiry_date', '<', Carbon::today())
             ->orderBy('expiry_date')
             ->get();
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Shared helper: medicines expiring within N days
+    |--------------------------------------------------------------------------
     */
     private function expiringMedicines(int $days)
     {
         return Medicine::whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [today(), today()->addDays($days)])
+            ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->addDays($days)])
             ->with('category')
             ->orderBy('expiry_date')
             ->get();
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Shared helper: inventory status counts
+    |--------------------------------------------------------------------------
     */
     private function inventoryStatus(): array
     {
         return [
-            'inStock'    => Medicine::where('quantity', '>', 0)
+            'inStock' => Medicine::where('quantity', '>', 0)
                 ->whereColumn('quantity', '>', 'reorder_level')
                 ->where(function ($q) {
                     $q->whereNull('expiry_date')
-                      ->orWhere('expiry_date', '>=', today());
+                        ->orWhere('expiry_date', '>=', Carbon::today());
                 })->count(),
-            'lowStock'   => Medicine::where('quantity', '>', 0)
+            'lowStock' => Medicine::where('quantity', '>', 0)
                 ->whereColumn('quantity', '<=', 'reorder_level')
                 ->where(function ($q) {
                     $q->whereNull('expiry_date')
-                      ->orWhere('expiry_date', '>=', today());
+                        ->orWhere('expiry_date', '>=', Carbon::today());
                 })->count(),
             'outOfStock' => Medicine::where('quantity', 0)->count(),
-            'expired'    => Medicine::whereNotNull('expiry_date')
-                ->where('expiry_date', '<', today())->count(),
+            'expired' => Medicine::whereNotNull('expiry_date')
+                ->where('expiry_date', '<', Carbon::today())
+                ->count(),
         ];
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Shared helper: sales analytics (daily / weekly / monthly)
+    |--------------------------------------------------------------------------
     */
     private function salesAnalytics(): array
     {
+        // Daily – last 7 days
         $daily = [];
         for ($i = 6; $i >= 0; $i--) {
-            $date = today()->subDays($i);
+            $date = Carbon::today()->subDays($i);
             $daily[] = [
                 'label' => $date->format('D'),
                 'date'  => $date->format('Y-m-d'),
@@ -109,10 +117,11 @@ class DashboardController extends Controller
             ];
         }
 
+        // Weekly – last 4 weeks
         $weekly = [];
         for ($i = 3; $i >= 0; $i--) {
-            $start = today()->subWeeks($i)->startOfWeek();
-            $end   = today()->subWeeks($i)->endOfWeek();
+            $start = Carbon::today()->subWeeks($i)->startOfWeek();
+            $end   = Carbon::today()->subWeeks($i)->endOfWeek();
             $weekly[] = [
                 'label' => $start->format('M d') . ' – ' . $end->format('M d'),
                 'total' => (float) Sale::whereBetween('sale_date', [$start, $end])->sum('total_amount'),
@@ -120,9 +129,10 @@ class DashboardController extends Controller
             ];
         }
 
+        // Monthly – last 6 months
         $monthly = [];
         for ($i = 5; $i >= 0; $i--) {
-            $month = today()->subMonths($i);
+            $month = Carbon::today()->subMonths($i);
             $monthly[] = [
                 'label' => $month->format('M Y'),
                 'total' => (float) Sale::whereYear('sale_date', $month->year)
@@ -138,7 +148,9 @@ class DashboardController extends Controller
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Shared helper: purchase vs sales totals
+    |--------------------------------------------------------------------------
     */
     private function purchaseVsSales(): array
     {
@@ -151,11 +163,13 @@ class DashboardController extends Controller
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Shared helper: purchase order statistics
+    |--------------------------------------------------------------------------
     */
     private function purchaseOrderStats(): array
     {
-        $statuses = PurchaseOrder::statuses();
+        $statuses = ['draft', 'pending', 'sent', 'approved', 'delivered', 'completed', 'cancelled'];
         $stats = [];
         foreach ($statuses as $status) {
             $stats[$status] = PurchaseOrder::where('status', $status)->count();
@@ -164,17 +178,21 @@ class DashboardController extends Controller
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Shared helper: recent activities
+    |--------------------------------------------------------------------------
     */
-    private function recentActivities(int $limit = 10): array
+    private function recentActivities(int $limit = 4): array
     {
         $activities = [];
 
+        // Recent sales
         foreach (Sale::latest()->take($limit)->get() as $sale) {
-            $createdAt = $sale->created_at ?? now();
+            $createdAt = $sale->created_at ?? Carbon::now();
+
             $activities[] = [
                 'id'        => 'sale_' . $sale->id,
-                'user'      => 'System',
+                'user'      => $sale->user?->name ?? 'System',
                 'action'    => "Completed Sale #{$sale->id}",
                 'icon'      => 'shopping-cart',
                 'date'      => $createdAt->format('Y-m-d'),
@@ -183,38 +201,46 @@ class DashboardController extends Controller
             ];
         }
 
+        // Recent purchase orders
         foreach (PurchaseOrder::with('supplier')->latest()->take($limit)->get() as $po) {
-            $updatedAt = $po->updated_at ?? $po->created_at ?? now();
+            $activityAt = $po->updated_at ?? $po->created_at ?? Carbon::now();
+
             $action = match ($po->status) {
-                'pending'    => "Created Purchase Order #{$po->id}",
-                'approved'   => "Approved Purchase Order #{$po->id}",
-                'processing' => "Processing Purchase Order #{$po->id}",
+                'draft'      => "Created Purchase Order #{$po->id}",
+                'pending'    => "Submitted Purchase Order #{$po->id}",
+                'sent'       => "Sent Purchase Order #{$po->id} to supplier",
+                'delivered'  => "Purchase Order #{$po->id} marked as delivered",
                 'completed'  => "Completed Purchase Order #{$po->id}",
                 'cancelled'  => "Cancelled Purchase Order #{$po->id}",
                 default      => "Updated Purchase Order #{$po->id}",
             };
+
             $activities[] = [
                 'id'        => 'po_' . $po->id,
-                'user'      => 'System',
+                'user'      => $po->supplier?->name ?? 'System',
                 'action'    => $action,
                 'icon'      => 'package',
-                'date'      => $updatedAt->format('Y-m-d'),
-                'time'      => $updatedAt->format('H:i'),
-                'timestamp' => $updatedAt->timestamp,
+                'date'      => $activityAt->format('Y-m-d'),
+                'time'      => $activityAt->format('H:i'),
+                'timestamp' => $activityAt->timestamp,
             ];
         }
 
-        foreach (StockMovement::with('medicine')->latest()->take($limit)->get() as $movement) {
-            $createdAt = $movement->created_at ?? now();
+        // Recent stock movements
+        foreach (StockMovement::with('medicine', 'user')->latest()->take($limit)->get() as $movement) {
+            $createdAt = $movement->created_at ?? Carbon::now();
+
             $medicineName = $movement->medicine
                 ? $movement->medicine->name
                 : 'Unknown medicine';
+
             $action = $movement->type === 'in'
                 ? "Stock increased for {$medicineName} ({$movement->quantity})"
                 : "Stock decreased for {$medicineName} ({$movement->quantity})";
+
             $activities[] = [
                 'id'        => 'sm_' . $movement->id,
-                'user'      => 'System',
+                'user'      => $movement->user?->name ?? 'System',
                 'action'    => $action,
                 'icon'      => 'activity',
                 'date'      => $createdAt->format('Y-m-d'),
@@ -231,231 +257,224 @@ class DashboardController extends Controller
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Admin dashboard – full data set
+    |--------------------------------------------------------------------------
     */
     private function adminDashboard()
     {
-        $totalProducts   = Medicine::count();
-        $totalStock      = Medicine::sum('quantity');
-        $totalSuppliers  = Supplier::count();
+        try {
+            $totalMedicines       = Medicine::count();
+            $totalStock           = Medicine::sum('quantity');
+            $totalSuppliers       = Supplier::count();
+            $totalUsers           = User::count();
 
-        $lowStockMedicines    = $this->lowStockMedicines();
-        $lowStockCount        = $lowStockMedicines->count();
+            $lowStockMedicines    = $this->lowStockMedicines();
+            $lowStockCount        = $lowStockMedicines->count();
 
-        $expiredMedicines     = $this->expiredMedicines();
-        $expiredCount         = $expiredMedicines->count();
+            $expiredMedicines     = $this->expiredMedicines();
+            $expiredCount         = $expiredMedicines->count();
 
-        $expiringMedicines    = $this->expiringMedicines(90);
-        $expiringCount        = $expiringMedicines->count();
+            $expiring30           = $this->expiringMedicines(30);
+            $expiring60           = $this->expiringMedicines(60);
+            $expiring90           = $this->expiringMedicines(90);
 
-        $todaySalesCount      = Sale::whereDate('sale_date', today())->count();
-        $todayRevenue         = Sale::whereDate('sale_date', today())->sum('total_amount');
+            $pendingPOs           = PurchaseOrder::where('status', 'pending')->count();
 
-        $totalRevenue         = Sale::sum('total_amount');
+            $todaySalesCount      = Sale::whereDate('sale_date', Carbon::today())->count();
+            $todayRevenue         = Sale::whereDate('sale_date', Carbon::today())->sum('total_amount');
 
-        $totalPurchases       = PurchaseOrder::sum('total_amount');
+            $salesAnalytics       = $this->salesAnalytics();
+            $purchaseVsSales      = $this->purchaseVsSales();
+            $inventoryStatus      = $this->inventoryStatus();
+            $poStats              = $this->purchaseOrderStats();
+            $activities           = $this->recentActivities(4);
 
-        $totalUsers           = User::count();
-        $pharmacistCount      = User::where('role', 'pharmacist')->count();
-        $cashierCount         = User::where('role', 'cashier')->count();
-        $pendingUsersCount    = User::where('status', User::STATUS_PENDING)->count();
+            $recentPurchaseOrders = PurchaseOrder::with('supplier')
+                ->latest()->take(5)->get();
 
-        $salesChartData = Sale::select(
-            DB::raw('DATE(sale_date) as date'),
-            DB::raw('COUNT(*) as count'),
-            DB::raw('SUM(total_amount) as revenue')
-        )
-            ->where('sale_date', '>=', today()->subDays(6))
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->keyBy('date');
-
-        $salesChartLabels = [];
-        $salesChartCounts = [];
-        $salesChartRevenue = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = today()->subDays($i)->toDateString();
-            $salesChartLabels[] = today()->subDays($i)->format('D M j');
-            $salesChartCounts[]  = $salesChartData->has($day) ? (int) $salesChartData[$day]->count : 0;
-            $salesChartRevenue[] = $salesChartData->has($day) ? (float) $salesChartData[$day]->revenue : 0;
-        }
-
-        $inventoryChartData = Medicine::leftJoin('categories', 'medicines.category_id', '=', 'categories.id')
-            ->select(
-                DB::raw('COALESCE(categories.name, "Uncategorized") as category'),
-                DB::raw('COUNT(medicines.id) as medicine_count'),
-                DB::raw('SUM(medicines.quantity) as total_stock')
-            )
-            ->groupBy(DB::raw('COALESCE(categories.name, "Uncategorized")'))
-            ->orderBy('total_stock', 'desc')
-            ->get();
-
-        // Calculate percentage of medicines in each category
-        $totalMedicinesForChart = $inventoryChartData->sum('medicine_count');
-        $inventoryChartData = $inventoryChartData->map(function ($item) use ($totalMedicinesForChart) {
-            $item->percentage = $totalMedicinesForChart > 0
-                ? round(($item->medicine_count / $totalMedicinesForChart) * 100, 1)
-                : 0;
-            return $item;
-        })->values();
-
-        $recentSales = Sale::latest('sale_date')
-            ->take(5)->get();
-
-        $recentPurchases = PurchaseOrder::with('supplier')
-            ->latest('order_date')
-            ->take(5)->get();
-
-        $recentStockMovements = StockMovement::with('medicine')
-            ->latest()
-            ->take(5)->get();
-
-        $recentActivities = [];
-
-        foreach ($recentSales as $sale) {
-            $recentActivities[] = [
-                'type'      => 'sale',
-                'title'     => 'New Sale #' . $sale->id,
-                'subtitle'  => '$' . number_format($sale->total_amount, 2) . ' on ' . $sale->sale_date,
-                'time'      => $sale->created_at->diffForHumans(),
-                'icon'      => '💰',
-                'color'     => 'green',
+            $salesChartData = [
+                'labels'  => array_column($salesAnalytics['daily'], 'label'),
+                'counts'  => array_column($salesAnalytics['daily'], 'count'),
+                'revenue' => array_column($salesAnalytics['daily'], 'total'),
             ];
+
+            $inventoryChartData = Category::with('medicines')->get()->map(function ($category) {
+                return [
+                    'category'       => $category->name,
+                    'total_stock'    => (int) $category->medicines->sum('quantity'),
+                    'medicine_count' => $category->medicines->count(),
+                ];
+            })->values();
+
+            return response()->json([
+                // ---- Summary cards ----
+                'totalMedicines'         => $totalMedicines,
+                'totalStock'             => $totalStock,
+                'lowStockCount'          => $lowStockCount,
+                'expiredCount'           => $expiredCount,
+                'pendingPurchaseOrders'  => $pendingPOs,
+                'todaySalesCount'        => $todaySalesCount,
+                'todayRevenue'           => $todayRevenue,
+                'totalUsers'             => $totalUsers,
+                'totalRevenue'           => (float) Sale::sum('total_amount'),
+                'pharmacistCount'        => User::where('role', 'pharmacist')->count(),
+                'cashierCount'           => User::where('role', 'cashier')->count(),
+                'pendingUsersCount'      => User::where('status', 'pending')->count(),
+
+                // ---- Lists ----
+                'lowStockMedicines'      => $lowStockMedicines,
+                'expiredMedicines'       => $expiredMedicines,
+                'expiringSoon'           => [
+                    '30_days' => $expiring30,
+                    '60_days' => $expiring60,
+                    '90_days' => $expiring90,
+                ],
+                'expiring30Count'        => $expiring30->count(),
+                'expiring60Count'        => $expiring60->count(),
+                'expiring90Count'        => $expiring90->count(),
+
+                // ---- Charts ----
+                'salesAnalytics'         => $salesAnalytics,
+                'salesChartData'         => $salesChartData,
+                'inventoryChartData'     => $inventoryChartData,
+                'purchaseVsSales'        => $purchaseVsSales,
+                'inventoryStatus'        => $inventoryStatus,
+
+                // ---- Purchase order stats ----
+                'purchaseOrderStats'     => $poStats,
+
+                // ---- Recent data ----
+                'recentActivities'       => $activities,
+                'recentPurchaseOrders'   => $recentPurchaseOrders,
+
+                // ---- Backward-compatible fields ----
+                'totalProducts'          => $totalMedicines,
+                'totalSuppliers'         => $totalSuppliers,
+                'expiringCount'          => $expiring90->count(),
+                'expiringMedicines'      => $expiring90,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'message' => 'Failed to load admin dashboard data'
+            ], 500);
         }
-
-        foreach ($recentPurchases as $po) {
-            $recentActivities[] = [
-                'type'      => 'purchase',
-                'title'     => 'Purchase Order #' . $po->id,
-                'subtitle'  => 'From ' . ($po->supplier->name ?? 'Unknown Supplier'),
-                'time'      => $po->created_at->diffForHumans(),
-                'icon'      => '📦',
-                'color'     => 'blue',
-            ];
-        }
-
-        foreach ($recentStockMovements as $sm) {
-            $recentActivities[] = [
-                'type'      => 'stock',
-                'title'     => 'Stock ' . ($sm->type === 'in' ? 'In' : 'Out') . ' - ' . ($sm->medicine->name ?? 'Unknown'),
-                'subtitle'  => $sm->quantity . ' units',
-                'time'      => $sm->created_at->diffForHumans(),
-                'icon'      => $sm->type === 'in' ? '📥' : '📤',
-                'color'     => $sm->type === 'in' ? 'blue' : 'orange',
-            ];
-        }
-
-        usort($recentActivities, function ($a, $b) {
-            return strcmp($b['time'], $a['time']);
-        });
-        $recentActivities = array_slice($recentActivities, 0, 8);
-
-        return [
-            'totalProducts'      => $totalProducts,
-            'totalStock'         => $totalStock,
-            'totalSuppliers'     => $totalSuppliers,
-            'lowStockMedicines'  => $lowStockMedicines,
-            'lowStockCount'      => $lowStockCount,
-            'expiringMedicines'  => $expiringMedicines,
-            'expiringCount'      => $expiringCount,
-            'expiredMedicines'   => $expiredMedicines,
-            'expiredCount'       => $expiredCount,
-            'todaySalesCount'    => $todaySalesCount,
-            'todayRevenue'       => $todayRevenue,
-            'totalRevenue'       => $totalRevenue,
-            'totalPurchases'     => $totalPurchases,
-            'pendingUsersCount'  => $pendingUsersCount,
-            'totalUsers'         => $totalUsers,
-            'pharmacistCount'    => $pharmacistCount,
-            'cashierCount'       => $cashierCount,
-            'salesChartData'     => [
-                'labels'   => $salesChartLabels,
-                'counts'   => $salesChartCounts,
-                'revenue'  => $salesChartRevenue,
-            ],
-            'inventoryChartData'   => $inventoryChartData,
-            'recentActivities'     => $recentActivities,
-        ];
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Pharmacist dashboard – inventory & expiry focus
+    |--------------------------------------------------------------------------
     */
     private function pharmacistDashboard()
     {
-        $totalMedicines       = Medicine::count();
-        $totalStock           = Medicine::sum('quantity');
+        try {
+            $totalMedicines       = Medicine::count();
+            $totalStock           = Medicine::sum('quantity');
 
-        $lowStockMedicines    = $this->lowStockMedicines();
-        $lowStockCount        = $lowStockMedicines->count();
+            $lowStockMedicines    = $this->lowStockMedicines();
+            $lowStockCount        = $lowStockMedicines->count();
 
-        $expiredMedicines     = $this->expiredMedicines();
-        $expiredCount         = $expiredMedicines->count();
+            $expiredMedicines     = $this->expiredMedicines();
+            $expiredCount         = $expiredMedicines->count();
 
-        $expiring30           = $this->expiringMedicines(30);
-        $expiring60           = $this->expiringMedicines(60);
-        $expiring90           = $this->expiringMedicines(90);
+            $expiring30           = $this->expiringMedicines(30);
+            $expiring60           = $this->expiringMedicines(60);
+            $expiring90           = $this->expiringMedicines(90);
 
-        $salesAnalytics       = $this->salesAnalytics();
-        $inventoryStatus      = $this->inventoryStatus();
-        $activities           = $this->recentActivities(8);
+            $salesAnalytics       = $this->salesAnalytics();
+            $inventoryStatus      = $this->inventoryStatus();
+            $activities           = $this->recentActivities(4);
 
-        return [
-            'totalMedicines'         => $totalMedicines,
-            'totalStock'             => $totalStock,
-            'lowStockCount'          => $lowStockCount,
-            'expiredCount'           => $expiredCount,
-            'expiring30Count'        => $expiring30->count(),
-            'expiring60Count'        => $expiring60->count(),
-            'expiring90Count'        => $expiring90->count(),
-            'lowStockMedicines'      => $lowStockMedicines,
-            'expiredMedicines'       => $expiredMedicines,
-            'expiringSoon'           => [
-                '30_days' => $expiring30,
-                '60_days' => $expiring60,
-                '90_days' => $expiring90,
-            ],
-            'salesAnalytics'         => $salesAnalytics,
-            'inventoryStatus'        => $inventoryStatus,
-            'recentActivities'       => $activities,
-            'totalProducts'          => $totalMedicines,
-            'expiringCount'          => $expiring90->count(),
-            'expiringMedicines'      => $expiring90,
-        ];
+            return response()->json([
+                // ---- Summary cards ----
+                'totalMedicines'         => $totalMedicines,
+                'totalStock'             => $totalStock,
+                'lowStockCount'          => $lowStockCount,
+                'expiredCount'           => $expiredCount,
+                'expiring30Count'        => $expiring30->count(),
+                'expiring60Count'        => $expiring60->count(),
+                'expiring90Count'        => $expiring90->count(),
+
+                // ---- Lists ----
+                'lowStockMedicines'      => $lowStockMedicines,
+                'expiredMedicines'       => $expiredMedicines,
+                'expiringSoon'           => [
+                    '30_days' => $expiring30,
+                    '60_days' => $expiring60,
+                    '90_days' => $expiring90,
+                ],
+
+                // ---- Charts ----
+                'salesAnalytics'         => $salesAnalytics,
+                'inventoryStatus'        => $inventoryStatus,
+
+                // ---- Recent ----
+                'recentActivities'       => $activities,
+
+                // ---- Backward-compatible fields ----
+                'totalProducts'          => $totalMedicines,
+                'expiringCount'          => $expiring90->count(),
+                'expiringMedicines'      => $expiring90,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'message' => 'Failed to load pharmacist dashboard data'
+            ], 500);
+        }
     }
 
     /*
+    |--------------------------------------------------------------------------
     | Cashier dashboard – sales focus
+    |--------------------------------------------------------------------------
     */
     private function cashierDashboard()
     {
-        $todaySalesCount      = Sale::whereDate('sale_date', today())->count();
-        $todayRevenue         = Sale::whereDate('sale_date', today())->sum('total_amount');
-        $totalMedicines       = Medicine::count();
+        try {
+            $todaySalesCount      = Sale::whereDate('sale_date', Carbon::today())->count();
+            $todayRevenue         = Sale::whereDate('sale_date', Carbon::today())->sum('total_amount');
+            $totalMedicines       = Medicine::count();
 
-        $recentSales          = Sale::latest()
-            ->take(10)
-            ->get();
+            $recentSales          = Sale::with('user')->latest()->take(10)->get();
 
-        $todayHourly = [];
-        for ($h = 0; $h < 24; $h++) {
-            $todayHourly[] = [
-                'label' => sprintf('%02d:00', $h),
-                'total' => (float) Sale::whereDate('sale_date', today())
-                    ->whereTime('sale_date', '>=', sprintf('%02d:00:00', $h))
-                    ->whereTime('sale_date', '<', sprintf('%02d:00:00', $h + 1))
-                    ->sum('total_amount'),
-            ];
+            // Today's sales by hour for a mini chart
+            $todayHourly = [];
+            for ($h = 0; $h < 24; $h++) {
+                $start = Carbon::today()->setHour($h)->setMinute(0)->setSecond(0);
+                $end = Carbon::today()->setHour($h)->setMinute(59)->setSecond(59);
+
+                $hourlySales = Sale::whereBetween('sale_date', [$start, $end])->get();
+                $todayHourly[] = [
+                    'label' => sprintf('%02d:00', $h),
+                    'total' => (float) $hourlySales->sum('total_amount'),
+                    'count' => $hourlySales->count(),
+                ];
+            }
+
+            return response()->json([
+                // ---- Summary cards ----
+                'todaySalesCount'        => $todaySalesCount,
+                'todayRevenue'           => $todayRevenue,
+                'totalMedicines'         => $totalMedicines,
+
+                // ---- Lists ----
+                'recentSales'            => $recentSales,
+                'todayHourlySales'       => $todayHourly,
+
+                // ---- Backward-compatible fields ----
+                'totalProducts'          => $totalMedicines,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'message' => 'Failed to load cashier dashboard data'
+            ], 500);
         }
-
-        return [
-            'todaySalesCount'        => $todaySalesCount,
-            'todayRevenue'           => $todayRevenue,
-            'totalMedicines'         => $totalMedicines,
-            'recentSales'            => $recentSales,
-            'todayHourlySales'       => $todayHourly,
-            'totalProducts'          => $totalMedicines,
-        ];
     }
 }

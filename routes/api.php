@@ -14,6 +14,10 @@ use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ShelfController;
+use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\WarehouseController;
+use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\StockManagementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,75 +44,113 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     Route::put('/settings/password', [AuthController::class, 'updatePassword']);
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    // --------------------------------------------------------------------
-    // Shared Read-Only Access (Admin, Pharmacist, Cashier)
-    // --------------------------------------------------------------------
+    // ============================================================
+    // SHARED READ-ONLY ACCESS (Admin, Pharmacist, Cashier)
+    // ============================================================
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
-        // Medicines Read
+        
+        // ---- Medicines ----
         Route::get('/medicines', [MedicineController::class, 'index']);
         Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
         Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
 
-        // Stock Movements Read
+        // ---- Stock Movements ----
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
         Route::get('/stock-movements/types', [StockMovementController::class, 'getTypes']);
         Route::get('/stock-movements/summary', [StockMovementController::class, 'getSummary']);
         Route::get('/stock-movements/export-pdf', [StockMovementController::class, 'exportPdf']);
 
-        // Categories Read
+        // ---- Stock Management (NEW) ----
+        Route::get('/stock-management/summary', [StockManagementController::class, 'summary']);
+        Route::get('/stock-management/current', [StockManagementController::class, 'currentStock']);
+        Route::get('/stock-management/low-stock', [StockManagementController::class, 'lowStock']);
+        Route::get('/stock-management/expiry', [StockManagementController::class, 'expiry']);
+        Route::get('/stock-management/damaged', [StockManagementController::class, 'damaged']);
+
+        // ---- Categories ----
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
 
-        // Shelves Read
+        // ---- Shelves ----
         Route::get('/shelves', [ShelfController::class, 'index']);
         Route::get('/shelves/{shelf}', [ShelfController::class, 'show']);
 
-        // Suppliers Read
+        // ---- Suppliers ----
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
 
-        // Retail Products Read
+        // ---- Retail Products ----
         Route::get('/retail-products', [RetailProductController::class, 'index']);
         Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
+
+        // ---- Branches (Read-Only) ----
+        Route::get('/branches', [BranchController::class, 'index']);
+        Route::get('/branches/{branch}', [BranchController::class, 'show']);
+        Route::get('/branches/{branch}/inventory', [BranchController::class, 'inventory']);
+        Route::get('/branches/{branch}/sales', [BranchController::class, 'sales']);
+
+        // ---- Warehouse (Read-Only) ----
+        Route::get('/warehouse/stats', [WarehouseController::class, 'stats']);
+        Route::get('/warehouse/shelves', [WarehouseController::class, 'shelves']);
+        Route::get('/warehouse/stock', [WarehouseController::class, 'stock']);
+        Route::get('/warehouse/receiving-history', [WarehouseController::class, 'receivingHistory']);
+
+        // ---- Audit Logs (Read-Only) ----
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+        Route::get('/audit-logs/stats', [AuditLogController::class, 'stats']);
+        Route::get('/audit-logs/modules', [AuditLogController::class, 'modules']);
     });
 
-    // --------------------------------------------------------------------
-    // Write Operations - Admin & Pharmacist (Create, Update, Delete)
-    // --------------------------------------------------------------------
+    // ============================================================
+    // WRITE OPERATIONS - Admin & Pharmacist
+    // ============================================================
     Route::middleware('role:admin,pharmacist')->group(function () {
-        // Categories - Create, Update, Delete
+        
+        // ---- Categories ----
         Route::post('/categories', [CategoryController::class, 'store']);
         Route::put('/categories/{category}', [CategoryController::class, 'update']);
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
-        // Shelves - Create, Update, Delete
+        // ---- Shelves ----
         Route::post('/shelves', [ShelfController::class, 'store']);
         Route::put('/shelves/{shelf}', [ShelfController::class, 'update']);
         Route::delete('/shelves/{shelf}', [ShelfController::class, 'destroy']);
 
-        // Medicines - Create, Update, Delete
+        // ---- Medicines ----
         Route::post('/medicines', [MedicineController::class, 'store']);
         Route::post('/medicines/{medicine}', [MedicineController::class, 'update']);
         Route::put('/medicines/{medicine}', [MedicineController::class, 'update']);
         Route::patch('/medicines/{medicine}/status', [MedicineController::class, 'updateStatus']);
         Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
 
-        // Stock Movements - Create, Delete
+        // ---- Stock Movements ----
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
         Route::delete('/stock-movements/{stockMovement}', [StockMovementController::class, 'destroy']);
 
-        // Low Stock & Reports
+        // ---- Stock Management ----
+        Route::post('/stock-management/adjust', [StockManagementController::class, 'adjust']);
+        Route::post('/stock-management/restock', [StockManagementController::class, 'restock']);
+        Route::post('/stock-management/quarantine', [StockManagementController::class, 'quarantine']);
+
+        // ---- Low Stock & Reports ----
         Route::get('/low-stock', [LowStockController::class, 'index']);
         Route::get('/low-stock/export-pdf', [LowStockController::class, 'exportPdf']);
         Route::get('/reports', [ReportController::class, 'index']);
+
+        // ---- Warehouse Operations ----
+        Route::post('/warehouse/receive', [WarehouseController::class, 'receive']);
+        Route::post('/warehouse/transfer/{transfer}/approve', [WarehouseController::class, 'approveTransfer']);
+        Route::post('/warehouse/transfer/{transfer}/complete', [WarehouseController::class, 'completeTransfer']);
+        Route::get('/warehouse/transfer-requests', [WarehouseController::class, 'transferRequests']);
     });
 
-    // --------------------------------------------------------------------
-    // Admin Only — Management
-    // --------------------------------------------------------------------
+    // ============================================================
+    // ADMIN ONLY — Full Management
+    // ============================================================
     Route::middleware('role:admin')->group(function () {
-        // User Management
+        
+        // ---- User Management ----
         Route::get('/users', [UserController::class, 'index']);
         Route::get('/users/stats', [UserController::class, 'stats']);
         Route::post('/users', [UserController::class, 'store']);
@@ -117,10 +159,10 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::post('/users/{user}/approve', [UserController::class, 'approve']);
         Route::post('/users/{user}/reject', [UserController::class, 'reject']);
 
-        // Suppliers Write
+        // ---- Suppliers ----
         Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
 
-        // Purchase Orders
+        // ---- Purchase Orders ----
         Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
         Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
         Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
@@ -133,11 +175,25 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
         Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
+
+        // ---- Branches (Full CRUD) ----
+        Route::post('/branches', [BranchController::class, 'store']);
+        Route::put('/branches/{branch}', [BranchController::class, 'update']);
+        Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
+        Route::post('/branches/{branch}/transfer-stock', [BranchController::class, 'transferStock']);
+
+        // ---- Retail Products ----
+        Route::post('/retail-products', [RetailProductController::class, 'store']);
+        Route::put('/retail-products/{retailProduct}', [RetailProductController::class, 'update']);
+        Route::delete('/retail-products/{retailProduct}', [RetailProductController::class, 'destroy']);
+
+        // ---- Audit Logs (Export) ----
+        Route::get('/audit-logs/export', [AuditLogController::class, 'export']);
     });
 
-    // --------------------------------------------------------------------
-    // Sales — Read-Only (Admin, Pharmacist, Cashier)
-    // --------------------------------------------------------------------
+    // ============================================================
+    // SALES — Read-Only (Admin, Pharmacist, Cashier)
+    // ============================================================
     Route::middleware('role:admin,pharmacist,cashier')->group(function () {
         Route::get('/sales', [SaleController::class, 'index']);
         Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
@@ -147,37 +203,28 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/sales/{sale}/receipt/print', [SaleController::class, 'print']);
     });
 
-    // --------------------------------------------------------------------
-    // Sales History & Export — Admin & Cashier
-    // --------------------------------------------------------------------
+    // ============================================================
+    // SALES History & Export — Admin & Cashier
+    // ============================================================
     Route::middleware('role:admin,cashier')->group(function () {
         Route::get('/sales/history', [SaleController::class, 'history']);
         Route::post('/sales/export', [SaleController::class, 'export']);
         Route::get('/sales/export', [SaleController::class, 'export']);
     });
 
-    // --------------------------------------------------------------------
-    // Sales Operations (Pharmacist Only)
-    // --------------------------------------------------------------------
+    // ============================================================
+    // SALES Operations — Pharmacist Only
+    // ============================================================
     Route::middleware('role:pharmacist')->group(function () {
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
         Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
     });
 
-    // --------------------------------------------------------------------
-    // Sales — Cashier Only (complete payment & finalize sales)
-    // --------------------------------------------------------------------
+    // ============================================================
+    // SALES — Cashier Only
+    // ============================================================
     Route::middleware('role:cashier')->group(function () {
         Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
         Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
-    });
-
-    // --------------------------------------------------------------------
-    // Retail Products — Write (Admin only)
-    // --------------------------------------------------------------------
-    Route::middleware('role:admin')->group(function () {
-        Route::post('/retail-products', [RetailProductController::class, 'store']);
-        Route::put('/retail-products/{retailProduct}', [RetailProductController::class, 'update']);
-        Route::delete('/retail-products/{retailProduct}', [RetailProductController::class, 'destroy']);
     });
 });
