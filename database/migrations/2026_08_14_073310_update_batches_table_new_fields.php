@@ -3,11 +3,18 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
+        // Drop existing indexes if they exist
+        $this->dropIndexIfExists('batches', 'batches_status_index');
+        $this->dropIndexIfExists('batches', 'batches_received_at_index');
+        $this->dropIndexIfExists('batches', 'batches_expiry_date_index');
+        $this->dropIndexIfExists('batches', 'batches_batch_number_index');
+
         Schema::table('batches', function (Blueprint $table) {
             // Add new fields if missing
             if (!Schema::hasColumn('batches', 'manufacturer')) {
@@ -53,22 +60,11 @@ return new class extends Migration
                       ->default('available')->after('quantity');
             }
 
-            // Add indexes - using try-catch
-            try {
-                $table->index('status');
-            } catch (\Exception $e) {}
-
-            try {
-                $table->index('received_at');
-            } catch (\Exception $e) {}
-
-            try {
-                $table->index('expiry_date');
-            } catch (\Exception $e) {}
-
-            try {
-                $table->index('batch_number');
-            } catch (\Exception $e) {}
+            // Add indexes
+            $table->index('status', 'batches_status_index');
+            $table->index('received_at', 'batches_received_at_index');
+            $table->index('expiry_date', 'batches_expiry_date_index');
+            $table->index('batch_number', 'batches_batch_number_index');
         });
     }
 
@@ -96,22 +92,49 @@ return new class extends Migration
                 $table->dropConstrainedForeignId('purchase_order_id');
             }
 
-            // Drop indexes - using try-catch
-            try {
-                $table->dropIndex(['status']);
-            } catch (\Exception $e) {}
-
-            try {
-                $table->dropIndex(['received_at']);
-            } catch (\Exception $e) {}
-
-            try {
-                $table->dropIndex(['expiry_date']);
-            } catch (\Exception $e) {}
-
-            try {
-                $table->dropIndex(['batch_number']);
-            } catch (\Exception $e) {}
+            // Drop indexes
+            $this->dropIndexIfExists('batches', 'batches_status_index');
+            $this->dropIndexIfExists('batches', 'batches_received_at_index');
+            $this->dropIndexIfExists('batches', 'batches_expiry_date_index');
+            $this->dropIndexIfExists('batches', 'batches_batch_number_index');
         });
+    }
+
+    /**
+     * Check if an index exists and drop it
+     */
+    private function dropIndexIfExists(string $table, string $indexName): void
+    {
+        try {
+            $connection = Schema::getConnection();
+            $driver = $connection->getDriverName();
+            
+            if ($driver === 'mysql') {
+                $result = $connection->select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
+                if (count($result) > 0) {
+                    $connection->statement("ALTER TABLE {$table} DROP INDEX {$indexName}");
+                }
+            } elseif ($driver === 'pgsql') {
+                $result = $connection->select("SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?", [$table, $indexName]);
+                if (count($result) > 0) {
+                    $connection->statement("DROP INDEX {$indexName}");
+                }
+            } else {
+                // SQLite - use PRAGMA to check
+                try {
+                    $connection->statement("DROP INDEX IF EXISTS {$indexName}");
+                } catch (\Exception $e) {
+                    // Index doesn't exist, skip
+                }
+            }
+        } catch (\Exception $e) {
+            // Fallback: try to drop and ignore errors
+            try {
+                $connection = Schema::getConnection();
+                $connection->statement("ALTER TABLE {$table} DROP INDEX {$indexName}");
+            } catch (\Exception $e) {
+                // Index doesn't exist, skip
+            }
+        }
     }
 };

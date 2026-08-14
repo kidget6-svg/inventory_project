@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // First, check and drop existing indexes if they exist
+        $this->dropIndexIfExists('sales', 'sales_customer_name_index');
+        $this->dropIndexIfExists('sales', 'sales_sale_date_index');
+
         Schema::table('sales', function (Blueprint $table) {
             // Add customer fields if missing
             if (!Schema::hasColumn('sales', 'customer_name')) {
@@ -34,19 +38,9 @@ return new class extends Migration
                 $table->text('notes')->nullable();
             }
 
-            // Add indexes - using try-catch to handle duplicates
-            // Note: We can't check if index exists without Doctrine, so we use try-catch
-            try {
-                $table->index('customer_name');
-            } catch (\Exception $e) {
-                // Index already exists, skip
-            }
-
-            try {
-                $table->index('sale_date');
-            } catch (\Exception $e) {
-                // Index already exists, skip
-            }
+            // Add indexes
+            $table->index('customer_name', 'sales_customer_name_index');
+            $table->index('sale_date', 'sales_sale_date_index');
         });
     }
 
@@ -63,18 +57,50 @@ return new class extends Migration
                 'notes'
             ]);
             
-            // Drop indexes - using try-catch
-            try {
-                $table->dropIndex('sales_customer_name_index');
-            } catch (\Exception $e) {
-                // Index doesn't exist, skip
-            }
-
-            try {
-                $table->dropIndex('sales_sale_date_index');
-            } catch (\Exception $e) {
-                // Index doesn't exist, skip
-            }
+            // Drop indexes
+            $this->dropIndexIfExists('sales', 'sales_customer_name_index');
+            $this->dropIndexIfExists('sales', 'sales_sale_date_index');
         });
+    }
+
+    /**
+     * Check if an index exists and drop it
+     */
+    private function dropIndexIfExists(string $table, string $indexName): void
+    {
+        try {
+            // Get the database connection
+            $connection = Schema::getConnection();
+            $driver = $connection->getDriverName();
+            
+            // Different approaches for different database drivers
+            if ($driver === 'mysql') {
+                $result = $connection->select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
+                if (count($result) > 0) {
+                    $connection->statement("ALTER TABLE {$table} DROP INDEX {$indexName}");
+                }
+            } elseif ($driver === 'pgsql') {
+                // PostgreSQL approach
+                $result = $connection->select("SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?", [$table, $indexName]);
+                if (count($result) > 0) {
+                    $connection->statement("DROP INDEX {$indexName}");
+                }
+            } else {
+                // SQLite approach - try-catch
+                try {
+                    $connection->statement("DROP INDEX IF EXISTS {$indexName}");
+                } catch (\Exception $e) {
+                    // Index doesn't exist, skip
+                }
+            }
+        } catch (\Exception $e) {
+            // If we can't check, try to drop and ignore errors
+            try {
+                $connection = Schema::getConnection();
+                $connection->statement("ALTER TABLE {$table} DROP INDEX {$indexName}");
+            } catch (\Exception $e) {
+                // Index doesn't exist, skip
+            }
+        }
     }
 };

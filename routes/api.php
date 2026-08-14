@@ -14,6 +14,11 @@ use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\ShelfController;
+use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\WarehouseController;
+use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\StockManagementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,283 +38,166 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // Account & Dashboard
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
-
-    Route::middleware('permission:dashboard.view')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index']);
-    });
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
     // --------------------------------------------------------------------
-    // Page: Users
+    // USERS
     // --------------------------------------------------------------------
-    Route::middleware('permission:users.view')->group(function () {
-        Route::get('/users', [UserController::class, 'index']);
-        Route::get('/users/stats', [UserController::class, 'stats']);
-    });
-
-    Route::middleware('permission:users.create')->group(function () {
-        Route::post('/users', [UserController::class, 'store']);
-    });
-
-    Route::middleware('permission:users.edit')->group(function () {
-        Route::put('/users/{user}', [UserController::class, 'update']);
-    });
-
-    Route::middleware('permission:users.delete')->group(function () {
-        Route::delete('/users/{user}', [UserController::class, 'destroy']);
-    });
-
-    Route::middleware('permission:users.approve')->group(function () {
-        Route::post('/users/{user}/approve', [UserController::class, 'approve']);
-        Route::post('/users/{user}/reject', [UserController::class, 'reject']);
-    });
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/stats', [UserController::class, 'stats']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{user}', [UserController::class, 'update']);
+    Route::delete('/users/{user}', [UserController::class, 'destroy']);
+    Route::post('/users/{user}/approve', [UserController::class, 'approve']);
+    Route::post('/users/{user}/reject', [UserController::class, 'reject']);
 
     // --------------------------------------------------------------------
-    // Page: Roles & Permissions
+    // ROLES
     // --------------------------------------------------------------------
-    Route::middleware('permission:roles.view')->group(function () {
-        Route::get('/roles', [RoleController::class, 'index']);
-    });
-
-    Route::middleware('permission:roles.create')->group(function () {
-        Route::post('/roles', [RoleController::class, 'store']);
-    });
-
-    Route::middleware('permission:roles.edit')->group(function () {
-        Route::put('/roles/{role}', [RoleController::class, 'update']);
-    });
-
-    Route::middleware('permission:roles.delete')->group(function () {
-        Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
-    });
+    Route::get('/roles', [RoleController::class, 'index']);
+    Route::post('/roles', [RoleController::class, 'store']);
+    Route::put('/roles/{role}', [RoleController::class, 'update']);
+    Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
 
     // --------------------------------------------------------------------
-    // Page: Medicines
+    // CATEGORIES
     // --------------------------------------------------------------------
-    Route::middleware('permission:medicines.view')->group(function () {
-        Route::get('/medicines', [MedicineController::class, 'index']);
-        Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
-    });
-
-    Route::middleware('permission:medicines.create')->group(function () {
-        Route::post('/medicines', [MedicineController::class, 'store']);
-    });
-
-    Route::middleware('permission:medicines.edit')->group(function () {
-        Route::put('/medicines/{medicine}', [MedicineController::class, 'update']);
-    });
-
-    Route::middleware('permission:medicines.toggle-status')->group(function () {
-        Route::patch('/medicines/{medicine}/status', [MedicineController::class, 'updateStatus']);
-    });
-
-    Route::middleware('permission:medicines.delete')->group(function () {
-        Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
-    });
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/categories/{category}', [CategoryController::class, 'show']);
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::put('/categories/{category}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
     // --------------------------------------------------------------------
-    // Page: Categories
+    // SHELVES
     // --------------------------------------------------------------------
-    Route::middleware('permission:categories.view')->group(function () {
-        Route::get('/categories', [CategoryController::class, 'index']);
-        Route::get('/categories/{category}', [CategoryController::class, 'show']);
-    });
-
-    Route::middleware('permission:categories.create')->group(function () {
-        Route::post('/categories', [CategoryController::class, 'store']);
-    });
-
-    Route::middleware('permission:categories.edit')->group(function () {
-        Route::put('/categories/{category}', [CategoryController::class, 'update']);
-    });
-
-    Route::middleware('permission:categories.delete')->group(function () {
-        Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
-    });
+    Route::get('/shelves', [ShelfController::class, 'index']);
+    Route::get('/shelves/{shelf}', [ShelfController::class, 'show']);
+    Route::post('/shelves', [ShelfController::class, 'store']);
+    Route::put('/shelves/{shelf}', [ShelfController::class, 'update']);
+    Route::delete('/shelves/{shelf}', [ShelfController::class, 'destroy']);
 
     // --------------------------------------------------------------------
-    // Page: Suppliers
+    // SUPPLIERS
     // --------------------------------------------------------------------
-    Route::middleware('permission:suppliers.view')->group(function () {
-        Route::get('/suppliers', [SupplierController::class, 'index']);
-        Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
-    });
-
-    Route::middleware('permission:suppliers.create')->group(function () {
-        Route::post('/suppliers', [SupplierController::class, 'store']);
-    });
-
-    Route::middleware('permission:suppliers.edit')->group(function () {
-        Route::put('/suppliers/{supplier}', [SupplierController::class, 'update']);
-    });
-
-    Route::middleware('permission:suppliers.delete')->group(function () {
-        Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy']);
-    });
+    Route::get('/suppliers', [SupplierController::class, 'index']);
+    Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+    Route::post('/suppliers', [SupplierController::class, 'store']);
+    Route::put('/suppliers/{supplier}', [SupplierController::class, 'update']);
+    Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy']);
 
     // --------------------------------------------------------------------
-    // Page: Retail & OTC Products
+    // MEDICINES
     // --------------------------------------------------------------------
-    Route::middleware('permission:retail-products.view')->group(function () {
-        Route::get('/retail-products', [RetailProductController::class, 'index']);
-        Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
-    });
-
-    Route::middleware('permission:retail-products.create')->group(function () {
-        Route::post('/retail-products', [RetailProductController::class, 'store']);
-    });
-
-    Route::middleware('permission:retail-products.edit')->group(function () {
-        Route::put('/retail-products/{retailProduct}', [RetailProductController::class, 'update']);
-    });
-
-    Route::middleware('permission:retail-products.delete')->group(function () {
-        Route::delete('/retail-products/{retailProduct}', [RetailProductController::class, 'destroy']);
-    });
+    Route::get('/medicines', [MedicineController::class, 'index']);
+    Route::get('/medicines/{medicine}', [MedicineController::class, 'show']);
+    Route::post('/medicines', [MedicineController::class, 'store']);
+    Route::put('/medicines/{medicine}', [MedicineController::class, 'update']);
+    Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
+    Route::patch('/medicines/{medicine}/status', [MedicineController::class, 'updateStatus']);
 
     // --------------------------------------------------------------------
-    // Page: Inventory & Stock Movements
+    // RETAIL PRODUCTS
     // --------------------------------------------------------------------
-    Route::middleware('permission:stock-movements.view')->group(function () {
-        Route::get('/stock-movements', [StockMovementController::class, 'index']);
-        Route::get('/stock-movements/types', [StockMovementController::class, 'getTypes']);
-        Route::get('/stock-movements/summary', [StockMovementController::class, 'getSummary']);
-        Route::get('/stock-movements/{id}', [StockMovementController::class, 'show']);
-    });
-
-    Route::middleware('permission:stock-movements.create')->group(function () {
-        Route::post('/stock-movements', [StockMovementController::class, 'store']);
-    });
-
-    Route::middleware('permission:stock-movements.delete')->group(function () {
-        Route::delete('/stock-movements/{id}', [StockMovementController::class, 'destroy']);
-    });
+    Route::get('/retail-products', [RetailProductController::class, 'index']);
+    Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
+    Route::post('/retail-products', [RetailProductController::class, 'store']);
+    Route::put('/retail-products/{retailProduct}', [RetailProductController::class, 'update']);
+    Route::delete('/retail-products/{retailProduct}', [RetailProductController::class, 'destroy']);
 
     // --------------------------------------------------------------------
-    // Page: Low Stock
+    // STOCK MOVEMENTS
     // --------------------------------------------------------------------
-    Route::middleware('permission:lowstock.view')->group(function () {
-        Route::get('/low-stock', [LowStockController::class, 'index']);
-        Route::get('/medicines/low-stock', [MedicineController::class, 'getLowStock']);
-    });
-
-    Route::middleware('permission:lowstock.order-now')->group(function () {
-        Route::post('/low-stock/order-now/{medicine}', [LowStockController::class, 'orderNow']);
-    });
+    Route::get('/stock-movements', [StockMovementController::class, 'index']);
+    Route::get('/stock-movements/types', [StockMovementController::class, 'getTypes']);
+    Route::get('/stock-movements/summary', [StockMovementController::class, 'getSummary']);
+    Route::get('/stock-movements/{id}', [StockMovementController::class, 'show']);
+    Route::post('/stock-movements', [StockMovementController::class, 'store']);
+    Route::delete('/stock-movements/{id}', [StockMovementController::class, 'destroy']);
 
     // --------------------------------------------------------------------
-    // Page: Purchase Orders
+    // STOCK MANAGEMENT
     // --------------------------------------------------------------------
-    Route::middleware('permission:purchase-orders.view')->group(function () {
-        Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
-        Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
-    });
-
-    Route::middleware('permission:purchase-orders.create')->group(function () {
-        Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
-    });
-
-    Route::middleware('permission:purchase-orders.edit')->group(function () {
-        Route::put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update']);
-    });
-
-    Route::middleware('permission:purchase-orders.delete')->group(function () {
-        Route::delete('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy']);
-    });
-
-    Route::middleware('permission:purchase-orders.submit')->group(function () {
-        Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
-    });
-
-    Route::middleware('permission:purchase-orders.approve')->group(function () {
-        Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);
-    });
-
-    Route::middleware('permission:purchase-orders.deliver')->group(function () {
-        Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
-    });
-
-    Route::middleware('permission:purchase-orders.complete')->group(function () {
-        Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
-    });
-
-    Route::middleware('permission:purchase-orders.cancel')->group(function () {
-        Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel']);
-    });
-
-    Route::middleware('permission:purchase-orders.reopen')->group(function () {
-        Route::post('/purchase-orders/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopen']);
-    });
-
-    Route::middleware('permission:purchase-orders.send')->group(function () {
-        Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
-        Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
-        Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
-        Route::post('/purchase-orders/{purchaseOrder}/send-pdf', [PurchaseOrderController::class, 'sendPdfToSupplier']);
-    });
-
-    Route::middleware('permission:purchase-orders.download')->group(function () {
-        Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
-        Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
-    });
+    Route::get('/stock-management/summary', [StockManagementController::class, 'summary']);
+    Route::get('/stock-management/current', [StockManagementController::class, 'currentStock']);
+    Route::get('/stock-management/low-stock', [StockManagementController::class, 'lowStock']);
+    Route::get('/stock-management/expiry', [StockManagementController::class, 'expiry']);
+    Route::get('/stock-management/damaged', [StockManagementController::class, 'damaged']);
 
     // --------------------------------------------------------------------
-    // Page: Prescription Sales (pharmacist)
+    // LOW STOCK
     // --------------------------------------------------------------------
-    Route::middleware('permission:prescription-sales.dispense')->group(function () {
-        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
-    });
+    Route::get('/low-stock', [LowStockController::class, 'index']);
+    Route::post('/low-stock/order-now/{medicine}', [LowStockController::class, 'orderNow']);
 
     // --------------------------------------------------------------------
-    // Page: Retail & OTC Sales (pharmacist)
+    // PURCHASE ORDERS
     // --------------------------------------------------------------------
-    Route::middleware('permission:retail-otc-sales.draft')->group(function () {
-        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
-    });
+    Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+    Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
+    Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
+    Route::put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update']);
+    Route::delete('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy']);
+    Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
+    Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);
+    Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
+    Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
+    Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel']);
+    Route::post('/purchase-orders/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopen']);
+    Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
+    Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
+    Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
 
     // --------------------------------------------------------------------
-    // Page: Retail POS (cashier)
+    // SALES
     // --------------------------------------------------------------------
-    Route::middleware('permission:retail-pos.checkout')->group(function () {
-        Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
-    });
+    Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
+    Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
+    Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
+    Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
+    Route::get('/sales', [SaleController::class, 'index']);
+    Route::get('/sales/history', [SaleController::class, 'history']);
+    Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
+    Route::get('/sales/stats', [SaleController::class, 'getStats']);
+    Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
+    Route::get('/sales/{sale}/receipt/pdf', [SaleController::class, 'download']);
+    Route::get('/sales/{sale}/receipt/print', [SaleController::class, 'print']);
+    Route::get('/sales/export', [SaleController::class, 'export']);
 
     // --------------------------------------------------------------------
-    // Page: Prescription Checkout (cashier)
+    // BRANCHES
     // --------------------------------------------------------------------
-    Route::middleware('permission:prescription-checkout.complete')->group(function () {
-        Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
-    });
-
-    // --------------------------------------------------------------------
-    // Page: Sales History
-    // --------------------------------------------------------------------
-    Route::middleware('permission:sales-history.view')->group(function () {
-        Route::get('/sales', [SaleController::class, 'index']);
-        Route::get('/sales/history', [SaleController::class, 'history']);
-        Route::get('/sales/today', [SaleController::class, 'getTodaySales']);
-        Route::get('/sales/stats', [SaleController::class, 'getStats']);
-    });
-
-    Route::middleware('permission:sales-history.receipt')->group(function () {
-        Route::get('/sales/{sale}/receipt', [SaleController::class, 'receipt']);
-    });
-
-    Route::middleware('permission:sales-history.download')->group(function () {
-        Route::get('/sales/{sale}/receipt/pdf', [SaleController::class, 'download']);
-    });
-
-    Route::middleware('permission:sales-history.print')->group(function () {
-        Route::get('/sales/{sale}/receipt/print', [SaleController::class, 'print']);
-    });
-
-    Route::middleware('permission:sales-history.export')->group(function () {
-        Route::get('/sales/export', [SaleController::class, 'export']);
-    });
+    Route::get('/branches', [BranchController::class, 'index']);
+    Route::get('/branches/stats', [BranchController::class, 'stats']);
+    Route::get('/branches/{branch}', [BranchController::class, 'show']);
+    Route::post('/branches', [BranchController::class, 'store']);
+    Route::put('/branches/{branch}', [BranchController::class, 'update']);
+    Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
+    Route::get('/branches/{branch}/inventory', [BranchController::class, 'inventory']);
+    Route::get('/branches/{branch}/sales', [BranchController::class, 'sales']);
 
     // --------------------------------------------------------------------
-    // Page: Reports
+    // WAREHOUSE
     // --------------------------------------------------------------------
-    Route::middleware('permission:reports.view')->group(function () {
-        Route::get('/reports', [ReportController::class, 'index']);
-    });
+    Route::get('/warehouse/stats', [WarehouseController::class, 'stats']);
+    Route::get('/warehouse/shelves', [WarehouseController::class, 'shelves']);
+    Route::get('/warehouse/stock', [WarehouseController::class, 'stock']);
+    Route::get('/warehouse/receiving-history', [WarehouseController::class, 'receivingHistory']);
+    Route::get('/warehouse/transfer-requests', [WarehouseController::class, 'transferRequests']);
+    Route::post('/warehouse/receive', [WarehouseController::class, 'receive']);
+    Route::post('/warehouse/transfer/{transfer}/approve', [WarehouseController::class, 'approveTransfer']);
+    Route::post('/warehouse/transfer/{transfer}/complete', [WarehouseController::class, 'completeTransfer']);
+
+    // --------------------------------------------------------------------
+    // REPORTS
+    // --------------------------------------------------------------------
+    Route::get('/reports', [ReportController::class, 'index']);
+
+    // --------------------------------------------------------------------
+    // AUDIT LOGS
+    // --------------------------------------------------------------------
+    Route::get('/audit-logs', [AuditLogController::class, 'index']);
+    Route::get('/audit-logs/stats', [AuditLogController::class, 'stats']);
+    Route::get('/audit-logs/modules', [AuditLogController::class, 'modules']);
+    Route::get('/audit-logs/export', [AuditLogController::class, 'export']);
 });

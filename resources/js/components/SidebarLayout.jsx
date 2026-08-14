@@ -5,7 +5,8 @@ import {
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
     ArrowLeftRight, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText, ShieldCheck
+    ShoppingBag, FileText, ShieldCheck,
+    AlertTriangle, History, Warehouse, Building2, Boxes, ClipboardList, Layers, Tag
 } from 'lucide-react';
 
 // Single permission-driven menu. Admin sees every entry automatically
@@ -13,26 +14,36 @@ import {
 const menuItems = [
     { section: 'Main' },
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['dashboard.view'] },
+    
     { section: 'Point of Sale' },
     { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['prescription-sales.view'] },
     { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['prescription-checkout.view'] },
     { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['retail-otc-sales.view'] },
     { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['retail-pos.view'] },
+    
     { section: 'Product Management' },
     { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view'] },
     { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail-products.view'] },
     { to: '/categories', label: 'Categories', icon: FolderTree, permissions: ['categories.view'] },
     { to: '/suppliers', label: 'Suppliers', icon: Truck, permissions: ['suppliers.view'] },
-    { section: 'Inventory & Purchasing' },
-    { to: '/inventory', label: 'Inventory', icon: Package, permissions: ['inventory.view'] },
-    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
+    
+    { section: 'Warehouse & Inventory' },
+    { to: '/warehouse', label: 'Warehouse', icon: Warehouse, permissions: ['warehouse.view'] },
+    { to: '/stock-management', label: 'Stock Management', icon: Boxes, permissions: ['inventory.view'] },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['stock-movements.view'] },
     { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle, permissions: ['lowstock.view'] },
-    { section: 'Reports' },
-    { to: '/reports', label: 'Reports', icon: BarChart3, permissions: ['reports.view'] },
+    { to: '/branches', label: 'Branches', icon: Building2, permissions: ['branches.view'] },
+    
+    { section: 'Operations' },
+    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
+    
+    { section: 'Reports & Analytics' },
+    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3, permissions: ['reports.view'] },
     { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales-history.view'] },
+    { to: '/audit-logs', label: 'Audit Logs', icon: ClipboardList, permissions: ['audit.view'] },
+    
     { section: 'Administration' },
-    { to: '/users', label: 'Users', icon: Users, permissions: ['users.view'] },
+    { to: '/users', label: 'User Management', icon: Users, permissions: ['users.view'] },
     { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.view'] },
 ];
 
@@ -82,6 +93,9 @@ export default function SidebarLayout({ children, pageTitle }) {
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const accountMenuRef = useRef(null);
     const menu = buildMenu(menuItems, hasAnyPermission);
+    
+    const userRole = user?.role || 'guest';
+    const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
     const handleLogout = async () => {
         await logout();
@@ -97,16 +111,6 @@ export default function SidebarLayout({ children, pageTitle }) {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    // Check if user has access to a route
-    const hasAccess = (path) => {
-        // Super Admin has access to everything
-        if (userRole === 'super_admin') return true;
-        
-        // Check if path exists in user's menu
-        const userMenu = getMenu(userRole);
-        return userMenu.some(item => item.to === path);
-    };
 
     const sidebarWidth = collapsed ? 'md:w-20' : 'md:w-64';
     const mainMargin = collapsed ? 'md:ml-20' : 'md:ml-64';

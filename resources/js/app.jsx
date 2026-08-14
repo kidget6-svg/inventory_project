@@ -13,8 +13,13 @@ import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
 import Medicines from './pages/Medicines';
-// 🗑️ REMOVED: Inventory - Merged into StockManagement
-import StockManagement from './pages/StockManagement'; // 🆕 NEW
+
+// 🆕 NEW PAGES
+import StockManagement from './pages/StockManagement';
+import Warehouse from './pages/Warehouse';
+import Branches from './pages/Branches';
+import AuditLogs from './pages/AuditLogs';
+
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
@@ -24,7 +29,6 @@ import RetailSales from './pages/RetailSales';
 import RetailOTCSales from './pages/RetailOTCSales';
 import RetailProducts from './pages/RetailProducts';
 import StockMovements from './pages/StockMovements';
-// 🗑️ REMOVED: LowStock - Merged into StockManagement
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -118,9 +122,12 @@ function App() {
             <Route path="/medicines" element={
                 <ProtectedRoute permissions={['medicines.view']} title="Medicines"><Medicines /></ProtectedRoute>
             } />
-            <Route path="/inventory" element={
-                <ProtectedRoute permissions={['inventory.view']} title="Stock Inventory"><Inventory /></ProtectedRoute>
+            
+            {/* ✅ NEW: Stock Management - Replaces Inventory */}
+            <Route path="/stock-management" element={
+                <ProtectedRoute permissions={['inventory.view']} title="Stock Management"><StockManagement /></ProtectedRoute>
             } />
+            
             <Route path="/categories" element={
                 <ProtectedRoute permissions={['categories.view']} title="Medicine Categories"><Categories /></ProtectedRoute>
             } />
@@ -129,10 +136,24 @@ function App() {
             } />
 
             {/* ============================================================
+                WAREHOUSE (NEW)
+            ============================================================ */}
+            <Route path="/warehouse" element={
+                <ProtectedRoute permissions={['warehouse.view']} title="Warehouse"><Warehouse /></ProtectedRoute>
+            } />
+
+            {/* ============================================================
                 BRANCHES (NEW)
             ============================================================ */}
             <Route path="/branches" element={
-                <ProtectedRoute roles={['admin']} title="Branches"><Branches /></ProtectedRoute>
+                <ProtectedRoute permissions={['branches.view']} title="Branches"><Branches /></ProtectedRoute>
+            } />
+
+            {/* ============================================================
+                AUDIT LOGS (NEW)
+            ============================================================ */}
+            <Route path="/audit-logs" element={
+                <ProtectedRoute permissions={['audit.view']} title="Audit Logs"><AuditLogs /></ProtectedRoute>
             } />
 
             {/* ============================================================
@@ -174,14 +195,22 @@ function App() {
                 <ProtectedRoute permissions={['sales-history.view']} title="Sales History"><SalesHistory /></ProtectedRoute>
             } />
 
-            {/* Reports & Tracking */}
+            {/* ============================================================
+                STOCK MOVEMENTS
+            ============================================================ */}
             <Route path="/stock-movements" element={
                 <ProtectedRoute permissions={['stock-movements.view']} title="Stock Movements"><StockMovements /></ProtectedRoute>
             } />
 
             {/* ============================================================
+                REPORTS
+            ============================================================ */}
+            <Route path="/reports" element={
+                <ProtectedRoute permissions={['reports.view']} title="System Reports"><Reports /></ProtectedRoute>
+            } />
+
+            {/* ============================================================
                 LEGACY REDIRECTS
-                Redirect old paths to new ones
             ============================================================ */}
             {/* Inventory → StockManagement */}
             <Route path="/inventory" element={
@@ -189,10 +218,7 @@ function App() {
             } />
             {/* LowStock → StockManagement */}
             <Route path="/low-stock" element={
-                <ProtectedRoute permissions={['lowstock.view']} title="Low Stock Alerts"><LowStock /></ProtectedRoute>
-            } />
-            <Route path="/reports" element={
-                <ProtectedRoute permissions={['reports.view']} title="System Reports"><Reports /></ProtectedRoute>
+                <Navigate to="/stock-management" replace />
             } />
 
             {/* ============================================================
@@ -206,7 +232,12 @@ function App() {
 function RootApp() {
     return (
         <AuthProvider>
-            <BrowserRouter>
+            <BrowserRouter
+                future={{
+                    v7_startTransition: true,
+                    v7_relativeSplatPath: true,
+                }}
+            >
                 <App />
             </BrowserRouter>
             <ToastContainer />
