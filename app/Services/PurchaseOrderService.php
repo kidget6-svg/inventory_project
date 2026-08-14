@@ -29,6 +29,11 @@ class PurchaseOrderService
 
     /**
      * Send the Purchase Order PDF to the supplier via email.
+     *
+     * After the email is successfully handed off to the mail driver,
+     * the sent_at timestamp is recorded so that every email-sending
+     * action (send, resend, send-email) captures the exact moment
+     * the purchase order email was dispatched.
      */
     public function sendToSupplier(PurchaseOrder $purchaseOrder): void
     {
@@ -46,5 +51,10 @@ class PurchaseOrderService
 
         Mail::to($purchaseOrder->supplier->email)
             ->send(new PurchaseOrderMail($purchaseOrder, $pdfContent, $adminName));
+
+        // Record the exact date/time the email was successfully sent.
+        // This runs only after Mail::send() returns without throwing,
+        // guaranteeing sent_at reflects a successful dispatch.
+        $purchaseOrder->forceFill(['sent_at' => now()])->save();
     }
 }

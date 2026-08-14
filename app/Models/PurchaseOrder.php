@@ -190,7 +190,9 @@ class PurchaseOrder extends Model
 
     /**
      * Send the purchase order to the supplier (pending -> sent).
-     * Records the sent_at timestamp.
+     * The sent_at timestamp is recorded by the service layer
+     * (PurchaseOrderService::sendToSupplier) immediately after
+     * the email is successfully dispatched, so it is not set here.
      */
     public function send(): bool
     {
@@ -200,7 +202,6 @@ class PurchaseOrder extends Model
 
         return $this->update([
             'status' => 'sent',
-            'sent_at' => now(),
         ]);
     }
 
@@ -323,5 +324,83 @@ class PurchaseOrder extends Model
 
             throw $e;
         }
+    }
+
+    // ==================================================================
+    // Email status display helpers
+    // ==================================================================
+
+    /**
+     * Mail drivers that provide delivery tracking (e.g. via webhooks).
+     * Drivers not in this list cannot confirm whether an email was
+     * actually delivered to the recipient.
+     */
+    public static function deliveryTrackingDrivers(): array
+    {
+        return ['ses', 'mailgun', 'postmark'];
+    }
+
+    /**
+     * Whether the currently configured mail driver can confirm
+     * email delivery (e.g. via webhooks or delivery receipts).
+     */
+    public static function mailDriverSupportsDeliveryTracking(): bool
+    {
+        $driver = config('mail.mailer') ?? config('mail.driver') ?? 'log';
+
+        return in_array($driver, self::deliveryTrackingDrivers());
+    }
+
+    /**
+     * Human-readable "Sent At" display value.
+     *
+     * - "Not sent yet." when the email has not been dispatched.
+     * - The formatted timestamp once the email has been sent.
+     */
+    public function sentAtDisplay(): string
+    {
+        if (! $this->sent_at) {
+            return 'Not sent yet.';
+        }
+
+        return $this->sent_at->format('M d, Y h:i A');
+    }
+
+    /**
+     * Human-readable "Delivered At" display value.
+     *
+     * - The formatted timestamp when delivery has been confirmed.
+     * - "Delivery confirmation unavailable" when the current mail
+     *   driver does not provide delivery tracking.
+     * - "Not delivered yet." when tracking IS available but delivery
+     *   has not yet been confirmed.
+     */
+    public function deliveredAtDisplay(): string
+    {
+        if ($this->delivered_at) {
+            return $this->delivered_at->format('M d, Y h:i A');
+        }
+
+        if (! self::mailDriverSupportsDeliveryTracking()) {
+            return 'Delivery confirmation unavailable';
+        }
+
+        return 'Not delivered yet.';
+    }
+
+    /**
+     * Accessor so sent_at_display is included in API/JSON responses.
+     */
+    public function getSentAtDisplayAttribute(): string
+    {
+        return $this->sentAtDisplay();
+    }
+
+    /**
+     * Accessor so delivered_at_display is included in API/JSON responses.
+     */
+    public function getDeliveredAtDisplayAttribute(): string
+    {
+        return $this->deliveredAtDisplay();
     }
 }

@@ -146,8 +146,22 @@ export default function PurchaseOrders() {
         setShowPdfPreview(true);
         try {
             const res = await api.get(`/purchase-orders/${order.id}/preview`);
+            // Convert the base64 PDF returned by the API into a Blob URL.
+            // A data: URL (data:application/pdf;base64,...) is subject to a
+            // browser-imposed size limit, which causes the iframe to render
+            // completely blank for larger PDFs. A Blob URL has no such limit
+            // and renders the exact same PDF that the Download button uses.
+            const base64 = res.data.pdf;
+            const byteChars = atob(base64);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) {
+                byteNumbers[i] = byteChars.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
             setPdfPreviewData({
-                pdf: res.data.pdf,
+                pdfUrl: url,
                 purchase_order: res.data.purchase_order,
             });
         } catch (err) {
@@ -338,6 +352,9 @@ export default function PurchaseOrders() {
     };
 
     const closePdfPreview = () => {
+        if (pdfPreviewData?.pdfUrl) {
+            URL.revokeObjectURL(pdfPreviewData.pdfUrl);
+        }
         setShowPdfPreview(false);
         setPdfPreviewData(null);
     };
@@ -463,6 +480,8 @@ export default function PurchaseOrders() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Supplier</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Date</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Sent At</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Delivered At</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Amount</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">Actions</th>
                                 </tr>
@@ -477,7 +496,7 @@ export default function PurchaseOrders() {
                                             key={o.id}
                                             className="border-b hover:bg-sky-50/30"
                                         >
-                                                                    <td className="px-4 py-3 text-sm">{displayIndex}</td>
+                                            <td className="px-4 py-3 text-sm">{displayIndex}</td>
                                             <td className="px-4 py-3 text-sm">
                                                 <div className="overflow-hidden whitespace-nowrap text-ellipsis truncate">
                                                     {o.supplier?.name || "---"}
@@ -486,6 +505,12 @@ export default function PurchaseOrders() {
                                             <td className="px-4 py-3 text-sm">{formatDate(o.order_date)}</td>
                                             <td className="px-4 py-3">
                                                 <span className={statusBadge(status)}>{statusLabel(status)}</span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-600">
+                                                {o.sent_at_display || 'Not sent yet.'}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-600">
+                                                {o.delivered_at_display || 'Delivery confirmation unavailable'}
                                             </td>
                                             <td className="px-4 py-3 text-sm">${Number(o.total_amount || 0).toFixed(2)}</td>
                                             <td className="px-4 py-3">
@@ -507,11 +532,12 @@ export default function PurchaseOrders() {
                                 })}
                                 {orders.length === 0 && (
                                     <tr>
-                                        <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+                                        <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
                                             No purchase orders found
                                         </td>
                                     </tr>
                                 )}
+
                             </tbody>
                         </table>
                     </div>
@@ -550,7 +576,7 @@ export default function PurchaseOrders() {
                         <div className="border border-gray-200 rounded-xl overflow-hidden">
                             <iframe
                                 title="Purchase Order PDF Preview"
-                                src={`data:application/pdf;base64,${pdfPreviewData.pdf}`}
+                                src={pdfPreviewData.pdfUrl}
                                 className="w-full h-[600px]"
                             />
                         </div>
@@ -592,7 +618,20 @@ export default function PurchaseOrders() {
                                 <span className={statusBadge(modalItem.status?.toLowerCase())}>{statusLabel(modalItem.status)}</span>
                             </div>
                             <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Sent At</label>
+                                <p className="text-sm text-gray-600">
+                                    {modalItem.sent_at_display || 'Not sent yet.'}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1">Delivered At</label>
+                                <p className="text-sm text-gray-600">
+                                    {modalItem.delivered_at_display || 'Delivery confirmation unavailable'}
+                                </p>
+                            </div>
+                            <div>
                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Total Amount</label>
+
                                 <p className="text-sm text-gray-600 flex items-center gap-1">
                                     <DollarSign size={14} />
                                     ${Number(modalItem.total_amount || 0).toFixed(2)}
