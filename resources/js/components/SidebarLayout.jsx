@@ -20,7 +20,7 @@ const menuItems = [
     { section: 'Product Management' },
     { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view'] },
     { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail-products.view'] },
-    { to: '/categories', label: 'Categories', icon: FolderTree, permissions: ['categories.view'] },
+    { to: '/categories', label: 'Categories & shelf', icon: FolderTree, permissions: ['categories.view'] },
     { to: '/suppliers', label: 'Suppliers', icon: Truck, permissions: ['suppliers.view'] },
 
     { section: 'Inventory & Purchasing' },

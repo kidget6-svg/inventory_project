@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { ArrowLeft, Edit, Trash2, Calendar, Package, DollarSign, Tag, Send, RefreshCw, CheckCircle, XCircle, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Calendar, Package, Tag, Send, RefreshCw, CheckCircle, XCircle, Download, FileText, Pill } from 'lucide-react';
 
 export default function PurchaseOrderView() {
     const { id } = useParams();
@@ -84,7 +84,6 @@ export default function PurchaseOrderView() {
     }
 
     const status = order.status?.toLowerCase();
-    const item = order.items?.[0];
 
     return (
         <div className="space-y-6">
@@ -117,36 +116,55 @@ export default function PurchaseOrderView() {
                         <span className={statusBadge(status)}>{order.status}</span>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Total Amount</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">Total Items</label>
                         <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <DollarSign size={14} />
-                            ${Number(order.total_amount || 0).toFixed(2)}
-                        </p>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Medicine</label>
-                        <p className="text-sm font-medium text-gray-800 flex items-center gap-1">
                             <Package size={14} />
-                            {item?.medicine?.name || order.medicine?.name || 'N/A'}
+                            {order.items?.length || 0}
                         </p>
                     </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label>
-                        <p className="text-sm text-gray-600">{item?.quantity || 0}</p>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Unit Price</label>
-                        <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <DollarSign size={14} />
-                            ${Number(item?.unit_price || 0).toFixed(2)}
-                        </p>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Subtotal</label>
-                        <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <DollarSign size={14} />
-                            ${Number(item?.subtotal || 0).toFixed(2)}
-                        </p>
+                    <div className="md:col-span-2">
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">Order Items</label>
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-sky-50">
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-sky-700">#</th>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-sky-700">Product</th>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-sky-700">Type</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-sky-700">Qty</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(order.items || []).map((oi, i) => {
+                                        const isRetail = oi.itemable_type?.includes('RetailProduct');
+                                        const name = oi.itemable?.name || oi.medicine?.name || 'N/A';
+                                        return (
+                                            <tr key={i} className="border-t border-gray-100">
+                                                <td className="px-3 py-2 text-sm text-gray-500">{i + 1}</td>
+                                                <td className="px-3 py-2 text-sm font-medium text-gray-800 flex items-center gap-1">
+                                                    {isRetail ? <Package size={14} className="text-amber-500" /> : <Pill size={14} className="text-sky-500" />}
+                                                    {name}
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <span className={isRetail
+                                                        ? "px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
+                                                        : "px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700"
+                                                    }>
+                                                        {isRetail ? 'Retail/OTC' : 'Medicine'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-sm text-right text-gray-600">{oi.quantity}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {(order.items || []).length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="px-3 py-4 text-center text-gray-400 text-sm">No items</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-500 mb-1">Notes</label>

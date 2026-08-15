@@ -14,7 +14,7 @@ class PurchaseOrderService
      */
     public function generatePdf(PurchaseOrder $purchaseOrder): string
     {
-        $purchaseOrder->load('supplier', 'items.medicine');
+        $purchaseOrder->load('supplier', 'items.medicine', 'items.itemable');
 
         $adminName = auth()->check()
             ? (auth()->user()->first_name

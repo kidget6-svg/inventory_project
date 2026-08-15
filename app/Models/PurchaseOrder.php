@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Medicine;
+use App\Models\RetailProduct;
 use App\Models\StockMovement;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -259,8 +260,8 @@ class PurchaseOrder extends Model
 
     /**
      * Complete the purchase order:
-     * - Update medicine stock quantities
-     * - Create stock movement records
+     * - Update stock quantities for medicines AND retail products
+     * - Create stock movement records (polymorphic)
      * - Prevent duplicate stock additions
      * - Records the completed_at timestamp
      * Delivered -> Completed | Approved -> Completed
@@ -274,27 +275,57 @@ class PurchaseOrder extends Model
         DB::beginTransaction();
 
         try {
-            foreach ($this->items as $item) {
-                $medicine = Medicine::lockForUpdate()->find($item->medicine_id);
+            $this->load('items');
 
-                if (! $medicine) {
-                    throw new \RuntimeException('Medicine not found for order item ' . $item->id);
+            foreach ($this->items as $item) {
+                // Resolve the product via polymorphic relationship (preferred)
+                $product = $item->itemable;
+
+                // Fallback to medicine relationship for legacy items
+                if (! $product && $item->medicine_id) {
+                    $product = Medicine::lockForUpdate()->find($item->medicine_id);
+                }
+
+                if (! $product) {
+                    throw new \RuntimeException('Product not found for order item ' . $item->id);
+                }
+
+                // Lock the product row for update
+                if ($product instanceof RetailProduct) {
+                    $product = RetailProduct::lockForUpdate()->find($product->id);
+                } elseif ($product instanceof Medicine) {
+                    $product = Medicine::lockForUpdate()->find($product->id);
+                }
+
+                if (! $product) {
+                    throw new \RuntimeException('Failed to lock product for order item ' . $item->id);
                 }
 
                 // Check if a stock movement already exists for this PO item
                 // to prevent duplicate stock additions
-                $existingMovement = StockMovement::where('medicine_id', $medicine->id)
+                $existingMovement = StockMovement::where('itemable_type', get_class($product))
+                    ->where('itemable_id', $product->id)
                     ->where('reference', 'PO-' . $this->id)
                     ->where('type', 'in')
                     ->exists();
 
+                // Also check legacy medicine_id column
+                if (! $existingMovement && $product instanceof Medicine) {
+                    $existingMovement = StockMovement::where('medicine_id', $product->id)
+                        ->where('reference', 'PO-' . $this->id)
+                        ->where('type', 'in')
+                        ->exists();
+                }
+
                 if (! $existingMovement) {
-                    if (! $medicine->increment('quantity', $item->quantity)) {
-                        throw new \RuntimeException('Failed to increment stock for medicine ' . $medicine->id);
+                    if (! $product->increment('quantity', $item->quantity)) {
+                        throw new \RuntimeException('Failed to increment stock for product ' . $product->id);
                     }
 
                     StockMovement::create([
-                        'medicine_id' => $medicine->id,
+                        'medicine_id' => $product instanceof Medicine ? $product->id : null,
+                        'itemable_type' => get_class($product),
+                        'itemable_id' => $product->id,
                         'type' => 'in',
                         'quantity' => $item->quantity,
                         'reference' => 'PO-' . $this->id,

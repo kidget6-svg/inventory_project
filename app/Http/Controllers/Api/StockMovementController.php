@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
+use App\Models\RetailProduct;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -14,7 +16,7 @@ class StockMovementController extends Controller
 {
     public function index(Request $request)
     {
-        $query = StockMovement::with(['medicine', 'user', 'approver', 'completer']);
+        $query = StockMovement::with(['medicine', 'itemable', 'user', 'approver', 'completer']);
 
         if ($request->medicine_id) {
             $query->where('medicine_id', $request->medicine_id);
@@ -54,14 +56,16 @@ class StockMovementController extends Controller
 
         return response()->json([
             'movements' => $movements,
-            'medicines' => Medicine::orderBy('name')->get(['id', 'name', 'quantity'])
+            'medicines' => Medicine::orderBy('name')->get(['id', 'name', 'quantity']),
+            'retail_products' => RetailProduct::orderBy('name')->get(['id', 'name', 'sku', 'quantity']),
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'medicine_id' => 'required|exists:medicines,id',
+            'medicine_id' => 'nullable|exists:medicines,id',
+            'retail_product_id' => 'nullable|exists:retail_products,id',
             'type' => 'required|in:in,out,adjustment,return,transfer,damaged,expired,lost,correction,self',
             'quantity' => 'required|integer|min:1',
             'reference' => 'nullable|string|max:255',
@@ -74,14 +78,32 @@ class StockMovementController extends Controller
             'status' => 'nullable|string|in:pending,approved,completed,cancelled',
         ]);
 
+        // At least one product must be selected
+        if (!$validated['medicine_id'] && !$validated['retail_product_id']) {
+            throw ValidationException::withMessages([
+                'medicine_id' => 'You must select a medicine or a retail product.',
+            ]);
+        }
+
         $response = DB::transaction(function () use ($validated, $request) {
-            $medicine = Medicine::lockForUpdate()->findOrFail($validated['medicine_id']);
-            $oldQuantity = $medicine->quantity;
+            $isRetail = !empty($validated['retail_product_id']);
+
+            if ($isRetail) {
+                $product = RetailProduct::lockForUpdate()->findOrFail($validated['retail_product_id']);
+                $itemableType = RetailProduct::class;
+                $itemableId = $product->id;
+            } else {
+                $product = Medicine::lockForUpdate()->findOrFail($validated['medicine_id']);
+                $itemableType = Medicine::class;
+                $itemableId = $product->id;
+            }
+
+            $oldQuantity = (int) $product->quantity;
 
             if (in_array($validated['type'], ['out', 'damaged', 'expired', 'lost', 'correction'])) {
-                if ($validated['quantity'] > $medicine->quantity) {
+                if ($validated['quantity'] > $oldQuantity) {
                     throw ValidationException::withMessages([
-                        'quantity' => "Insufficient stock. Available: {$medicine->quantity}"
+                        'quantity' => "Insufficient stock. Available: {$oldQuantity}"
                     ]);
                 }
             }
@@ -94,7 +116,9 @@ class StockMovementController extends Controller
             }
 
             $movement = StockMovement::create([
-                'medicine_id' => $validated['medicine_id'],
+                'medicine_id' => $validated['medicine_id'] ?? null,
+                'itemable_type' => $itemableType,
+                'itemable_id' => $itemableId,
                 'user_id' => auth()->id(),
                 'type' => $validated['type'],
                 'quantity' => $validated['quantity'],
@@ -112,11 +136,11 @@ class StockMovementController extends Controller
                 'device_info' => $request->userAgent(),
             ]);
 
-            $medicine->update(['quantity' => $newQuantity]);
+            $product->update(['quantity' => $newQuantity]);
 
             return [
-                'movement' => $movement->load('medicine', 'user', 'approver', 'completer'),
-                'medicine' => $medicine
+                'movement' => $movement->load('medicine', 'itemable', 'user', 'approver', 'completer'),
+                'product' => $product
             ];
         });
 
@@ -128,7 +152,7 @@ class StockMovementController extends Controller
 
     public function show($id)
     {
-        $movement = StockMovement::with(['medicine', 'user', 'approver', 'completer'])->findOrFail($id);
+        $movement = StockMovement::with(['medicine', 'itemable', 'user', 'approver', 'completer'])->findOrFail($id);
         return response()->json($movement);
     }
 
@@ -222,22 +246,24 @@ class StockMovementController extends Controller
     public function destroy($id)
     {
         try {
-            $movement = StockMovement::with('medicine')->findOrFail($id);
+            $movement = StockMovement::with(['medicine', 'itemable'])->findOrFail($id);
 
-            if ($movement->medicine) {
-                DB::transaction(function () use ($movement) {
-                    $medicine = $movement->medicine;
+            // Resolve the product (medicine or retail product) to revert stock
+            $product = $movement->itemable ?? $movement->medicine;
+
+            if ($product) {
+                DB::transaction(function () use ($movement, $product) {
                     $qty = (int) $movement->quantity;
 
                     if (in_array($movement->type, ['in', 'return', 'transfer'])) {
-                        $medicine->quantity = max(0, (int) $medicine->quantity - $qty);
+                        $product->quantity = max(0, (int) $product->quantity - $qty);
                     } elseif (in_array($movement->type, ['out', 'damaged', 'expired', 'lost', 'correction', 'self'])) {
-                        $medicine->quantity += $qty;
+                        $product->quantity += $qty;
                     } elseif ($movement->type === 'adjustment') {
-                        $medicine->quantity = $movement->before_quantity ?? $medicine->quantity;
+                        $product->quantity = $movement->before_quantity ?? $product->quantity;
                     }
 
-                    $medicine->save();
+                    $product->save();
                 });
             }
 

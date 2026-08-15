@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Medicine;
-use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -145,19 +144,6 @@ class BranchController extends Controller
             'success' => true,
             'data' => $inventory,
             'stats' => $stats
-        ]);
-    }
-
-    public function sales(Branch $branch)
-    {
-        $sales = Sale::where('branch_id', $branch->id)
-            ->latest()
-            ->take(10)
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $sales
         ]);
     }
 }

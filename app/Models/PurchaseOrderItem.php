@@ -12,6 +12,8 @@ class PurchaseOrderItem extends Model
     protected $fillable = [
         'purchase_order_id',
         'medicine_id',
+        'itemable_type',
+        'itemable_id',
         'quantity',
         'unit_price',
         'subtotal',
@@ -25,5 +27,19 @@ class PurchaseOrderItem extends Model
     public function medicine()
     {
         return $this->belongsTo(Medicine::class);
+    }
+
+    /**
+     * Polymorphic relationship to the ordered item (Medicine or RetailProduct).
+     */
+    public function itemable()
+    {
+        return $this->morphTo();
+    }
+
+    public function retailProduct()
+    {
+        return $this->belongsTo(RetailProduct::class, 'itemable_id')
+            ->where('itemable_type', RetailProduct::class);
     }
 }

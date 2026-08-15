@@ -120,8 +120,8 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Medicine</th>
-                        <th>Generic Name</th>
+                        <th>Product</th>
+                        <th>Type</th>
                         <th class="text-right">Quantity</th>
                     </tr>
                 </thead>
@@ -129,8 +129,8 @@
                     @foreach($purchaseOrder->items as $item)
                     <tr>
                         <td>{{ $loop->iteration }}</td>
-                        <td>{{ $item->medicine->name ?? 'N/A' }}</td>
-                        <td>{{ $item->medicine->generic_name ?? 'N/A' }}</td>
+                        <td>{{ $item->itemable?->name ?? $item->medicine?->name ?? 'N/A' }}</td>
+                        <td>{{ $item->itemable instanceof \App\Models\RetailProduct ? 'Retail/OTC' : 'Medicine' }}</td>
                         <td class="text-right">{{ $item->quantity }}</td>
                     </tr>
                     @endforeach

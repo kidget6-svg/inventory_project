@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../axios';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -11,7 +11,7 @@ import {
     Warehouse, Users, Truck, RotateCcw, AlertTriangle, ChevronDown,
     MoreVertical, Send, BarChart3, Info, Layers, Zap, Shield,
     ArrowLeftRight, RotateCw, UserCheck, Building2, Hash,
-    TrendingDown, RefreshCcw
+    TrendingDown, RefreshCcw, Pill
 } from 'lucide-react';
 
 const movementTypeConfig = {
@@ -49,6 +49,7 @@ export default function StockMovements() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [medicines, setMedicines] = useState([]);
+        const [retailProducts, setRetailProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [users, setUsers] = useState([]);
@@ -59,11 +60,20 @@ export default function StockMovements() {
     const [modalMode, setModalMode] = useState('create');
     const [modalItem, setModalItem] = useState(null);
     const [form, setForm] = useState({
-        medicine_id: '', type: 'in', quantity: '', reference: '', notes: '',
+        medicine_id: '', retail_product_id: '', type: 'in', quantity: '', reference: '', notes: '',
         source_type: '', destination_type: '', branch_id: '', status: 'pending'
     });
     const [submitting, setSubmitting] = useState(false);
     const [formLoading, setFormLoading] = useState(false);
+
+    // Product search dropdown state
+    const [activeTab, setActiveTab] = useState('medicine');
+    const [medSearch, setMedSearch] = useState('');
+    const [retailSearch, setRetailSearch] = useState('');
+    const [showMedDropdown, setShowMedDropdown] = useState(false);
+    const [showRetailDropdown, setShowRetailDropdown] = useState(false);
+    const medSearchRef = useRef(null);
+    const retailSearchRef = useRef(null);
 
     const [filters, setFilters] = useState({
         search: '', medicine_id: '', category_id: '', supplier_id: '',
@@ -87,6 +97,7 @@ export default function StockMovements() {
                 setMovements(Array.isArray(movementsData) ? movementsData : []);
                 setMeta(data.movements?.meta || data.meta || null);
                 setMedicines(Array.isArray(data.medicines) ? data.medicines : []);
+                                setRetailProducts(Array.isArray(data.retail_products) ? data.retail_products : []);
                 setHasError(false);
             })
             .catch(err => {
@@ -128,12 +139,45 @@ export default function StockMovements() {
 
     useEffect(() => { loadFilterOptions(); }, [loadFilterOptions]);
 
+    // Click-outside handler for product search dropdowns
+    useEffect(() => {
+        const handler = (e) => {
+            if (medSearchRef.current && !medSearchRef.current.contains(e.target)) setShowMedDropdown(false);
+            if (retailSearchRef.current && !retailSearchRef.current.contains(e.target)) setShowRetailDropdown(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const filteredMedicines = useMemo(() => {
+        if (!medSearch) return medicines;
+        const q = medSearch.toLowerCase();
+        return medicines.filter(m =>
+            (m.name || '').toLowerCase().includes(q) ||
+            (m.generic_name || '').toLowerCase().includes(q) ||
+            (m.barcode && String(m.barcode).includes(q))
+        );
+    }, [medicines, medSearch]);
+
+    const filteredRetail = useMemo(() => {
+        if (!retailSearch) return retailProducts;
+        const q = retailSearch.toLowerCase();
+        return retailProducts.filter(r =>
+            (r.name || '').toLowerCase().includes(q) ||
+            (r.sku || '').toLowerCase().includes(q) ||
+            (r.barcode && String(r.barcode).includes(q))
+        );
+    }, [retailProducts, retailSearch]);
+
     const handlePageChange = (p) => setPage(p);
 
     const openCreate = () => {
         setModalMode('create');
         setModalItem(null);
-        setForm({ medicine_id: '', type: 'in', quantity: '', reference: '', notes: '', source_type: '', destination_type: '', branch_id: '', status: 'pending' });
+        setForm({ medicine_id: '', retail_product_id: '', type: 'in', quantity: '', reference: '', notes: '', source_type: '', destination_type: '', branch_id: '', status: 'pending' });
+        setActiveTab('medicine');
+        setMedSearch('');
+        setRetailSearch('');
         setError('');
         setShowModal(true);
         loadMedicinesForSelect();
@@ -148,24 +192,53 @@ export default function StockMovements() {
     const closeModal = () => {
         setShowModal(false);
         setModalItem(null);
-        setForm({ medicine_id: '', type: 'in', quantity: '', reference: '', notes: '', source_type: '', destination_type: '', branch_id: '', status: 'pending' });
+        setForm({ medicine_id: '', retail_product_id: '', type: 'in', quantity: '', reference: '', notes: '', source_type: '', destination_type: '', branch_id: '', status: 'pending' });
+        setActiveTab('medicine');
+        setMedSearch('');
+        setRetailSearch('');
         setError('');
     };
 
     const loadMedicinesForSelect = async () => {
         setFormLoading(true);
         try {
-            const r = await api.get('/medicines');
-            const list = Array.isArray(r.data?.data) ? r.data.data :
-                         Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
-                         Array.isArray(r.data) ? r.data : [];
-            setMedicines(list);
+            const [medRes, retailRes] = await Promise.all([
+                api.get('/medicines', { params: { per_page: 1000 } }),
+                api.get('/retail-products', { params: { per_page: 1000 } }),
+            ]);
+            const medList = Array.isArray(medRes.data?.data) ? medRes.data.data :
+                         Array.isArray(medRes.data?.medicines?.data) ? medRes.data.medicines.data :
+                         Array.isArray(medRes.data) ? medRes.data : [];
+            const retailList = Array.isArray(retailRes.data?.data) ? retailRes.data.data :
+                           Array.isArray(retailRes.data) ? retailRes.data : [];
+            setMedicines(medList);
+            setRetailProducts(retailList);
         } catch (err) {
             console.error(err);
         } finally {
             setFormLoading(false);
         }
     };
+
+    const handleSelectMedicine = (id) => {
+        setForm(prev => ({ ...prev, medicine_id: id, retail_product_id: '' }));
+        setShowMedDropdown(false);
+        setMedSearch('');
+    };
+
+    const handleSelectRetail = (id) => {
+        setForm(prev => ({ ...prev, retail_product_id: id, medicine_id: '' }));
+        setShowRetailDropdown(false);
+        setRetailSearch('');
+    };
+
+    const selectedProduct = useMemo(() => {
+        if (form.retail_product_id) return retailProducts.find(r => r.id == form.retail_product_id);
+        if (form.medicine_id) return medicines.find(m => m.id == form.medicine_id);
+        return null;
+    }, [form.medicine_id, form.retail_product_id, medicines, retailProducts]);
+
+    const isRetailSelected = !!form.retail_product_id;
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -208,10 +281,12 @@ export default function StockMovements() {
     };
 
     const handleDuplicate = async (item) => {
+        const isRetail = item.itemable_type?.includes('RetailProduct');
         setModalMode('create');
         setModalItem(item);
         setForm({
-            medicine_id: item.medicine_id || item.medicine?.id || '',
+            medicine_id: isRetail ? '' : (item.itemable_id || item.medicine_id || item.medicine?.id || ''),
+            retail_product_id: isRetail ? (item.itemable_id || item.itemable?.id || '') : '',
             type: item.type || 'in',
             quantity: item.quantity || '',
             reference: item.reference ? `${item.reference} (copy)` : '',
@@ -221,6 +296,9 @@ export default function StockMovements() {
             branch_id: item.branch_id || '',
             status: 'pending'
         });
+        setActiveTab(isRetail ? 'retail' : 'medicine');
+        setMedSearch('');
+        setRetailSearch('');
         setError('');
         setShowModal(true);
         loadMedicinesForSelect();
@@ -448,8 +526,8 @@ export default function StockMovements() {
                                                     <Package size={16} className="text-sky-600" />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-medium text-gray-800 truncate">{m.medicine?.name || '---'}</p>
-                                                    <p className="text-xs text-gray-400 truncate">{m.medicine?.barcode || m.medicine?.generic_name || ''}</p>
+                                                    <p className="text-sm font-medium text-gray-800 truncate">{m.itemable?.name || m.medicine?.name || '---'}</p>
+                                                    <p className="text-xs text-gray-400 truncate">{m.itemable_type?.includes('RetailProduct') ? (m.itemable?.sku || m.itemable?.barcode || '') : (m.medicine?.barcode || m.medicine?.generic_name || '')}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -491,7 +569,7 @@ export default function StockMovements() {
             <Pagination meta={meta} onPageChange={handlePageChange} />
 
             {/* Create / View Modal */}
-            <Modal open={showModal} onClose={closeModal} title={modalMode === 'create' ? 'Record Stock Movement' : `Movement #${modalItem?.id || ''}`} size="max-w-lg">
+            <Modal open={showModal} onClose={closeModal} title={modalMode === 'create' ? 'Record Stock Movement' : `Movement #${modalItem?.id || ''}`} size="max-w-2xl">
                 {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-4 border border-red-100">{error}</div>}
 
                 {isViewMode && modalItem ? (
@@ -501,8 +579,8 @@ export default function StockMovements() {
                                 <Package className="w-5 h-5 text-sky-600" />
                             </div>
                             <div>
-                                <p className="font-bold text-gray-800">{modalItem.medicine?.name || 'N/A'}</p>
-                                <p className="text-xs text-gray-500">{modalItem.medicine?.category?.name || 'Uncategorized'}</p>
+                                <p className="font-bold text-gray-800">{modalItem.itemable?.name || modalItem.medicine?.name || 'N/A'}</p>
+                                <p className="text-xs text-gray-500">{modalItem.itemable_type?.includes('RetailProduct') ? 'Retail & OTC Product' : (modalItem.medicine?.category?.name || 'Uncategorized')}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -554,24 +632,137 @@ export default function StockMovements() {
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Product Selection with tab toggle + searchable dropdown */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
-                            <div className="relative">
-                                <Package className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <select
-                                    name="medicine_id"
-                                    value={form.medicine_id}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
-                                    required
-                                    disabled={formLoading}
-                                >
-                                    <option value="">Select Medicine</option>
-                                    {medicines.map(m => (
-                                        <option key={m.id} value={m.id}>{m.name} (Stock: {m.quantity ?? 0})</option>
-                                    ))}
-                                </select>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Product *</label>
+                            {/* Tab toggle */}
+                            <div className="flex gap-2 mb-2">
+                                <button type="button" onClick={() => setActiveTab('medicine')}
+                                    className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${activeTab === 'medicine' ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'}`}>
+                                    <Pill size={14} />
+                                    Medicines ({medicines.length})
+                                </button>
+                                <button type="button" onClick={() => setActiveTab('retail')}
+                                    className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${activeTab === 'retail' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>
+                                    <Package size={14} />
+                                    Retail & OTC ({retailProducts.length})
+                                </button>
                             </div>
+
+                            {/* Selected product card or search dropdown */}
+                            {selectedProduct ? (
+                                <div className={`rounded-xl border p-3 flex items-center gap-3 ${isRetailSelected ? 'bg-amber-50 border-amber-200' : 'bg-sky-50 border-sky-200'}`}>
+                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isRetailSelected ? 'bg-amber-100' : 'bg-sky-100'}`}>
+                                        {isRetailSelected ? <Package size={18} className="text-amber-600" /> : <Pill size={18} className="text-sky-600" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-gray-800 truncate">{selectedProduct.name}</p>
+                                        <p className="text-xs text-gray-500">
+                                            Stock: <span className="font-semibold">{selectedProduct.quantity ?? 0}</span>
+                                            {selectedProduct.generic_name ? ` | ${selectedProduct.generic_name}` : ''}
+                                            {selectedProduct.sku ? ` | SKU: ${selectedProduct.sku}` : ''}
+                                        </p>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${isRetailSelected ? 'bg-amber-200 text-amber-800' : 'bg-sky-200 text-sky-800'}`}>
+                                        {isRetailSelected ? 'OTC' : 'MED'}
+                                    </span>
+                                    <button type="button" onClick={() => setForm(prev => ({ ...prev, medicine_id: '', retail_product_id: '' }))} className="text-gray-400 hover:text-red-500 shrink-0">
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Medicine search dropdown */}
+                                    {activeTab === 'medicine' && (
+                                        <div className="relative" ref={medSearchRef}>
+                                            <div className="relative">
+                                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    value={medSearch}
+                                                    onChange={(e) => { setMedSearch(e.target.value); setShowMedDropdown(true); }}
+                                                    onFocus={() => setShowMedDropdown(true)}
+                                                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                                    placeholder="Search medicines by name, generic, or barcode..."
+                                                />
+                                            </div>
+                                            {showMedDropdown && (
+                                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                                    {formLoading ? (
+                                                        <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading medicines...</div>
+                                                    ) : (
+                                                        <>
+                                                            {filteredMedicines.slice(0, 50).map(m => (
+                                                                <button key={m.id} type="button" onClick={() => handleSelectMedicine(m.id)}
+                                                                    className="w-full text-left px-3 py-2.5 text-sm flex items-center justify-between hover:bg-sky-50 transition-colors">
+                                                                    <span className="flex items-center gap-2">
+                                                                        <Pill size={14} className="text-sky-400" />
+                                                                        {m.name}
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-500">Stock: {m.quantity ?? 0}</span>
+                                                                </button>
+                                                            ))}
+                                                            {filteredMedicines.length === 0 && (
+                                                                <div className="px-4 py-8 text-center text-gray-400 text-sm">No medicines found</div>
+                                                            )}
+                                                            {filteredMedicines.length > 50 && (
+                                                                <div className="px-3 py-2 text-center text-xs text-gray-400 border-t border-gray-100">
+                                                                    Showing first 50 of {filteredMedicines.length} results.
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Retail & OTC search dropdown */}
+                                    {activeTab === 'retail' && (
+                                        <div className="relative" ref={retailSearchRef}>
+                                            <div className="relative">
+                                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    value={retailSearch}
+                                                    onChange={(e) => { setRetailSearch(e.target.value); setShowRetailDropdown(true); }}
+                                                    onFocus={() => setShowRetailDropdown(true)}
+                                                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none"
+                                                    placeholder="Search retail products by name, SKU, or barcode..."
+                                                />
+                                            </div>
+                                            {showRetailDropdown && (
+                                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                                    {formLoading ? (
+                                                        <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading products...</div>
+                                                    ) : (
+                                                        <>
+                                                            {filteredRetail.slice(0, 50).map(r => (
+                                                                <button key={r.id} type="button" onClick={() => handleSelectRetail(r.id)}
+                                                                    className="w-full text-left px-3 py-2.5 text-sm flex items-center justify-between hover:bg-amber-50 transition-colors">
+                                                                    <span className="flex items-center gap-2">
+                                                                        <Package size={14} className="text-amber-400" />
+                                                                        {r.name}
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-500">Stock: {r.quantity ?? 0}</span>
+                                                                </button>
+                                                            ))}
+                                                            {filteredRetail.length === 0 && (
+                                                                <div className="px-4 py-8 text-center text-gray-400 text-sm">No retail products found</div>
+                                                            )}
+                                                            {filteredRetail.length > 50 && (
+                                                                <div className="px-3 py-2 text-center text-xs text-gray-400 border-t border-gray-100">
+                                                                    Showing first 50 of {filteredRetail.length} results.
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Type *</label>

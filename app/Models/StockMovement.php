@@ -29,6 +29,8 @@ class StockMovement extends Model
 
     protected $fillable = [
         'medicine_id',
+        'itemable_type',
+        'itemable_id',
         'batch_id',
         'type',
         'quantity',
@@ -65,6 +67,20 @@ class StockMovement extends Model
     public function medicine()
     {
         return $this->belongsTo(Medicine::class);
+    }
+
+    /**
+     * Polymorphic relationship to the moved item (Medicine or RetailProduct).
+     */
+    public function itemable()
+    {
+        return $this->morphTo();
+    }
+
+    public function retailProduct()
+    {
+        return $this->belongsTo(RetailProduct::class, 'itemable_id')
+            ->where('itemable_type', RetailProduct::class);
     }
 
     public function batch()
