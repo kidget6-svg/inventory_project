@@ -43,7 +43,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // ============================================================
     // SHARED READ-ONLY ACCESS (Admin, Pharmacist, Cashier)
     // ============================================================
-    Route::middleware('role:admin,pharmacist,cashier')->group(function () {
+    Route::middleware('role:admin,pharmacist,cashier,purchasing_staff')->group(function () {
 
         // ---- Medicines ----
         Route::get('/medicines', [MedicineController::class, 'index']);
@@ -75,6 +75,10 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         // ---- Suppliers ----
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+
+        // ---- Purchase Orders (Read) ----
+        Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+        Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
 
         // ---- Retail Products ----
         Route::get('/retail-products', [RetailProductController::class, 'index']);
@@ -157,14 +161,22 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
     });
 
+    // User approval (admin + super_admin only)
     Route::middleware('permission:users.approve')->group(function () {
         Route::post('/users/{user}/approve', [UserController::class, 'approve']);
         Route::post('/users/{user}/reject', [UserController::class, 'reject']);
+    });
 
-        // ---- Suppliers ----
-        Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
+    // ---- Suppliers (Write: admin + purchasing_staff) ----
+    Route::middleware('role:admin,purchasing_staff')->group(function () {
+        Route::post('/suppliers', [SupplierController::class, 'store']);
+        Route::get('/suppliers/{supplier}/edit', [SupplierController::class, 'edit']);
+        Route::put('/suppliers/{supplier}', [SupplierController::class, 'update']);
+        Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy']);
+    });
 
-        // ---- Purchase Orders ----
+    // ---- Purchase Orders (admin + purchasing_staff) ----
+    Route::middleware('role:admin,purchasing_staff')->group(function () {
         Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
         Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
         Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
@@ -174,10 +186,14 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
         Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel']);
         Route::post('/purchase-orders/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopen']);
+        Route::post('/purchase-orders/{purchaseOrder}/process', [PurchaseOrderController::class, 'process']);
         Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
         Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
-        Route::apiResource('purchase-orders', PurchaseOrderController::class);
+        Route::apiResource('purchase-orders', PurchaseOrderController::class)->except(['index', 'show']);
+    });
 
+    // ---- Branches, Retail Products, Audit Logs (admin only) ----
+    Route::middleware('role:admin')->group(function () {
         // ---- Branches (Full CRUD) ----
         Route::post('/branches', [BranchController::class, 'store']);
         Route::put('/branches/{branch}', [BranchController::class, 'update']);

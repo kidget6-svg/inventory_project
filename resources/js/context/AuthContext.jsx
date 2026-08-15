@@ -10,7 +10,7 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         const token = localStorage.getItem('token') || localStorage.getItem('access_token');
-        
+
         // Skip calling /api/user if no token exists yet
         if (!token) {
             setUser(null);
@@ -48,10 +48,10 @@ export function AuthProvider({ children }) {
 
     const register = async (data) => {
         try {
-            const config = data instanceof FormData 
-                ? { headers: { 'Content-Type': undefined } } 
+            const config = data instanceof FormData
+                ? { headers: { 'Content-Type': undefined } }
                 : {};
-                
+
             const response = await api.post('/register', data, config);
             return response.data;
         } catch (error) {
@@ -85,8 +85,19 @@ export function AuthProvider({ children }) {
         return permissions.some(p => userPermissions.includes(p));
     };
 
+    const hasAllPermissions = (permissions = []) => {
+        if (!Array.isArray(permissions) || permissions.length === 0) return true;
+        const userPermissions = getUserPermissions();
+        return permissions.every(p => userPermissions.includes(p));
+    };
+
+    // Convenience aliases (shorthand used across the codebase)
+    const can = hasPermission;
+    const canAny = hasAnyPermission;
+    const canAll = hasAllPermissions;
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, hasPermission, hasAnyPermission }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, hasPermission, hasAnyPermission, hasAllPermissions, can, canAny, canAll }}>
             {children}
         </AuthContext.Provider>
     );

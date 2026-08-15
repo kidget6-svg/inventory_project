@@ -17,6 +17,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {
     PosProductCard,
@@ -34,6 +35,8 @@ import {
 } from 'lucide-react';
 
 export default function PrescriptionSales() {
+    const { hasPermission } = useAuth();
+    const canDispense = hasPermission('prescription-sales.dispense');
     const [medicines, setMedicines] = useState([]);
     const [search, setSearch] = useState('');
     const [cart, setCart] = useState([]);
@@ -327,6 +330,7 @@ export default function PrescriptionSales() {
                     onAction={handleSendToCashier}
                     actionDisabled={cart.length === 0 || submitting}
                     actionLoading={submitting}
+                    actionHidden={!canDispense}
                     emptyMessage="Prescription draft is empty"
                     emptySubMessage="Select medicines from the list to begin"
                     emptyIcon={FileText}

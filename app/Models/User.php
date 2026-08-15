@@ -141,16 +141,12 @@ class User extends Authenticatable
             return Permission::pluck('slug')->all();
         }
 
-        // If the user has a role_id, get permissions
-        // from the related Role model.
-        if ($this->role_id) {
-            $role = $this->role()->with('permissions')->first();
+        $role = $this->role_id
+            ? $this->role()->first()
+            : Role::where('slug', $this->getAttribute('role'))->first();
 
-            if ($role) {
-                return $role->permissions
-                    ->pluck('slug')
-                    ->all();
-            }
+        if ($role) {
+            return $role->permissions()->pluck('permissions.slug')->all();
         }
 
         // Fallback to config-based permissions.

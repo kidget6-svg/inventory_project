@@ -39,6 +39,10 @@ class DashboardController extends Controller
                 return $this->pharmacistDashboard();
             }
 
+            if ($user->role === 'purchasing_staff') {
+                return $this->purchasingStaffDashboard();
+            }
+
             return $this->cashierDashboard();
 
         } catch (\Exception $e) {
@@ -510,6 +514,73 @@ class DashboardController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Cashier Dashboard Error: ' . $e->getMessage());
+            return response()->json([
+                'error' => $e->getMessage(),
+                'message' => 'Failed to load dashboard'
+            ], 500);
+        }
+    }
+
+    /**
+     * Purchasing staff dashboard.
+     */
+    private function purchasingStaffDashboard(): JsonResponse
+    {
+        try {
+            $today           = Carbon::today();
+
+            $totalSuppliers       = Supplier::count();
+            $totalPurchaseOrders  = PurchaseOrder::count();
+
+            $pendingPOs           = PurchaseOrder::where('status', 'pending')->count();
+            $pendingReceiving     = PurchaseOrder::whereIn('status', ['sent', 'delivered'])->count();
+
+            $completedThisMonth   = PurchaseOrder::where('status', 'completed')
+                ->whereMonth('created_at', $today->month)
+                ->whereYear('created_at', $today->year)
+                ->count();
+
+            $totalSpendThisMonth  = (float) PurchaseOrder::where('status', 'completed')
+                ->whereMonth('created_at', $today->month)
+                ->whereYear('created_at', $today->year)
+                ->sum('total_amount');
+
+            $poStats              = $this->purchaseOrderStats();
+            $activities           = $this->recentActivities(5);
+
+            $recentPurchaseOrders = PurchaseOrder::with('supplier')
+                ->latest()
+                ->take(10)
+                ->get();
+
+            $expiring30           = $this->expiringMedicines(30);
+
+            return response()->json([
+                // ---- Summary cards ----
+                'totalSuppliers'        => $totalSuppliers,
+                'totalPurchaseOrders'   => $totalPurchaseOrders,
+                'pendingPurchaseOrders' => $pendingPOs,
+                'pendingReceiving'      => $pendingReceiving,
+                'totalSpendThisMonth'   => $totalSpendThisMonth,
+                'completedThisMonth'    => $completedThisMonth,
+
+                // ---- Purchase Order Stats ----
+                'purchaseOrderStats'    => $poStats,
+
+                // ---- Lists ----
+                'expiringSoon'          => $expiring30,
+                'expiring30Count'       => $expiring30->count(),
+                'recentPurchaseOrders'  => $recentPurchaseOrders,
+
+                // ---- Activity ----
+                'recentActivities'      => $activities,
+
+                // ---- Misc ----
+                'totalProducts'         => Medicine::count(),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Purchasing Staff Dashboard Error: ' . $e->getMessage());
             return response()->json([
                 'error' => $e->getMessage(),
                 'message' => 'Failed to load dashboard'

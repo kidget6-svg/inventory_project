@@ -12,6 +12,7 @@ import RolesPermissions from './pages/RolesPermissions';
 import AdminDashboard from './pages/AdminDashboard';
 import PharmacistDashboard from './pages/PharmacistDashboard';
 import CashierDashboard from './pages/CashierDashboard';
+import PurchasingStaffDashboard from './pages/PurchasingStaffDashboard';
 import Medicines from './pages/Medicines';
 // 🗑️ REMOVED: Inventory - Merged into StockManagement
 import StockManagement from './pages/StockManagement'; // 🆕 NEW
@@ -38,8 +39,9 @@ import StockMovementCreate from './pages/StockMovementCreate';
 import StockMovementView from './pages/StockMovementView';
 import PurchaseOrderCreate from './pages/PurchaseOrderCreate';
 import PurchaseOrderEdit from './pages/PurchaseOrderEdit';
+import PurchaseOrderView from './pages/PurchaseOrderView';
 
-function ProtectedRoute({ children, permissions, title }) {
+function ProtectedRoute({ children, permissions, roles, title }) {
     const { user, loading, hasAnyPermission } = useAuth();
 
     if (loading) {
@@ -54,6 +56,12 @@ function ProtectedRoute({ children, permissions, title }) {
         return <Navigate to="/login" replace />;
     }
 
+    // Role-based guard (e.g. roles={['admin', 'purchasing_staff']})
+    if (roles && !roles.includes(user.role)) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    // Permission-based guard
     if (permissions && !hasAnyPermission(permissions)) {
         return <Navigate to="/dashboard" replace />;
     }
@@ -65,6 +73,7 @@ function DashboardRouter() {
     const { user } = useAuth();
     if (user?.role === 'admin') return <AdminDashboard />;
     if (user?.role === 'pharmacist') return <PharmacistDashboard />;
+    if (user?.role === 'purchasing_staff') return <PurchasingStaffDashboard />;
     return <CashierDashboard />;
 }
 
@@ -142,12 +151,12 @@ function App() {
             <Route path="/warehouse" element={
                 <ProtectedRoute roles={['admin']} title="Warehouse"><Warehouse /></ProtectedRoute>
             } />
-            
+
             {/* 🆕 Stock Management - Replaces Inventory + LowStock */}
             <Route path="/stock-management" element={
                 <ProtectedRoute roles={['admin', 'pharmacist', 'cashier']} title="Stock Management"><StockManagement /></ProtectedRoute>
             } />
-            
+
             <Route path="/stock-movements" element={
                 <ProtectedRoute roles={['admin', 'pharmacist']} title="Stock Movements"><StockMovements /></ProtectedRoute>
             } />
@@ -169,13 +178,16 @@ function App() {
                 PURCHASE ORDERS
             ============================================================ */}
             <Route path="/purchase-orders" element={
-                <ProtectedRoute roles={['admin']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'purchasing_staff']} title="Purchase Orders"><PurchaseOrders /></ProtectedRoute>
             } />
             <Route path="/purchase-orders/create" element={
-                <ProtectedRoute roles={['admin']} title="Create Purchase Order"><PurchaseOrderCreate /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'purchasing_staff']} title="Create Purchase Order"><PurchaseOrderCreate /></ProtectedRoute>
+            } />
+            <Route path="/purchase-orders/:id" element={
+                <ProtectedRoute roles={['admin', 'purchasing_staff']} title="Purchase Order Details"><PurchaseOrderView /></ProtectedRoute>
             } />
             <Route path="/purchase-orders/:id/edit" element={
-                <ProtectedRoute roles={['admin']} title="Edit Purchase Order"><PurchaseOrderEdit /></ProtectedRoute>
+                <ProtectedRoute roles={['admin', 'purchasing_staff']} title="Edit Purchase Order"><PurchaseOrderEdit /></ProtectedRoute>
             } />
 
             {/* ============================================================

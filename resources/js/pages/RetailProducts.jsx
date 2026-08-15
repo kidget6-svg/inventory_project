@@ -29,9 +29,11 @@ const categoryOptions = [
 const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
 export default function RetailProducts() {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const navigate = useNavigate();
-    const isAdmin = user?.role === 'admin';
+    const canCreate = hasPermission('retail-products.create');
+    const canEdit = hasPermission('retail-products.edit');
+    const canDelete = hasPermission('retail-products.delete');
 
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -501,15 +503,15 @@ export default function RetailProducts() {
 
             <div className="flex justify-between items-center mb-5">
                 <h3 className="text-base font-semibold text-gray-700">All Retail Products ({products.length})</h3>
-                {isAdmin ? (
+                {canCreate ? (
                     <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <Package size={16} /> Add New Retail Product
                     </button>
-                ) : (
+                ) : hasPermission('retail-otc-sales.draft') ? (
                     <button onClick={() => navigate('/retail-otc-sales')} className="btn-primary px-4 py-2 text-sm transition-colors flex items-center gap-2">
                         <ShoppingBag size={16} /> Create Retail Sale
                     </button>
-                )}
+                ) : null}
             </div>
 
             {loading ? <LoadingSpinner text="Loading retail products..." /> : (
@@ -565,10 +567,10 @@ export default function RetailProducts() {
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <button onClick={() => openView(p)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="View"><Eye size={16} /></button>
-                                                    {isAdmin && (
+                                                    {(canEdit || canDelete) && (
                                                         <>
-                                                            <button onClick={() => openEdit(p)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>
-                                                            <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>
+                                                            {canEdit && <button onClick={() => openEdit(p)} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors" title="Edit"><Edit size={16} /></button>}
+                                                            {canDelete && <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 size={16} /></button>}
                                                         </>
                                                     )}
                                                 </div>
@@ -587,7 +589,7 @@ export default function RetailProducts() {
                 </>
             )}
 
-            {isAdmin && (
+            {(canCreate || canEdit) && (
                 <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Retail Product' : 'Add New Retail Product'} size="max-w-2xl">
                     <Stepper steps={formSteps} currentStep={step} />
                     {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
@@ -663,7 +665,7 @@ export default function RetailProducts() {
                         </div>
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">
                             <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
-                            {isAdmin && (
+                            {canEdit && (
                                 <button onClick={() => { setShowViewModal(false); openEdit(viewProduct); }} className="btn-primary px-4 py-2 text-sm flex items-center gap-2"><Edit size={16} /> Edit Product</button>
                             )}
                         </div>

@@ -142,10 +142,43 @@ const superAdminMenu = [
 // ============================================================
 // ROLE TO MENU MAPPING
 // ============================================================
+// ============================================================
+// PURCHASING STAFF MENU
+// ============================================================
+const purchasingStaffMenu = [
+    // Main
+    { section: 'Main' },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+
+    // Suppliers & Purchase Orders
+    { section: 'Purchasing' },
+    { to: '/suppliers', label: 'Suppliers', icon: Truck },
+    { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+    { to: '/purchase-orders/create', label: 'Create Purchase Order', icon: FileText },
+
+    // Product Management (Read-Only)
+    { section: 'Products' },
+    { to: '/medicines', label: 'Medicines', icon: Pill },
+    { to: '/retail-products', label: 'Retail & OTC Products', icon: Package },
+
+    // Inventory (Read-Only)
+    { section: 'Inventory' },
+    { to: '/stock-management', label: 'Stock Management', icon: Boxes },
+    { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight },
+
+    // Reports
+    { section: 'Reports' },
+    { to: '/reports', label: 'Reports Dashboard', icon: BarChart3 },
+];
+
+// ============================================================
+// ROLE TO MENU MAPPING
+// ============================================================
 const menuByRole = {
     super_admin: superAdminMenu,
     admin: adminMenu,
     pharmacist: pharmacistMenu,
+    purchasing_staff: purchasingStaffMenu,
     cashier: cashierMenu
 };
 
@@ -160,6 +193,7 @@ const roleBadgeStyle = {
     super_admin: 'bg-purple-100 text-purple-700',
     admin: 'bg-sky-100 text-sky-700',
     pharmacist: 'bg-emerald-100 text-emerald-700',
+    purchasing_staff: 'bg-orange-100 text-orange-700',
     cashier: 'bg-amber-100 text-amber-700',
 };
 
@@ -170,6 +204,7 @@ const roleLabel = {
     super_admin: 'Super Admin',
     admin: 'Admin',
     pharmacist: 'Pharmacist',
+    purchasing_staff: 'Purchasing Staff',
     cashier: 'Cashier',
 };
 
