@@ -75,7 +75,7 @@ class StockMovementController extends Controller
             'status' => 'nullable|string|in:pending,approved,completed,cancelled',
             'items' => 'nullable|array|min:1',
             'items.*.type' => 'required_with:items|in:medicine,retail',
-            'items.*.id' => 'required_with:items|integer|exists:medicines,id',
+            'items.*.id' => 'required_with:items|integer|min:1',
             'items.*.quantity' => 'required_with:items|integer|min:1',
             'medicine_id' => 'nullable|exists:medicines,id',
             'retail_product_id' => 'nullable|exists:retail_products,id',

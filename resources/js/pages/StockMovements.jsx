@@ -49,7 +49,7 @@ export default function StockMovements() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [medicines, setMedicines] = useState([]);
-        const [retailProducts, setRetailProducts] = useState([]);
+    const [retailProducts, setRetailProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [users, setUsers] = useState([]);
@@ -59,9 +59,17 @@ export default function StockMovements() {
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('create');
     const [modalItem, setModalItem] = useState(null);
+
+    // ✅ NEW: Multi-item state
+    const [selectedItems, setSelectedItems] = useState([]);
     const [form, setForm] = useState({
-        medicine_id: '', retail_product_id: '', type: 'in', quantity: '', reference: '', notes: '',
-        source_type: '', destination_type: '', branch_id: '', status: 'pending'
+        type: 'in',
+        reference: '',
+        notes: '',
+        source_type: '',
+        destination_type: '',
+        branch_id: '',
+        status: 'pending'
     });
     const [submitting, setSubmitting] = useState(false);
     const [formLoading, setFormLoading] = useState(false);
@@ -97,7 +105,7 @@ export default function StockMovements() {
                 setMovements(Array.isArray(movementsData) ? movementsData : []);
                 setMeta(data.movements?.meta || data.meta || null);
                 setMedicines(Array.isArray(data.medicines) ? data.medicines : []);
-                                setRetailProducts(Array.isArray(data.retail_products) ? data.retail_products : []);
+                setRetailProducts(Array.isArray(data.retail_products) ? data.retail_products : []);
                 setHasError(false);
             })
             .catch(err => {
@@ -118,7 +126,7 @@ export default function StockMovements() {
     const loadSummary = useCallback(() => {
         api.get('/stock-movements/summary', { params: filters })
             .then(r => setSummary(r.data))
-            .catch(() => {});
+            .catch(() => { });
     }, [filters]);
 
     useEffect(() => {
@@ -134,7 +142,7 @@ export default function StockMovements() {
             setCategories(Array.isArray(catRes.data?.data) ? catRes.data.data : (Array.isArray(catRes.data) ? catRes.data : []));
             setSuppliers(Array.isArray(supRes.data?.data) ? supRes.data.data : (Array.isArray(supRes.data) ? supRes.data : []));
             setUsers(Array.isArray(userRes.data?.data) ? userRes.data.data : (Array.isArray(userRes.data) ? userRes.data : []));
-        }).catch(() => {});
+        }).catch(() => { });
     }, []);
 
     useEffect(() => { loadFilterOptions(); }, [loadFilterOptions]);
@@ -174,7 +182,16 @@ export default function StockMovements() {
     const openCreate = () => {
         setModalMode('create');
         setModalItem(null);
-        setForm({ medicine_id: '', retail_product_id: '', type: 'in', quantity: '', reference: '', notes: '', source_type: '', destination_type: '', branch_id: '', status: 'pending' });
+        setSelectedItems([]);
+        setForm({
+            type: 'in',
+            reference: '',
+            notes: '',
+            source_type: '',
+            destination_type: '',
+            branch_id: '',
+            status: 'pending'
+        });
         setActiveTab('medicine');
         setMedSearch('');
         setRetailSearch('');
@@ -192,7 +209,16 @@ export default function StockMovements() {
     const closeModal = () => {
         setShowModal(false);
         setModalItem(null);
-        setForm({ medicine_id: '', retail_product_id: '', type: 'in', quantity: '', reference: '', notes: '', source_type: '', destination_type: '', branch_id: '', status: 'pending' });
+        setSelectedItems([]);
+        setForm({
+            type: 'in',
+            reference: '',
+            notes: '',
+            source_type: '',
+            destination_type: '',
+            branch_id: '',
+            status: 'pending'
+        });
         setActiveTab('medicine');
         setMedSearch('');
         setRetailSearch('');
@@ -207,10 +233,10 @@ export default function StockMovements() {
                 api.get('/retail-products', { params: { per_page: 1000 } }),
             ]);
             const medList = Array.isArray(medRes.data?.data) ? medRes.data.data :
-                         Array.isArray(medRes.data?.medicines?.data) ? medRes.data.medicines.data :
-                         Array.isArray(medRes.data) ? medRes.data : [];
+                Array.isArray(medRes.data?.medicines?.data) ? medRes.data.medicines.data :
+                    Array.isArray(medRes.data) ? medRes.data : [];
             const retailList = Array.isArray(retailRes.data?.data) ? retailRes.data.data :
-                           Array.isArray(retailRes.data) ? retailRes.data : [];
+                Array.isArray(retailRes.data) ? retailRes.data : [];
             setMedicines(medList);
             setRetailProducts(retailList);
         } catch (err) {
@@ -220,35 +246,89 @@ export default function StockMovements() {
         }
     };
 
-    const handleSelectMedicine = (id) => {
-        setForm(prev => ({ ...prev, medicine_id: id, retail_product_id: '' }));
-        setShowMedDropdown(false);
-        setMedSearch('');
+    // ✅ NEW: Add item to selected list
+    const addItem = (type, product) => {
+        // Check if already added
+        if (selectedItems.some(item => item.type === type && item.id === product.id)) {
+            window.showToast('Item already added', 'info');
+            return;
+        }
+        setSelectedItems(prev => [...prev, {
+            type,
+            id: product.id,
+            name: product.name,
+            quantity: 1,
+            stock: product.quantity || 0,
+            isRetail: type === 'retail'
+        }]);
+        // Close dropdown
+        if (type === 'medicine') {
+            setShowMedDropdown(false);
+            setMedSearch('');
+        } else {
+            setShowRetailDropdown(false);
+            setRetailSearch('');
+        }
     };
 
-    const handleSelectRetail = (id) => {
-        setForm(prev => ({ ...prev, retail_product_id: id, medicine_id: '' }));
-        setShowRetailDropdown(false);
-        setRetailSearch('');
+    // ✅ NEW: Remove item from selected list
+    const removeItem = (index) => {
+        setSelectedItems(prev => prev.filter((_, i) => i !== index));
     };
 
-    const selectedProduct = useMemo(() => {
-        if (form.retail_product_id) return retailProducts.find(r => r.id == form.retail_product_id);
-        if (form.medicine_id) return medicines.find(m => m.id == form.medicine_id);
-        return null;
-    }, [form.medicine_id, form.retail_product_id, medicines, retailProducts]);
+    // ✅ NEW: Update item quantity
+    const updateItemQty = (index, value) => {
+        setSelectedItems(prev => prev.map((item, i) =>
+            i === index ? { ...item, quantity: Math.max(1, parseInt(value) || 1) } : item
+        ));
+    };
 
-    const isRetailSelected = !!form.retail_product_id;
+    // ✅ NEW: Check if item is already added
+    const isItemAdded = (type, id) => {
+        return selectedItems.some(item => item.type === type && item.id === id);
+    };
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+    // ✅ UPDATED: Submit with multiple items
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        if (selectedItems.length === 0) {
+            setError('Please add at least one product to the movement.');
+            return;
+        }
+
+        // Validate quantities
+        const invalidItems = selectedItems.filter(item => !item.quantity || item.quantity < 1);
+        if (invalidItems.length > 0) {
+            setError('Please enter valid quantities for all items.');
+            return;
+        }
+
         setSubmitting(true);
         try {
-            await api.post('/stock-movements', form);
-            window.showToast('Stock movement recorded successfully', 'success');
+            // Create movement for each item
+            const promises = selectedItems.map(item => {
+                const payload = {
+                    type: form.type,
+                    quantity: item.quantity,
+                    reference: form.reference,
+                    notes: form.notes,
+                    source_type: form.source_type,
+                    destination_type: form.destination_type,
+                    branch_id: form.branch_id,
+                    status: form.status,
+                    medicine_id: item.type === 'medicine' ? item.id : null,
+                    retail_product_id: item.type === 'retail' ? item.id : null,
+                };
+                return api.post('/stock-movements', payload);
+            });
+
+            await Promise.all(promises);
+
+            window.showToast(`Stock movement recorded for ${selectedItems.length} item(s) successfully`, 'success');
             setShowModal(false);
             setHasError(false);
             loadMovements();
@@ -284,11 +364,16 @@ export default function StockMovements() {
         const isRetail = item.itemable_type?.includes('RetailProduct');
         setModalMode('create');
         setModalItem(item);
+        setSelectedItems([{
+            type: isRetail ? 'retail' : 'medicine',
+            id: isRetail ? item.itemable_id : (item.medicine_id || item.medicine?.id),
+            name: isRetail ? item.itemable?.name : item.medicine?.name,
+            quantity: item.quantity || 1,
+            stock: item.medicine?.quantity || item.itemable?.quantity || 0,
+            isRetail: isRetail
+        }]);
         setForm({
-            medicine_id: isRetail ? '' : (item.itemable_id || item.medicine_id || item.medicine?.id || ''),
-            retail_product_id: isRetail ? (item.itemable_id || item.itemable?.id || '') : '',
             type: item.type || 'in',
-            quantity: item.quantity || '',
             reference: item.reference ? `${item.reference} (copy)` : '',
             notes: item.notes || '',
             source_type: item.source_type || '',
@@ -634,7 +719,7 @@ export default function StockMovements() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Product Selection with tab toggle + searchable dropdown */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Product *</label>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Products * (Add one or more)</label>
                             {/* Tab toggle */}
                             <div className="flex gap-2 mb-2">
                                 <button type="button" onClick={() => setActiveTab('medicine')}
@@ -649,123 +734,190 @@ export default function StockMovements() {
                                 </button>
                             </div>
 
-                            {/* Selected product card or search dropdown */}
-                            {selectedProduct ? (
-                                <div className={`rounded-xl border p-3 flex items-center gap-3 ${isRetailSelected ? 'bg-amber-50 border-amber-200' : 'bg-sky-50 border-sky-200'}`}>
-                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isRetailSelected ? 'bg-amber-100' : 'bg-sky-100'}`}>
-                                        {isRetailSelected ? <Package size={18} className="text-amber-600" /> : <Pill size={18} className="text-sky-600" />}
+                            {/* Medicine search dropdown */}
+                            {activeTab === 'medicine' && (
+                                <div className="relative" ref={medSearchRef}>
+                                    <div className="relative">
+                                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            value={medSearch}
+                                            onChange={(e) => { setMedSearch(e.target.value); setShowMedDropdown(true); }}
+                                            onFocus={() => setShowMedDropdown(true)}
+                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                            placeholder="Search medicines by name, generic, or barcode..."
+                                        />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-gray-800 truncate">{selectedProduct.name}</p>
-                                        <p className="text-xs text-gray-500">
-                                            Stock: <span className="font-semibold">{selectedProduct.quantity ?? 0}</span>
-                                            {selectedProduct.generic_name ? ` | ${selectedProduct.generic_name}` : ''}
-                                            {selectedProduct.sku ? ` | SKU: ${selectedProduct.sku}` : ''}
-                                        </p>
-                                    </div>
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${isRetailSelected ? 'bg-amber-200 text-amber-800' : 'bg-sky-200 text-sky-800'}`}>
-                                        {isRetailSelected ? 'OTC' : 'MED'}
-                                    </span>
-                                    <button type="button" onClick={() => setForm(prev => ({ ...prev, medicine_id: '', retail_product_id: '' }))} className="text-gray-400 hover:text-red-500 shrink-0">
-                                        <X size={16} />
-                                    </button>
+                                    {showMedDropdown && (
+                                        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                            {formLoading ? (
+                                                <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading medicines...</div>
+                                            ) : (
+                                                <>
+                                                    {filteredMedicines.slice(0, 50).map(m => (
+                                                        <button
+                                                            key={m.id}
+                                                            type="button"
+                                                            onClick={() => addItem('medicine', m)}
+                                                            disabled={isItemAdded('medicine', m.id)}
+                                                            className={`w-full text-left px-3 py-2.5 text-sm flex items-center justify-between hover:bg-sky-50 transition-colors ${isItemAdded('medicine', m.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            <span className="flex items-center gap-2">
+                                                                <Pill size={14} className="text-sky-400" />
+                                                                {m.name}
+                                                            </span>
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-xs text-gray-500">Stock: {m.quantity ?? 0}</span>
+                                                                {isItemAdded('medicine', m.id) && (
+                                                                    <span className="text-xs text-green-600 font-semibold">Added</span>
+                                                                )}
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                    {filteredMedicines.length === 0 && (
+                                                        <div className="px-4 py-8 text-center text-gray-400 text-sm">No medicines found</div>
+                                                    )}
+                                                    {filteredMedicines.length > 50 && (
+                                                        <div className="px-3 py-2 text-center text-xs text-gray-400 border-t border-gray-100">
+                                                            Showing first 50 of {filteredMedicines.length} results.
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <>
-                                    {/* Medicine search dropdown */}
-                                    {activeTab === 'medicine' && (
-                                        <div className="relative" ref={medSearchRef}>
-                                            <div className="relative">
-                                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                <input
-                                                    type="text"
-                                                    value={medSearch}
-                                                    onChange={(e) => { setMedSearch(e.target.value); setShowMedDropdown(true); }}
-                                                    onFocus={() => setShowMedDropdown(true)}
-                                                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                                    placeholder="Search medicines by name, generic, or barcode..."
-                                                />
-                                            </div>
-                                            {showMedDropdown && (
-                                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
-                                                    {formLoading ? (
-                                                        <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading medicines...</div>
-                                                    ) : (
-                                                        <>
-                                                            {filteredMedicines.slice(0, 50).map(m => (
-                                                                <button key={m.id} type="button" onClick={() => handleSelectMedicine(m.id)}
-                                                                    className="w-full text-left px-3 py-2.5 text-sm flex items-center justify-between hover:bg-sky-50 transition-colors">
-                                                                    <span className="flex items-center gap-2">
-                                                                        <Pill size={14} className="text-sky-400" />
-                                                                        {m.name}
-                                                                    </span>
-                                                                    <span className="text-xs text-gray-500">Stock: {m.quantity ?? 0}</span>
-                                                                </button>
-                                                            ))}
-                                                            {filteredMedicines.length === 0 && (
-                                                                <div className="px-4 py-8 text-center text-gray-400 text-sm">No medicines found</div>
-                                                            )}
-                                                            {filteredMedicines.length > 50 && (
-                                                                <div className="px-3 py-2 text-center text-xs text-gray-400 border-t border-gray-100">
-                                                                    Showing first 50 of {filteredMedicines.length} results.
-                                                                </div>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                            )}
 
-                                    {/* Retail & OTC search dropdown */}
-                                    {activeTab === 'retail' && (
-                                        <div className="relative" ref={retailSearchRef}>
-                                            <div className="relative">
-                                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                <input
-                                                    type="text"
-                                                    value={retailSearch}
-                                                    onChange={(e) => { setRetailSearch(e.target.value); setShowRetailDropdown(true); }}
-                                                    onFocus={() => setShowRetailDropdown(true)}
-                                                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none"
-                                                    placeholder="Search retail products by name, SKU, or barcode..."
-                                                />
-                                            </div>
-                                            {showRetailDropdown && (
-                                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
-                                                    {formLoading ? (
-                                                        <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading products...</div>
-                                                    ) : (
-                                                        <>
-                                                            {filteredRetail.slice(0, 50).map(r => (
-                                                                <button key={r.id} type="button" onClick={() => handleSelectRetail(r.id)}
-                                                                    className="w-full text-left px-3 py-2.5 text-sm flex items-center justify-between hover:bg-amber-50 transition-colors">
-                                                                    <span className="flex items-center gap-2">
-                                                                        <Package size={14} className="text-amber-400" />
-                                                                        {r.name}
-                                                                    </span>
-                                                                    <span className="text-xs text-gray-500">Stock: {r.quantity ?? 0}</span>
-                                                                </button>
-                                                            ))}
-                                                            {filteredRetail.length === 0 && (
-                                                                <div className="px-4 py-8 text-center text-gray-400 text-sm">No retail products found</div>
-                                                            )}
-                                                            {filteredRetail.length > 50 && (
-                                                                <div className="px-3 py-2 text-center text-xs text-gray-400 border-t border-gray-100">
-                                                                    Showing first 50 of {filteredRetail.length} results.
-                                                                </div>
-                                                            )}
-                                                        </>
+                            {/* Retail & OTC search dropdown */}
+                            {activeTab === 'retail' && (
+                                <div className="relative" ref={retailSearchRef}>
+                                    <div className="relative">
+                                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            value={retailSearch}
+                                            onChange={(e) => { setRetailSearch(e.target.value); setShowRetailDropdown(true); }}
+                                            onFocus={() => setShowRetailDropdown(true)}
+                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none"
+                                            placeholder="Search retail products by name, SKU, or barcode..."
+                                        />
+                                    </div>
+                                    {showRetailDropdown && (
+                                        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                            {formLoading ? (
+                                                <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading products...</div>
+                                            ) : (
+                                                <>
+                                                    {filteredRetail.slice(0, 50).map(r => (
+                                                        <button
+                                                            key={r.id}
+                                                            type="button"
+                                                            onClick={() => addItem('retail', r)}
+                                                            disabled={isItemAdded('retail', r.id)}
+                                                            className={`w-full text-left px-3 py-2.5 text-sm flex items-center justify-between hover:bg-amber-50 transition-colors ${isItemAdded('retail', r.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            <span className="flex items-center gap-2">
+                                                                <Package size={14} className="text-amber-400" />
+                                                                {r.name}
+                                                            </span>
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-xs text-gray-500">Stock: {r.quantity ?? 0}</span>
+                                                                {isItemAdded('retail', r.id) && (
+                                                                    <span className="text-xs text-green-600 font-semibold">Added</span>
+                                                                )}
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                    {filteredRetail.length === 0 && (
+                                                        <div className="px-4 py-8 text-center text-gray-400 text-sm">No retail products found</div>
                                                     )}
-                                                </div>
+                                                    {filteredRetail.length > 50 && (
+                                                        <div className="px-3 py-2 text-center text-xs text-gray-400 border-t border-gray-100">
+                                                            Showing first 50 of {filteredRetail.length} results.
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     )}
-                                </>
+                                </div>
                             )}
                         </div>
+
+                        {/* ✅ NEW: Selected Items Table */}
+                        {selectedItems.length > 0 && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Selected Items ({selectedItems.length})</label>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="bg-gray-50">
+                                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">#</th>
+                                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
+                                                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Type</th>
+                                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Qty</th>
+                                                <th className="px-3 py-2 w-8"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedItems.map((item, index) => (
+                                                <tr key={`${item.type}-${item.id}`} className="border-t border-gray-100">
+                                                    <td className="px-3 py-2 text-sm text-gray-500">{index + 1}</td>
+                                                    <td className="px-3 py-2 text-sm font-medium text-gray-800 flex items-center gap-2">
+                                                        {item.isRetail ? (
+                                                            <Package size={14} className="text-amber-400" />
+                                                        ) : (
+                                                            <Pill size={14} className="text-sky-400" />
+                                                        )}
+                                                        {item.name}
+                                                        <span className="text-xs text-gray-400 ml-1">(Stock: {item.stock})</span>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-center">
+                                                        <span className={item.isRetail
+                                                            ? "px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
+                                                            : "px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700"
+                                                        }>
+                                                            {item.isRetail ? 'OTC' : 'Medicine'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <input
+                                                            type="number"
+                                                            value={item.quantity}
+                                                            onChange={(e) => updateItemQty(index, e.target.value)}
+                                                            className="w-20 px-2 py-1 text-sm text-right border border-gray-200 rounded focus:border-sky-400 outline-none"
+                                                            min="1"
+                                                        />
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeItem(index)}
+                                                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="border-t-2 border-gray-200 bg-gray-50">
+                                                <td colSpan="2" className="px-3 py-2 text-right text-xs font-bold text-gray-700">Total Items:</td>
+                                                <td className="px-3 py-2 text-center text-sm font-bold text-gray-900">{selectedItems.length}</td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Movement Type */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Type *</label>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Movement Type *</label>
                             <select
                                 name="type"
                                 value={form.type}
@@ -778,6 +930,8 @@ export default function StockMovements() {
                                 ))}
                             </select>
                         </div>
+
+                        {/* Source/Destination */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
@@ -802,18 +956,8 @@ export default function StockMovements() {
                                 </select>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
-                            <input
-                                type="number"
-                                name="quantity"
-                                value={form.quantity}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
-                                min="1"
-                                required
-                            />
-                        </div>
+
+                        {/* Reference & Notes */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Reference</label>
                             <div className="relative">
@@ -838,16 +982,17 @@ export default function StockMovements() {
                                 />
                             </div>
                         </div>
+
                         <div className="flex justify-end gap-3 pt-2">
                             <button type="button" onClick={closeModal} className="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2">
                                 <X size={16} /> Cancel
                             </button>
                             <button
                                 type="submit"
-                                disabled={submitting}
+                                disabled={submitting || selectedItems.length === 0}
                                 className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-xl shadow-lg shadow-sky-500/20 hover:shadow-xl transition-all duration-300 flex items-center gap-2 disabled:opacity-60"
                             >
-                                {submitting ? <><Loader2 size={16} className="animate-spin" /> Recording...</> : <><Save size={16} /> Record Movement</>}
+                                {submitting ? <><Loader2 size={16} className="animate-spin" /> Recording...</> : <><Save size={16} /> Record Movement ({selectedItems.length} items)</>}
                             </button>
                         </div>
                     </form>
