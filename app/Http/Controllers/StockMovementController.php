@@ -84,13 +84,13 @@ class StockMovementController extends Controller
     {
         $validated = $request->validate([
             'medicine_id'      => 'required|exists:medicines,id',
-            'type'             => 'required|in:in,out,adjustment,return,transfer,damaged,expired,lost,correction,self',
+            'type'             => 'required|in:in,out,adjustment,return,transfer,damaged,expired,lost,correction,self,warehouse',
             'quantity'         => 'required|integer|min:1',
             'reference'        => 'nullable|string|max:255',
             'notes'            => 'nullable|string|max:1000',
-            'source_type'      => 'nullable|string|in:self,supplier,branch,sale,customer',
+            'source_type'      => 'nullable|string|in:self,supplier,branch,sale,customer,warehouse',
             'source_id'        => 'nullable|integer',
-            'destination_type' => 'nullable|string|in:self,supplier,branch,sale,customer',
+            'destination_type' => 'nullable|string|in:self,supplier,branch,sale,customer,warehouse',
             'destination_id'   => 'nullable|integer',
             'branch_id'        => 'nullable|integer',
             'status'           => 'nullable|string|in:pending,approved,completed,cancelled',
@@ -102,7 +102,7 @@ class StockMovementController extends Controller
                 $qty = (int) $validated['quantity'];
                 $oldQuantity = (int) $medicine->quantity;
 
-                if (in_array($validated['type'], ['in', 'return', 'transfer'])) {
+                if (in_array($validated['type'], ['in', 'return', 'transfer', 'warehouse'])) {
                     $medicine->quantity += $qty;
                 } elseif (in_array($validated['type'], ['out', 'damaged', 'expired', 'lost', 'correction', 'self'])) {
                     if ($medicine->quantity < $qty) {

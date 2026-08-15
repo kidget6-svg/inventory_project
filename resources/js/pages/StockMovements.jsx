@@ -25,6 +25,7 @@ const movementTypeConfig = {
     lost: { label: 'Lost', color: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertTriangle },
     correction: { label: 'Correction', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: FileText },
     self: { label: 'Self Adjustment', color: 'bg-teal-100 text-teal-700 border-teal-200', icon: RotateCw },
+    warehouse: { label: 'Warehouse', color: 'bg-sky-100 text-sky-700 border-sky-200', icon: Warehouse },
 };
 
 const SkeletonTable = () => (
@@ -935,25 +936,27 @@ export default function StockMovements() {
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
-                                <select name="source_type" value={form.source_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
-                                    <option value="">None</option>
-                                    <option value="self">Self</option>
-                                    <option value="supplier">Supplier</option>
-                                    <option value="branch">Branch</option>
-                                    <option value="sale">Sale</option>
-                                    <option value="customer">Customer</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
-                                <select name="destination_type" value={form.destination_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
-                                    <option value="">None</option>
-                                    <option value="self">Self</option>
-                                    <option value="supplier">Supplier</option>
-                                    <option value="branch">Branch</option>
-                                    <option value="sale">Sale</option>
-                                    <option value="customer">Customer</option>
-                                </select>
+                                 <select name="source_type" value={form.source_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                     <option value="">None</option>
+                                     <option value="self">Self</option>
+                                     <option value="supplier">Supplier</option>
+                                     <option value="branch">Branch</option>
+                                     <option value="sale">Sale</option>
+                                     <option value="customer">Customer</option>
+                                     <option value="warehouse">Warehouse</option>
+                                 </select>
+                             </div>
+                             <div>
+                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
+                                 <select name="destination_type" value={form.destination_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                     <option value="">None</option>
+                                     <option value="self">Self</option>
+                                     <option value="supplier">Supplier</option>
+                                     <option value="branch">Branch</option>
+                                     <option value="sale">Sale</option>
+                                     <option value="customer">Customer</option>
+                                     <option value="warehouse">Warehouse</option>
+                                 </select>
                             </div>
                         </div>
 

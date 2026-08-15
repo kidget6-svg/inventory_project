@@ -6,7 +6,7 @@ import {
     ArrowLeft, Save, X, Plus, Trash2, Search, Pill, Package,
     ArrowUpRight, ArrowDownRight, RotateCcw, ClipboardList, AlertTriangle,
     Truck, CalendarX, FileWarning, CheckCircle2, AlertCircle,
-    ShoppingBag, ChevronDown, Check,
+    ShoppingBag, ChevronDown, Check, Warehouse,
 } from 'lucide-react';
 
 const movementTypes = [
@@ -20,6 +20,7 @@ const movementTypes = [
     { value: 'lost', label: 'Lost', icon: FileWarning, color: 'orange', desc: 'Mark lost stock' },
     { value: 'correction', label: 'Correction', icon: CheckCircle2, color: 'blue', desc: 'Fix data errors' },
     { value: 'self', label: 'Self Adjustment', icon: RotateCcw, color: 'teal', desc: 'Internal self adjustment' },
+    { value: 'warehouse', label: 'Warehouse', icon: Warehouse, color: 'sky', desc: 'Warehouse inventory movement' },
 ];
 
 const colorMap = {
