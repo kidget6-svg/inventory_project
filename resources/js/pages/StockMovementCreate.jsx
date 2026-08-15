@@ -2,16 +2,12 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Stepper from '../components/Stepper';
-import StatCard from '../components/StatCard';
 import {
-    ArrowLeft, Save, X, Package, Tag, FileText, Loader2, Search,
+    ArrowLeft, Save, X, Plus, Trash2, Search, Pill, Package,
     ArrowUpRight, ArrowDownRight, RotateCcw, ClipboardList, AlertTriangle,
     Truck, CalendarX, FileWarning, CheckCircle2, AlertCircle,
-    ShoppingBag, ChevronDown, Check, Pill,
+    ShoppingBag, ChevronDown, Check,
 } from 'lucide-react';
-
-const steps = ['Select Product', 'Movement Type', 'Details & Confirm'];
 
 const movementTypes = [
     { value: 'in', label: 'Stock In', icon: ArrowUpRight, color: 'emerald', desc: 'Add stock to inventory' },
@@ -27,15 +23,15 @@ const movementTypes = [
 ];
 
 const colorMap = {
-    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:shadow-emerald-100',
-    red: 'bg-red-50 border-red-200 text-red-700 hover:border-red-400 hover:shadow-red-100',
-    sky: 'bg-sky-50 border-sky-200 text-sky-700 hover:border-sky-400 hover:shadow-sky-100',
-    amber: 'bg-amber-50 border-amber-200 text-amber-700 hover:border-amber-400 hover:shadow-amber-100',
-    purple: 'bg-purple-50 border-purple-200 text-purple-700 hover:border-purple-400 hover:shadow-purple-100',
-    orange: 'bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400 hover:shadow-orange-100',
-    gray: 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-400 hover:shadow-gray-100',
-    blue: 'bg-blue-50 border-blue-200 text-blue-700 hover:border-blue-400 hover:shadow-blue-100',
-    teal: 'bg-teal-50 border-teal-200 text-teal-700 hover:border-teal-400 hover:shadow-teal-100',
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    red: 'bg-red-50 border-red-200 text-red-700',
+    sky: 'bg-sky-50 border-sky-200 text-sky-700',
+    amber: 'bg-amber-50 border-amber-200 text-amber-700',
+    purple: 'bg-purple-50 border-purple-200 text-purple-700',
+    orange: 'bg-orange-50 border-orange-200 text-orange-700',
+    gray: 'bg-gray-50 border-gray-200 text-gray-700',
+    blue: 'bg-blue-50 border-blue-200 text-blue-700',
+    teal: 'bg-teal-50 border-teal-200 text-teal-700',
 };
 
 /* ── Searchable Select Dropdown ───────────────────────────── */
@@ -66,12 +62,10 @@ function SearchableSelect({ items, value, onSelect, placeholder, icon: Icon, acc
     }, [items, query]);
 
     const selected = items.find(i => i.value === value);
-
     const accentBg = accent === 'amber' ? 'bg-amber-100 text-amber-600' : 'bg-sky-100 text-sky-600';
 
     return (
         <div className="relative" ref={ref}>
-            {/* Trigger button */}
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
@@ -93,10 +87,8 @@ function SearchableSelect({ items, value, onSelect, placeholder, icon: Icon, acc
                 <ChevronDown size={18} className={`text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Dropdown panel */}
             {open && (
                 <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                    {/* Search input */}
                     <div className="relative border-b border-gray-100">
                         <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                         <input
@@ -108,7 +100,6 @@ function SearchableSelect({ items, value, onSelect, placeholder, icon: Icon, acc
                             className="w-full pl-10 pr-3 py-2.5 text-sm outline-none"
                         />
                     </div>
-                    {/* Options list */}
                     <div className="max-h-64 overflow-y-auto">
                         {filtered.length === 0 ? (
                             <div className="px-4 py-8 text-center text-gray-400 text-sm">
@@ -118,7 +109,7 @@ function SearchableSelect({ items, value, onSelect, placeholder, icon: Icon, acc
                             <button
                                 key={item.value}
                                 type="button"
-                                onClick={() => { onSelect(item.value); setOpen(false); setQuery(''); }}
+                                onClick={() => { onSelect(item); setOpen(false); setQuery(''); }}
                                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-sky-50 transition-colors ${
                                     value === item.value ? 'bg-sky-50' : ''
                                 }`}
@@ -134,7 +125,6 @@ function SearchableSelect({ items, value, onSelect, placeholder, icon: Icon, acc
                             </button>
                         ))}
                     </div>
-                    {/* Footer count */}
                     <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">
                         {filtered.length} of {items.length} products
                     </div>
@@ -152,18 +142,20 @@ export default function StockMovementCreate() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
-    const [step, setStep] = useState(0);
 
-    // Which product type tab is active in Step 0
     const [activeTab, setActiveTab] = useState('medicine');
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showDropdown, setShowDropdown] = useState(false);
+    const searchRef = useRef(null);
 
-    const [form, setForm] = useState({
-        medicine_id: '', retail_product_id: '',
-        type: 'in', quantity: '', reference: '', notes: '',
-        source_type: '', destination_type: ''
-    });
+    const [items, setItems] = useState([]);
+    const [movementType, setMovementType] = useState('');
+    const [reference, setReference] = useState('');
+    const [notes, setNotes] = useState('');
+    const [sourceType, setSourceType] = useState('');
+    const [destinationType, setDestinationType] = useState('');
 
-    // Load medicines and retail products
     useEffect(() => {
         Promise.all([
             api.get('/medicines', { params: { per_page: 1000 } }),
@@ -182,79 +174,98 @@ export default function StockMovementCreate() {
             .finally(() => setLoading(false));
     }, []);
 
-    // Build dropdown option lists
-    const medicineOptions = useMemo(() => medicines.map(m => ({
-        value: m.id,
-        label: m.name || 'Unnamed Medicine',
-        sub: m.generic_name || '',
-        barcode: m.barcode ? String(m.barcode) : '',
-        stock: m.quantity ?? 0,
-    })), [medicines]);
+    useEffect(() => {
+        function handleClick(e) {
+            if (searchRef.current && !searchRef.current.contains(e.target)) {
+                setShowDropdown(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
 
-    const retailOptions = useMemo(() => retailProducts.map(r => ({
-        value: r.id,
-        label: r.name || 'Unnamed Product',
-        sub: r.sku || '',
-        barcode: r.barcode ? String(r.barcode) : '',
-        stock: r.quantity ?? 0,
-    })), [retailProducts]);
+    const isItemAdded = (type, id) => items.some(i => i.type === type && i.id === id);
 
-    // Selected product details for display in later steps
-    const selectedMedicine = useMemo(() => medicines.find(m => m.id == form.medicine_id), [medicines, form.medicine_id]);
-    const selectedRetail = useMemo(() => retailProducts.find(r => r.id == form.retail_product_id), [retailProducts, form.retail_product_id]);
-    const currentProduct = selectedRetail || selectedMedicine;
-    const isRetail = !!selectedRetail;
-
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-    const handleSelectMedicine = (id) => {
-        setForm({ ...form, medicine_id: id, retail_product_id: '' });
-    };
-    const handleSelectRetail = (id) => {
-        setForm({ ...form, retail_product_id: id, medicine_id: '' });
+    const addItem = (type, product) => {
+        if (isItemAdded(type, product.id)) return;
+        setItems(prev => [...prev, {
+            type,
+            id: product.id,
+            name: product.name,
+            quantity: 1,
+        }]);
+        setSelectedProduct(null);
+        setSearchTerm('');
+        setShowDropdown(false);
     };
 
-    const handleContinue = () => {
-        // Auto-switch tab if the other type has a selection
-        if (form.medicine_id) setActiveTab('medicine');
-        if (form.retail_product_id) setActiveTab('retail');
-        setStep(1);
+    const removeItem = (index) => {
+        setItems(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleSelectType = (type) => {
-        setForm({ ...form, type });
-        setStep(2);
+    const updateItemQuantity = (index, value) => {
+        const qty = parseInt(value) || 1;
+        setItems(prev => prev.map((it, i) =>
+            i === index ? { ...it, quantity: Math.max(1, qty) } : it
+        ));
     };
+
+    const currentList = activeTab === 'medicine' ? medicines : retailProducts;
+    const filteredProducts = currentList.filter(p =>
+        (p.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+
+        if (items.length === 0) {
+            setError('Please add at least one product.');
+            return;
+        }
+        if (!movementType) {
+            setError('Please select a movement type.');
+            return;
+        }
+
         setSubmitting(true);
         try {
-            await api.post('/stock-movements', form);
-            window.showToast('Stock movement recorded successfully', 'success');
+            const payload = {
+                type: movementType,
+                reference: reference || null,
+                notes: notes || null,
+                source_type: sourceType || null,
+                destination_type: destinationType || null,
+                items: items.map(i => ({
+                    type: i.type,
+                    id: i.id,
+                    quantity: i.quantity,
+                })),
+            };
+
+            await api.post('/stock-movements', payload);
+            window.showToast('Stock movements recorded successfully', 'success');
             navigate('/stock-movements');
         } catch (err) {
-            setError(err.response?.data?.message || 'Error recording movement');
+            setError(err.response?.data?.message || 'Error recording stock movements');
         } finally {
             setSubmitting(false);
         }
     };
 
     const handleCancel = () => {
-        if (form.medicine_id || form.retail_product_id || form.quantity) {
+        if (items.length > 0) {
             if (!window.confirm('Discard unsaved changes?')) return;
         }
         navigate('/stock-movements');
     };
 
-    const hasSelection = !!(form.medicine_id || form.retail_product_id);
-    const canSubmit = hasSelection && form.type && form.quantity;
+    const canSubmit = items.length > 0 && movementType;
 
     if (loading) return <LoadingSpinner text="Loading products..." />;
 
     return (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-6 max-w-5xl">
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Link
@@ -266,13 +277,8 @@ export default function StockMovementCreate() {
                 </Link>
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Record Stock Movement</h1>
-                    <p className="text-sm text-gray-500 mt-0.5">Step {step + 1} of {steps.length}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">Add multiple items and record a single movement type</p>
                 </div>
-            </div>
-
-            {/* Stepper */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <Stepper steps={steps} currentStep={step} />
             </div>
 
             {error && (
@@ -282,13 +288,19 @@ export default function StockMovementCreate() {
                 </div>
             )}
 
-            {/* ── Step 0: Select Product ───────────────────── */}
-            {step === 0 && (
-                <div className="space-y-5">
-                    {/* Tab toggle: Medicines | Retail & OTC */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {/* 1. Add Products */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <Package size={18} className="text-sky-600" />
+                        1. Add Products
+                    </h3>
+
+                    {/* Tab toggle */}
                     <div className="flex gap-2 p-1.5 bg-gray-100 rounded-xl w-fit">
                         <button
-                            onClick={() => setActiveTab('medicine')}
+                            type="button"
+                            onClick={() => { setActiveTab('medicine'); setSearchTerm(''); setShowDropdown(false); }}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                                 activeTab === 'medicine'
                                     ? 'bg-white text-sky-700 shadow-sm'
@@ -297,10 +309,11 @@ export default function StockMovementCreate() {
                         >
                             <Pill size={16} />
                             Medicines
-                            <span className="ml-1 text-xs text-gray-400">({medicineOptions.length})</span>
+                            <span className="ml-1 text-xs text-gray-400">({medicines.length})</span>
                         </button>
                         <button
-                            onClick={() => setActiveTab('retail')}
+                            type="button"
+                            onClick={() => { setActiveTab('retail'); setSearchTerm(''); setShowDropdown(false); }}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                                 activeTab === 'retail'
                                     ? 'bg-white text-amber-700 shadow-sm'
@@ -309,265 +322,221 @@ export default function StockMovementCreate() {
                         >
                             <ShoppingBag size={16} />
                             Retail & OTC
-                            <span className="ml-1 text-xs text-gray-400">({retailOptions.length})</span>
+                            <span className="ml-1 text-xs text-gray-400">({retailProducts.length})</span>
                         </button>
                     </div>
 
-                    {/* Searchable dropdown for active tab */}
-                    <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-                        <label className="block text-xs font-semibold text-gray-600 mb-2">
-                            {activeTab === 'medicine' ? 'Select Medicine' : 'Select Retail & OTC Product'} *
-                        </label>
-                        {activeTab === 'medicine' ? (
-                            <SearchableSelect
-                                items={medicineOptions}
-                                value={form.medicine_id}
-                                onSelect={handleSelectMedicine}
-                                placeholder="Search and select a medicine..."
-                                icon={Pill}
-                                accent="sky"
+                    {/* Search + Add */}
+                    <div className="relative" ref={searchRef}>
+                        <div className="relative">
+                            <Search size={18} className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => { setSearchTerm(e.target.value); setShowDropdown(true); }}
+                                onFocus={() => setShowDropdown(true)}
+                                className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                placeholder={activeTab === 'medicine' ? 'Search medicines by name...' : 'Search retail & OTC products...'}
                             />
-                        ) : (
-                            <SearchableSelect
-                                items={retailOptions}
-                                value={form.retail_product_id}
-                                onSelect={handleSelectRetail}
-                                placeholder="Search and select a retail product..."
-                                icon={ShoppingBag}
-                                accent="amber"
-                            />
+                        </div>
+                        {showDropdown && (
+                            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                                {filteredProducts.length === 0 ? (
+                                    <div className="px-4 py-6 text-center text-gray-400 text-sm">No products found</div>
+                                ) : filteredProducts.map(p => {
+                                    const added = isItemAdded(activeTab, p.id);
+                                    return (
+                                        <button
+                                            key={p.id}
+                                            type="button"
+                                            onClick={() => addItem(activeTab, p)}
+                                            disabled={added}
+                                            className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-sky-50 ${added ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                {activeTab === 'medicine'
+                                                    ? <Pill size={14} className="text-sky-400" />
+                                                    : <Package size={14} className="text-amber-400" />}
+                                                {p.name}
+                                            </span>
+                                            {added
+                                                ? <span className="text-xs text-green-600 font-semibold">Added</span>
+                                                : <Plus size={16} className="text-sky-500" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
 
-                    {/* Selected product summary card */}
-                    {hasSelection && (
-                        <div className={`rounded-2xl border p-5 ${
-                            isRetail ? 'bg-amber-50 border-amber-200' : 'bg-sky-50 border-sky-200'
-                        }`}>
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                                    isRetail ? 'bg-amber-100' : 'bg-sky-100'
-                                }`}>
-                                    {isRetail
-                                        ? <ShoppingBag className="w-6 h-6 text-amber-600" />
-                                        : <Pill className="w-6 h-6 text-sky-600" />
-                                    }
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-bold text-gray-800">{currentProduct?.name || 'Selected Product'}</p>
-                                    <p className="text-sm text-gray-500">
-                                        Stock: <span className="font-semibold">{currentProduct?.quantity ?? 0}</span>
-                                        {currentProduct?.shelf_location && ` | Shelf: ${currentProduct.shelf_location}`}
-                                        {currentProduct?.generic_name && ` | ${currentProduct.generic_name}`}
-                                        {currentProduct?.sku && ` | SKU: ${currentProduct.sku}`}
-                                    </p>
-                                </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${
-                                    isRetail ? 'bg-amber-200 text-amber-800' : 'bg-sky-200 text-sky-800'
-                                }`}>
-                                    {isRetail ? 'Retail & OTC' : 'Medicine'}
-                                </span>
-                            </div>
+                    {/* Selected Items Table */}
+                    {items.length > 0 ? (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
+                                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-24">Type</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 w-28">Quantity</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 w-24">Stock</th>
+                                        <th className="px-3 py-2 w-10"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {items.map((it, i) => (
+                                        <tr key={`${it.type}-${it.id}`} className="border-t border-gray-100">
+                                            <td className="px-3 py-2 text-sm font-medium text-gray-800 flex items-center gap-2">
+                                                {it.type === 'medicine'
+                                                    ? <Pill size={14} className="text-sky-400" />
+                                                    : <Package size={14} className="text-amber-400" />}
+                                                {it.name}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${it.type === 'medicine' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                    {it.type === 'medicine' ? 'Medicine' : 'Retail'}
+                                                </span>
+                                            </td>
+                                            <td className="px-3 py-2 text-right">
+                                                <input
+                                                    type="number"
+                                                    value={it.quantity}
+                                                    onChange={(e) => updateItemQuantity(i, e.target.value)}
+                                                    className="w-20 px-2 py-1 text-sm text-right border border-gray-200 rounded-lg focus:border-sky-400 outline-none"
+                                                    min="1"
+                                                />
+                                            </td>
+                                            <td className="px-3 py-2 text-right text-sm text-gray-500">
+                                                {it.type === 'medicine'
+                                                    ? (medicines.find(m => m.id === it.id)?.quantity ?? 0)
+                                                    : (retailProducts.find(r => r.id === it.id)?.quantity ?? 0)}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItem(i)}
+                                                    className="text-red-500 hover:text-red-700"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 text-sm">
+                            No products added yet. Search and add products above.
                         </div>
                     )}
-
-                    {/* Continue button */}
-                    <div className="flex justify-end">
-                        <button
-                            onClick={handleContinue}
-                            disabled={!hasSelection}
-                            className="px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-xl shadow-lg shadow-sky-500/20 hover:shadow-xl transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Continue
-                            <ArrowUpRight size={16} />
-                        </button>
-                    </div>
                 </div>
-            )}
 
-            {/* ── Step 1: Movement Type ──────────────────── */}
-            {step === 1 && (
-                <div className="space-y-4">
-                    <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                            isRetail ? 'bg-amber-100' : 'bg-sky-100'
-                        }`}>
-                            {isRetail
-                                ? <ShoppingBag className="w-6 h-6 text-amber-600" />
-                                : <Pill className="w-6 h-6 text-sky-600" />
-                            }
-                        </div>
-                        <div>
-                            <p className="font-bold text-gray-800">{currentProduct?.name || 'Selected Product'}</p>
-                            <p className="text-sm text-gray-500">
-                                Stock: {currentProduct?.quantity ?? 0}
-                                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    isRetail ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'
-                                }`}>
-                                    {isRetail ? 'Retail & OTC' : 'Medicine'}
-                                </span>
-                            </p>
-                        </div>
-                        <button onClick={() => setStep(0)} className="ml-auto text-sm text-sky-600 font-semibold hover:underline">Change</button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* 2. Movement Type */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <ClipboardList size={18} className="text-sky-600" />
+                        2. Movement Type
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         {movementTypes.map(mt => {
                             const Icon = mt.icon;
                             return (
                                 <button
                                     key={mt.value}
-                                    onClick={() => handleSelectType(mt.value)}
-                                    className={`text-left p-5 rounded-2xl border-2 transition-all duration-200 hover:shadow-lg ${
-                                        form.type === mt.value ? `border-sky-500 ${colorMap[mt.color].split(' ')[0]} shadow-md` : 'border-gray-200 bg-white hover:border-gray-300'
+                                    type="button"
+                                    onClick={() => setMovementType(mt.value)}
+                                    className={`text-left p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-lg ${
+                                        movementType === mt.value
+                                            ? `border-sky-500 ${colorMap[mt.color].split(' ')[0]} shadow-md`
+                                            : 'border-gray-200 bg-white hover:border-gray-300'
                                     }`}
                                 >
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                                            form.type === mt.value ? colorMap[mt.color].split(' ')[0] : 'bg-gray-100'
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                            movementType === mt.value ? colorMap[mt.color].split(' ')[0] : 'bg-gray-100'
                                         }`}>
-                                            <Icon size={20} className={form.type === mt.value ? colorMap[mt.color].split(' ')[2] : 'text-gray-500'} />
+                                            <Icon size={16} className={movementType === mt.value ? colorMap[mt.color].split(' ')[2] : 'text-gray-500'} />
                                         </div>
-                                        <span className="font-bold text-gray-800">{mt.label}</span>
+                                        <span className="font-bold text-gray-800 text-sm">{mt.label}</span>
                                     </div>
-                                    <p className="text-xs text-gray-500 ml-[52px]">{mt.desc}</p>
+                                    <p className="text-xs text-gray-500 ml-[42px]">{mt.desc}</p>
                                 </button>
                             );
                         })}
                     </div>
                 </div>
-            )}
 
-            {/* ── Step 2: Details & Confirm ──────────────── */}
-            {step === 2 && (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
-                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                            <ClipboardList size={18} className="text-sky-600" />
-                            Movement Details
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                                    {isRetail ? 'Retail Product *' : 'Medicine *'}
-                                </label>
-                                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-3">
-                                    {isRetail
-                                        ? <ShoppingBag size={18} className="text-amber-500" />
-                                        : <Pill size={18} className="text-sky-500" />
-                                    }
-                                    <span className="text-sm font-medium text-gray-800 truncate">{currentProduct?.name || '---'}</span>
-                                    <span className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
-                                        isRetail ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'
-                                    }`}>
-                                        {isRetail ? 'OTC' : 'MED'}
-                                    </span>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Movement Type *</label>
-                                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center gap-3">
-                                    {(() => {
-                                        const mt = movementTypes.find(t => t.value === form.type);
-                                        if (!mt) return null;
-                                        const Icon = mt.icon;
-                                        return <><Icon size={18} className={colorMap[mt.color].split(' ')[2]} /> <span className="text-sm font-medium text-gray-800">{mt.label}</span></>;
-                                    })()}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+                {/* 3. Details */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <FileText size={18} className="text-sky-600" />
+                        3. Details & Confirm
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Reference</label>
+                            <div className="relative">
+                                <Tag className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                                 <input
-                                    type="number"
-                                    name="quantity"
-                                    value={form.quantity}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
-                                    min="1"
-                                    required
+                                    value={reference}
+                                    onChange={(e) => setReference(e.target.value)}
+                                    className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Reference</label>
-                                <div className="relative">
-                                    <Tag className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input
-                                        name="reference"
-                                        value={form.reference}
-                                        onChange={handleChange}
-                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
-                                <div className="relative">
-                                    <FileText className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input
-                                        name="notes"
-                                        value={form.notes}
-                                        onChange={handleChange}
-                                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
-                                <select name="source_type" value={form.source_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
-                                    <option value="">None</option>
-                                    <option value="self">Self</option>
-                                    <option value="supplier">Supplier</option>
-                                    <option value="branch">Branch</option>
-                                    <option value="sale">Sale</option>
-                                    <option value="customer">Customer</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
-                                <select name="destination_type" value={form.destination_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
-                                    <option value="">None</option>
-                                    <option value="self">Self</option>
-                                    <option value="supplier">Supplier</option>
-                                    <option value="branch">Branch</option>
-                                    <option value="sale">Sale</option>
-                                    <option value="customer">Customer</option>
-                                </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                            <div className="relative">
+                                <FileText className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                    className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                />
                             </div>
                         </div>
-                    </div>
-
-                    {/* Preview Card */}
-                    <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-2xl border border-sky-100 p-6 shadow-sm">
-                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <CheckCircle2 size={18} className="text-sky-600" />
-                            Summary Preview
-                        </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <StatCard value={currentProduct?.name || '---'} label={isRetail ? 'Retail Product' : 'Medicine'} color="blue" />
-                            <StatCard value={movementTypes.find(t => t.value === form.type)?.label || form.type} label="Type" color="green" />
-                            <StatCard value={form.quantity || '0'} label="Quantity" color="orange" />
-                            <StatCard value={currentProduct?.quantity ?? 0} label="Current Stock" color="purple" />
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
+                            <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                <option value="">None</option>
+                                <option value="self">Self</option>
+                                <option value="supplier">Supplier</option>
+                                <option value="branch">Branch</option>
+                                <option value="sale">Sale</option>
+                                <option value="customer">Customer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
+                            <select value={destinationType} onChange={(e) => setDestinationType(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                <option value="">None</option>
+                                <option value="self">Self</option>
+                                <option value="supplier">Supplier</option>
+                                <option value="branch">Branch</option>
+                                <option value="sale">Sale</option>
+                                <option value="customer">Customer</option>
+                            </select>
                         </div>
                     </div>
+                </div>
 
-                    <div className="flex items-center justify-between pt-2">
-                        <button type="button" onClick={() => setStep(1)} className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2">
-                            <ArrowLeft size={16} /> Back
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-2">
+                    <button type="button" onClick={handleCancel} className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2">
+                        <X size={16} /> Cancel
+                    </button>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500">{items.length} item(s)</span>
+                        <button
+                            type="submit"
+                            disabled={submitting || !canSubmit}
+                            className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-xl shadow-lg shadow-sky-500/20 hover:shadow-xl transition-all duration-300 flex items-center gap-2 disabled:opacity-60"
+                        >
+                            {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Recording...</> : <><Save size={16} /> Record Movements</>}
                         </button>
-                        <div className="flex items-center gap-3">
-                            <button type="button" onClick={handleCancel} className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2">
-                                <X size={16} /> Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={submitting || !canSubmit}
-                                className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-xl shadow-lg shadow-sky-500/20 hover:shadow-xl transition-all duration-300 flex items-center gap-2 disabled:opacity-60"
-                            >
-                                {submitting ? <><Loader2 size={16} className="animate-spin" /> Recording...</> : <><Save size={16} /> Record Movement</>}
-                            </button>
-                        </div>
                     </div>
-                </form>
-            )}
+                </div>
+            </form>
         </div>
     );
 }

@@ -108,8 +108,8 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::delete('/medicines/{medicine}', [MedicineController::class, 'destroy']);
 
         // Stock Movements - Create, Delete
-        Route::post('/stock-movements', [StockMovementController::class, 'store']);
-        Route::delete('/stock-movements/{stockMovement}', [StockMovementController::class, 'destroy']);
+    Route::post('/stock-movements', [StockMovementController::class, 'store']);
+    Route::delete('/stock-movements/{stockMovement}', [StockMovementController::class, 'destroy']);
 
         // Stock Management
         Route::get('/stock-management/summary', [StockManagementController::class, 'summary']);

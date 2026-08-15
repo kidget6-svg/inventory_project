@@ -64,10 +64,7 @@ class StockMovementController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'medicine_id' => 'nullable|exists:medicines,id',
-            'retail_product_id' => 'nullable|exists:retail_products,id',
             'type' => 'required|in:in,out,adjustment,return,transfer,damaged,expired,lost,correction,self',
-            'quantity' => 'required|integer|min:1',
             'reference' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'source_type' => 'nullable|string|in:self,supplier,branch,sale,customer',
@@ -76,71 +73,95 @@ class StockMovementController extends Controller
             'destination_id' => 'nullable|integer',
             'branch_id' => 'nullable|integer',
             'status' => 'nullable|string|in:pending,approved,completed,cancelled',
+            'items' => 'nullable|array|min:1',
+            'items.*.type' => 'required_with:items|in:medicine,retail',
+            'items.*.id' => 'required_with:items|integer|exists:medicines,id',
+            'items.*.quantity' => 'required_with:items|integer|min:1',
+            'medicine_id' => 'nullable|exists:medicines,id',
+            'retail_product_id' => 'nullable|exists:retail_products,id',
+            'quantity' => 'nullable|integer|min:1',
         ]);
 
-        // At least one product must be selected
-        if (!$validated['medicine_id'] && !$validated['retail_product_id']) {
+        $items = [];
+        if (!empty($validated['items']) && is_array($validated['items'])) {
+            $items = $validated['items'];
+        } elseif (!empty($validated['medicine_id']) || !empty($validated['retail_product_id'])) {
+            $type = !empty($validated['retail_product_id']) ? 'retail' : 'medicine';
+            $id = !empty($validated['retail_product_id']) ? $validated['retail_product_id'] : $validated['medicine_id'];
+            $items = [[
+                'type' => $type,
+                'id' => $id,
+                'quantity' => $validated['quantity'] ?? 1,
+            ]];
+        }
+
+        if (empty($items)) {
             throw ValidationException::withMessages([
-                'medicine_id' => 'You must select a medicine or a retail product.',
+                'items' => 'At least one product is required.',
             ]);
         }
 
-        $response = DB::transaction(function () use ($validated, $request) {
-            $isRetail = !empty($validated['retail_product_id']);
+        $response = DB::transaction(function () use ($validated, $items, $request) {
+            $movements = [];
+            $updatedProducts = [];
 
-            if ($isRetail) {
-                $product = RetailProduct::lockForUpdate()->findOrFail($validated['retail_product_id']);
-                $itemableType = RetailProduct::class;
-                $itemableId = $product->id;
-            } else {
-                $product = Medicine::lockForUpdate()->findOrFail($validated['medicine_id']);
-                $itemableType = Medicine::class;
-                $itemableId = $product->id;
-            }
+            foreach ($items as $item) {
+                $isRetail = ($item['type'] ?? 'medicine') === 'retail';
 
-            $oldQuantity = (int) $product->quantity;
-
-            if (in_array($validated['type'], ['out', 'damaged', 'expired', 'lost', 'correction'])) {
-                if ($validated['quantity'] > $oldQuantity) {
-                    throw ValidationException::withMessages([
-                        'quantity' => "Insufficient stock. Available: {$oldQuantity}"
-                    ]);
+                if ($isRetail) {
+                    $product = RetailProduct::lockForUpdate()->findOrFail($item['id']);
+                } else {
+                    $product = Medicine::lockForUpdate()->findOrFail($item['id']);
                 }
+
+                $oldQuantity = (int) $product->quantity;
+                $quantity = (int) ($item['quantity'] ?? 1);
+
+                if (in_array($validated['type'], ['out', 'damaged', 'expired', 'lost', 'correction'])) {
+                    if ($quantity > $oldQuantity) {
+                        throw ValidationException::withMessages([
+                            'quantity' => "Insufficient stock for {$product->name}. Available: {$oldQuantity}"
+                        ]);
+                    }
+                }
+
+                $newQuantity = $oldQuantity;
+                if (in_array($validated['type'], ['in', 'return', 'transfer'])) {
+                    $newQuantity += $quantity;
+                } elseif (in_array($validated['type'], ['out', 'damaged', 'adjustment', 'expired', 'lost', 'correction', 'self'])) {
+                    $newQuantity -= $quantity;
+                }
+
+                $movement = StockMovement::create([
+                    'medicine_id' => $isRetail ? null : $product->id,
+                    'itemable_type' => $isRetail ? RetailProduct::class : Medicine::class,
+                    'itemable_id' => $product->id,
+                    'user_id' => auth()->id(),
+                    'type' => $validated['type'],
+                    'quantity' => $quantity,
+                    'before_quantity' => $oldQuantity,
+                    'after_quantity' => $newQuantity,
+                    'reference' => $validated['reference'] ?? null,
+                    'notes' => $validated['notes'] ?? null,
+                    'source_type' => $validated['source_type'] ?? null,
+                    'source_id' => $validated['source_id'] ?? null,
+                    'destination_type' => $validated['destination_type'] ?? null,
+                    'destination_id' => $validated['destination_id'] ?? null,
+                    'branch_id' => $validated['branch_id'] ?? null,
+                    'status' => $validated['status'] ?? 'pending',
+                    'ip_address' => $request->ip(),
+                    'device_info' => $request->userAgent(),
+                ]);
+
+                $product->update(['quantity' => $newQuantity]);
+                $updatedProducts[] = $product;
+
+                $movements[] = $movement->load('medicine', 'itemable', 'user', 'approver', 'completer');
             }
-
-            $newQuantity = $oldQuantity;
-            if (in_array($validated['type'], ['in', 'return', 'transfer'])) {
-                $newQuantity += $validated['quantity'];
-            } else if (in_array($validated['type'], ['out', 'damaged', 'adjustment', 'expired', 'lost', 'correction', 'self'])) {
-                $newQuantity -= $validated['quantity'];
-            }
-
-            $movement = StockMovement::create([
-                'medicine_id' => $validated['medicine_id'] ?? null,
-                'itemable_type' => $itemableType,
-                'itemable_id' => $itemableId,
-                'user_id' => auth()->id(),
-                'type' => $validated['type'],
-                'quantity' => $validated['quantity'],
-                'before_quantity' => $oldQuantity,
-                'after_quantity' => $newQuantity,
-                'reference' => $validated['reference'] ?? null,
-                'notes' => $validated['notes'] ?? null,
-                'source_type' => $validated['source_type'] ?? null,
-                'source_id' => $validated['source_id'] ?? null,
-                'destination_type' => $validated['destination_type'] ?? null,
-                'destination_id' => $validated['destination_id'] ?? null,
-                'branch_id' => $validated['branch_id'] ?? null,
-                'status' => $validated['status'] ?? 'pending',
-                'ip_address' => $request->ip(),
-                'device_info' => $request->userAgent(),
-            ]);
-
-            $product->update(['quantity' => $newQuantity]);
 
             return [
-                'movement' => $movement->load('medicine', 'itemable', 'user', 'approver', 'completer'),
-                'product' => $product
+                'movements' => $movements,
+                'products' => $updatedProducts,
             ];
         });
 
