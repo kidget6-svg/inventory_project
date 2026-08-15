@@ -35,13 +35,14 @@ export default function Users(){
 
     const [users,setUsers] = useState([]);
 
-    const [loading,setLoading] = useState(true);
+    const [initialLoading,setInitialLoading] = useState(true);
 
     const [error,setError] = useState("");
 
     const [meta, setMeta] = useState(null);
     const [page, setPage] = useState(1);
 
+    const [searchTerm, setSearchTerm] = useState("");
     const [search,setSearch] = useState("");
 
     const [roleFilter,setRoleFilter] = useState("all");
@@ -91,7 +92,6 @@ export default function Users(){
 
 
     useEffect(()=>{
-        fetchUsers();
         fetchUserStats();
     },[]);
 
@@ -108,7 +108,6 @@ export default function Users(){
 
 
     const fetchUsers = async()=>{
-        setLoading(true);
         try {
             const response = await api.get("/users", {
                 params: {
@@ -124,9 +123,17 @@ export default function Users(){
         } catch (e) {
             setError('Failed to load users');
         } finally {
-            setLoading(false);
+            setInitialLoading(false);
         }
     };
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setSearch(searchTerm);
+        }, 400);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     useEffect(() => { setPage(1); }, [search, roleFilter, statusFilter]);
     useEffect(() => { fetchUsers(); }, [page, search, roleFilter, statusFilter]);
@@ -454,13 +461,13 @@ export default function Users(){
         const styles={
 
             admin:
-            "bg-sky-100 text-sky-700",
+            "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
 
             pharmacist:
-            "bg-sky-100 text-sky-700",
+            "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
 
             cashier:
-            "bg-sky-100 text-sky-700"
+            "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
 
         };
 
@@ -493,9 +500,9 @@ export default function Users(){
         if(!status) return null;
 
         const styles={
-            approved: "bg-green-100 text-green-700",
-            pending: "bg-amber-100 text-amber-700",
-            rejected: "bg-red-100 text-red-700",
+            approved: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+            pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+            rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
         };
 
         const labels={
@@ -533,7 +540,7 @@ export default function Users(){
 // ================= MODAL FORM =================
 
 
-if(loading){
+if(initialLoading){
 
     return (
         <LoadingSpinner text="Loading users..." />
@@ -595,6 +602,7 @@ md:items-center
 text-3xl
 font-bold
 text-gray-800
+dark:text-white
 ">
 
 User Management
@@ -605,6 +613,7 @@ User Management
 
 <p className="
 text-gray-500
+dark:text-gray-400
 mt-1
 ">
 
@@ -677,9 +686,12 @@ gap-5
 
 <div className="
 bg-white
+dark:bg-gray-800
 rounded-xl
 shadow-sm
 border
+border-gray-100
+dark:border-gray-700
 p-5
 ">
 
@@ -691,7 +703,7 @@ justify-between
 
 <div>
 
-<p className="text-gray-500 text-sm">
+<p className="text-gray-500 dark:text-gray-400 text-sm">
 
 Total Users
 
@@ -702,6 +714,7 @@ Total Users
 text-3xl
 font-bold
 text-blue-500
+dark:text-blue-400
 mt-2
 ">
 
@@ -715,6 +728,7 @@ mt-2
 <User
 className="
 text-blue-500
+dark:text-blue-400
 "
 size={35}
 />
@@ -734,9 +748,12 @@ size={35}
 
 <div className="
 bg-white
+dark:bg-gray-800
 rounded-xl
 shadow-sm
 border
+border-gray-100
+dark:border-gray-700
 p-5
 ">
 
@@ -746,7 +763,7 @@ p-5
 
 <div>
 
-<p className="text-gray-500 text-sm">
+<p className="text-gray-500 dark:text-gray-400 text-sm">
 
 Admins
 
@@ -757,6 +774,7 @@ Admins
 text-3xl
 font-bold
 text-blue-500
+dark:text-blue-400
 mt-2
 ">
 
@@ -768,7 +786,7 @@ mt-2
 
 
 <ShieldCheck
-className="text-blue-500"
+className="text-blue-500 dark:text-blue-400"
 size={35}
 />
 
@@ -788,9 +806,12 @@ size={35}
 
 <div className="
 bg-white
+dark:bg-gray-800
 rounded-xl
 shadow-sm
 border
+border-gray-100
+dark:border-gray-700
 p-5
 ">
 
@@ -801,7 +822,7 @@ p-5
 <div>
 
 
-<p className="text-gray-500 text-sm">
+<p className="text-gray-500 dark:text-gray-400 text-sm">
 
 Pharmacists
 
@@ -813,6 +834,7 @@ Pharmacists
 text-3xl
 font-bold
 text-blue-500
+dark:text-blue-400
 mt-2
 ">
 
@@ -824,9 +846,8 @@ mt-2
 </div>
 
 
-
 <Pill
-className="text-blue-500"
+className="text-blue-500 dark:text-blue-400"
 size={35}
 />
 
@@ -846,9 +867,12 @@ size={35}
 
 <div className="
 bg-white
+dark:bg-gray-800
 rounded-xl
 shadow-sm
 border
+border-gray-100
+dark:border-gray-700
 p-5
 ">
 
@@ -858,7 +882,7 @@ p-5
 
 <div>
 
-<p className="text-gray-500 text-sm">
+<p className="text-gray-500 dark:text-gray-400 text-sm">
 
 Cashiers
 
@@ -869,6 +893,7 @@ Cashiers
 text-3xl
 font-bold
 text-blue-500
+dark:text-blue-400
 mt-2
 ">
 
@@ -882,7 +907,7 @@ mt-2
 
 
 <WalletCards
-className="text-blue-500"
+className="text-blue-500 dark:text-blue-400"
 size={35}
 />
 
@@ -908,9 +933,12 @@ size={35}
 
 <div className="
 bg-white
+dark:bg-gray-800
 rounded-xl
 shadow-sm
 border
+border-gray-100
+dark:border-gray-700
 p-5
 flex
 flex-col
@@ -930,10 +958,11 @@ flex-1
 
 className="
 absolute
-left-3
-top-3
+left-3.5
+top-3.5
 text-gray-400
 "
+size={18}
 
 />
 
@@ -942,10 +971,10 @@ text-gray-400
 <input
 
 
-value={search}
+value={searchTerm}
 
 
-onChange={(e)=>setSearch(e.target.value)}
+onChange={(e)=>setSearchTerm(e.target.value)}
 
 
 placeholder="Search by name or email..."
@@ -954,17 +983,34 @@ placeholder="Search by name or email..."
 className="
 w-full
 pl-11
+pr-10
 py-3
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
 outline-none
 focus:ring-2
 focus:ring-blue-500
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+placeholder-gray-400
+dark:placeholder-gray-300
 "
 
 />
 
-
+{searchTerm && (
+    <button
+        type="button"
+        onClick={() => setSearchTerm('')}
+        className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+    >
+        <X size={18} />
+    </button>
+)}
 
 </div>
 
@@ -984,9 +1030,18 @@ onChange={(e)=>setRoleFilter(e.target.value)}
 
 className="
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
 px-4
 py-3
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+outline-none
+focus:ring-2
+focus:ring-blue-500
 "
 
 
@@ -1018,9 +1073,18 @@ onChange={(e)=>setStatusFilter(e.target.value)}
 
 className="
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
 px-4
 py-3
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+outline-none
+focus:ring-2
+focus:ring-blue-500
 "
 
 >
@@ -1067,11 +1131,15 @@ px-4
 
 <div className="
 bg-white
+dark:bg-gray-800
 rounded-2xl
 shadow-xl
 w-full
 max-w-2xl
 p-6
+border
+border-gray-100
+dark:border-gray-700
 ">
 
 
@@ -1090,6 +1158,7 @@ mb-5
 text-xl
 font-bold
 text-gray-800
+dark:text-white
 ">
 
 
@@ -1154,7 +1223,7 @@ gap-5
 
 <div>
 
-<label className="text-sm font-medium">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
 
 Full Name
 
@@ -1198,7 +1267,18 @@ w-full
 pl-10
 py-3
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+outline-none
+focus:ring-2
+focus:ring-blue-500
+placeholder-gray-400
+dark:placeholder-gray-300
 "
 
 
@@ -1221,7 +1301,7 @@ placeholder="Full name"
 
 <div>
 
-<label className="text-sm font-medium">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
 
 Email
 
@@ -1272,7 +1352,18 @@ w-full
 pl-10
 py-3
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+outline-none
+focus:ring-2
+focus:ring-blue-500
+placeholder-gray-400
+dark:placeholder-gray-300
 "
 
 
@@ -1297,7 +1388,7 @@ placeholder="Email"
 <div>
 
 
-<label className="text-sm font-medium">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
 
 Role
 
@@ -1323,7 +1414,16 @@ mt-1
 py-3
 px-4
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+outline-none
+focus:ring-2
+focus:ring-blue-500
 "
 
 
@@ -1361,7 +1461,7 @@ value={role.slug}
 <div>
 
 
-<label className="text-sm font-medium">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
 
 Password {editingUser && "(leave empty to keep current)"}
 
@@ -1413,7 +1513,18 @@ pl-10
 pr-12
 py-3
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+outline-none
+focus:ring-2
+focus:ring-blue-500
+placeholder-gray-400
+dark:placeholder-gray-300
 "
 
 
@@ -1438,6 +1549,8 @@ absolute
 right-3
 top-3
 text-gray-500
+hover:text-gray-700
+dark:hover:text-gray-300
 "
 
 
@@ -1472,7 +1585,7 @@ showPassword
 <div>
 
 
-<label className="text-sm font-medium">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
 
 Confirm Password
 
@@ -1523,7 +1636,18 @@ pl-10
 pr-12
 py-3
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+outline-none
+focus:ring-2
+focus:ring-blue-500
+placeholder-gray-400
+dark:placeholder-gray-300
 "
 
 
@@ -1548,6 +1672,8 @@ absolute
 right-3
 top-3
 text-gray-500
+hover:text-gray-700
+dark:hover:text-gray-300
 "
 
 
@@ -1608,8 +1734,13 @@ className="
 px-5
 py-3
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
+text-gray-700
+dark:text-gray-300
 hover:bg-gray-50
+dark:hover:bg-gray-700
 "
 
 
@@ -1724,11 +1855,15 @@ px-4
 
 <div className="
 bg-white
+dark:bg-gray-800
 rounded-2xl
 shadow-xl
 w-full
 max-w-md
 p-6
+border
+border-gray-100
+dark:border-gray-700
 ">
 
 <div className="
@@ -1738,7 +1873,7 @@ items-center
 mb-5
 ">
 
-<h2 className="text-xl font-bold text-gray-800">
+<h2 className="text-xl font-bold text-gray-800 dark:text-white">
 
 Reject {rejectTarget?.name}
 
@@ -1748,7 +1883,7 @@ Reject {rejectTarget?.name}
 
 onClick={closeRejectModal}
 
-className="text-gray-400 hover:text-gray-600"
+className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 
 >
 
@@ -1758,7 +1893,7 @@ className="text-gray-400 hover:text-gray-600"
 
 </div>
 
-<label className="text-sm font-medium">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
 
 Reason (optional)
 
@@ -1777,7 +1912,18 @@ w-full
 mt-1
 p-3
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
+bg-white
+dark:bg-gray-700
+text-gray-900
+dark:text-white
+outline-none
+focus:ring-2
+focus:ring-blue-500
+placeholder-gray-400
+dark:placeholder-gray-300
 "
 
 placeholder="Let this applicant know why their registration was rejected..."
@@ -1801,8 +1947,13 @@ className="
 px-5
 py-3
 border
+border-gray-200
+dark:border-gray-600
 rounded-xl
+text-gray-700
+dark:text-gray-300
 hover:bg-gray-50
+dark:hover:bg-gray-700
 "
 
 >
@@ -1868,9 +2019,12 @@ Rejecting...
 
 <div className="
 bg-white
+dark:bg-gray-800
 rounded-xl
 shadow-sm
 border
+border-gray-100
+dark:border-gray-700
 overflow-hidden
 ">
 
@@ -1878,48 +2032,48 @@ overflow-hidden
 <table className="w-full">
 
 
-<thead className="bg-gray-50">
+<thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
 
 
 <tr>
 
 
-<th className="px-6 py-4 text-left text-sm">
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
 
 User
 
 </th>
 
 
-<th className="px-6 py-4 text-left text-sm">
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
 
 Email
 
 </th>
 
 
-<th className="px-6 py-4 text-left text-sm">
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
 
 Role
 
 </th>
 
 
-<th className="px-6 py-4 text-left text-sm">
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
 
 Status
 
 </th>
 
 
-<th className="px-6 py-4 text-left text-sm">
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
 
 Created
 
 </th>
 
 
-<th className="px-6 py-4 text-right text-sm">
+<th className="px-6 py-4 text-right text-sm font-semibold text-gray-600 dark:text-gray-300">
 
 Actions
 
@@ -1937,7 +2091,7 @@ Actions
 
 
 
-<tbody className="divide-y">
+<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 
 
 {
@@ -1955,6 +2109,7 @@ key={user.id}
 
 className="
 hover:bg-gray-50
+dark:hover:bg-gray-700/50
 transition
 "
 
@@ -1996,14 +2151,14 @@ user.name?.charAt(0)
 <div>
 
 
-<p className="font-semibold">
+<p className="font-semibold text-gray-900 dark:text-white">
 
 {user.name}
 
 </p>
 
 
-<p className="text-xs text-gray-400">
+<p className="text-xs text-gray-400 dark:text-gray-500">
 
 ID: {user.id}
 
@@ -2024,7 +2179,7 @@ ID: {user.id}
 
 
 
-<td className="px-6 py-4 text-gray-600">
+<td className="px-6 py-4 text-gray-600 dark:text-gray-300">
 
 
 {user.email}
@@ -2063,7 +2218,7 @@ ID: {user.id}
 
 
 
-<td className="px-6 py-4 text-gray-500">
+<td className="px-6 py-4 text-gray-500 dark:text-gray-400">
     <div className="flex flex-col gap-1">
         <span>
             {
@@ -2075,7 +2230,7 @@ ID: {user.id}
             "-"
             }
         </span>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-400 dark:text-gray-500">
             {
             user.created_at
             ?

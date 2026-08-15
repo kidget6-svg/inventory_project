@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { 
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
     ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
-    ShoppingBag, FileText, ShieldCheck
+    ShoppingBag, FileText, ShieldCheck, Sun, Moon
 } from 'lucide-react';
 
 // Single permission-driven menu. Admin sees every entry automatically
@@ -62,6 +63,7 @@ const roleBadgeStyle = {
 
 export default function SidebarLayout({ children, pageTitle }) {
     const { user, logout, hasAnyPermission } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
@@ -89,7 +91,7 @@ export default function SidebarLayout({ children, pageTitle }) {
     const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
     return (
-        <div className="flex min-h-screen bg-gray-50">
+        <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
             {/* Mobile Menu Toggle */}
             <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -100,25 +102,25 @@ export default function SidebarLayout({ children, pageTitle }) {
 
             {/* Sidebar */}
             <aside
-                className={`fixed top-0 left-0 w-64 ${sidebarWidth} h-screen bg-[#E3F2FD] border-r border-sky-200 z-40 flex flex-col overflow-hidden transition-all duration-300 ${
+                className={`fixed top-0 left-0 w-64 ${sidebarWidth} h-screen bg-[#E3F2FD] dark:bg-gray-800 border-r border-sky-200 dark:border-gray-700 z-40 flex flex-col overflow-hidden transition-all duration-300 ${
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0`}
             >
-                <div className="p-5 border-b border-sky-200 flex items-center justify-between">
+                <div className="p-5 border-b border-sky-200 dark:border-gray-700 flex items-center justify-between">
                     <div className={`flex items-center gap-3 min-w-0 ${collapsed ? 'md:justify-center md:w-full' : ''}`}>
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-2xl ring-2 ring-sky-400/70 bg-white transform hover:scale-105 transition-transform duration-200">
                             <img src="/images/sidebar.png" alt="EthioPharmacy" className="w-10 h-10 object-contain" />
                         </div>
                         {!collapsed && (
                             <div className="min-w-0">
-                                <div className="text-base font-bold text-gray-900 tracking-tight truncate">EthioPharmacy</div>
+                                <div className="text-base font-bold text-gray-900 dark:text-white tracking-tight truncate">EthioPharmacy</div>
                             </div>
                         )}
                     </div>
                     <button
                         onClick={() => setCollapsed(!collapsed)}
-                        className={`hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-lg text-gray-600 hover:bg-sky-200 hover:text-gray-900 transition-colors ${
-                            collapsed ? 'md:absolute md:top-4 md:right-[-14px] bg-[#E3F2FD] border border-sky-200' : ''
+                        className={`hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-sky-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors ${
+                            collapsed ? 'md:absolute md:top-4 md:right-[-14px] bg-[#E3F2FD] dark:bg-gray-800 border border-sky-200 dark:border-gray-700' : ''
                         }`}
                         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
@@ -130,9 +132,9 @@ export default function SidebarLayout({ children, pageTitle }) {
                     {menu.map((item, i) =>
                         item.section ? (
                             collapsed ? (
-                                <div key={`sec-${i}`} className="mx-3 mt-4 mb-1.5 border-t border-sky-200" />
+                                <div key={`sec-${i}`} className="mx-3 mt-4 mb-1.5 border-t border-sky-200 dark:border-gray-700" />
                             ) : (
-                                <div key={`sec-${i}`} className="px-5 pt-4 pb-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+                                <div key={`sec-${i}`} className="px-5 pt-4 pb-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                                     {item.section}
                                 </div>
                             )
@@ -148,7 +150,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                                     } ${
                                         isActive
                                             ? 'bg-sky-500 text-white shadow-sm'
-                                            : 'text-gray-800 hover:bg-sky-200 hover:text-gray-900'
+                                            : 'text-gray-800 dark:text-gray-200 hover:bg-sky-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                                     }`
                                 }
                             >
@@ -162,50 +164,59 @@ export default function SidebarLayout({ children, pageTitle }) {
 
             {/* Main Content */}
             <main className={`flex-1 ${mainMargin} min-h-screen transition-all duration-300`}>
-                <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-sky-200/60 px-8 py-4 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900 tracking-tight">{pageTitle || 'Dashboard'}</h2>
+                <div className="sticky top-0 z-30 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-sky-200/60 dark:border-gray-700 px-8 py-4 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{pageTitle || 'Dashboard'}</h2>
 
-                    <div className="relative" ref={accountMenuRef}>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={toggleTheme}
+                            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                            className="flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-sky-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                        </button>
+
+                        <div className="relative" ref={accountMenuRef}>
                         <button
                             onClick={() => setAccountMenuOpen(!accountMenuOpen)}
-                            className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-sky-50 transition-colors"
+                            className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-sky-50 dark:hover:bg-gray-700 transition-colors"
                         >
                             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                                 {userInitial}
                             </div>
                             <div className="hidden sm:block text-left">
-                                <div className="text-sm font-semibold text-gray-900 leading-tight">{user?.name || 'User'}</div>
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{user?.name || 'User'}</div>
                                 <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${roleBadgeStyle[user?.role] || 'bg-gray-100 text-gray-600'}`}>
                                     {user?.role || 'Guest'}
                                 </div>
                             </div>
-                            <ChevronDown size={16} className={`text-gray-500 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown size={16} className={`text-gray-500 dark:text-gray-400 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
                         </button>
 
                         {accountMenuOpen && (
-                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-sky-100 py-2 z-50">
-                                <div className="px-4 py-2 border-b border-sky-100 mb-1">
-                                    <div className="text-sm font-semibold text-gray-900 truncate">{user?.name || 'User'}</div>
-                                    <div className="text-xs text-gray-500 truncate">{user?.email || ''}</div>
+                            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-sky-100 dark:border-gray-700 py-2 z-50">
+                                <div className="px-4 py-2 border-b border-sky-100 dark:border-gray-700 mb-1">
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user?.name || 'User'}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || ''}</div>
                                 </div>
                                 <button
                                     onClick={() => { setAccountMenuOpen(false); navigate('/profile'); }}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-sky-50 transition-colors"
+                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-gray-700 transition-colors"
                                 >
                                     <UserCircle size={16} />
                                     Profile
                                 </button>
                                 <button
                                     onClick={() => { setAccountMenuOpen(false); navigate('/settings'); }}
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-sky-50 transition-colors"
+                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-sky-50 dark:hover:bg-gray-700 transition-colors"
                                 >
                                     <Settings size={16} />
                                     Settings
                                 </button>
-                                <div className="border-t border-sky-100 mt-1 pt-1">
+                                <div className="border-t border-sky-100 dark:border-gray-700 mt-1 pt-1">
                                     <button
                                         onClick={handleLogout}
-                                        className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                        className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 transition-colors"
                                     >
                                         <LogOut size={16} />
                                         Logout
@@ -213,6 +224,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                                 </div>
                             </div>
                         )}
+                    </div>
                     </div>
                 </div>
                 <div className="p-6 lg:p-8">

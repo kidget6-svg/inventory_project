@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import SidebarLayout from './components/SidebarLayout';
 import { ToastContainer } from './components/Toast';
 import Landing from './pages/Landing';
@@ -171,12 +172,14 @@ function App() {
 
 function RootApp() {
     return (
-        <AuthProvider>
-            <BrowserRouter>
-                <App />
-            </BrowserRouter>
-            <ToastContainer />
-        </AuthProvider>
+        <ThemeProvider>
+            <AuthProvider>
+                <BrowserRouter>
+                    <App />
+                </BrowserRouter>
+                <ToastContainer />
+            </AuthProvider>
+        </ThemeProvider>
     );
 }
 
