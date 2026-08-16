@@ -361,23 +361,6 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Mark a purchase order as delivered (sent -> delivered).
-     * Does NOT update inventory yet.
-     */
-    public function deliver(PurchaseOrder $purchaseOrder)
-    {
-        if (! $purchaseOrder->canDeliver()) {
-            return response()->json([
-                'message' => 'Cannot mark as delivered in ' . $purchaseOrder->status . ' status'
-            ], 422);
-        }
-
-        $purchaseOrder->deliver();
-
-        return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine'));
-    }
-
-    /**
      * Approve a purchase order (pending -> approved).
      */
     public function approve(PurchaseOrder $purchaseOrder)

@@ -106,9 +106,7 @@
                 </tr>
                 <tr>
                     <td class="label">Sent At:</td>
-                    <td>{{ $purchaseOrder->sentAtDisplay() }}</td>
-                    <td class="label">Delivered At:</td>
-                    <td>{{ $purchaseOrder->deliveredAtDisplay() }}</td>
+                    <td colspan="3">{{ $purchaseOrder->sentAtDisplay() }}</td>
                 </tr>
             </table>
         </div>
@@ -141,7 +139,7 @@
         <!-- Footer -->
         <div class="footer">
             <p>This is a computer-generated Purchase Order. No signature is required.</p>
-            <p>Generated on: {{ \Carbon\Carbon::now()->format('M d, Y h:i A') }} | EthioPharmacy</p>
+            <p>Generated on: {{ \Carbon\Carbon::now()->setTimezone(config('app.timezone'))->format('M d, Y, g:i A') }} | EthioPharmacy</p>
         </div>
     </div>
 </body>

@@ -204,7 +204,6 @@ class DashboardController extends Controller
         foreach (PurchaseOrder::with('supplier')->latest()->take($limit)->get() as $po) {
             // Use the most specific timestamp available for accurate activity tracking
             $activityAt = $po->completed_at
-                ?? $po->delivered_at
                 ?? $po->sent_at
                 ?? $po->updated_at
                 ?? $po->created_at

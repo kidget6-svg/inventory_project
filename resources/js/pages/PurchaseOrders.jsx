@@ -495,8 +495,6 @@ export default function PurchaseOrders() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Supplier</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Date</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Sent At</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Delivered At</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Amount</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-sky-700">Actions</th>
                                 </tr>
@@ -521,12 +519,6 @@ export default function PurchaseOrders() {
                                             <td className="px-4 py-3">
                                                 <span className={statusBadge(status)}>{statusLabel(status)}</span>
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-600">
-                                                {o.sent_at_display || 'Not sent yet.'}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-600">
-                                                {o.delivered_at_display || 'Delivery confirmation unavailable'}
-                                            </td>
                                             <td className="px-4 py-3 text-sm">${Number(o.total_amount || 0).toFixed(2)}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex justify-end items-center gap-2">
@@ -547,7 +539,7 @@ export default function PurchaseOrders() {
                                 })}
                                 {orders.length === 0 && (
                                     <tr>
-                                        <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
+                                        <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
                                             No purchase orders found
                                         </td>
                                     </tr>
@@ -638,12 +630,6 @@ export default function PurchaseOrders() {
                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Sent At</label>
                                 <p className="text-sm text-gray-600">
                                     {modalItem.sent_at_display || 'Not sent yet.'}
-                                </p>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1">Delivered At</label>
-                                <p className="text-sm text-gray-600">
-                                    {modalItem.delivered_at_display || 'Delivery confirmation unavailable'}
                                 </p>
                             </div>
                             <div>

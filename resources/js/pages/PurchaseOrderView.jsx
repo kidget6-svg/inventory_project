@@ -127,6 +127,12 @@ export default function PurchaseOrderView() {
                         <span className={statusBadge(status)}>{order.status}</span>
                     </div>
                     <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">Sent At</label>
+                        <p className="text-sm text-gray-600">
+                            {order.sent_at_display || 'Not sent yet.'}
+                        </p>
+                    </div>
+                    <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1">Total Amount</label>
                         <p className="text-sm text-gray-600 flex items-center gap-1">
                             <DollarSign size={14} />
@@ -194,6 +200,7 @@ export default function PurchaseOrderView() {
                         </button>
                     )}
                     {status === 'sent' && (
+<<<<<<< ours
                         <>
                             {canDeliver && (
                                 <button
@@ -216,6 +223,17 @@ export default function PurchaseOrderView() {
                         </>
                     )}
                     {['delivered', 'approved'].includes(status) && canComplete && (
+=======
+                        <button
+                            onClick={() => handleAction('resend', 'Resend to Supplier')}
+                            className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
+                        >
+                            <RefreshCw size={16} />
+                            Resend to Supplier
+                        </button>
+                    )}
+                    {(status === 'sent' || status === 'approved') && (
+>>>>>>> theirs
                         <button
                             onClick={() => handleAction('complete', 'Complete Order')}
                             className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 flex items-center gap-2"
@@ -224,7 +242,11 @@ export default function PurchaseOrderView() {
                             Complete Order
                         </button>
                     )}
+<<<<<<< ours
                     {['draft', 'pending', 'sent', 'delivered'].includes(status) && canCancel && (
+=======
+                    {['draft', 'pending', 'sent', 'delivered', 'approved'].includes(status) && (
+>>>>>>> theirs
                         <button
                             onClick={() => handleAction('cancel', 'Cancel')}
                             className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"

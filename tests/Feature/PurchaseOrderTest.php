@@ -349,34 +349,11 @@ class PurchaseOrderTest extends TestCase
             ]);
     }
 
-    public function test_admin_can_deliver_a_sent_purchase_order()
-    {
-        $user = $this->adminUser();
-        $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 20, 'sent');
-
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/deliver");
-
-        $response->assertOk()
-            ->assertJsonFragment([
-                'status' => 'delivered',
-            ]);
-
-        $this->assertDatabaseHas('purchase_orders', [
-            'id' => $order->id,
-            'status' => 'delivered',
-        ]);
-
-        // Verify delivered_at was recorded
-        $order->refresh();
-        $this->assertNotNull($order->delivered_at);
-    }
-
-    public function test_admin_can_complete_a_delivered_purchase_order_and_stock_increases()
+    public function test_admin_can_complete_a_sent_purchase_order_and_stock_increases()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
-        $order = $this->createOrderWithItem($medicine, 25, 'delivered');
+        $order = $this->createOrderWithItem($medicine, 25, 'sent');
 
         $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
 
@@ -412,7 +389,7 @@ class PurchaseOrderTest extends TestCase
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
-        $order = $this->createOrderWithItem($medicine, 25, 'delivered');
+        $order = $this->createOrderWithItem($medicine, 25, 'sent');
 
         // Complete the order
         $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
@@ -422,7 +399,7 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals(125, $medicine->quantity);
 
         // Try to complete again (should not add stock again)
-        $order->update(['status' => 'delivered']);
+        $order->update(['status' => 'sent']);
         $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
 
         // Medicine stock should still be 125 (no duplicate addition)
@@ -501,31 +478,17 @@ class PurchaseOrderTest extends TestCase
             ]);
     }
 
-    public function test_cannot_deliver_non_sent_order()
+    public function test_cannot_complete_non_sent_order()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine();
         $order = $this->createOrderWithItem($medicine, 20, 'pending');
 
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/deliver");
-
-        $response->assertStatus(422)
-            ->assertJsonFragment([
-                'message' => 'Cannot mark as delivered in pending status',
-            ]);
-    }
-
-    public function test_cannot_complete_non_delivered_order()
-    {
-        $user = $this->adminUser();
-        $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 20, 'sent');
-
         $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
 
         $response->assertStatus(422)
             ->assertJsonFragment([
-                'message' => 'Cannot complete order in sent status',
+                'message' => 'Cannot complete order in pending status',
             ]);
     }
 
