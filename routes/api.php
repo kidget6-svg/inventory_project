@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\StockManagementController;
+use App\Http\Controllers\Api\RoleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -159,6 +160,15 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::post('/users', [UserController::class, 'store']);
         Route::put('/users/{user}', [UserController::class, 'update']);
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
+    });
+
+    // ---- Roles & Permissions (admin only) ----
+    Route::middleware('permission:roles.manage')->group(function () {
+        Route::get('/roles', [RoleController::class, 'index']);
+        Route::post('/roles', [RoleController::class, 'store']);
+        Route::get('/roles/{role}', [RoleController::class, 'show']);
+        Route::put('/roles/{role}', [RoleController::class, 'update']);
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
     });
 
     // User approval (admin + super_admin only)

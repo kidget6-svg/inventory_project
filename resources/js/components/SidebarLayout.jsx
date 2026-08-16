@@ -6,7 +6,7 @@ import {
     ArrowLeftRight, BarChart3, Menu, X, LogOut, Users,
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
     ShoppingBag, FileText, Warehouse, AlertTriangle, Building2, ClipboardList,
-    Boxes, ShoppingCart as CartIcon, History, Home, Layers, Tag
+    Boxes, ShoppingCart as CartIcon, History, Home, Layers, Tag, ShieldCheck
 } from 'lucide-react';
 
 // ============================================================
@@ -43,6 +43,7 @@ const adminMenu = [
     // Administration
     { section: 'Administration' },
     { to: '/users', label: 'User Management', icon: Users },
+    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck },
     { to: '/audit-logs', label: 'Audit Logs', icon: ClipboardList },
 ];
 
@@ -136,12 +137,10 @@ const superAdminMenu = [
     // Administration
     { section: 'Administration' },
     { to: '/users', label: 'User Management', icon: Users },
+    { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck },
     { to: '/audit-logs', label: 'Audit Logs', icon: ClipboardList },
 ];
 
-// ============================================================
-// ROLE TO MENU MAPPING
-// ============================================================
 // ============================================================
 // PURCHASING STAFF MENU
 // ============================================================

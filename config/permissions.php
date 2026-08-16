@@ -171,6 +171,11 @@ return [
         'users.manage'                  => 'Manage Users',
         'users.approve'                 => 'Approve Users',
         'users.reject'                  => 'Reject Users',
+        'roles.view'                    => 'View Roles',
+        'roles.create'                  => 'Create Role',
+        'roles.edit'                    => 'Edit Role',
+        'roles.delete'                  => 'Delete Role',
+        'roles.manage'                  => 'Manage Roles & Permissions',
     ],
 
 ];

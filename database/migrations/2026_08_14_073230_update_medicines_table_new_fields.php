@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // ── Add missing columns (guarded) ──────────────────────────
         Schema::table('medicines', function (Blueprint $table) {
             // Add new fields if missing
             if (!Schema::hasColumn('medicines', 'dosage_form')) {
@@ -18,9 +19,6 @@ return new class extends Migration
                 $table->string('strength')->nullable()->after('dosage_form');
             }
 
-            if (!Schema::hasColumn('medicines', 'unit')) {
-                $table->string('unit')->nullable()->after('strength');
-            }
 
             if (!Schema::hasColumn('medicines', 'serial_number')) {
                 $table->string('serial_number')->nullable()->unique()->after('batch_number');
@@ -56,56 +54,62 @@ return new class extends Migration
             if (Schema::hasColumn('medicines', 'description') && !Schema::hasColumn('medicines', 'prescription')) {
                 $table->renameColumn('description', 'prescription');
             }
-
-            // Add indexes - using try-catch
-            try {
-                $table->index('stock_status');
-            } catch (\Exception $e) {}
-
-            try {
-                $table->index('approval_status');
-            } catch (\Exception $e) {}
-
-            try {
-                $table->index('serial_number');
-            } catch (\Exception $e) {}
         });
+
+        // ── Add indexes as SEPARATE statements.
+        //    Each is guarded by Schema::hasIndex so re-runs are safe.
+        //    They MUST be outside the closure above because indexes inside
+        //    a single Schema::table closure are batched into one ALTER TABLE;
+        //    a try/catch around $table->index() cannot catch the SQL error.
+        // ─────────────────────────────────────────────────────────
+        foreach (['stock_status', 'approval_status', 'serial_number'] as $col) {
+            $indexName = 'medicines_' . $col . '_index';
+            if (!Schema::hasIndex('medicines', $indexName)) {
+                try {
+                    Schema::table('medicines', function (Blueprint $table) use ($col) {
+                        $table->index($col);
+                    });
+                } catch (\Exception $e) {
+                    // Index may already exist or column might be missing — safe to skip
+                }
+            }
+        }
     }
 
     public function down(): void
     {
-        Schema::table('medicines', function (Blueprint $table) {
-            // Drop columns
-            $table->dropColumn([
-                'dosage_form', 
-                'strength', 
-                'unit', 
-                'serial_number',
-                'minimum_stock', 
-                'maximum_stock', 
-                'manufactured_date',
-                'received_date', 
-                'stock_status', 
-                'approval_status'
-            ]);
-
-            // Rename back
-            if (Schema::hasColumn('medicines', 'prescription') && !Schema::hasColumn('medicines', 'description')) {
-                $table->renameColumn('prescription', 'description');
+        // Drop indexes first (separate statements, guarded)
+        foreach (['stock_status', 'approval_status', 'serial_number'] as $col) {
+            $indexName = 'medicines_' . $col . '_index';
+            if (Schema::hasIndex('medicines', $indexName)) {
+                try {
+                    Schema::table('medicines', function (Blueprint $table) use ($col) {
+                        $table->dropIndex([$col]);
+                    });
+                } catch (\Exception $e) {}
             }
+        }
 
-            // Drop indexes - using try-catch
-            try {
-                $table->dropIndex(['stock_status']);
-            } catch (\Exception $e) {}
+        // Drop columns that may exist
+        $cols = [];
+        foreach (['dosage_form', 'strength', 'unit', 'serial_number', 'minimum_stock',
+                  'maximum_stock', 'manufactured_date', 'received_date',
+                  'stock_status', 'approval_status'] as $col) {
+            if (Schema::hasColumn('medicines', $col)) {
+                $cols[] = $col;
+            }
+        }
+        if (!empty($cols)) {
+            Schema::table('medicines', function (Blueprint $table) use ($cols) {
+                $table->dropColumn($cols);
+            });
+        }
 
-            try {
-                $table->dropIndex(['approval_status']);
-            } catch (\Exception $e) {}
-
-            try {
-                $table->dropIndex(['serial_number']);
-            } catch (\Exception $e) {}
-        });
+        // Rename back
+        if (Schema::hasColumn('medicines', 'prescription') && !Schema::hasColumn('medicines', 'description')) {
+            Schema::table('medicines', function (Blueprint $table) {
+                $table->renameColumn('prescription', 'description');
+            });
+        }
     }
 };
