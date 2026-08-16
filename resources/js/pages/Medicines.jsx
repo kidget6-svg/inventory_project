@@ -20,7 +20,7 @@ const statusOptions = [
     { value: 'discontinued', label: 'Discontinued' },
 ];
 
-const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
+
 
 export default function Medicines() {
     const { user } = useAuth();
@@ -49,14 +49,12 @@ export default function Medicines() {
     const [imageFile, setImageFile] = useState(null);
 
     const [form, setForm] = useState({
-        name: '', generic_name: '', batch_number: '', barcode: '', category_id: '',
-        supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '',
-        reorder_level: '', expiry_date: '', status: 'active',
-        description: '', manufacturer: '', shelf_location: '',
+        name: '', generic_name: '', category_id: '',
+        status: 'active', description: '', shelf_location: '',
     });
 
     const [filters, setFilters] = useState({
-        search: '', category_id: '', supplier_id: '', status: '',
+        search: '', category_id: '', status: '',
     });
 
     const [searchTimeout, setSearchTimeout] = useState(null);
@@ -131,10 +129,8 @@ export default function Medicines() {
 
     const resetForm = () => {
         setForm({ 
-            name: '', generic_name: '', batch_number: '', barcode: '', category_id: '', 
-            supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '', 
-            reorder_level: '', expiry_date: '', status: 'active', 
-            description: '', manufacturer: '', shelf_location: '' 
+            name: '', generic_name: '', category_id: '', 
+            status: 'active', description: '', shelf_location: '' 
         });
         setEditId(null); 
         setError(''); 
@@ -150,14 +146,10 @@ export default function Medicines() {
 
     const openEdit = (m) => {
         setForm({
-            name: m.name || '', generic_name: m.generic_name || '', batch_number: m.batch_number || '',
-            barcode: m.barcode || '', category_id: m.category_id || '', supplier_id: m.supplier_id || '',
-            quantity: m.quantity || '', unit_price: m.unit_price || '', purchase_price: m.purchase_price || '',
-            selling_price: m.selling_price || m.unit_price || '', reorder_level: m.reorder_level || '',
-            expiry_date: m.expiry_date ? new Date(m.expiry_date).toISOString().split('T')[0] : '',
+            name: m.name || '', generic_name: m.generic_name || '',
+            category_id: m.category_id || '',
             status: m.status || 'active',
             description: m.description || '',
-            manufacturer: m.manufacturer || '',
             shelf_location: m.shelf_location || '',
         });
         setEditId(m.id); 
@@ -173,8 +165,7 @@ export default function Medicines() {
         setShowViewModal(true);
     };
 
-    const nextStep = () => { setStep(s => Math.min(s + 1, formSteps.length - 1)); };
-    const prevStep = () => { setStep(s => Math.max(s - 1, 0)); };
+
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -321,193 +312,82 @@ export default function Medicines() {
 
     const isFiltered = filters.search || filters.category_id || filters.supplier_id || filters.status;
 
-    const renderStepContent = () => {
-        switch (step) {
-            case 0:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
-                            <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                    <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input type="text" name="barcode" value={form.barcode} onChange={handleChange} placeholder="Scan or type barcode" className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono" />
-                                </div>
-                                <button type="button" onClick={startBarcodeScan} disabled={scanning} className="px-3 py-2 bg-sky-500 text-white rounded-lg text-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5 disabled:opacity-60">
-                                    {scanning ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                                    {scanning ? 'Scanning...' : 'Scan'}
-                                </button>
-                            </div>
-                            {scanning && (
-                                <div className="mt-2 relative">
-                                    <video ref={videoRef} className="w-full max-w-xs rounded-lg border-2 border-sky-400" />
-                                    <button type="button" onClick={stopBarcodeScan} className="mt-1 text-xs text-red-600 hover:underline">Cancel scan</button>
-                                </div>
+    const renderFormContent = () => {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Name *</label>
+                    <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Paracetamol Extra" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Generic Name</label>
+                    <input type="text" name="generic_name" value={form.generic_name} onChange={handleChange} placeholder="e.g. Acetaminophen" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
+                    <select name="category_id" value={form.category_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
+                        <option value="">Select Category</option>
+                        {categories.filter(c => !c.type || c.type === 'medicine').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
+                    <input type="text" name="shelf_location" value={form.shelf_location} onChange={handleChange} placeholder="e.g. A-2-3" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                </div>
+                
+                {!editId && <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                    <select 
+                        name="status" 
+                        value={form.status} 
+                        onChange={handleChange} 
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                    >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="expired">Expired</option>
+                        <option value="discontinued">Discontinued</option>
+                    </select>
+                </div>}
+
+                {editId && <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                        <span className="text-sm font-medium text-gray-700">{form.status === 'active' ? 'Active' : form.status === 'inactive' ? 'Inactive' : form.status === 'discontinued' ? 'Discontinued' : 'Expired'}</span>
+                    </div>
+                    <button type="button" role="switch" aria-checked={form.status === 'active'} aria-label="Toggle medicine active status" onClick={toggleStatus} disabled={!['active', 'inactive'].includes(form.status)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${form.status === 'active' ? 'bg-sky-500' : 'bg-gray-300'}`}>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.status === 'active' ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                </div>}
+
+                <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                    <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                </div>
+                <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Image</label>
+                    <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                            {imagePreview ? (
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                                <Package className="text-gray-300" size={28} />
                             )}
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Name *</label>
-                            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Paracetamol Extra" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Generic Name</label>
-                            <input type="text" name="generic_name" value={form.generic_name} onChange={handleChange} placeholder="e.g. Acetaminophen" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
-                            <select name="category_id" value={form.category_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
-                                <option value="">Select Category</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
-                            <input type="text" name="manufacturer" value={form.manufacturer} onChange={handleChange} placeholder="e.g. GSK" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
-                            <input type="text" name="shelf_location" value={form.shelf_location} onChange={handleChange} placeholder="e.g. A-2-3" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-
-                        {!editId && <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Batch Number</label>
-                            <input 
-                                type="text" 
-                                name="batch_number" 
-                                value={form.batch_number} 
-                                onChange={handleChange} 
-                                placeholder="e.g. BATCH-001" 
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
+                        <div className="flex-1">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
+                                onChange={handleImageChange}
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
                             />
-                        </div>}
-
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Image</label>
-                            <div className="flex items-center gap-4">
-                                <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <Package className="text-gray-300" size={28} />
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
-                                        onChange={handleImageChange}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
-                                    />
-                                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
-                                </div>
-                            </div>
+                            <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
                         </div>
                     </div>
-                );
-            case 1:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier</label>
-                            <select name="supplier_id" value={form.supplier_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
-                                <option value="">Select Supplier</option>
-                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
-                            <input type="number" name="quantity" value={form.quantity} onChange={handleChange} placeholder="0" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Selling Price *</label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input type="number" name="selling_price" value={form.selling_price || form.unit_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Purchase Price</label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input type="number" name="purchase_price" value={form.purchase_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                            </div>
-                        </div>
-                        {!editId && <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
-                            <input 
-                                type="number" 
-                                name="reorder_level" 
-                                value={form.reorder_level} 
-                                onChange={handleChange} 
-                                placeholder="10" 
-                                min="0" 
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
-                                required 
-                            />
-                        </div>}
-                    </div>
-                );
-            case 2:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {!editId && <>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date</label>
-                                <div className="relative">
-                                    <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input 
-                                        type="date" 
-                                        name="expiry_date" 
-                                        value={form.expiry_date} 
-                                        onChange={handleChange} 
-                                        className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                                <select 
-                                    name="status" 
-                                    value={form.status} 
-                                    onChange={handleChange} 
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                >
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                    <option value="expired">Expired</option>
-                                    <option value="discontinued">Discontinued</option>
-                                </select>
-                            </div>
-                        </>}
-                        {editId && <div className="md:col-span-2 flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                                <span className="text-sm font-medium text-gray-700">{form.status === 'active' ? 'Active' : form.status === 'inactive' ? 'Inactive' : form.status === 'discontinued' ? 'Discontinued' : 'Expired'}</span>
-                            </div>
-                            <button type="button" role="switch" aria-checked={form.status === 'active'} aria-label="Toggle medicine active status" onClick={toggleStatus} disabled={!['active', 'inactive'].includes(form.status)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${form.status === 'active' ? 'bg-sky-500' : 'bg-gray-300'}`}>
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.status === 'active' ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
-                        </div>}
-                        <div className="md:col-span-2 p-4 bg-sky-50 rounded-xl border border-sky-200">
-                            <h4 className="text-sm font-semibold text-sky-800 mb-2">Review Summary</h4>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div><span className="text-gray-500">Name:</span> <span className="font-medium">{form.name || '---'}</span></div>
-                                <div><span className="text-gray-500">Generic Name:</span> <span className="font-medium">{form.generic_name || '---'}</span></div>
-                                <div><span className="text-gray-500">Barcode:</span> <span className="font-medium">{form.barcode || '---'}</span></div>
-                                <div><span className="text-gray-500">Quantity:</span> <span className="font-medium">{form.quantity || '0'}</span></div>
-                                <div><span className="text-gray-500">Selling Price:</span> <span className="font-medium">{form.selling_price || form.unit_price ? `$${form.selling_price || form.unit_price}` : '---'}</span></div>
-                                <div><span className="text-gray-500">Status:</span> <span className="font-medium">{form.status}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            default: return null;
-        }
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -522,7 +402,7 @@ export default function Medicines() {
                         <Tag className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                         <select name="category_id" value={filters.category_id} onChange={handleFilterChange} className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none appearance-none">
                             <option value="">All Categories</option>
-                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {categories.filter(c => !c.type || c.type === 'medicine').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                     <div className="relative w-full md:w-48">
@@ -638,24 +518,17 @@ export default function Medicines() {
 
             {canWrite && (
                 <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Medicine' : 'Add New Medicine'} size="max-w-2xl">
-                    <Stepper steps={formSteps} currentStep={step} />
                     {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
-                    <form onSubmit={(e) => { e.preventDefault(); if (step === formSteps.length - 1) handleSubmit(); else nextStep(); }}>
-                        {renderStepContent()}
-                        <div className="flex justify-between mt-6 pt-4 border-t border-sky-100">
-                            <button type="button" onClick={step === 0 ? () => setShowModal(false) : prevStep} className="btn-secondary flex items-center gap-1.5">
-                                <ChevronLeft size={16} /> {step === 0 ? 'Cancel' : 'Back'}
+                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+                        {renderFormContent()}
+                        <div className="flex justify-end mt-6 pt-4 border-t border-sky-100 gap-3">
+                            <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">
+                                Cancel
                             </button>
-                            {step < formSteps.length - 1 ? (
-                                <button type="submit" className="btn-primary flex items-center gap-1.5">
-                                    Next <ChevronRight size={16} />
-                                </button>
-                            ) : (
-                                <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
-                                    {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
-                                        : <><Save size={16} /> {editId ? 'Update Medicine' : 'Create Medicine'}</>}
-                                </button>
-                            )}
+                            <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
+                                {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
+                                    : <><Save size={16} /> {editId ? 'Update Medicine' : 'Create Medicine'}</>}
+                            </button>
                         </div>
                     </form>
                 </Modal>

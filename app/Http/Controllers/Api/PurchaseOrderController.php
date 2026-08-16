@@ -25,6 +25,7 @@ class PurchaseOrderController extends Controller
     {
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
+            'manufacturing_company' => 'nullable|string|max:255',
             // Multi-item format (preferred)
             'items' => 'nullable|array|min:1',
             'items.*.medicine_id' => 'nullable|exists:medicines,id',
@@ -72,6 +73,7 @@ class PurchaseOrderController extends Controller
 
             $order = PurchaseOrder::create([
                 'supplier_id' => $validated['supplier_id'],
+                'manufacturing_company' => $validated['manufacturing_company'] ?? null,
                 'order_date' => now()->toDateString(),
                 'status' => 'draft',
                 'total_amount' => $totalAmount,
@@ -110,6 +112,7 @@ class PurchaseOrderController extends Controller
 
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
+            'manufacturing_company' => 'nullable|string|max:255',
             'items' => 'nullable|array|min:1',
             'items.*.medicine_id' => 'nullable|exists:medicines,id',
             'items.*.retail_product_id' => 'nullable|exists:retail_products,id',
@@ -155,6 +158,7 @@ class PurchaseOrderController extends Controller
 
             $purchaseOrder->update([
                 'supplier_id' => $validated['supplier_id'],
+                'manufacturing_company' => $validated['manufacturing_company'] ?? null,
                 'total_amount' => $totalAmount,
             ]);
 

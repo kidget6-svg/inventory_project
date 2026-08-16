@@ -25,6 +25,7 @@ export default function Categories() {
     const [categories, setCategories] = useState([]);
     const [shelves, setShelves] = useState([]);
     const [allShelves, setAllShelves] = useState([]); // For dropdown
+    const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingShelves, setLoadingShelves] = useState(false);
     const [error, setError] = useState('');
@@ -37,10 +38,13 @@ export default function Categories() {
     const [modalItem, setModalItem] = useState(null);
     const [modalType, setModalType] = useState('category');
     const [form, setForm] = useState({ 
+        type: 'medicine',
         name: '', 
         description: '', 
         shelf_location: '',
-        capacity: 100
+        capacity: 100,
+        location_type: 'warehouse',
+        branch_id: ''
     });
     const [submitting, setSubmitting] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
@@ -59,6 +63,21 @@ export default function Categories() {
         } catch (err) {
             console.error('Failed to load shelves for dropdown:', err);
             setAllShelves([]);
+        }
+    };
+
+    const loadBranches = async () => {
+        try {
+            const response = await api.get('/branches');
+            let data = [];
+            if (Array.isArray(response.data)) {
+                data = response.data;
+            } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+                data = response.data.data;
+            }
+            setBranches(data);
+        } catch (err) {
+            console.error('Failed to load branches:', err);
         }
     };
 
@@ -124,6 +143,7 @@ export default function Categories() {
 
     useEffect(() => { 
         loadAllShelves(); // Load all shelves for dropdown
+        loadBranches();
         if (activeTab === 'categories') {
             loadCategories(); 
         } else {
@@ -173,8 +193,8 @@ export default function Categories() {
         setModalMode('create');
         setModalItem(null);
         setForm(type === 'category' 
-            ? { name: '', description: '', shelf_location: '' }
-            : { shelf_location: '', description: '', capacity: 100 }
+            ? { type: 'medicine', name: '', description: '', shelf_location: '' }
+            : { shelf_location: '', description: '', capacity: 100, location_type: 'warehouse', branch_id: '' }
         );
         setError('');
         setValidationErrors({});
@@ -191,6 +211,7 @@ export default function Categories() {
         setModalItem(item);
         setForm(type === 'category'
             ? { 
+                type: item.type || 'medicine',
                 name: item.name, 
                 description: item.description || '', 
                 shelf_location: item.shelf_location || '' 
@@ -198,7 +219,9 @@ export default function Categories() {
             : {
                 shelf_location: item.shelf_location || '',
                 description: item.description || '',
-                capacity: item.capacity || 100
+                capacity: item.capacity || 100,
+                location_type: item.branch_id ? 'branch' : 'warehouse',
+                branch_id: item.branch_id || ''
             }
         );
         setError('');
@@ -216,7 +239,7 @@ export default function Categories() {
     const closeModal = () => {
         setShowModal(false);
         setModalItem(null);
-        setForm({ name: '', description: '', shelf_location: '' });
+        setForm({ type: 'medicine', name: '', description: '', shelf_location: '' });
         setError('');
         setValidationErrors({});
     };
@@ -240,6 +263,7 @@ export default function Categories() {
             
             if (modalType === 'category') {
                 payload = { 
+                    type: form.type,
                     name: form.name, 
                     description: form.description, 
                     shelf_location: form.shelf_location 
@@ -249,7 +273,8 @@ export default function Categories() {
                 payload = {
                     shelf_location: form.shelf_location,
                     description: form.description || '',
-                    capacity: capacity
+                    capacity: capacity,
+                    branch_id: form.location_type === 'branch' ? (form.branch_id || null) : null
                 };
             }
 
@@ -328,6 +353,7 @@ export default function Categories() {
                     <thead>
                         <tr className="bg-sky-50 border-b border-sky-100">
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Category Name</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Description</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Shelf Location</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Medicines</th>
@@ -342,6 +368,9 @@ export default function Categories() {
                                         <Tag className="w-4 h-4 text-sky-500" />
                                         {cat.name}
                                     </div>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-500 capitalize">
+                                    {cat.type || 'medicine'}
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-500">
                                     {cat.description || '---'}
@@ -412,6 +441,7 @@ export default function Categories() {
                     <thead>
                         <tr className="bg-sky-50 border-b border-sky-100">
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Shelf Location</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Location Type</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Description</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Capacity</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Progress</th>
@@ -436,6 +466,9 @@ export default function Categories() {
                                             <Layers className="w-4 h-4 text-sky-500" />
                                             {shelf.shelf_location}
                                         </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-500">
+                                        {shelf.branch_id ? 'Branch' : 'Warehouse'}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-500">
                                         {shelf.description || '---'}
@@ -666,6 +699,24 @@ export default function Categories() {
                         {modalType === 'category' && (
                             <>
                                 <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Product Category Type *</label>
+                                    <select
+                                        name="type"
+                                        value={form.type}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none bg-white"
+                                        required
+                                    >
+                                        <option value="medicine">Medicine</option>
+                                        <option value="retail">Retail</option>
+                                        <option value="otc">Over-the-Counter (OTC)</option>
+                                    </select>
+                                    {validationErrors.type && (
+                                        <p className="text-xs text-red-500 mt-1">{validationErrors.type[0]}</p>
+                                    )}
+                                </div>
+
+                                <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Category Name *</label>
                                     <input
                                         name="name"
@@ -716,6 +767,39 @@ export default function Categories() {
                         {/* Shelf fields */}
                         {modalType === 'shelf' && (
                             <>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Location Type *</label>
+                                    <select
+                                        name="location_type"
+                                        value={form.location_type}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none bg-white"
+                                        required
+                                    >
+                                        <option value="warehouse">Warehouse</option>
+                                        <option value="branch">Branch</option>
+                                    </select>
+                                </div>
+                                {form.location_type === 'branch' && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Select Branch *</label>
+                                        <select
+                                            name="branch_id"
+                                            value={form.branch_id}
+                                            onChange={handleChange}
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none bg-white"
+                                            required
+                                        >
+                                            <option value="">Select a Branch</option>
+                                            {branches.map(b => (
+                                                <option key={b.id} value={b.id}>{b.name}</option>
+                                            ))}
+                                        </select>
+                                        {validationErrors.branch_id && (
+                                            <p className="text-xs text-red-500 mt-1">{validationErrors.branch_id[0]}</p>
+                                        )}
+                                    </div>
+                                )}
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location *</label>
                                     <input

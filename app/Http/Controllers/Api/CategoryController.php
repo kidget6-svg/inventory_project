@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Shelf;
+use App\Models\Medicine;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -65,7 +66,27 @@ class CategoryController extends Controller
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'shelf_location' => 'nullable|string|max:255',
+                'type' => 'required|in:medicine,retail,otc',
             ]);
+
+            // Restriction: If category type is retail or otc, check if selected shelf is occupied by medicine
+            if (in_array($validated['type'], ['retail', 'otc']) && !empty($validated['shelf_location'])) {
+                $shelf = Shelf::where('shelf_location', $validated['shelf_location'])->first();
+                $isOccupiedByMedicine = false;
+                if ($shelf) {
+                    $isOccupiedByMedicine = Medicine::where('shelf_id', $shelf->id)
+                        ->orWhere('shelf_location', $validated['shelf_location'])
+                        ->exists();
+                } else {
+                    $isOccupiedByMedicine = Medicine::where('shelf_location', $validated['shelf_location'])->exists();
+                }
+
+                if ($isOccupiedByMedicine) {
+                    throw ValidationException::withMessages([
+                        'shelf_location' => 'This shelf is already occupied by medicine and cannot be selected for retail or OTC products.',
+                    ]);
+                }
+            }
 
             // Create the category
             $category = Category::create($validated);
@@ -108,7 +129,27 @@ class CategoryController extends Controller
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'shelf_location' => 'nullable|string|max:255',
+                'type' => 'required|in:medicine,retail,otc',
             ]);
+
+            // Restriction: If category type is retail or otc, check if selected shelf is occupied by medicine
+            if (in_array($validated['type'], ['retail', 'otc']) && !empty($validated['shelf_location'])) {
+                $shelf = Shelf::where('shelf_location', $validated['shelf_location'])->first();
+                $isOccupiedByMedicine = false;
+                if ($shelf) {
+                    $isOccupiedByMedicine = Medicine::where('shelf_id', $shelf->id)
+                        ->orWhere('shelf_location', $validated['shelf_location'])
+                        ->exists();
+                } else {
+                    $isOccupiedByMedicine = Medicine::where('shelf_location', $validated['shelf_location'])->exists();
+                }
+
+                if ($isOccupiedByMedicine) {
+                    throw ValidationException::withMessages([
+                        'shelf_location' => 'This shelf is already occupied by medicine and cannot be selected for retail or OTC products.',
+                    ]);
+                }
+            }
 
             // Update the category
             $category->update($validated);

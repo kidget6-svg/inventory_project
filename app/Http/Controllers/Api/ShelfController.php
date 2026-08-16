@@ -64,6 +64,7 @@ class ShelfController extends Controller
                 'shelf_location' => 'required|string|max:255|unique:shelves,shelf_location',
                 'description' => 'nullable|string',
                 'capacity' => 'required|integer|min:1',
+                'branch_id' => 'nullable|exists:branches,id',
             ]);
 
             // Set name from shelf_location
@@ -110,6 +111,7 @@ class ShelfController extends Controller
                 'shelf_location' => 'required|string|max:255|unique:shelves,shelf_location,' . $shelf->id,
                 'description' => 'nullable|string',
                 'capacity' => 'required|integer|min:1',
+                'branch_id' => 'nullable|exists:branches,id',
             ]);
 
             // Set name from shelf_location

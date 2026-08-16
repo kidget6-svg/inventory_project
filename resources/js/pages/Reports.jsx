@@ -235,7 +235,7 @@ export default function Reports() {
                                     <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
                                         <td className="px-4 py-3">
                                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                                item.product_type === 'retail' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'
+                                                item.product_type === 'retail' ? 'bg-yellow-100 text-yellow-800' : 'bg-sky-100 text-sky-700'
                                             }`}>
                                                 {item.product_type === 'retail' ? 'Retail / OTC' : 'Medicine'}
                                             </span>

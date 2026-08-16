@@ -18,6 +18,7 @@ class Batch extends Model
 
     protected $fillable = [
         'medicine_id',
+        'shelf_id',
         'batch_number',
         'barcode',
         'manufacturing_date',

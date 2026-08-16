@@ -12,6 +12,7 @@ export default function PurchaseOrderCreate() {
     const [medicines, setMedicines] = useState([]);
     const [retailProducts, setRetailProducts] = useState([]);
     const [supplierId, setSupplierId] = useState('');
+    const [manufacturingCompany, setManufacturingCompany] = useState('');
     const [items, setItems] = useState([]);
     const [activeTab, setActiveTab] = useState('medicine');
     const [medSearch, setMedSearch] = useState('');
@@ -96,6 +97,7 @@ export default function PurchaseOrderCreate() {
         try {
             const payload = {
                 supplier_id: supplierId,
+                manufacturing_company: manufacturingCompany || null,
                 items: items.map(i => ({
                     medicine_id: i.type === 'medicine' ? i.id : null,
                     retail_product_id: i.type === 'retail' ? i.id : null,
@@ -137,7 +139,7 @@ export default function PurchaseOrderCreate() {
                         <select
                             value={supplierId}
                             onChange={(e) => setSupplierId(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none bg-white"
                             required
                         >
                             <option value="">Select Supplier</option>
@@ -145,6 +147,18 @@ export default function PurchaseOrderCreate() {
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                         </select>
+                    </div>
+
+                    {/* Manufacturing Company */}
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturing Company</label>
+                        <input
+                            type="text"
+                            value={manufacturingCompany}
+                            onChange={(e) => setManufacturingCompany(e.target.value)}
+                            placeholder="Enter manufacturing company name"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        />
                     </div>
 
                     {/* 2. Product selection tabs */}
@@ -270,88 +284,72 @@ export default function PurchaseOrderCreate() {
                         )}
                     </div>
 
-                    {/* 3. Selected items - WITHOUT Unit Price and Subtotal */}
+                    {/* Added Items Table */}
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">3. Selected Items ({items.length})</label>
-                        {items.length > 0 ? (
-                            <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-50">
-                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
-                                            <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 w-24">Type</th>
-                                            <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-24">Qty</th>
-                                            <th className="px-4 py-2 w-12"></th>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Selected Items ({items.length})</label>
+                        <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600 uppercase">
+                                    <tr>
+                                        <th className="px-3 py-2 text-left">Type</th>
+                                        <th className="px-3 py-2 text-left">Product Name</th>
+                                        <th className="px-3 py-2 text-center w-32">Quantity</th>
+                                        <th className="px-3 py-2 text-right w-16">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {items.length > 0 ? items.map((item, idx) => (
+                                        <tr key={`${item.type}-${item.id}`}>
+                                            <td className="px-3 py-2">
+                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                    item.type === 'retail' ? 'bg-yellow-100 text-yellow-800' : 'bg-sky-100 text-sky-700'
+                                                }`}>
+                                                    {item.type === 'retail' ? 'Retail / OTC' : 'Medicine'}
+                                                </span>
+                                            </td>
+                                            <td className="px-3 py-2 font-medium text-gray-800">{item.name}</td>
+                                            <td className="px-3 py-2 text-center">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={item.quantity}
+                                                    onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
+                                                    className="w-20 px-2 py-1 border border-gray-200 rounded text-center text-sm focus:border-sky-400 outline-none"
+                                                    required
+                                                />
+                                            </td>
+                                            <td className="px-3 py-2 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItem(idx)}
+                                                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                                    title="Remove"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {items.map((it, i) => (
-                                            <tr key={`${it.type}-${it.id}`} className="border-t border-gray-100">
-                                                <td className="px-4 py-2 text-sm font-medium text-gray-800 flex items-center gap-2">
-                                                    {it.type === 'medicine'
-                                                        ? <Pill size={14} className="text-sky-400" />
-                                                        : <Package size={14} className="text-amber-400" />}
-                                                    {it.name}
-                                                </td>
-                                                <td className="px-4 py-2 text-center">
-                                                    <span className={it.type === 'medicine'
-                                                        ? "px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700"
-                                                        : "px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
-                                                    }>
-                                                        {it.type === 'medicine' ? 'Medicine' : 'OTC'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    <input
-                                                        type="number"
-                                                        value={it.quantity}
-                                                        onChange={(e) => updateItem(i, 'quantity', e.target.value)}
-                                                        className="w-20 px-2 py-1 text-sm text-right border border-gray-200 rounded focus:border-sky-400 outline-none"
-                                                        min="1"
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-2 text-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeItem(i)}
-                                                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                                                        title="Remove item"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr className="border-t-2 border-gray-200 bg-gray-50">
-                                            <td colSpan="2" className="px-4 py-2 text-right text-xs font-bold text-gray-700">Total Items:</td>
-                                            <td className="px-4 py-2 text-right text-sm font-bold text-gray-900">{items.length}</td>
-                                            <td></td>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="4" className="px-3 py-6 text-center text-gray-400">
+                                                No items added yet. Search and select products above.
+                                            </td>
                                         </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        ) : (
-                            <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
-                                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                No products added yet. Search and add products above.
-                            </div>
-                        )}
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
-                        <Link to="/purchase-orders" className="btn-secondary px-4 py-2 text-sm flex items-center gap-2">
-                            <X size={16} />
-                            Cancel
-                        </Link>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                        <Link to="/purchase-orders" className="btn-secondary">Cancel</Link>
                         <button
                             type="submit"
-                            disabled={submitting || items.length === 0}
-                            className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-60"
+                            disabled={submitting}
+                            className="btn-primary flex items-center gap-2 disabled:opacity-60"
                         >
-                            {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creating...</> : <><Save size={16} /> Create Order</>}
+                            {submitting ? <LoadingSpinner size="sm" /> : <Save size={16} />}
+                            Create Purchase Order
                         </button>
                     </div>
                 </form>

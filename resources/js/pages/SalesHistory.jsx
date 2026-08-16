@@ -483,7 +483,7 @@ export default function SalesHistory() {
                                                      <td className="px-3 py-2 font-medium text-gray-800 flex items-center justify-between">
                                                          <span>{item.itemable?.name || item.medicine?.name || 'Product'}</span>
                                                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                                                             item.itemable_type?.includes('RetailProduct') ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'
+                                                             item.itemable_type?.includes('RetailProduct') ? 'bg-yellow-100 text-yellow-800' : 'bg-sky-100 text-sky-700'
                                                          }`}>
                                                              {item.itemable_type?.includes('RetailProduct') ? 'Retail / OTC' : 'Medicine'}
                                                          </span>

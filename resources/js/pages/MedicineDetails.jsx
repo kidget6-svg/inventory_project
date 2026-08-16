@@ -525,7 +525,7 @@ export default function Medicines() {
                                 required
                             >
                                 <option value="">Select Category</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {categories.filter(c => !c.type || c.type === 'medicine').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
 
@@ -818,7 +818,7 @@ export default function Medicines() {
                             className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none appearance-none"
                         >
                             <option value="">All Categories</option>
-                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {categories.filter(c => !c.type || c.type === 'medicine').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                     <div className="relative w-full md:w-48">

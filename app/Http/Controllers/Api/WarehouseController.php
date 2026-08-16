@@ -35,7 +35,7 @@ class WarehouseController extends Controller
 
     public function shelves()
     {
-        $shelves = Shelf::withCount('medicines')->get()->map(function ($shelf) {
+        $shelves = Shelf::whereNull('branch_id')->withCount('medicines')->get()->map(function ($shelf) {
             $totalItems = $shelf->medicines()->sum('quantity');
             $capacity = $shelf->capacity ?? 100;
             return [
@@ -74,6 +74,7 @@ class WarehouseController extends Controller
                 'batch_number' => 'required|string|max:255',
                 'expiry_date' => 'required|date|after:today',
                 'quantity' => 'required|integer|min:1',
+                'shelf_id' => 'nullable|exists:shelves,id',
             ]);
 
             $po = PurchaseOrder::findOrFail($validated['purchase_order_id']);
@@ -83,6 +84,7 @@ class WarehouseController extends Controller
             // Create batch
             $batch = Batch::create([
                 'medicine_id' => $medicine->id,
+                'shelf_id' => $validated['shelf_id'] ?? null,
                 'batch_number' => $validated['batch_number'],
                 'expiry_date' => $validated['expiry_date'],
                 'quantity' => $validated['quantity'],
@@ -91,9 +93,16 @@ class WarehouseController extends Controller
                 'received_at' => now(),
             ]);
 
-            // Update medicine quantity
+            // Update medicine quantity and shelf
             $oldQuantity = $medicine->quantity;
             $medicine->quantity += $validated['quantity'];
+            if (!empty($validated['shelf_id'])) {
+                $medicine->shelf_id = $validated['shelf_id'];
+                $shelf = Shelf::find($validated['shelf_id']);
+                if ($shelf) {
+                    $medicine->shelf_location = $shelf->shelf_location;
+                }
+            }
             $medicine->save();
 
             // Create stock movement
