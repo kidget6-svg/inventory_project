@@ -41,6 +41,8 @@ class PurchaseOrderService
             throw new \RuntimeException('Supplier does not have an email address.');
         }
 
+        $purchaseOrder->forceFill(['sent_at' => now()])->save();
+
         $pdfContent = $this->generatePdf($purchaseOrder);
 
         $adminName = auth()->check()
@@ -51,7 +53,5 @@ class PurchaseOrderService
 
         Mail::to($purchaseOrder->supplier->email)
             ->send(new PurchaseOrderMail($purchaseOrder, $pdfContent, $adminName));
-
-        $purchaseOrder->forceFill(['sent_at' => now()])->save();
     }
 }

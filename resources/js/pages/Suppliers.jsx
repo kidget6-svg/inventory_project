@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
-import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import { Eye, Edit, Trash2, Search, X, Plus, Save, Calendar, Phone, Mail, MapPin, User } from 'lucide-react';
 import Pagination from '../components/Pagination';
@@ -14,10 +13,6 @@ const fields = [
 ];
 
 export default function Suppliers() {
-    const { hasPermission } = useAuth();
-    const canCreate = hasPermission('suppliers.create');
-    const canEdit = hasPermission('suppliers.edit');
-    const canDelete = hasPermission('suppliers.delete');
     const [suppliers, setSuppliers] = useState([]);
     const [search, setSearch] = useState('');
     const [meta, setMeta] = useState(null);
@@ -152,15 +147,13 @@ export default function Suppliers() {
                         )}
                     </div>
 
-                    {canCreate && (
-                        <button
-                            onClick={openCreate}
-                            className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
-                        >
-                            <Plus size={16} />
-                            New Supplier
-                        </button>
-                    )}
+                    <button
+                        onClick={openCreate}
+                        className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                    >
+                        <Plus size={16} />
+                        New Supplier
+                    </button>
                 </div>
             </div>
 
@@ -203,24 +196,20 @@ export default function Suppliers() {
                                             >
                                                 <Eye size={16} />
                                             </button>
-                                            {canEdit && (
-                                                <button
-                                                    onClick={() => openEdit(s)}
-                                                    className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-                                            )}
-                                            {canDelete && (
-                                                <button
-                                                    onClick={() => handleDelete(s.id)}
-                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => openEdit(s)}
+                                                className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(s.id)}
+                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
