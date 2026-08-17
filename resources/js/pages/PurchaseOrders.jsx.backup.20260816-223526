@@ -50,7 +50,6 @@ export default function PurchaseOrders() {
     const [modalItem, setModalItem] = useState(null);
     const [form, setForm] = useState({
         supplier_id: '',
-        manufacturing_company: '',
         medicine_name: '',
         quantity: '',
     });
@@ -210,9 +209,20 @@ export default function PurchaseOrders() {
         // Always: View
         actions.push({ icon: Eye, tooltip: 'View Details', color: 'sky', onClick: () => openView(order) });
 
-        const pdfAvailable = ['approved', 'completed'].includes(status);
+        const pdfAvailable = status !== 'draft';
         if (pdfAvailable) {
             actions.push({ icon: FileText, tooltip: 'Generate PDF', color: 'purple', onClick: () => handlePreviewPdf(order) });
+            actions.push({ icon: Download, tooltip: 'Download PDF', color: 'sky', onClick: () => handleDownloadPdf(order) });
+        }
+
+        if (['pending', 'approved', 'sent', 'delivered', 'completed'].includes(status)) {
+            actions.push({
+                icon: sendingOrderId === order.id ? Loader2 : Send,
+                tooltip: status === 'pending' ? 'Send Purchase Order PDF to Supplier' : 'Resend Purchase Order PDF to Supplier',
+                color: 'sky',
+                onClick: () => handleSendPdf(order),
+                disabled: sendingOrderId === order.id,
+            });
         }
 
         switch (status) {
@@ -226,38 +236,28 @@ export default function PurchaseOrders() {
             case 'pending':
                 actions.push({ icon: CheckCircle, tooltip: 'Approve', color: 'green', onClick: () => handleWorkflowAction(order, 'approve', 'Approve') });
                 actions.push({ icon: XCircle, tooltip: 'Reject', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Reject') });
+                actions.push({ icon: Send, tooltip: 'Email Supplier', color: 'sky', onClick: () => handleEmailSupplier(order) });
+                actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
                 break;
 
             case 'sent':
                 actions.push({ icon: Package, tooltip: 'Mark as Delivered', color: 'amber', onClick: () => handleWorkflowAction(order, 'deliver', 'Mark as Delivered') });
+                actions.push({ icon: RefreshCw, tooltip: 'Resend to Supplier', color: 'purple', onClick: () => handleEmailSupplier(order) });
                 actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
                 break;
 
             case 'delivered':
+                actions.push({ icon: RefreshCw, tooltip: 'Resend to Supplier', color: 'purple', onClick: () => handleEmailSupplier(order) });
                 actions.push({ icon: ClipboardCheck, tooltip: 'Mark Complete', color: 'green', onClick: () => handleWorkflowAction(order, 'complete', 'Mark Complete') });
                 actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
                 break;
 
             case 'approved':
-                actions.push({
-                    icon: sendingOrderId === order.id ? Loader2 : Send,
-                    tooltip: 'Resend Purchase Order PDF to Supplier',
-                    color: 'sky',
-                    onClick: () => handleSendPdf(order),
-                    disabled: sendingOrderId === order.id,
-                });
                 actions.push({ icon: ClipboardCheck, tooltip: 'Mark Complete', color: 'green', onClick: () => handleWorkflowAction(order, 'complete', 'Mark Complete') });
                 actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
                 break;
 
             case 'completed':
-                actions.push({
-                    icon: sendingOrderId === order.id ? Loader2 : Send,
-                    tooltip: 'Resend Purchase Order PDF to Supplier',
-                    color: 'sky',
-                    onClick: () => handleSendPdf(order),
-                    disabled: sendingOrderId === order.id,
-                });
                 break;
 
             case 'cancelled':
@@ -347,7 +347,6 @@ export default function PurchaseOrders() {
                 const orderItem = data.items?.[0];
                 setForm({
                     supplier_id: data.supplier_id || '',
-                    manufacturing_company: data.manufacturing_company || '',
                     medicine_name: orderItem?.medicine?.name || '',
                     quantity: orderItem?.quantity || '',
                 });
@@ -364,7 +363,7 @@ export default function PurchaseOrders() {
     const closeModal = () => {
         setShowModal(false);
         setModalItem(null);
-        setForm({ supplier_id: '', manufacturing_company: '', medicine_name: '', quantity: '' });
+        setForm({ supplier_id: '', medicine_name: '', quantity: '' });
         setError('');
     };
 
@@ -648,10 +647,6 @@ export default function PurchaseOrders() {
                                 </p>
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 mb-1">Manufacturer</label>
-                                <p className="text-sm text-gray-600">{modalItem.manufacturing_company || 'N/A'}</p>
-                            </div>
-                            <div>
                                 <label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label>
                                 <p className="text-sm text-gray-600">{modalItem.items?.[0]?.quantity || 0}</p>
                             </div>
@@ -680,7 +675,7 @@ export default function PurchaseOrders() {
 
                         {/* Status-aware icon-only action buttons */}
                         <div className="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-gray-200">
-                            {['approved', 'completed'].includes(modalItem.status?.toLowerCase()) && (
+                            {modalItem.status?.toLowerCase() !== 'draft' && (
                                 <ActionIcon
                                     icon={Download}
                                     tooltip="Download PDF"
@@ -811,19 +806,6 @@ export default function PurchaseOrders() {
                                     <option key={m.id} value={m.name} />
                                 ))}
                             </datalist>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer *</label>
-                            <input
-                                type="text"
-                                name="manufacturing_company"
-                                value={form.manufacturing_company}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                placeholder="Enter manufacturer name"
-                                required
-                                disabled={formLoading}
-                            />
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>

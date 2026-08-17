@@ -13,6 +13,10 @@ use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ShelfController;
+use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\StockManagementController;
+use App\Http\Controllers\Api\WarehouseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,6 +74,17 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         // Retail Products Read
         Route::get('/retail-products', [RetailProductController::class, 'index']);
         Route::get('/retail-products/{retailProduct}', [RetailProductController::class, 'show']);
+
+        // Warehouse Read
+        Route::get('/warehouse/stats', [WarehouseController::class, 'stats']);
+        Route::get('/warehouse/shelves', [WarehouseController::class, 'shelves']);
+        Route::get('/warehouse/stock', [WarehouseController::class, 'stock']);
+        Route::get('/warehouse/receiving-history', [WarehouseController::class, 'receivingHistory']);
+        Route::get('/warehouse/transfer-requests', [WarehouseController::class, 'transferRequests']);
+
+        // Branches Read
+        Route::get('/branches', [BranchController::class, 'index']);
+        Route::get('/branches/stats', [BranchController::class, 'stats']);
     });
 
     // --------------------------------------------------------------------
@@ -97,8 +112,20 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
         Route::delete('/stock-movements/{stockMovement}', [StockMovementController::class, 'destroy']);
 
+        // Stock Management
+        Route::get('/stock-management/summary', [StockManagementController::class, 'summary']);
+        Route::get('/stock-management/current', [StockManagementController::class, 'currentStock']);
+        Route::get('/stock-management/low-stock', [StockManagementController::class, 'lowStock']);
+        Route::get('/stock-management/expiry', [StockManagementController::class, 'expiry']);
+        Route::get('/stock-management/damaged', [StockManagementController::class, 'damaged']);
+
         // Reports
         Route::get('/reports', [ReportController::class, 'index']);
+
+        // Warehouse Write
+        Route::post('/warehouse/receive', [WarehouseController::class, 'receive']);
+        Route::post('/warehouse/transfer/{id}/approve', [WarehouseController::class, 'approveTransfer']);
+        Route::post('/warehouse/transfer/{id}/complete', [WarehouseController::class, 'completeTransfer']);
     });
 
     // --------------------------------------------------------------------
@@ -114,8 +141,19 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::post('/users/{user}/approve', [UserController::class, 'approve']);
         Route::post('/users/{user}/reject', [UserController::class, 'reject']);
 
+        // Audit Logs
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+        Route::get('/audit-logs/stats', [AuditLogController::class, 'stats']);
+        Route::get('/audit-logs/modules', [AuditLogController::class, 'modules']);
+        Route::get('/audit-logs/export', [AuditLogController::class, 'export']);
+
         // Suppliers Write
         Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
+
+        // Branches Write (Admin only)
+        Route::post('/branches', [BranchController::class, 'store']);
+        Route::put('/branches/{branch}', [BranchController::class, 'update']);
+        Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
 
         // Purchase Orders
         Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);

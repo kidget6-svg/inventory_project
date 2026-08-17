@@ -23,6 +23,7 @@ class PurchaseOrderController extends Controller
     {
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
+            'manufacturing_company' => 'nullable|string|max:255',
             'medicine_name' => 'nullable|string|max:255',
             'medicine_id' => 'nullable|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
@@ -60,6 +61,7 @@ class PurchaseOrderController extends Controller
 
             $order = PurchaseOrder::create([
                 'supplier_id' => $validated['supplier_id'],
+                'manufacturing_company' => $validated['manufacturing_company'],
                 'order_date' => now()->toDateString(),
                 'status' => 'draft',
                 'total_amount' => $subtotal,
@@ -98,6 +100,7 @@ class PurchaseOrderController extends Controller
 
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
+            'manufacturing_company' => 'nullable|string|max:255',
             'medicine_name' => 'nullable|string|max:255',
             'medicine_id' => 'nullable|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
@@ -137,6 +140,7 @@ class PurchaseOrderController extends Controller
             // order_date is preserved from creation and not editable by the user
             $purchaseOrder->update([
                 'supplier_id' => $validated['supplier_id'],
+                'manufacturing_company' => $validated['manufacturing_company'],
                 'total_amount' => $subtotal,
             ]);
 
