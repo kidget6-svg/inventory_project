@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Edit, Trash2, Calendar, Package, DollarSign, Tag, Send, RefreshCw, CheckCircle, XCircle, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Calendar, Package, DollarSign, Tag, Send, RefreshCw, CheckCircle, XCircle, Download, FileText, Pill } from 'lucide-react';
 
 export default function PurchaseOrderView() {
     const { id } = useParams();

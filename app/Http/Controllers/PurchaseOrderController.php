@@ -40,12 +40,9 @@ class PurchaseOrderController extends Controller
     {
         $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
-            'order_date' => 'required|date',
-            'status' => 'required',
             'medicine_name' => 'nullable|string|max:255',
             'medicine_id' => 'nullable|exists:medicines,id',
             'quantity' => 'required|integer|min:1',
-            'unit_price' => 'required|numeric|min:0',
         ]);
 
         if (empty($request->medicine_name) && empty($request->medicine_id)) {
@@ -65,21 +62,22 @@ class PurchaseOrderController extends Controller
                     'name' => $medName,
                     'category_id' => $defaultCategory ? $defaultCategory->id : 1,
                     'quantity' => 0,
-                    'unit_price' => $request->unit_price,
-                    'selling_price' => $request->unit_price,
+                    'unit_price' => 0,
+                    'selling_price' => 0,
                     'status' => 'active',
                 ]);
             }
         }
 
         // Calculate subtotal
-        $subtotal = $request->quantity * $request->unit_price;
+        $unitPrice = $request->input('unit_price', 0);
+        $subtotal = $request->quantity * $unitPrice;
 
         // Create Purchase Order
         $purchaseOrder = PurchaseOrder::create([
             'supplier_id' => $request->supplier_id,
-            'order_date' => $request->order_date,
-            'status' => $request->status,
+            'order_date' => now()->toDateString(),
+            'status' => 'draft',
             'total_amount' => $subtotal,
         ]);
 
@@ -88,7 +86,8 @@ class PurchaseOrderController extends Controller
             'purchase_order_id' => $purchaseOrder->id,
             'medicine_id' => $medicine->id,
             'quantity' => $request->quantity,
-            'unit_cost' => $request->unit_price,
+            'unit_price' => $unitPrice,
+            'subtotal' => $subtotal,
         ]);
 
         // Increase medicine stock

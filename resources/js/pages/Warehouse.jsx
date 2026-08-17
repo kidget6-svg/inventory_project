@@ -37,6 +37,7 @@ export default function WarehousePage() {
         batch_number: '',
         expiry_date: '',
         quantity: '',
+        shelf_id: '',
     });
     const [submitting, setSubmitting] = useState(false);
     const [filters, setFilters] = useState({
@@ -45,6 +46,14 @@ export default function WarehousePage() {
         date_from: '',
         date_to: '',
     });
+
+    // Helper to safely extract array from API response
+    const asArray = (res) => {
+        const d = res.data;
+        if (Array.isArray(d)) return d;
+        if (d && Array.isArray(d.data)) return d.data;
+        return [];
+    };
 
     // Load all warehouse data
     const loadWarehouseData = useCallback(async () => {
@@ -61,11 +70,11 @@ export default function WarehousePage() {
             ]);
 
             setStats(statsRes.data);
-            setShelves(shelvesRes.data?.data || shelvesRes.data || []);
-            setStock(stockRes.data?.data || stockRes.data || []);
-            setReceivingHistory(receivingRes.data?.data || receivingRes.data || []);
-            setTransferRequests(transfersRes.data?.data || transfersRes.data || []);
-            setPurchaseOrders(poRes.data?.data || poRes.data || []);
+            setShelves(asArray(shelvesRes));
+            setStock(asArray(stockRes));
+            setReceivingHistory(asArray(receivingRes));
+            setTransferRequests(asArray(transfersRes));
+            setPurchaseOrders(asArray(poRes));
         } catch (err) {
             setError('Failed to load warehouse data');
             console.error(err);
@@ -88,11 +97,12 @@ export default function WarehousePage() {
                 batch_number: batchData.batch_number,
                 expiry_date: batchData.expiry_date,
                 quantity: batchData.quantity,
+                shelf_id: batchData.shelf_id || null,
             });
             window.showToast('Stock received successfully', 'success');
             setShowReceivingModal(false);
             setSelectedPO(null);
-            setBatchData({ batch_number: '', expiry_date: '', quantity: '' });
+            setBatchData({ batch_number: '', expiry_date: '', quantity: '', shelf_id: '' });
             loadWarehouseData();
         } catch (err) {
             window.showToast(err.response?.data?.message || 'Failed to receive stock', 'error');
@@ -528,6 +538,21 @@ export default function WarehousePage() {
                             min="1"
                             required
                         />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location (Warehouse vs Branch)</label>
+                        <select
+                            value={batchData.shelf_id}
+                            onChange={(e) => setBatchData({ ...batchData, shelf_id: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 outline-none bg-white"
+                        >
+                            <option value="">Select Shelf (Optional)</option>
+                            {shelves.map(shelf => (
+                                <option key={shelf.id} value={shelf.id}>
+                                    {shelf.shelf_location} {shelf.branch_id ? '(Branch Shelf)' : '(Warehouse Shelf)'}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
                         <button type="button" onClick={() => setShowReceivingModal(false)} className="btn-secondary">

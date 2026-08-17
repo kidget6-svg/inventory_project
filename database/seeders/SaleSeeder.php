@@ -18,6 +18,8 @@ class SaleSeeder extends Seeder
         // Get the actual columns from the sales table
         $columns = Schema::getColumnListing('sales');
         $this->command->info('📋 Sales table columns: ' . implode(', ', $columns));
+        $itemColumns = Schema::getColumnListing('sale_items');
+        $this->command->info('📋 Sale items table columns: ' . implode(', ', $itemColumns));
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         SaleItem::truncate();
@@ -35,8 +37,18 @@ class SaleSeeder extends Seeder
             return;
         }
 
+        // Get sale_items columns
+        $itemColumns = Schema::getColumnListing('sale_items');
+        $this->command->info('📋 Sale Items columns: ' . implode(', ', $itemColumns));
+
+        // Check if batch_id exists in sale_items
+        $hasBatchId = in_array('batch_id', $itemColumns);
+        $hasItemableType = in_array('itemable_type', $itemColumns);
+        $hasItemableId = in_array('itemable_id', $itemColumns);
+
         $salesCreated = 0;
         $itemsCreated = 0;
+        $receiptCounter = 1;
 
         // Create 20 sales
         for ($i = 0; $i < 20; $i++) {
@@ -52,17 +64,36 @@ class SaleSeeder extends Seeder
 
             foreach ($selectedMedicines as $medicine) {
                 $quantity = rand(1, 4);
-                $price = $medicine->selling_price ?? rand(50, 200);
+                $price = $medicine->selling_price ?? $medicine->unit_price ?? rand(50, 200);
                 $subtotal = $quantity * $price;
                 $totalAmount += $subtotal;
 
-                $items[] = [
+                $itemData = [
                     'medicine_id' => $medicine->id,
                     'quantity' => $quantity,
                     'unit_price' => $price,
                     'subtotal' => $subtotal,
                 ];
+
+                // Only add batch_id if the column exists
+                if ($hasBatchId) {
+                    $itemData['batch_id'] = $medicine->batches()->first()?->id ?? null;
+                }
+
+                // Only add itemable fields if they exist
+                if ($hasItemableType) {
+                    $itemData['itemable_type'] = 'App\\Models\\Medicine';
+                }
+                if ($hasItemableId) {
+                    $itemData['itemable_id'] = $medicine->id;
+                }
+
+                $items[] = $itemData;
             }
+
+            // ✅ FIXED: Generate unique receipt number
+            $receiptNumber = 'RCP-' . date('Ymd') . '-' . str_pad($receiptCounter, 4, '0', STR_PAD_LEFT);
+            $receiptCounter++;
 
             // Build sale data based on available columns
             $saleData = [
@@ -78,6 +109,10 @@ class SaleSeeder extends Seeder
                 $saleData['total_amount'] = $totalAmount;
             }
 
+            if (in_array('net_amount', $columns)) {
+                $saleData['net_amount'] = $totalAmount;
+            }
+
             if (in_array('subtotal', $columns)) {
                 $saleData['subtotal'] = $totalAmount;
             }
@@ -90,14 +125,24 @@ class SaleSeeder extends Seeder
                 $saleData['tax'] = round($totalAmount * 0.15, 2);
             }
 
-            if (in_array('grand_total', $columns)) {
-                $discount = $saleData['discount'] ?? 0;
-                $tax = $saleData['tax'] ?? 0;
-                $saleData['grand_total'] = $totalAmount - $discount + $tax;
+            if (in_array('payment_method', $columns)) {
+                $saleData['payment_method'] = ['cash', 'telebirr', 'card', 'bank_transfer'][rand(0, 3)];
             }
 
-            if (in_array('total', $columns)) {
-                $saleData['total'] = $totalAmount;
+            if (in_array('amount_paid', $columns)) {
+                $saleData['amount_paid'] = $totalAmount;
+            }
+
+            if (in_array('change_amount', $columns)) {
+                $saleData['change_amount'] = 0;
+            }
+
+            if (in_array('payment_status', $columns)) {
+                $saleData['payment_status'] = 'paid';
+            }
+
+            if (in_array('receipt_number', $columns)) {
+                $saleData['receipt_number'] = $receiptNumber;
             }
 
             // Add customer fields if they exist
@@ -107,6 +152,24 @@ class SaleSeeder extends Seeder
 
             if (in_array('customer_phone', $columns)) {
                 $saleData['customer_phone'] = '+2519' . rand(10000000, 99999999);
+            }
+
+            if (in_array('customer_email', $columns)) {
+                $saleData['customer_email'] = 'customer' . rand(1, 100) . '@example.com';
+            }
+
+            // ✅ FIXED: Use proper type values - 'prescription' or 'otc' only
+            if (in_array('type', $columns)) {
+                $saleData['type'] = rand(0, 1) === 0 ? 'prescription' : 'otc';
+            }
+
+            if (in_array('notes', $columns)) {
+                $saleData['notes'] = 'Auto-generated sale';
+            }
+
+            // Add branch_id if column exists
+            if (in_array('branch_id', $columns)) {
+                $saleData['branch_id'] = null;
             }
 
             try {
@@ -123,15 +186,25 @@ class SaleSeeder extends Seeder
                             'medicine_id' => $item['medicine_id'],
                             'quantity' => $item['quantity'],
                             'unit_price' => $item['unit_price'],
+                            'created_at' => $saleDate,
+                            'updated_at' => $saleDate,
                         ];
 
-                        // Check if 'total' or 'subtotal' column exists in sale_items
-                        $itemColumns = Schema::getColumnListing('sale_items');
+                        // Only add fields that exist
+                        if ($hasBatchId) {
+                            $itemData['batch_id'] = $item['batch_id'] ?? null;
+                        }
+                        if ($hasItemableType) {
+                            $itemData['itemable_type'] = $item['itemable_type'] ?? 'App\\Models\\Medicine';
+                        }
+                        if ($hasItemableId) {
+                            $itemData['itemable_id'] = $item['itemable_id'] ?? $item['medicine_id'];
+                        }
 
+                        // Check if 'total' or 'subtotal' column exists in sale_items
                         if (in_array('total', $itemColumns)) {
                             $itemData['total'] = $item['subtotal'];
                         }
-
                         if (in_array('subtotal', $itemColumns)) {
                             $itemData['subtotal'] = $item['subtotal'];
                         }

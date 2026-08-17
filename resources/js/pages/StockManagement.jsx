@@ -7,7 +7,7 @@ import {
     Package, AlertTriangle, TrendingDown, Calendar, History,
     Search, Filter, X, Save, Tag, Eye, Edit, Trash2,
     RefreshCw, Printer, Download, Plus, Loader2,
-    CheckCircle, XCircle, Clock, AlertOctagon
+    CheckCircle, XCircle, Clock, AlertOctagon, Pill, ShoppingBag
 } from 'lucide-react';
 
 const TABS = [
@@ -23,16 +23,23 @@ export default function StockManagement() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
-    const [medicines, setMedicines] = useState([]);
-    const [filteredMedicines, setFilteredMedicines] = useState([]);
+    const [productTypeFilter, setProductTypeFilter] = useState('all'); // 'all' | 'medicine' | 'retail'
+    
+    const [allProducts, setAllProducts] = useState([]);
+    const [medicinesList, setMedicinesList] = useState([]);
+    const [retailList, setRetailList] = useState([]);
+    const [lowStockItems, setLowStockItems] = useState([]);
+    const [expiryItems, setExpiryItems] = useState({ expired: [], expiring_soon: [] });
+    const [damagedItems, setDamagedItems] = useState([]);
+
     const [movements, setMovements] = useState([]);
     const [movementsMeta, setMovementsMeta] = useState(null);
     const [movementsPage, setMovementsPage] = useState(1);
     const [categories, setCategories] = useState([]);
     const [summary, setSummary] = useState(null);
     const [filters, setFilters] = useState({ search: '', category_id: '' });
-    const [showFilters, setShowFilters] = useState(false);
-    const [selectedMedicine, setSelectedMedicine] = useState(null);
+    
+    const [selectedItem, setSelectedItem] = useState(null);
     const [showViewModal, setShowViewModal] = useState(false);
     const [showRestockModal, setShowRestockModal] = useState(false);
     const [restockQty, setRestockQty] = useState('');
@@ -44,28 +51,28 @@ export default function StockManagement() {
         setLoading(true);
         setError('');
         try {
-            // Load summary stats
             const summaryRes = await api.get('/stock-management/summary');
             setSummary(summaryRes.data);
 
-            // Load medicines with filters
             const params = {
                 category_id: filters.category_id || undefined,
-                per_page: 1000
             };
             if (filters.search) params.search = filters.search;
 
-            const medicinesRes = await api.get('/medicines', { params });
-            let medicinesData = [];
-            if (Array.isArray(medicinesRes.data)) {
-                medicinesData = medicinesRes.data;
-            } else if (medicinesRes.data && medicinesRes.data.data) {
-                medicinesData = medicinesRes.data.data;
-            }
-            setMedicines(medicinesData);
-            setFilteredMedicines(medicinesData);
+            const currentRes = await api.get('/stock-management/current', { params });
+            setAllProducts(currentRes.data.data || []);
+            setMedicinesList(currentRes.data.medicines || []);
+            setRetailList(currentRes.data.retail_products || []);
 
-            // Load categories
+            const lowRes = await api.get('/stock-management/low-stock');
+            setLowStockItems(lowRes.data.all || []);
+
+            const expiryRes = await api.get('/stock-management/expiry');
+            setExpiryItems(expiryRes.data || { expired: [], expiring_soon: [] });
+
+            const damagedRes = await api.get('/stock-management/damaged');
+            setDamagedItems(damagedRes.data.all || []);
+
             const catRes = await api.get('/categories', { params: { per_page: -1 } });
             let categoriesData = [];
             if (Array.isArray(catRes.data)) {
@@ -75,7 +82,6 @@ export default function StockManagement() {
             }
             setCategories(categoriesData);
 
-            // Load movements
             const movRes = await api.get('/stock-movements', { params: { page: movementsPage, per_page: 10 } });
             let movementsData = [];
             let metaData = null;
@@ -101,47 +107,17 @@ export default function StockManagement() {
         loadData();
     }, [loadData]);
 
-    // Filter medicines based on search
-    useEffect(() => {
-        if (!filters.search) {
-            setFilteredMedicines(medicines);
-            return;
-        }
-        const search = filters.search.toLowerCase();
-        const filtered = medicines.filter(m => 
-            m.name?.toLowerCase().includes(search) ||
-            m.generic_name?.toLowerCase().includes(search) ||
-            m.barcode?.includes(search)
-        );
-        setFilteredMedicines(filtered);
-    }, [filters.search, medicines]);
-
-    // Derived data for tabs
-    const today = new Date();
-    const lowStockMedicines = medicines.filter(m => 
-        m.quantity <= m.reorder_level && m.quantity > 0
-    );
-    const outOfStockMedicines = medicines.filter(m => m.quantity === 0);
-    const expiredMedicines = medicines.filter(m => 
-        m.expiry_date && new Date(m.expiry_date) < today
-    );
-    const expiringSoonMedicines = medicines.filter(m => {
-        if (!m.expiry_date) return false;
-        const expDate = new Date(m.expiry_date);
-        const daysUntilExpiry = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-        return daysUntilExpiry >= 0 && daysUntilExpiry <= 90;
-    });
-    const damagedMedicines = medicines.filter(m => m.status === 'damaged' || m.status === 'quarantined');
-
-    const getTabData = () => {
-        switch (activeTab) {
-            case 'current': return filteredMedicines;
-            case 'low-stock': return lowStockMedicines;
-            case 'expiry': return [...expiredMedicines, ...expiringSoonMedicines];
-            case 'damaged': return damagedMedicines;
-            default: return [];
-        }
+    const filterByType = (items) => {
+        if (productTypeFilter === 'medicine') return items.filter(i => i.product_type === 'medicine');
+        if (productTypeFilter === 'retail') return items.filter(i => i.product_type === 'retail');
+        return items;
     };
+
+    const filteredCurrentStock = filterByType(allProducts);
+    const filteredLowStock = filterByType(lowStockItems);
+    const filteredExpired = filterByType(expiryItems.expired || []);
+    const filteredExpiringSoon = filterByType(expiryItems.expiring_soon || []);
+    const filteredDamaged = filterByType(damagedItems);
 
     const getStatusBadge = (status) => {
         const config = {
@@ -156,11 +132,11 @@ export default function StockManagement() {
         return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>;
     };
 
-    const getStockStatusBadge = (medicine) => {
-        if (medicine.quantity <= 0) {
+    const getStockStatusBadge = (item) => {
+        if (item.quantity <= 0) {
             return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Out of Stock</span>;
         }
-        if (medicine.quantity <= medicine.reorder_level) {
+        if (item.quantity <= (item.reorder_level ?? 10)) {
             return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">Low Stock</span>;
         }
         return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">In Stock</span>;
@@ -168,25 +144,31 @@ export default function StockManagement() {
 
     const handleRestock = async (e) => {
         e.preventDefault();
-        if (!selectedMedicine || !restockQty || Number(restockQty) < 1) return;
+        if (!selectedItem || !restockQty || Number(restockQty) < 1) return;
         
         setSubmitting(true);
         try {
-            await api.post('/stock-movements', {
-                medicine_id: selectedMedicine.id,
+            const payload = {
                 type: 'in',
                 quantity: Number(restockQty),
                 reference: 'Manual restock',
                 notes: restockNotes || '',
-            });
-            window.showToast(`Restocked ${restockQty} units of ${selectedMedicine.name}`, 'success');
+            };
+            if (selectedItem.product_type === 'retail') {
+                payload.retail_product_id = selectedItem.id;
+            } else {
+                payload.medicine_id = selectedItem.id;
+            }
+
+            await api.post('/stock-movements', payload);
+            window.showToast(`Restocked ${restockQty} units of ${selectedItem.name}`, 'success');
             setShowRestockModal(false);
-            setSelectedMedicine(null);
+            setSelectedItem(null);
             setRestockQty('');
             setRestockNotes('');
             loadData();
         } catch (err) {
-            window.showToast('Failed to restock medicine', 'error');
+            window.showToast('Failed to restock item', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -216,7 +198,7 @@ export default function StockManagement() {
                     </div>
                 </div>
             </div>
-            <div className="card p-4 border-l-4 text-orange-500">
+            <div className="card p-4 border-l-4 border-orange-500">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-orange-100 rounded-lg">
                         <Calendar className="w-5 h-5 text-orange-600" />
@@ -277,15 +259,44 @@ export default function StockManagement() {
         </div>
     );
 
+    const renderProductTypeToggle = () => (
+        <div className="flex gap-2 mb-4">
+            <button
+                onClick={() => setProductTypeFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    productTypeFilter === 'all' ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+            >
+                All Products ({allProducts.length})
+            </button>
+            <button
+                onClick={() => setProductTypeFilter('medicine')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    productTypeFilter === 'medicine' ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+            >
+                <Pill size={14} /> Medicines ({medicinesList.length})
+            </button>
+            <button
+                onClick={() => setProductTypeFilter('retail')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    productTypeFilter === 'retail' ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+            >
+                <ShoppingBag size={14} /> Retail & OTC ({retailList.length})
+            </button>
+        </div>
+    );
+
     const renderFilters = () => (
-        <div className="mb-6">
+        <div className="mb-4">
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                     <input
                         type="text"
                         name="search"
-                        placeholder="Search medicines..."
+                        placeholder="Search medicines or retail & OTC products..."
                         value={filters.search}
                         onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                         className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
@@ -297,7 +308,7 @@ export default function StockManagement() {
                         name="category_id"
                         value={filters.category_id}
                         onChange={(e) => setFilters({ ...filters, category_id: e.target.value })}
-                        className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none appearance-none"
+                        className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none appearance-none bg-white"
                     >
                         <option value="">All Categories</option>
                         {categories.map(c => (
@@ -317,15 +328,16 @@ export default function StockManagement() {
         </div>
     );
 
-    const renderMedicineTable = (data, showExpiry = true) => (
+    const renderItemTable = (data, showExpiry = true) => (
         <div className="card overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[1000px]">
                     <thead>
                         <tr className="bg-sky-50 border-b border-sky-100">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Medicine</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Product Name</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Category</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Batch</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Batch / SKU</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Quantity</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Status</th>
                             {showExpiry && <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Expiry Date</th>}
@@ -334,30 +346,42 @@ export default function StockManagement() {
                         </tr>
                     </thead>
                     <tbody>
-                        {data.length > 0 ? data.map(m => (
-                            <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{m.category?.name || 'No Category'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{m.batch_number || '---'}</td>
-                                <td className="px-4 py-3 text-sm font-semibold">{m.quantity}</td>
-                                <td className="px-4 py-3">{getStatusBadge(m.status)}</td>
+                        {data.length > 0 ? data.map(item => (
+                            <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                <td className="px-4 py-3">
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                        item.product_type === 'retail' ? 'bg-yellow-100 text-yellow-800' : 'bg-sky-100 text-sky-700'
+                                    }`}>
+                                        {item.product_type === 'retail' ? <ShoppingBag size={12} /> : <Pill size={12} />}
+                                        {item.product_type === 'retail' ? 'Retail / OTC' : 'Medicine'}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm font-medium">{item.name}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500">
+                                    {item.category?.name || item.category || 'No Category'}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-500">
+                                    {item.product_type === 'retail' ? (item.sku || '---') : (item.batch_number || '---')}
+                                </td>
+                                <td className="px-4 py-3 text-sm font-semibold">{item.quantity}</td>
+                                <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
                                 {showExpiry && (
                                     <td className="px-4 py-3 text-sm text-gray-500">
-                                        {m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '---'}
+                                        {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '---'}
                                     </td>
                                 )}
-                                <td className="px-4 py-3">{getStockStatusBadge(m)}</td>
+                                <td className="px-4 py-3">{getStockStatusBadge(item)}</td>
                                 <td className="px-4 py-3 text-right">
                                     <div className="flex justify-end gap-1">
                                         <button
-                                            onClick={() => { setSelectedMedicine(m); setShowViewModal(true); }}
+                                            onClick={() => { setSelectedItem(item); setShowViewModal(true); }}
                                             className="p-1.5 text-sky-600 hover:bg-sky-50 rounded transition-colors"
                                             title="View"
                                         >
                                             <Eye size={16} />
                                         </button>
                                         <button
-                                            onClick={() => { setSelectedMedicine(m); setShowRestockModal(true); }}
+                                            onClick={() => { setSelectedItem(item); setShowRestockModal(true); }}
                                             className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
                                         >
                                             Restock
@@ -367,8 +391,8 @@ export default function StockManagement() {
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan={showExpiry ? 8 : 7} className="px-4 py-8 text-center text-gray-400">
-                                    No medicines found
+                                <td colSpan={showExpiry ? 9 : 8} className="px-4 py-8 text-center text-gray-400">
+                                    No products found
                                 </td>
                             </tr>
                         )}
@@ -386,7 +410,7 @@ export default function StockManagement() {
                         <thead>
                             <tr className="bg-sky-50 border-b border-sky-100">
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Date</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Medicine</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Product</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Quantity</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Reference</th>
@@ -399,12 +423,14 @@ export default function StockManagement() {
                                     <td className="px-4 py-3 text-sm text-gray-500">
                                         {new Date(m.created_at).toLocaleDateString()}
                                     </td>
-                                    <td className="px-4 py-3 text-sm font-medium">{m.medicine?.name || 'Unknown'}</td>
+                                    <td className="px-4 py-3 text-sm font-medium">
+                                        {m.medicine?.name || m.itemable?.name || 'Unknown Product'}
+                                    </td>
                                     <td className="px-4 py-3 text-sm">
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                             m.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                         }`}>
-                                            {m.type === 'in' ? 'Stock In' : 'Stock Out'}
+                                            {m.type.toUpperCase()}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-sm font-semibold">{m.quantity}</td>
@@ -426,7 +452,7 @@ export default function StockManagement() {
         </div>
     );
 
-    if (loading && medicines.length === 0) {
+    if (loading && allProducts.length === 0) {
         return <LoadingSpinner text="Loading stock data..." />;
     }
 
@@ -437,15 +463,12 @@ export default function StockManagement() {
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">Stock Management</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        View and manage all inventory across the system
+                        View and manage inventory across medicines and retail / OTC products
                     </p>
                 </div>
                 <div className="flex gap-2">
                     <button onClick={loadData} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50" title="Refresh">
                         <RefreshCw size={18} />
-                    </button>
-                    <button className="px-4 py-2 bg-sky-500 text-white rounded-xl text-sm font-semibold hover:bg-sky-600 flex items-center gap-2">
-                        <Download size={16} /> Export
                     </button>
                 </div>
             </div>
@@ -462,8 +485,13 @@ export default function StockManagement() {
             {/* Tabs */}
             {renderTabs()}
 
-            {/* Filters */}
-            {(activeTab === 'current' || activeTab === 'low-stock') && renderFilters()}
+            {/* Filters & Product Type Toggle */}
+            {activeTab !== 'overview' && activeTab !== 'movements' && (
+                <>
+                    {renderProductTypeToggle()}
+                    {renderFilters()}
+                </>
+            )}
 
             {/* Tab Content */}
             {activeTab === 'overview' && (
@@ -472,36 +500,36 @@ export default function StockManagement() {
                         <div>
                             <h3 className="text-sm font-semibold text-gray-600 mb-3">Low Stock Alert</h3>
                             <div className="space-y-2">
-                                {lowStockMedicines.slice(0, 5).map(m => (
-                                    <div key={m.id} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                {lowStockItems.slice(0, 5).map(item => (
+                                    <div key={`${item.product_type}-${item.id}`} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-200">
                                         <div>
-                                            <p className="text-sm font-medium">{m.name}</p>
-                                            <p className="text-xs text-gray-500">Qty: {m.quantity} / Reorder: {m.reorder_level}</p>
+                                            <p className="text-sm font-medium">{item.name}</p>
+                                            <p className="text-xs text-gray-500">Qty: {item.quantity} / Reorder: {item.reorder_level ?? 10}</p>
                                         </div>
                                         <button
-                                            onClick={() => { setSelectedMedicine(m); setShowRestockModal(true); }}
+                                            onClick={() => { setSelectedItem(item); setShowRestockModal(true); }}
                                             className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
                                         >
                                             Restock
                                         </button>
                                     </div>
                                 ))}
-                                {lowStockMedicines.length === 0 && (
-                                    <p className="text-sm text-gray-400">All medicines are well-stocked!</p>
+                                {lowStockItems.length === 0 && (
+                                    <p className="text-sm text-gray-400">All products are well-stocked!</p>
                                 )}
                             </div>
                         </div>
                         <div>
                             <h3 className="text-sm font-semibold text-gray-600 mb-3">Expiring Soon (90 days)</h3>
                             <div className="space-y-2">
-                                {expiringSoonMedicines.slice(0, 5).map(m => {
-                                    const daysLeft = Math.ceil((new Date(m.expiry_date) - today) / (1000 * 60 * 60 * 24));
+                                {(expiryItems.expiring_soon || []).slice(0, 5).map(item => {
+                                    const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
                                     return (
-                                        <div key={m.id} className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
+                                        <div key={`${item.product_type}-${item.id}`} className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
                                             <div>
-                                                <p className="text-sm font-medium">{m.name}</p>
+                                                <p className="text-sm font-medium">{item.name}</p>
                                                 <p className="text-xs text-gray-500">
-                                                    Expires: {new Date(m.expiry_date).toLocaleDateString()} ({daysLeft} days left)
+                                                    Expires: {new Date(item.expiry_date).toLocaleDateString()} ({daysLeft} days left)
                                                 </p>
                                             </div>
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -512,8 +540,8 @@ export default function StockManagement() {
                                         </div>
                                     );
                                 })}
-                                {expiringSoonMedicines.length === 0 && (
-                                    <p className="text-sm text-gray-400">No medicines expiring soon.</p>
+                                {(expiryItems.expiring_soon || []).length === 0 && (
+                                    <p className="text-sm text-gray-400">No products expiring soon.</p>
                                 )}
                             </div>
                         </div>
@@ -521,60 +549,64 @@ export default function StockManagement() {
                 </div>
             )}
 
-            {activeTab === 'current' && renderMedicineTable(filteredMedicines)}
-            {activeTab === 'low-stock' && renderMedicineTable(lowStockMedicines)}
-            {activeTab === 'expiry' && renderMedicineTable([...expiredMedicines, ...expiringSoonMedicines])}
-            {activeTab === 'damaged' && renderMedicineTable(damagedMedicines)}
+            {activeTab === 'current' && renderItemTable(filteredCurrentStock)}
+            {activeTab === 'low-stock' && renderItemTable(filteredLowStock)}
+            {activeTab === 'expiry' && renderItemTable([...filteredExpired, ...filteredExpiringSoon])}
+            {activeTab === 'damaged' && renderItemTable(filteredDamaged)}
             {activeTab === 'movements' && renderMovementsTable()}
 
             {/* View Modal */}
             <Modal
                 open={showViewModal}
                 onClose={() => setShowViewModal(false)}
-                title="Medicine Details"
+                title="Product Details"
                 size="max-w-lg"
             >
-                {selectedMedicine && (
+                {selectedItem && (
                     <div className="space-y-4">
                         <div className="flex items-center gap-4">
                             <div className="w-16 h-16 rounded-xl bg-sky-100 flex items-center justify-center">
-                                <Package className="w-8 h-8 text-sky-600" />
+                                {selectedItem.product_type === 'retail' ? <ShoppingBag className="w-8 h-8 text-sky-600" /> : <Package className="w-8 h-8 text-sky-600" />}
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-gray-800">{selectedMedicine.name}</h3>
-                                <p className="text-sm text-gray-500">{selectedMedicine.generic_name || 'No generic name'}</p>
+                                <h3 className="text-lg font-bold text-gray-800">{selectedItem.name}</h3>
+                                <p className="text-sm text-gray-500">{selectedItem.generic_name || selectedItem.sku || 'No SKU / Generic'}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-semibold text-gray-500">Category</label>
-                                <p className="text-sm text-gray-800">{selectedMedicine.category?.name || 'N/A'}</p>
+                                <label className="text-xs font-semibold text-gray-500">Type</label>
+                                <p className="text-sm text-gray-800 capitalize">{selectedItem.product_type === 'retail' ? 'Retail / OTC' : 'Medicine'}</p>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-gray-500">Batch</label>
-                                <p className="text-sm text-gray-800">{selectedMedicine.batch_number || 'N/A'}</p>
+                                <label className="text-xs font-semibold text-gray-500">Category</label>
+                                <p className="text-sm text-gray-800">{selectedItem.category?.name || selectedItem.category || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-gray-500">Batch / SKU</label>
+                                <p className="text-sm text-gray-800">{selectedItem.batch_number || selectedItem.sku || 'N/A'}</p>
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500">Quantity</label>
-                                <p className="text-sm font-bold text-gray-800">{selectedMedicine.quantity}</p>
+                                <p className="text-sm font-bold text-gray-800">{selectedItem.quantity}</p>
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500">Reorder Level</label>
-                                <p className="text-sm text-gray-800">{selectedMedicine.reorder_level}</p>
+                                <p className="text-sm text-gray-800">{selectedItem.reorder_level ?? 10}</p>
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500">Expiry Date</label>
                                 <p className="text-sm text-gray-800">
-                                    {selectedMedicine.expiry_date ? new Date(selectedMedicine.expiry_date).toLocaleDateString() : 'N/A'}
+                                    {selectedItem.expiry_date ? new Date(selectedItem.expiry_date).toLocaleDateString() : 'N/A'}
                                 </p>
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500">Status</label>
-                                <div>{getStatusBadge(selectedMedicine.status)}</div>
+                                <div>{getStatusBadge(selectedItem.status)}</div>
                             </div>
                             <div className="col-span-2">
                                 <label className="text-xs font-semibold text-gray-500">Shelf Location</label>
-                                <p className="text-sm text-gray-800">{selectedMedicine.shelf_location || 'N/A'}</p>
+                                <p className="text-sm text-gray-800">{selectedItem.shelf_location || 'N/A'}</p>
                             </div>
                         </div>
                         <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
@@ -598,19 +630,19 @@ export default function StockManagement() {
             {/* Restock Modal */}
             <Modal
                 open={showRestockModal}
-                onClose={() => { setShowRestockModal(false); setSelectedMedicine(null); }}
-                title="Restock Medicine"
+                onClose={() => { setShowRestockModal(false); setSelectedItem(null); }}
+                title="Restock Product"
                 size="max-w-md"
             >
-                {selectedMedicine && (
+                {selectedItem && (
                     <form onSubmit={handleRestock} className="space-y-4">
                         <div>
-                            <label className="text-xs font-semibold text-gray-500">Medicine</label>
-                            <p className="text-sm font-medium text-gray-800">{selectedMedicine.name}</p>
+                            <label className="text-xs font-semibold text-gray-500">Product</label>
+                            <p className="text-sm font-medium text-gray-800">{selectedItem.name}</p>
                         </div>
                         <div>
                             <label className="text-xs font-semibold text-gray-500">Current Stock</label>
-                            <p className="text-sm text-gray-600">{selectedMedicine.quantity} units</p>
+                            <p className="text-sm text-gray-600">{selectedItem.quantity} units</p>
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity to Add *</label>
@@ -637,7 +669,7 @@ export default function StockManagement() {
                         <div className="flex justify-end gap-3 pt-2">
                             <button
                                 type="button"
-                                onClick={() => { setShowRestockModal(false); setSelectedMedicine(null); }}
+                                onClick={() => { setShowRestockModal(false); setSelectedItem(null); }}
                                 className="btn-secondary"
                             >
                                 Cancel

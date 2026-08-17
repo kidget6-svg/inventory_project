@@ -61,6 +61,9 @@ class SaleTest extends TestCase
                         'quantity' => 2,
                     ],
                 ],
+                'customer_name' => 'John Doe',
+                'customer_phone' => '0911234567',
+                'notes' => 'Take with food',
             ]);
 
         $response->assertCreated()
@@ -69,6 +72,9 @@ class SaleTest extends TestCase
         $this->assertDatabaseHas('sales', [
             'type' => 'prescription',
             'status' => 'pending_cashier',
+            'customer_name' => 'John Doe',
+            'customer_phone' => '0911234567',
+            'notes' => 'Take with food',
         ]);
     }
 

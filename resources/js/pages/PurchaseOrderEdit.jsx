@@ -3,7 +3,7 @@ import { useNavigate, Link, useParams } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Save, X, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, X, Calendar, DollarSign, Pill, Plus, Trash2, Search, Package } from 'lucide-react';
 
 export default function PurchaseOrderEdit() {
     const { id } = useParams();

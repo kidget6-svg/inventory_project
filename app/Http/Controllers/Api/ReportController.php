@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Medicine;
+use App\Models\RetailProduct;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Shelf;
@@ -19,21 +20,56 @@ class ReportController extends Controller
      */
     public function index()
     {
-        $medicines = Medicine::orderBy('name')->get();
+        $medicines = Medicine::orderBy('name')->get()->map(function($m) {
+            $m->product_type = 'medicine';
+            return $m;
+        });
+        $retailProducts = RetailProduct::orderBy('name')->get()->map(function($r) {
+            $r->product_type = 'retail';
+            $r->category = (object)['name' => $r->category ?? 'Retail/OTC'];
+            return $r;
+        });
+
         $sales = Sale::orderBy('sale_date', 'desc')->get();
         $purchases = PurchaseOrder::with('supplier')->orderBy('created_at', 'desc')->get();
 
-        $expiring = Medicine::whereNotNull('expiry_date')
+        $expiringMed = Medicine::whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [
                 \Carbon\Carbon::today(),
                 \Carbon\Carbon::today()->addDays(90)
             ])
             ->orderBy('expiry_date')
-            ->get();
+            ->get()->map(function($m) {
+                $m->product_type = 'medicine';
+                return $m;
+            });
 
-        $lowStock = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+        $expiringRetail = RetailProduct::whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [
+                \Carbon\Carbon::today(),
+                \Carbon\Carbon::today()->addDays(90)
+            ])
+            ->orderBy('expiry_date')
+            ->get()->map(function($r) {
+                $r->product_type = 'retail';
+                $r->category = (object)['name' => $r->category ?? 'Retail/OTC'];
+                return $r;
+            });
+
+        $lowStockMed = Medicine::whereColumn('quantity', '<=', 'reorder_level')
             ->orderBy('quantity')
-            ->get();
+            ->get()->map(function($m) {
+                $m->product_type = 'medicine';
+                return $m;
+            });
+
+        $lowStockRetail = RetailProduct::whereColumn('quantity', '<=', 'reorder_level')
+            ->orderBy('quantity')
+            ->get()->map(function($r) {
+                $r->product_type = 'retail';
+                $r->category = (object)['name' => $r->category ?? 'Retail/OTC'];
+                return $r;
+            });
 
         $inventoryChartData = Category::with('medicines')->get()->map(function ($category) {
             return [
@@ -45,10 +81,12 @@ class ReportController extends Controller
 
         return response()->json([
             'medicines' => $medicines,
+            'retail_products' => $retailProducts,
+            'inventory' => $medicines->concat($retailProducts)->values(),
             'sales' => $sales,
             'purchases' => $purchases,
-            'lowStock' => $lowStock,
-            'expiring' => $expiring,
+            'lowStock' => $lowStockMed->concat($lowStockRetail)->values(),
+            'expiring' => $expiringMed->concat($expiringRetail)->values(),
             'inventoryChartData' => $inventoryChartData,
         ]);
     }

@@ -54,16 +54,9 @@ class MedicineController extends Controller
                 'name'           => 'required|string|max:255',
                 'generic_name'   => 'nullable|string|max:255',
                 'category_id'    => 'nullable',
-                'supplier_id'    => 'nullable',
-                'quantity'       => 'required|integer|min:0',
-                'unit_price'     => 'nullable|numeric|min:0',
-                'purchase_price' => 'nullable|numeric|min:0',
-                'selling_price'  => 'required|numeric|min:0',
-                'reorder_level'  => 'nullable|integer|min:0',
-                'expiry_date'    => 'nullable|date',
                 'status'         => 'required|in:active,inactive,expired,discontinued',
                 'shelf_location' => 'nullable|string|max:100',
-                'batch_number'   => 'nullable|string|max:100',
+                'description'    => 'nullable|string',
                 'barcode'        => 'nullable|string|max:100',
             ]);
 

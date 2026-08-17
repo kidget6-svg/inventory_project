@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Save, X, Package, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, X, Package, Calendar, DollarSign, Pill, Plus, Trash2, Search } from 'lucide-react';
 
 export default function PurchaseOrderCreate() {
     const navigate = useNavigate();

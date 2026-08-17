@@ -68,6 +68,14 @@
                     <td class="label">Sale Type:</td>
                     <td>{{ ucfirst($sale->type ?? 'prescription') }}</td>
                 </tr>
+                @if($sale->notes)
+                <tr>
+                    <td class="label">Prescription Notes:</td>
+                    <td>{{ $sale->notes }}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                @endif
             </table>
         </div>
 

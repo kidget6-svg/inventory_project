@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
 import PieChart from '../components/PieChart';
+import { Pill, ShoppingBag } from 'lucide-react';
 
 export default function Reports() {
     const [data, setData] = useState(null);
     const [activeTab, setActiveTab] = useState('inventory');
+    const [productTypeFilter, setProductTypeFilter] = useState('all'); // 'all' | 'medicine' | 'retail'
     const [searchTerm, setSearchTerm] = useState('');
     const [sortKey, setSortKey] = useState('');
     const [sortDirection, setSortDirection] = useState('asc');
@@ -38,6 +40,13 @@ export default function Reports() {
     const sortIcon = (key) => {
         if (sortKey !== key) return ' ↕';
         return sortDirection === 'asc' ? ' ↑' : ' ↓';
+    };
+
+    const filterByType = (items) => {
+        if (!items) return [];
+        if (productTypeFilter === 'medicine') return items.filter(i => i.product_type === 'medicine');
+        if (productTypeFilter === 'retail') return items.filter(i => i.product_type === 'retail');
+        return items;
     };
 
     const filterAndSort = (items, searchFields) => {
@@ -95,12 +104,11 @@ export default function Reports() {
     );
 
     const inventoryData = useMemo(
-        () => filterAndSort(data?.medicines || [], ['name', 'batch_number']),
-        [data, searchTerm, sortKey, sortDirection]
+        () => filterAndSort(filterByType(data?.inventory || data?.medicines || []), ['name', 'batch_number', 'sku']),
+        [data, searchTerm, sortKey, sortDirection, productTypeFilter]
     );
 
-    // Derive labels/values for the Inventory by Category pie chart from the
-    // inventoryChartData returned by the API.
+    // Derive labels/values for the Inventory by Category pie chart
     const inventoryChartLabels = useMemo(
         () => data?.inventoryChartData?.map(c => c.category) || [],
         [data]
@@ -121,13 +129,13 @@ export default function Reports() {
     );
 
     const lowStockData = useMemo(
-        () => filterAndSort(data?.lowStock || [], ['name']),
-        [data, searchTerm, sortKey, sortDirection]
+        () => filterAndSort(filterByType(data?.lowStock || []), ['name', 'sku']),
+        [data, searchTerm, sortKey, sortDirection, productTypeFilter]
     );
 
     const expiringData = useMemo(
-        () => filterAndSort(data?.expiring || [], ['name', 'batch_number']),
-        [data, searchTerm, sortKey, sortDirection]
+        () => filterAndSort(filterByType(data?.expiring || []), ['name', 'batch_number', 'sku']),
+        [data, searchTerm, sortKey, sortDirection, productTypeFilter]
     );
 
     if (!data) {
@@ -157,6 +165,36 @@ export default function Reports() {
                 ))}
             </div>
 
+            {/* Product Type Toggle for inventory, lowStock, expiring */}
+            {['inventory', 'lowStock', 'expiring'].includes(activeTab) && (
+                <div className="flex gap-2 mb-4">
+                    <button
+                        onClick={() => setProductTypeFilter('all')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                            productTypeFilter === 'all' ? 'bg-sky-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                    >
+                        All Products
+                    </button>
+                    <button
+                        onClick={() => setProductTypeFilter('medicine')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
+                            productTypeFilter === 'medicine' ? 'bg-sky-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                    >
+                        <Pill size={12} /> Medicines
+                    </button>
+                    <button
+                        onClick={() => setProductTypeFilter('retail')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
+                            productTypeFilter === 'retail' ? 'bg-sky-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                        }`}
+                    >
+                        <ShoppingBag size={12} /> Retail / OTC Products
+                    </button>
+                </div>
+            )}
+
             {/* Search bar */}
             <div className="mb-4">
                 <input
@@ -170,7 +208,6 @@ export default function Reports() {
 
             {activeTab === 'inventory' && (
                 <div className="space-y-6">
-                    {/* Inventory by Category — pie chart shows proportions at a glance */}
                     {inventoryChartLabels.length > 0 && (
                         <div className="card">
                             <div className="p-5">
@@ -186,22 +223,30 @@ export default function Reports() {
                         <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Inventory Report ({inventoryData.length} items)</h3></div>
                         <table className="w-full">
                             <thead><tr className="bg-sky-50">
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Name{sortIcon('name')}</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch{sortIcon('batch_number')}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch / SKU{sortIcon('batch_number')}</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Qty{sortIcon('quantity')}</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('unit_price')}>Price{sortIcon('unit_price')}</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>Expiry{sortIcon('expiry_date')}</th>
                             </tr></thead>
                             <tbody>
-                                {inventoryData.length > 0 ? inventoryData.map(m => (
-                                    <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                        <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
-                                        <td className="px-4 py-3 text-sm">{m.batch_number || '---'}</td>
-                                        <td className="px-4 py-3 text-sm">{m.quantity}</td>
-                                        <td className="px-4 py-3 text-sm">${Number(m.unit_price).toFixed(2)}</td>
-                                        <td className="px-4 py-3 text-sm">{m.expiry_date || '---'}</td>
+                                {inventoryData.length > 0 ? inventoryData.map(item => (
+                                    <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                                item.product_type === 'retail' ? 'bg-yellow-100 text-yellow-800' : 'bg-sky-100 text-sky-700'
+                                            }`}>
+                                                {item.product_type === 'retail' ? 'Retail / OTC' : 'Medicine'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm font-medium">{item.name}</td>
+                                        <td className="px-4 py-3 text-sm">{item.batch_number || item.sku || '---'}</td>
+                                        <td className="px-4 py-3 text-sm">{item.quantity}</td>
+                                        <td className="px-4 py-3 text-sm">${Number(item.unit_price || item.price || 0).toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-sm">{item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '---'}</td>
                                     </tr>
-                                )) : emptyRow(5, 'No medicines found')}
+                                )) : emptyRow(6, 'No products found')}
                             </tbody>
                         </table>
                     </div>
@@ -247,8 +292,8 @@ export default function Reports() {
                                     <td className="px-4 py-3 text-sm">{p.id}</td>
                                     <td className="px-4 py-3 text-sm">{p.supplier?.name || '---'}</td>
                                     <td className="px-4 py-3 text-sm">{p.order_date}</td>
-                                    <td className="px-4 py-3 text-sm"><span className={statusBadge(p.status)}>{p.status}</span></td>
-                                    <td className="px-4 py-3 text-sm">${Number(p.total_amount || 0).toFixed(2)}</td>
+                                    <td className="px-4 py-3 text-sm">{p.status}</td>
+                                    <td className="px-4 py-3 text-sm font-semibold">${Number(p.total_amount).toFixed(2)}</td>
                                 </tr>
                             )) : emptyRow(5, 'No purchase orders found')}
                         </tbody>
@@ -258,21 +303,29 @@ export default function Reports() {
 
             {activeTab === 'lowStock' && (
                 <div className="card overflow-hidden">
-                    <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Low Stock Report ({lowStockData.length} items)</h3></div>
+                    <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Low Stock Report ({lowStockData.length})</h3></div>
                     <table className="w-full">
                         <thead><tr className="bg-sky-50">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Medicine{sortIcon('name')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Stock{sortIcon('quantity')}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Name{sortIcon('name')}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Qty{sortIcon('quantity')}</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('reorder_level')}>Reorder Level{sortIcon('reorder_level')}</th>
                         </tr></thead>
                         <tbody>
-                            {lowStockData.length > 0 ? lowStockData.map(m => (
-                                <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                    <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
-                                    <td className="px-4 py-3 text-sm font-semibold text-red-600">{m.quantity}</td>
-                                    <td className="px-4 py-3 text-sm">{m.reorder_level}</td>
+                            {lowStockData.length > 0 ? lowStockData.map(item => (
+                                <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                    <td className="px-4 py-3">
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                            item.product_type === 'retail' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'
+                                        }`}>
+                                            {item.product_type === 'retail' ? 'Retail / OTC' : 'Medicine'}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm font-medium">{item.name}</td>
+                                    <td className="px-4 py-3 text-sm font-semibold text-red-600">{item.quantity}</td>
+                                    <td className="px-4 py-3 text-sm">{item.reorder_level ?? 10}</td>
                                 </tr>
-                            )) : emptyRow(3, 'No low stock items')}
+                            )) : emptyRow(4, 'No low stock items')}
                         </tbody>
                     </table>
                 </div>
@@ -280,21 +333,31 @@ export default function Reports() {
 
             {activeTab === 'expiring' && (
                 <div className="card overflow-hidden">
-                    <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Expiring Medicines ({expiringData.length})</h3></div>
+                    <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Expiring Soon Report ({expiringData.length})</h3></div>
                     <table className="w-full">
                         <thead><tr className="bg-sky-50">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Medicine{sortIcon('name')}</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch{sortIcon('batch_number')}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('name')}>Name{sortIcon('name')}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch / SKU{sortIcon('batch_number')}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Qty{sortIcon('quantity')}</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>Expiry Date{sortIcon('expiry_date')}</th>
                         </tr></thead>
                         <tbody>
-                            {expiringData.length > 0 ? expiringData.map(m => (
-                                <tr key={m.id} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                    <td className="px-4 py-3 text-sm font-medium">{m.name}</td>
-                                    <td className="px-4 py-3 text-sm">{m.batch_number || '---'}</td>
-                                    <td className="px-4 py-3 text-sm text-red-600 font-semibold">{m.expiry_date}</td>
+                            {expiringData.length > 0 ? expiringData.map(item => (
+                                <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                    <td className="px-4 py-3">
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                            item.product_type === 'retail' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'
+                                        }`}>
+                                            {item.product_type === 'retail' ? 'Retail / OTC' : 'Medicine'}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm font-medium">{item.name}</td>
+                                    <td className="px-4 py-3 text-sm">{item.batch_number || item.sku || '---'}</td>
+                                    <td className="px-4 py-3 text-sm">{item.quantity}</td>
+                                    <td className="px-4 py-3 text-sm font-semibold text-orange-600">{item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '---'}</td>
                                 </tr>
-                            )) : emptyRow(3, 'No expiring medicines')}
+                            )) : emptyRow(5, 'No expiring items')}
                         </tbody>
                     </table>
                 </div>
