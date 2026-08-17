@@ -3,16 +3,14 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign, 
-    ArrowLeftRight, AlertTriangle, BarChart3, Menu, X, LogOut, Users, 
+    ArrowLeftRight, BarChart3, Menu, X, LogOut, Users, 
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
     ShoppingBag, FileText, ShieldCheck
 } from 'lucide-react';
 
-// Single permission-driven menu. Admin sees every entry automatically
-// because admins hold every permission.
 const menuItems = [
     { section: 'Main' },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permissions: ['dashboard.view'] },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { section: 'Point of Sale' },
     { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['prescription-sales.view'] },
     { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['prescription-checkout.view'] },
@@ -27,7 +25,6 @@ const menuItems = [
     { to: '/inventory', label: 'Inventory', icon: Package, permissions: ['inventory.view'] },
     { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, permissions: ['purchase-orders.view'] },
     { to: '/stock-movements', label: 'Stock Movements', icon: ArrowLeftRight, permissions: ['stock-movements.view'] },
-    { to: '/low-stock', label: 'Low Stock Alert', icon: AlertTriangle, permissions: ['lowstock.view'] },
     { section: 'Reports' },
     { to: '/reports', label: 'Reports', icon: BarChart3, permissions: ['reports.view'] },
     { to: '/sales-history', label: 'Sales History', icon: FileText, permissions: ['sales-history.view'] },
@@ -36,7 +33,10 @@ const menuItems = [
     { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck, permissions: ['roles.view'] },
 ];
 
-function buildMenu(items, hasAnyPermission) {
+function buildMenu(items, hasAnyPermission, isAdmin) {
+    if (isAdmin) {
+        return items;
+    }
     const result = [];
     let pendingSections = [];
     for (const item of items) {
@@ -67,7 +67,7 @@ export default function SidebarLayout({ children, pageTitle }) {
     const [collapsed, setCollapsed] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const accountMenuRef = useRef(null);
-    const menu = buildMenu(menuItems, hasAnyPermission);
+    const menu = buildMenu(menuItems, hasAnyPermission, user?.role === 'admin');
 
     const handleLogout = async () => {
         await logout();
@@ -107,7 +107,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                 <div className="p-5 border-b border-sky-200 flex items-center justify-between">
                     <div className={`flex items-center gap-3 min-w-0 ${collapsed ? 'md:justify-center md:w-full' : ''}`}>
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden shadow-2xl ring-2 ring-sky-400/70 bg-white transform hover:scale-105 transition-transform duration-200">
-                            <img src="/images/sidebar.png" alt="EthioPharmacy" className="w-10 h-10 object-contain" />
+                            <img src="/images/p1.png" alt="EthioPharmacy" className="w-10 h-10 object-contain" />
                         </div>
                         {!collapsed && (
                             <div className="min-w-0">
