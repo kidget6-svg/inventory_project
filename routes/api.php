@@ -193,10 +193,10 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     // --------------------------------------------------------------------
     // Sales Operations (Pharmacist Only)
     // --------------------------------------------------------------------
-    Route::middleware('role:pharmacist')->group(function () {
-        Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
-        Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
-    });
+    Route::post('/sales/prescription', [SaleController::class, 'storePrescription'])
+        ->middleware('permission:prescription-sales.dispense');
+    Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft'])
+        ->middleware('role:pharmacist');
 
     // --------------------------------------------------------------------
     // Sales — Cashier Only (complete payment & finalize sales)

@@ -46,7 +46,7 @@ class SaleController extends Controller
      */
     public function storePrescription(Request $request, SaleService $service)
     {
-        abort_if(! $request->user()->hasRole('pharmacist'), 403, 'Unauthorized. Only pharmacists can process prescription sales.');
+        abort_if(! $request->user()->hasPermission('prescription-sales.dispense'), 403, 'Unauthorized. Only pharmacists can process prescription sales.');
 
         $validated = $request->validate([
             'items' => 'required|array|min:1',

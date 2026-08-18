@@ -53,7 +53,6 @@ export default function PrescriptionSales() {
     const [patientName, setPatientName] = useState('');
     const [patientPhone, setPatientPhone] = useState('');
     const [patientEmail, setPatientEmail] = useState('');
-    const [prescriptionNotes, setPrescriptionNotes] = useState('');
 
     // Prescription & Patient Information modal (opened before sending to cashier queue)
     const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
@@ -174,7 +173,6 @@ export default function PrescriptionSales() {
                 customer_name: patientName,
                 customer_phone: patientPhone,
                 customer_email: patientEmail || null,
-                notes: prescriptionNotes || null,
             });
 
             window.showToast('Order dispatched to Cashier queue!', 'success');
@@ -182,7 +180,6 @@ export default function PrescriptionSales() {
             setPatientName('');
             setPatientPhone('');
             setPatientEmail('');
-            setPrescriptionNotes('');
             setShowPrescriptionModal(false);
         } catch (err) {
             window.showToast(
@@ -324,14 +321,12 @@ export default function PrescriptionSales() {
                     { name: 'patientName', label: 'Patient Name', icon: User, placeholder: 'Enter patient name' },
                     { name: 'patientPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number' },
                     { name: 'patientEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
-                    { name: 'prescriptionNotes', label: 'Prescription Notes', icon: Clipboard, placeholder: 'Prescription #, doctor name, etc.' },
                 ]}
-                values={{ patientName, patientPhone, patientEmail, prescriptionNotes }}
+                values={{ patientName, patientPhone, patientEmail }}
                 onChange={(key, value) => {
                     if (key === 'patientName') setPatientName(value);
                     else if (key === 'patientPhone') setPatientPhone(value);
                     else if (key === 'patientEmail') setPatientEmail(value);
-                    else if (key === 'prescriptionNotes') setPrescriptionNotes(value);
                 }}
                 onConfirm={confirmSendToCashier}
                 confirmLabel="Confirm & Send to Cashier Queue"
