@@ -18,19 +18,32 @@ class ReportController extends Controller
     /**
      * Display general reports (inventory, sales, purchases, low stock, expiring).
      */
-    public function index()
+    public function index(Request $request)
     {
-        $medicines = Medicine::orderBy('name')->get()->map(function($m) {
+        $user = $request->user();
+        $branchScope = $user->getBranchScope();
+
+        $medicineQuery = Medicine::orderBy('name');
+        $saleQuery = Sale::orderBy('sale_date');
+        $retailQuery = RetailProduct::orderBy('name');
+
+        // Branch scoping: pharmacists/cashiers see only their branch's data
+        if ($branchScope) {
+            $medicineQuery->where('branch_id', $branchScope);
+            $saleQuery->where('branch_id', $branchScope);
+        }
+
+        $medicines = $medicineQuery->get()->map(function($m) {
             $m->product_type = 'medicine';
             return $m;
         });
-        $retailProducts = RetailProduct::orderBy('name')->get()->map(function($r) {
+        $retailProducts = $retailQuery->get()->map(function($r) {
             $r->product_type = 'retail';
             $r->category = (object)['name' => $r->category ?? 'Retail/OTC'];
             return $r;
         });
 
-        $sales = Sale::orderBy('sale_date', 'desc')->get();
+        $sales = $saleQuery->latest()->get();
         $purchases = PurchaseOrder::with('supplier')->orderBy('created_at', 'desc')->get();
 
         $expiringMed = Medicine::whereNotNull('expiry_date')
@@ -38,6 +51,7 @@ class ReportController extends Controller
                 \Carbon\Carbon::today(),
                 \Carbon\Carbon::today()->addDays(90)
             ])
+            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
             ->orderBy('expiry_date')
             ->get()->map(function($m) {
                 $m->product_type = 'medicine';
@@ -57,6 +71,7 @@ class ReportController extends Controller
             });
 
         $lowStockMed = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
             ->orderBy('quantity')
             ->get()->map(function($m) {
                 $m->product_type = 'medicine';

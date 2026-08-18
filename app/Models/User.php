@@ -26,6 +26,12 @@ class User extends Authenticatable
         'password',
         'role',
         'status',
+        'branch_id',
+        'phone_number',
+        'gender',
+        'date_of_birth',
+        'address',
+        'profile_photo',
         'license_number',
         'license_expiry_date',
         'professional_registration_number',
@@ -111,11 +117,37 @@ class User extends Authenticatable
     }
 
     /**
+     * The branch this user is assigned to.
+     */
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
+    /**
      * The permissions granted to the user's role.
      */
     public function rolePermissions(): BelongsToMany
     {
         return $this->role()->with('permissions');
+    }
+
+    /**
+     * Check whether the user should be scoped to a specific branch.
+     * Pharmacists and cashiers see only their assigned branch.
+     * Admins see all branches.
+     */
+    public function shouldScopeToBranch(): bool
+    {
+        return in_array($this->role, ['pharmacist', 'cashier']) && !empty($this->branch_id);
+    }
+
+    /**
+     * Get the branch_id this user is scoped to (null for admin = all branches).
+     */
+    public function getBranchScope(): ?int
+    {
+        return $this->shouldScopeToBranch() ? $this->branch_id : null;
     }
 
     /**

@@ -20,7 +20,7 @@ const statusOptions = [
     { value: 'discontinued', label: 'Discontinued' },
 ];
 
-const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
+const formSteps = ['Basic Info', 'Stock & Description', 'Status'];
 
 export default function Medicines() {
     const { user } = useAuth();
@@ -50,9 +50,8 @@ export default function Medicines() {
 
     const [form, setForm] = useState({
         name: '', generic_name: '', batch_number: '', barcode: '', category_id: '',
-        supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '',
-        reorder_level: '', expiry_date: '', status: 'active',
-        description: '', manufacturer: '', shelf_location: '',
+        supplier_id: '', quantity: '', description: '', status: 'active',
+        dosage_form: '', strength: '', unit: '',
     });
 
     const [filters, setFilters] = useState({
@@ -132,9 +131,8 @@ export default function Medicines() {
     const resetForm = () => {
         setForm({ 
             name: '', generic_name: '', batch_number: '', barcode: '', category_id: '', 
-            supplier_id: '', quantity: '', unit_price: '', purchase_price: '', selling_price: '', 
-            reorder_level: '', expiry_date: '', status: 'active', 
-            description: '', manufacturer: '', shelf_location: '' 
+            supplier_id: '', quantity: '', description: '', status: 'active',
+            dosage_form: '', strength: '', unit: '' 
         });
         setEditId(null); 
         setError(''); 
@@ -152,13 +150,11 @@ export default function Medicines() {
         setForm({
             name: m.name || '', generic_name: m.generic_name || '', batch_number: m.batch_number || '',
             barcode: m.barcode || '', category_id: m.category_id || '', supplier_id: m.supplier_id || '',
-            quantity: m.quantity || '', unit_price: m.unit_price || '', purchase_price: m.purchase_price || '',
-            selling_price: m.selling_price || m.unit_price || '', reorder_level: m.reorder_level || '',
-            expiry_date: m.expiry_date ? new Date(m.expiry_date).toISOString().split('T')[0] : '',
+            quantity: m.quantity || '', description: m.description || '',
             status: m.status || 'active',
-            description: m.description || '',
-            manufacturer: m.manufacturer || '',
-            shelf_location: m.shelf_location || '',
+            dosage_form: m.dosage_form || '',
+            strength: m.strength || '',
+            unit: m.unit || '',
         });
         setEditId(m.id); 
         setShowModal(true); 
@@ -223,10 +219,21 @@ export default function Medicines() {
                 });
                 window.showToast('Medicine updated successfully', 'success');
             } else {
-                await api.post('/medicines', formData, {
+                const response = await api.post('/medicines', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 window.showToast('Medicine created successfully', 'success');
+                
+                // Automatically create stock movement for new medicine with initial quantity
+                if (form.quantity && form.quantity > 0 && response.data.id) {
+                    await api.post('/stock-movements', {
+                        medicine_id: response.data.id,
+                        type: 'in',
+                        quantity: form.quantity,
+                        reference: 'NEW-MED-' + Date.now(),
+                        notes: 'Initial stock added for new medicine'
+                    });
+                }
             }
             setShowModal(false); 
             loadMedicines();
@@ -361,25 +368,17 @@ export default function Medicines() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
-                            <input type="text" name="manufacturer" value={form.manufacturer} onChange={handleChange} placeholder="e.g. GSK" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Dosage Form</label>
+                            <input type="text" name="dosage_form" value={form.dosage_form} onChange={handleChange} placeholder="e.g. Tablet, Capsule, Syrup" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
-                            <input type="text" name="shelf_location" value={form.shelf_location} onChange={handleChange} placeholder="e.g. A-2-3" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Strength</label>
+                            <input type="text" name="strength" value={form.strength} onChange={handleChange} placeholder="e.g. 500mg, 10%" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
                         </div>
-
-                        {!editId && <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Batch Number</label>
-                            <input 
-                                type="text" 
-                                name="batch_number" 
-                                value={form.batch_number} 
-                                onChange={handleChange} 
-                                placeholder="e.g. BATCH-001" 
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
-                            />
-                        </div>}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Unit</label>
+                            <input type="text" name="unit" value={form.unit} onChange={handleChange} placeholder="e.g. pills, mL, mg" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
 
                         <div className="md:col-span-2">
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
@@ -424,85 +423,39 @@ export default function Medicines() {
                             <input type="number" name="quantity" value={form.quantity} onChange={handleChange} placeholder="0" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Selling Price *</label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input type="number" name="selling_price" value={form.selling_price || form.unit_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Image</label>
+                            <div className="flex items-center gap-4">
+                                <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                                    {imagePreview ? (
+                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Package className="text-gray-300" size={28} />
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
+                                        onChange={handleImageChange}
+                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Purchase Price</label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input type="number" name="purchase_price" value={form.purchase_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                            </div>
-                        </div>
-                        {!editId && <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
-                            <input 
-                                type="number" 
-                                name="reorder_level" 
-                                value={form.reorder_level} 
-                                onChange={handleChange} 
-                                placeholder="10" 
-                                min="0" 
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
-                                required 
-                            />
-                        </div>}
                     </div>
                 );
             case 2:
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {!editId && <>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date</label>
-                                <div className="relative">
-                                    <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input 
-                                        type="date" 
-                                        name="expiry_date" 
-                                        value={form.expiry_date} 
-                                        onChange={handleChange} 
-                                        className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" 
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                                <select 
-                                    name="status" 
-                                    value={form.status} 
-                                    onChange={handleChange} 
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                >
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                    <option value="expired">Expired</option>
-                                    <option value="discontinued">Discontinued</option>
-                                </select>
-                            </div>
-                        </>}
-                        {editId && <div className="md:col-span-2 flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                                <span className="text-sm font-medium text-gray-700">{form.status === 'active' ? 'Active' : form.status === 'inactive' ? 'Inactive' : form.status === 'discontinued' ? 'Discontinued' : 'Expired'}</span>
-                            </div>
-                            <button type="button" role="switch" aria-checked={form.status === 'active'} aria-label="Toggle medicine active status" onClick={toggleStatus} disabled={!['active', 'inactive'].includes(form.status)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${form.status === 'active' ? 'bg-sky-500' : 'bg-gray-300'}`}>
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.status === 'active' ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
-                        </div>}
-                        <div className="md:col-span-2 p-4 bg-sky-50 rounded-xl border border-sky-200">
-                            <h4 className="text-sm font-semibold text-sky-800 mb-2">Review Summary</h4>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div><span className="text-gray-500">Name:</span> <span className="font-medium">{form.name || '---'}</span></div>
-                                <div><span className="text-gray-500">Generic Name:</span> <span className="font-medium">{form.generic_name || '---'}</span></div>
-                                <div><span className="text-gray-500">Barcode:</span> <span className="font-medium">{form.barcode || '---'}</span></div>
-                                <div><span className="text-gray-500">Quantity:</span> <span className="font-medium">{form.quantity || '0'}</span></div>
-                                <div><span className="text-gray-500">Selling Price:</span> <span className="font-medium">{form.selling_price || form.unit_price ? `$${form.selling_price || form.unit_price}` : '---'}</span></div>
-                                <div><span className="text-gray-500">Status:</span> <span className="font-medium">{form.status}</span></div>
-                            </div>
+                        <div className="md:col-span-2 flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                            <span className="text-sm font-medium text-gray-700">{form.status === 'active' ? 'Active' : form.status === 'inactive' ? 'Inactive' : 'Discontinued'}</span>
                         </div>
                     </div>
                 );
@@ -699,15 +652,11 @@ export default function Medicines() {
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Generic Name</label><p className="text-sm text-gray-600">{viewMedicine.generic_name || '---'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Barcode</label><p className="text-sm font-mono text-gray-600">{viewMedicine.barcode || '---'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Category</label><p className="text-sm text-gray-600">{viewMedicine.category?.name || viewMedicine.category || 'General'}</p></div>
-                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewMedicine.supplier?.name || 'No Supplier'}</p></div>
-                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Manufacturer</label><p className="text-sm text-gray-600">{viewMedicine.manufacturer || '---'}</p></div>
-                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Shelf Location</label><p className="text-sm text-gray-600">{viewMedicine.shelf_location || '---'}</p></div>
+<div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewMedicine.supplier?.name || 'No Supplier'}</p></div>
+                            <div className="md:col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Description</label><p className="text-sm text-gray-600">{viewMedicine.description || '---'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Status</label><div className="mt-1">{getStatusBadge(viewMedicine.status)}</div></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label><p className="text-sm font-medium text-gray-800">{viewMedicine.quantity}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label><p className="text-sm text-gray-600">{viewMedicine.reorder_level}</p></div>
-                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Selling Price</label><p className="text-sm text-gray-600">{(viewMedicine.selling_price || viewMedicine.unit_price) ? `$${Number(viewMedicine.selling_price || viewMedicine.unit_price).toFixed(2)}` : '---'}</p></div>
-                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Purchase Price</label><p className="text-sm text-gray-600">{viewMedicine.purchase_price ? `$${Number(viewMedicine.purchase_price).toFixed(2)}` : '---'}</p></div>
-                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Expiry Date</label><p className="text-sm text-gray-600">{viewMedicine.expiry_date ? new Date(viewMedicine.expiry_date).toLocaleDateString() : '---'}</p></div>
                             <div className="md:col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Description</label><p className="text-sm text-gray-600">{viewMedicine.description || '---'}</p></div>
                         </div>
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-sky-100">

@@ -19,6 +19,12 @@ class StockMovementController extends Controller
         try {
             $query = StockMovement::with(['medicine', 'itemable', 'user', 'approver', 'completer']);
 
+            // Branch scoping: pharmacists/cashiers see only their branch's movements
+            $user = $request->user();
+            if ($user->shouldScopeToBranch()) {
+                $query->where('branch_id', $user->branch_id);
+            }
+
             if ($request->medicine_id) {
                 $query->where('medicine_id', $request->medicine_id);
             }

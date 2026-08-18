@@ -21,23 +21,21 @@ class Medicine extends Model
         'category_id',
         'supplier_id',
         'quantity',
-        'unit_price',
-        'purchase_price',
-        'selling_price',
         'reorder_level',
-        'expiry_date',
         'status',
-        'shelf_location',
-        'shelf_id',
+        'description',
+        'dosage_form',
+        'strength',
+        'unit',
         'batch_number',
         'barcode',
+        'image',
     ];
 
     // Explicitly clear $with so Eloquent doesn't query missing relationships like 'shelf'
     protected $with = [];
 
     protected $casts = [
-        'expiry_date' => 'date',
     ];
 
     /**
@@ -76,17 +74,13 @@ class Medicine extends Model
             ->latest('id')
             ->value('expiry_date');
 
-        return $batchExpiry ? Carbon::parse($batchExpiry) : ($this->expiry_date ? Carbon::parse($this->expiry_date) : null);
+        return $batchExpiry ? Carbon::parse($batchExpiry) : null;
     }
 
     public function syncAutomaticExpiryState(): void
     {
         $calculatedExpiry = $this->calculatedExpiryDate();
         $changes = [];
-
-        if ($calculatedExpiry && (! $this->expiry_date || ! $this->expiry_date->isSameDay($calculatedExpiry))) {
-            $changes['expiry_date'] = $calculatedExpiry->toDateString();
-        }
 
         if ($calculatedExpiry && $calculatedExpiry->isBefore(Carbon::today())) {
             $changes['status'] = self::STATUS_EXPIRED;

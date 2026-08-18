@@ -87,6 +87,8 @@ class AuthController extends Controller
 
         Log::info('Login SUCCESS:', ['email' => $credentials['email']]);
 
+        $user->load('branch');
+
         return response()->json([
             'message' => 'Login successful',
             'access_token' => $token,
@@ -97,6 +99,12 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'status' => $user->status,
+                'branch_id' => $user->branch_id,
+                'branch' => $user->branch ? [
+                    'id' => $user->branch->id,
+                    'name' => $user->branch->name,
+                ] : null,
+                'permissions' => $user->permissions,
             ],
             'role' => $user->role,
         ]);
@@ -161,6 +169,7 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user()->load('branch');
+        return response()->json($user);
     }
 }

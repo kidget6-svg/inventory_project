@@ -18,6 +18,7 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $branchScope = $user->getBranchScope();
 
         // Check role using direct comparison
         if ($user->role === 'admin' || $user->role === 'super_admin') {
@@ -25,10 +26,10 @@ class DashboardController extends Controller
         }
 
         if ($user->role === 'pharmacist') {
-            return $this->pharmacistDashboard();
+            return $this->pharmacistDashboard($branchScope);
         }
 
-        return $this->cashierDashboard();
+        return $this->cashierDashboard($branchScope);
     }
 
     /*
@@ -36,12 +37,16 @@ class DashboardController extends Controller
     | Shared helper: low-stock medicines
     |--------------------------------------------------------------------------
     */
-    private function lowStockMedicines()
+    private function lowStockMedicines($branchScope = null)
     {
-        return Medicine::whereColumn('quantity', '<=', 'reorder_level')
-            ->with('category')
-            ->orderBy('quantity')
-            ->get();
+        $query = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+            ->with('category');
+
+        if ($branchScope) {
+            $query->where('branch_id', $branchScope);
+        }
+
+        return $query->orderBy('quantity')->get();
     }
 
     /*
@@ -49,12 +54,16 @@ class DashboardController extends Controller
     | Shared helper: expired medicines
     |--------------------------------------------------------------------------
     */
-    private function expiredMedicines()
+    private function expiredMedicines($branchScope = null)
     {
-        return Medicine::whereNotNull('expiry_date')
-            ->where('expiry_date', '<', Carbon::today())
-            ->orderBy('expiry_date')
-            ->get();
+        $query = Medicine::whereNotNull('expiry_date')
+            ->where('expiry_date', '<', Carbon::today());
+
+        if ($branchScope) {
+            $query->where('branch_id', $branchScope);
+        }
+
+        return $query->orderBy('expiry_date')->get();
     }
 
     /*
@@ -62,13 +71,16 @@ class DashboardController extends Controller
     | Shared helper: medicines expiring within N days
     |--------------------------------------------------------------------------
     */
-    private function expiringMedicines(int $days)
+    private function expiringMedicines(int $days, $branchScope = null)
     {
-        return Medicine::whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->addDays($days)])
-            ->with('category')
-            ->orderBy('expiry_date')
-            ->get();
+        $query = Medicine::whereNotNull('expiry_date')
+            ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->addDays($days)]);
+
+        if ($branchScope) {
+            $query->where('branch_id', $branchScope);
+        }
+
+        return $query->with('category')->orderBy('expiry_date')->get();
     }
 
     /*
@@ -103,17 +115,21 @@ class DashboardController extends Controller
     | Shared helper: sales analytics (daily / weekly / monthly)
     |--------------------------------------------------------------------------
     */
-    private function salesAnalytics(): array
+    private function salesAnalytics($branchScope = null): array
     {
         // Daily – last 7 days
         $daily = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i);
+            $saleQuery = Sale::whereDate('sale_date', $date);
+            if ($branchScope) {
+                $saleQuery->where('branch_id', $branchScope);
+            }
             $daily[] = [
                 'label' => $date->format('D'),
                 'date'  => $date->format('Y-m-d'),
-                'total' => (float) Sale::whereDate('sale_date', $date)->sum('total_amount'),
-                'count' => Sale::whereDate('sale_date', $date)->count(),
+                'total' => (float) $saleQuery->sum('total_amount'),
+                'count' => $saleQuery->count(),
             ];
         }
 
@@ -122,10 +138,14 @@ class DashboardController extends Controller
         for ($i = 3; $i >= 0; $i--) {
             $start = Carbon::today()->subWeeks($i)->startOfWeek();
             $end   = Carbon::today()->subWeeks($i)->endOfWeek();
+            $saleQuery = Sale::whereBetween('sale_date', [$start, $end]);
+            if ($branchScope) {
+                $saleQuery->where('branch_id', $branchScope);
+            }
             $weekly[] = [
                 'label' => $start->format('M d') . ' – ' . $end->format('M d'),
-                'total' => (float) Sale::whereBetween('sale_date', [$start, $end])->sum('total_amount'),
-                'count' => Sale::whereBetween('sale_date', [$start, $end])->count(),
+                'total' => (float) $saleQuery->sum('total_amount'),
+                'count' => $saleQuery->count(),
             ];
         }
 
@@ -133,14 +153,15 @@ class DashboardController extends Controller
         $monthly = [];
         for ($i = 5; $i >= 0; $i--) {
             $month = Carbon::today()->subMonths($i);
+            $saleQuery = Sale::whereYear('sale_date', $month->year)
+                ->whereMonth('sale_date', $month->month);
+            if ($branchScope) {
+                $saleQuery->where('branch_id', $branchScope);
+            }
             $monthly[] = [
                 'label' => $month->format('M Y'),
-                'total' => (float) Sale::whereYear('sale_date', $month->year)
-                    ->whereMonth('sale_date', $month->month)
-                    ->sum('total_amount'),
-                'count' => Sale::whereYear('sale_date', $month->year)
-                    ->whereMonth('sale_date', $month->month)
-                    ->count(),
+                'total' => (float) $saleQuery->sum('total_amount'),
+                'count' => $saleQuery->count(),
             ];
         }
 
@@ -152,13 +173,21 @@ class DashboardController extends Controller
     | Shared helper: purchase vs sales totals
     |--------------------------------------------------------------------------
     */
-    private function purchaseVsSales(): array
+    private function purchaseVsSales($branchScope = null): array
     {
         return [
-            'totalPurchases' => (float) PurchaseOrder::where('status', 'completed')->sum('total_amount'),
-            'totalSales'     => (float) Sale::sum('total_amount'),
-            'purchaseCount'  => PurchaseOrder::where('status', 'completed')->count(),
-            'salesCount'     => Sale::count(),
+            'totalPurchases' => (float) PurchaseOrder::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->where('status', 'completed')->sum('total_amount'),
+            'totalSales'     => (float) Sale::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->sum('total_amount'),
+            'purchaseCount'  => PurchaseOrder::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->where('status', 'completed')->count(),
+            'salesCount'     => Sale::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->count(),
         ];
     }
 
@@ -167,12 +196,14 @@ class DashboardController extends Controller
     | Shared helper: purchase order statistics
     |--------------------------------------------------------------------------
     */
-    private function purchaseOrderStats(): array
+    private function purchaseOrderStats($branchScope = null): array
     {
         $statuses = ['draft', 'pending', 'sent', 'approved', 'delivered', 'completed', 'cancelled'];
         $stats = [];
         foreach ($statuses as $status) {
-            $stats[$status] = PurchaseOrder::where('status', $status)->count();
+            $stats[$status] = PurchaseOrder::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->where('status', $status)->count();
         }
         return $stats;
     }
@@ -368,11 +399,15 @@ class DashboardController extends Controller
     | Pharmacist dashboard – inventory & expiry focus
     |--------------------------------------------------------------------------
     */
-    private function pharmacistDashboard()
+    private function pharmacistDashboard($branchScope = null)
     {
         try {
-            $totalMedicines       = Medicine::count();
-            $totalStock           = Medicine::sum('quantity');
+            $totalMedicines       = Medicine::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->count();
+            $totalStock           = Medicine::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->sum('quantity');
 
             $lowStockMedicines    = $this->lowStockMedicines();
             $lowStockCount        = $lowStockMedicines->count();
@@ -433,12 +468,18 @@ class DashboardController extends Controller
     | Cashier dashboard – sales focus
     |--------------------------------------------------------------------------
     */
-    private function cashierDashboard()
+    private function cashierDashboard($branchScope = null)
     {
         try {
-            $todaySalesCount      = Sale::whereDate('sale_date', Carbon::today())->count();
-            $todayRevenue         = Sale::whereDate('sale_date', Carbon::today())->sum('total_amount');
-            $totalMedicines       = Medicine::count();
+            $todaySalesCount      = Sale::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->whereDate('sale_date', Carbon::today())->count();
+            $todayRevenue         = Sale::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->whereDate('sale_date', Carbon::today())->sum('total_amount');
+            $totalMedicines       = Medicine::when($branchScope, function ($query) use ($branchScope) {
+                return $query->where('branch_id', $branchScope);
+            })->count();
 
             $recentSales          = Sale::with('user')->latest()->take(10)->get();
 

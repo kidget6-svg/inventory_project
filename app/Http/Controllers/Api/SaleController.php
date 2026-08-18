@@ -22,6 +22,12 @@ class SaleController extends Controller
     {
         $query = Sale::with(['items.itemable', 'user']);
 
+        // Branch scoping: pharmacists/cashiers see only their branch's sales
+        $user = $request->user();
+        if ($user->shouldScopeToBranch()) {
+            $query->where('branch_id', $user->branch_id);
+        }
+
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }

@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\ShelfController;
 use App\Http\Controllers\Api\StockManagementController;
 use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Controllers\Api\BranchController;
+use App\Http\Controllers\Api\RoleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -139,6 +140,12 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
         Route::post('/users/{user}/approve', [UserController::class, 'approve']);
         Route::post('/users/{user}/reject', [UserController::class, 'reject']);
+
+        // Roles & Permissions
+        Route::get('/roles', [RoleController::class, 'index']);
+        Route::post('/roles', [RoleController::class, 'store']);
+        Route::put('/roles/{role}', [RoleController::class, 'update']);
+        Route::delete('/roles/{role}', [RoleController::class, 'destroy']);
 
         // Suppliers Write
         Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);

@@ -14,14 +14,29 @@ use Illuminate\Validation\ValidationException;
 
 class WarehouseController extends Controller
 {
-    public function stats()
+public function stats(Request $request)
     {
-        $totalMedicines = Medicine::count();
-        $totalStock = Medicine::sum('quantity');
-        $totalShelves = Shelf::count();
-        $usedShelves = Shelf::whereHas('medicines')->count();
-        $lowStock = Medicine::whereColumn('quantity', '<=', 'reorder_level')->count();
-        $pendingRequests = StockTransfer::where('status', 'pending')->count();
+        $user = $request->user();
+        $branchScope = $user->getBranchScope();
+
+        $totalMedicines = Medicine::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        })->count();
+        $totalStock = Medicine::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        })->sum('quantity');
+        $totalShelves = Shelf::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        })->count();
+        $usedShelves = Shelf::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        })->whereHas('medicines')->count();
+        $lowStock = Medicine::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        })->whereColumn('quantity', '<=', 'reorder_level')->count();
+        $pendingRequests = StockTransfer::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        })->where('status', 'pending')->count();
 
         return response()->json([
             'total_medicines' => $totalMedicines,
@@ -33,9 +48,14 @@ class WarehouseController extends Controller
         ]);
     }
 
-    public function shelves()
+    public function shelves(Request $request)
     {
-        $shelves = Shelf::withCount('medicines')->get()->map(function ($shelf) {
+        $user = $request->user();
+        $branchScope = $user->getBranchScope();
+
+        $shelves = Shelf::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        })->withCount('medicines')->get()->map(function ($shelf) {
             $totalItems = $shelf->medicines()->sum('quantity');
             $capacity = $shelf->capacity ?? 100;
             return [
@@ -54,7 +74,12 @@ class WarehouseController extends Controller
 
     public function stock(Request $request)
     {
-        $query = Medicine::with(['category', 'supplier', 'shelf']);
+        $user = $request->user();
+        $branchScope = $user->getBranchScope();
+
+        $query = Medicine::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        })->with(['category', 'supplier', 'shelf']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -124,9 +149,16 @@ class WarehouseController extends Controller
         }
     }
 
-    public function transferRequests()
+    public function transferRequests(Request $request)
     {
-        $transfers = StockTransfer::with(['medicine', 'toBranch', 'requestedBy'])
+        $user = $request->user();
+        $branchScope = $user->getBranchScope();
+
+        $query = StockTransfer::when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        });
+
+        $transfers = $query->with(['medicine', 'toBranch', 'requestedBy'])
             ->latest()
             ->get();
 
@@ -161,8 +193,10 @@ class WarehouseController extends Controller
 
     public function receivingHistory(Request $request)
     {
-        $query = StockMovement::where('type', 'in')
-            ->with(['medicine', 'user']);
+        $user = $request->user();
+        $branchScope = $user->getBranchScope();
+
+        $query = StockMovement::where('type', 'in');
 
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
@@ -170,6 +204,10 @@ class WarehouseController extends Controller
         if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
+
+        $query->when($branchScope, function ($query) use ($branchScope) {
+            return $query->where('branch_id', $branchScope);
+        });
 
         $history = $query->latest()->paginate(20);
         return response()->json($history);

@@ -20,12 +20,17 @@ class MedicineController extends Controller
         try {
             $query = Medicine::with(['category', 'supplier']);
 
+            // Branch scoping: pharmacists/cashiers see only their branch's medicines
+            $user = $request->user();
+            if ($user->shouldScopeToBranch()) {
+                $query->where('branch_id', $user->branch_id);
+            }
+
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('generic_name', 'like', "%{$search}%")
-                      ->orWhere('shelf_location', 'like', "%{$search}%");
+                      ->orWhere('generic_name', 'like', "%{$search}%");
                 });
             }
 
@@ -86,17 +91,14 @@ class MedicineController extends Controller
             'barcode' => 'nullable|string|max:255|unique:medicines,barcode',
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'shelf_id' => 'nullable|exists:shelves,id',
             'quantity' => 'required|integer|min:0',
             'unit_price' => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'selling_price' => 'nullable|numeric|min:0',
             'reorder_level' => 'required|integer|min:0',
-            'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
             'description' => 'nullable|string',
-            'manufacturer' => 'nullable|string|max:255',
-            'shelf_location' => 'nullable|string|max:50',
+            'dosage_form' => 'nullable|string|max:50',
+            'strength' => 'nullable|string|max:50',
+            'unit' => 'nullable|string|20',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
@@ -156,17 +158,14 @@ class MedicineController extends Controller
             'barcode' => ['nullable', 'string', 'max:100', Rule::unique('medicines', 'barcode')->ignore($medicine->id)],
             'category_id' => 'required|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'shelf_id' => 'nullable|exists:shelves,id',
             'quantity' => 'required|integer|min:0',
             'unit_price' => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'selling_price' => 'nullable|numeric|min:0',
             'reorder_level' => 'required|integer|min:0',
-            'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
             'description' => 'nullable|string',
-            'manufacturer' => 'nullable|string|max:255',
-            'shelf_location' => 'nullable|string|max:50',
+            'dosage_form' => 'nullable|string|max:50',
+            'strength' => 'nullable|string|max:50',
+            'unit' => 'nullable|string|20',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
