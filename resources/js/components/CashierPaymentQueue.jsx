@@ -15,6 +15,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 import Modal from './Modal';
 import {
@@ -62,6 +63,11 @@ const PAYMENT_LABELS = {
 };
 
 export default function CashierPaymentQueue({ saleType }) {
+    const { hasPermission } = useAuth();
+    const canComplete = hasPermission(saleType === 'prescription' ? 'prescription-checkout.complete' : 'retail-pos.checkout');
+    const canViewReceipt = hasPermission('sales-history.receipt');
+    const canDownloadReceipt = hasPermission('sales-history.download');
+    const canPrintReceipt = hasPermission('sales-history.print');
     const [pendingSales, setPendingSales] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
@@ -345,14 +351,18 @@ export default function CashierPaymentQueue({ saleType }) {
 
                             {/* Card Footer */}
                             <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
-                                <button
-                                    onClick={() => openPaymentModal(sale)}
-                                    disabled={processingId === sale.id}
-                                    className="w-full btn-primary px-4 py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-                                >
-                                    <DollarSign size={16} />
-                                    {processingId === sale.id ? 'Processing...' : 'Complete Sale'}
-                                </button>
+                                {canComplete ? (
+                                    <button
+                                        onClick={() => openPaymentModal(sale)}
+                                        disabled={processingId === sale.id}
+                                        className="w-full btn-primary px-4 py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                                    >
+                                        <DollarSign size={16} />
+                                        {processingId === sale.id ? 'Processing...' : 'Complete Sale'}
+                                    </button>
+                                ) : (
+                                    <div className="text-center text-xs text-gray-400 py-2">View only</div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -581,24 +591,30 @@ export default function CashierPaymentQueue({ saleType }) {
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 pt-2">
-                            <button
-                                onClick={handleViewReceipt}
-                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                            >
-                                <Receipt size={14} /> View Receipt
-                            </button>
-                            <button
-                                onClick={handleDownloadPdf}
-                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                            >
-                                <Download size={14} /> Download PDF
-                            </button>
-                            <button
-                                onClick={handlePrintReceipt}
-                                className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
-                            >
-                                <Printer size={14} /> Print Receipt
-                            </button>
+                            {canViewReceipt && (
+                                <button
+                                    onClick={handleViewReceipt}
+                                    className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                                >
+                                    <Receipt size={14} /> View Receipt
+                                </button>
+                            )}
+                            {canDownloadReceipt && (
+                                <button
+                                    onClick={handleDownloadPdf}
+                                    className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                                >
+                                    <Download size={14} /> Download PDF
+                                </button>
+                            )}
+                            {canPrintReceipt && (
+                                <button
+                                    onClick={handlePrintReceipt}
+                                    className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"
+                                >
+                                    <Printer size={14} /> Print Receipt
+                                </button>
+                            )}
                             <button
                                 onClick={handleCloseSuccess}
                                 className="btn-secondary px-3 py-2 text-sm flex items-center justify-center gap-1.5"

@@ -32,6 +32,7 @@ export default function PosCartPanel({
     onAction,
     actionDisabled = false,
     actionLoading = false,
+    actionHidden = false,
     emptyMessage = 'Your cart is empty',
     emptySubMessage = 'Add items from the catalog to get started',
     emptyIcon: EmptyIcon = ShoppingCart,
@@ -102,18 +103,20 @@ export default function PosCartPanel({
                                 </span>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={onAction}
-                                disabled={actionDisabled}
-                                className="w-full pos-btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {ActionIcon && <ActionIcon size={16} />}
-                                {actionLoading && (
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                )}
-                                {actionLabel}
-                            </button>
+                            {!actionHidden && (
+                                <button
+                                    type="button"
+                                    onClick={onAction}
+                                    disabled={actionDisabled}
+                                    className="w-full pos-btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {ActionIcon && <ActionIcon size={16} />}
+                                    {actionLoading && (
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    )}
+                                    {actionLabel}
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

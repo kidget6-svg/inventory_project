@@ -46,6 +46,10 @@ function ProtectedRoute({ children, permissions, title }) {
         return <Navigate to="/login" replace />;
     }
 
+    if (user?.role === 'admin') {
+        return <SidebarLayout pageTitle={title}>{children}</SidebarLayout>;
+    }
+
     if (permissions && !hasAnyPermission(permissions)) {
         return <Navigate to="/dashboard" replace />;
     }

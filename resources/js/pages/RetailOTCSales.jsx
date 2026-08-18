@@ -15,6 +15,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {
     PosProductCard,
@@ -34,6 +35,8 @@ import {
 } from 'lucide-react';
 
 export default function RetailOTCSales() {
+    const { hasPermission } = useAuth();
+    const canDraft = hasPermission('retail-otc-sales.draft');
     const [products, setProducts] = useState([]);
     const [search, setSearch] = useState('');
     const [cart, setCart] = useState([]);
@@ -287,6 +290,7 @@ export default function RetailOTCSales() {
                     onAction={handleSendToCashier}
                     actionDisabled={cart.length === 0 || submitting}
                     actionLoading={submitting}
+                    actionHidden={!canDraft}
                     emptyMessage="Retail draft is empty"
                     emptySubMessage="Select products from the catalog to begin"
                     emptyIcon={ShoppingBag}

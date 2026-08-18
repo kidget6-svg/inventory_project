@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Save, X } from 'lucide-react';
@@ -7,47 +8,32 @@ import { ArrowLeft, Save, X } from 'lucide-react';
 export default function CategoryEdit() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { hasPermission } = useAuth();
+    const canEdit = hasPermission('categories.edit');
     const [form, setForm] = useState({ name: '', description: '', shelf_location: '' });
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [shelves, setShelves] = useState([]);
 
-    // Check if user is admin
+    // Check if user can edit categories
     useEffect(() => {
-        const checkAdmin = async () => {
+        const checkPermission = async () => {
             try {
-                const response = await api.get('/user');
-                if (response.data.role !== 'admin') {
-                    window.showToast('Only admins can edit categories', 'error');
+                if (!canEdit) {
+                    window.showToast('You do not have permission to edit categories', 'error');
                     navigate('/categories');
                     return;
                 }
-                setIsAdmin(true);
             } catch (err) {
                 window.showToast('Unauthorized access', 'error');
                 navigate('/categories');
             }
         };
-        checkAdmin();
-    }, [navigate]);
-
-    // Load shelves for dropdown
-    useEffect(() => {
-        if (!isAdmin) return;
-        api.get('/shelves')
-            .then(r => {
-                const data = r.data;
-                setShelves(Array.isArray(data) ? data : []);
-            })
-            .catch(() => {
-                window.showToast('Failed to load shelves', 'error');
-            });
-    }, [isAdmin]);
+        checkPermission();
+    }, [navigate, canEdit]);
 
     useEffect(() => {
-        if (isAdmin) {
+        if (canEdit) {
             api.get(`/categories/${id}`)
                 .then(r => setForm({ 
                     name: r.data.name, 
@@ -57,7 +43,7 @@ export default function CategoryEdit() {
                 .catch(() => setError('Failed to load category'))
                 .finally(() => setLoading(false));
         }
-    }, [id, isAdmin]);
+    }, [id, canEdit]);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -79,7 +65,7 @@ export default function CategoryEdit() {
 
     if (loading) return <LoadingSpinner text="Loading category..." />;
 
-    if (!isAdmin) return null;
+    if (!canEdit) return null;
 
     return (
         <div className="space-y-6">
@@ -109,19 +95,13 @@ export default function CategoryEdit() {
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
-                        <select
+                        <input
                             name="shelf_location"
                             value={form.shelf_location}
                             onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none bg-white"
-                        >
-                            <option value="">Select Shelf</option>
-                            {shelves.map(shelf => (
-                                <option key={shelf.id} value={shelf.shelf_location}>
-                                    {shelf.name} ({shelf.shelf_location})
-                                </option>
-                            ))}
-                        </select>
+                            placeholder="e.g. A-2-3"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        />
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>

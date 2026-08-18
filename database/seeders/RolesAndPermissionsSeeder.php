@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -213,6 +214,15 @@ class RolesAndPermissionsSeeder extends Seeder
                 fn ($s) => $permissionBySlug[$s]->id,
                 array_filter($permissionSlugs, fn ($s) => isset($permissionBySlug[$s])),
             ));
+        }
+
+        // Backfill role_id for existing users based on their role slug.
+        foreach (User::all(['id', 'role']) as $user) {
+            $role = $roleBySlug[$user->role] ?? null;
+            if ($role) {
+                $user->role_id = $role->id;
+                $user->save();
+            }
         }
 
         $this->command->info('Roles & permissions seeded.');
