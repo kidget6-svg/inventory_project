@@ -241,23 +241,15 @@ export default function PurchaseOrders() {
             case 'approved':
                 actions.push({
                     icon: sendingOrderId === order.id ? Loader2 : Send,
-                    tooltip: 'Resend Purchase Order PDF to Supplier',
+                    tooltip: 'Send PDF/Email to Supplier',
                     color: 'sky',
                     onClick: () => handleSendPdf(order),
                     disabled: sendingOrderId === order.id,
                 });
-                actions.push({ icon: ClipboardCheck, tooltip: 'Mark Complete', color: 'green', onClick: () => handleWorkflowAction(order, 'complete', 'Mark Complete') });
                 actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
                 break;
 
             case 'completed':
-                actions.push({
-                    icon: sendingOrderId === order.id ? Loader2 : Send,
-                    tooltip: 'Resend Purchase Order PDF to Supplier',
-                    color: 'sky',
-                    onClick: () => handleSendPdf(order),
-                    disabled: sendingOrderId === order.id,
-                });
                 break;
 
             case 'cancelled':

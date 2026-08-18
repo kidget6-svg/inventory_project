@@ -333,7 +333,15 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Send the latest Purchase Order PDF to the supplier as an email attachment.
+     * Send the Purchase Order PDF to the supplier via email.
+     *
+     * Workflow: After a PO is approved, the admin clicks "Send PDF/Email".
+     * - If the email is sent successfully, the PO is automatically
+     *   completed (stock is added, completed_at is recorded) and the
+     *   Send button is hidden.
+     * - If sending fails, the PO stays "approved" and the error is shown.
+     *
+     * Allowed statuses: pending, approved.
      */
     public function sendPdfToSupplier(PurchaseOrder $purchaseOrder, PurchaseOrderService $service)
     {
@@ -349,17 +357,29 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
+        DB::beginTransaction();
+
         try {
+            // Send the email (throws on failure)
             $service->sendToSupplier($purchaseOrder);
 
+            // Email sent successfully — automatically complete the PO
+            $purchaseOrder->complete();
+
+            DB::commit();
+
             return response()->json([
-                'message' => 'Purchase Order PDF sent successfully.',
+                'message' => 'Purchase Order PDF sent successfully and order completed.',
                 'purchase_order' => $purchaseOrder->fresh()->load('supplier', 'items.medicine'),
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             report($e);
+
+            // Keep the PO in its current status (approved/pending) and surface the error
             return response()->json([
-                'message' => 'Error sending Purchase Order PDF: ' . $e->getMessage()
+                'message' => 'Error sending Purchase Order PDF: ' . $e->getMessage(),
+                'purchase_order' => $purchaseOrder->fresh()->load('supplier', 'items.medicine'),
             ], 500);
         }
     }
