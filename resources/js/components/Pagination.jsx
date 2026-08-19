@@ -22,42 +22,42 @@ export default function Pagination({ meta, onPageChange }) {
 
     return (
         <div className="mt-4 flex items-center justify-between">
-            <div className="text-sm text-gray-600">Showing {start} to {end} of {total} results</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Showing {start} to {end} of {total} results</div>
             <div className="inline-flex items-center space-x-1">
                 <button
                     onClick={() => onPageChange(Math.max(1, current_page - 1))}
                     disabled={current_page === 1}
-                    className={`px-3 py-1 rounded ${current_page === 1 ? 'text-gray-400 bg-gray-100' : 'text-sky-600 bg-white hover:bg-sky-50'} text-sm`}
+                    className={`px-3 py-1 rounded ${current_page === 1 ? 'text-gray-400 bg-gray-100 dark:bg-gray-800 dark:text-gray-600' : 'text-sky-600 bg-white hover:bg-sky-50 dark:bg-gray-800 dark:text-sky-400 dark:hover:bg-gray-700 dark:border dark:border-gray-700'} text-sm`}
                 >
                     Previous
                 </button>
 
                 {startPage > 1 && (
-                    <button onClick={() => onPageChange(1)} className="px-3 py-1 rounded text-sm text-sky-600 bg-white hover:bg-sky-50">1</button>
+                    <button onClick={() => onPageChange(1)} className="px-3 py-1 rounded text-sm text-sky-600 bg-white hover:bg-sky-50 dark:bg-gray-800 dark:text-sky-400 dark:hover:bg-gray-700 dark:border dark:border-gray-700">1</button>
                 )}
 
-                {startPage > 2 && <span className="px-2">…</span>}
+                {startPage > 2 && <span className="px-2 text-gray-500 dark:text-gray-400">…</span>}
 
                 {pages.map(p => (
                     <button
                         key={p}
                         onClick={() => onPageChange(p)}
-                        className={`px-3 py-1 rounded text-sm ${p === current_page ? 'bg-sky-600 text-white' : 'text-sky-600 bg-white hover:bg-sky-50'}`}
+                        className={`px-3 py-1 rounded text-sm ${p === current_page ? 'bg-sky-600 text-white dark:bg-sky-500 dark:text-white' : 'text-sky-600 bg-white hover:bg-sky-50 dark:bg-gray-800 dark:text-sky-400 dark:hover:bg-gray-700 dark:border dark:border-gray-700'}`}
                     >
                         {p}
                     </button>
                 ))}
 
-                {endPage < last_page - 1 && <span className="px-2">…</span>}
+                {endPage < last_page - 1 && <span className="px-2 text-gray-500 dark:text-gray-400">…</span>}
 
                 {endPage < last_page && (
-                    <button onClick={() => onPageChange(last_page)} className="px-3 py-1 rounded text-sm text-sky-600 bg-white hover:bg-sky-50">{last_page}</button>
+                    <button onClick={() => onPageChange(last_page)} className="px-3 py-1 rounded text-sm text-sky-600 bg-white hover:bg-sky-50 dark:bg-gray-800 dark:text-sky-400 dark:hover:bg-gray-700 dark:border dark:border-gray-700">{last_page}</button>
                 )}
 
                 <button
                     onClick={() => onPageChange(Math.min(last_page, current_page + 1))}
                     disabled={current_page === last_page}
-                    className={`px-3 py-1 rounded ${current_page === last_page ? 'text-gray-400 bg-gray-100' : 'text-sky-600 bg-white hover:bg-sky-50'} text-sm`}
+                    className={`px-3 py-1 rounded ${current_page === last_page ? 'text-gray-400 bg-gray-100 dark:bg-gray-800 dark:text-gray-600' : 'text-sky-600 bg-white hover:bg-sky-50 dark:bg-gray-800 dark:text-sky-400 dark:hover:bg-gray-700 dark:border dark:border-gray-700'} text-sm`}
                 >
                     Next
                 </button>

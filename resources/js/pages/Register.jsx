@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Stepper from '../components/Stepper';
@@ -8,6 +8,15 @@ export default function Register() {
     const { register } = useAuth();
     const navigate = useNavigate();
     const [step, setStep] = useState(0);
+
+    useEffect(() => {
+        const root = document.documentElement;
+        const hadDark = root.classList.contains('dark');
+        if (hadDark) root.classList.remove('dark');
+        return () => {
+            if (hadDark) root.classList.add('dark');
+        };
+    }, []);
 
     // Calculate date of birth limit (at least 20 years old)
     const maxDob = (() => {

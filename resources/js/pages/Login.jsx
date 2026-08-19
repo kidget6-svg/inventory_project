@@ -32,12 +32,20 @@ export default function Login() {
 
     // Prefill credentials if Remember Me was selected previously
     useEffect(() => {
+        const root = document.documentElement;
+        const hadDark = root.classList.contains('dark');
+        if (hadDark) root.classList.remove('dark');
+        
         const savedEmail = localStorage.getItem('remembered_email');
         const savedPassword = localStorage.getItem('remembered_password');
         if (savedEmail) {
             setForm({ email: savedEmail, password: savedPassword || '' });
             setRememberMe(true);
         }
+
+        return () => {
+            if (hadDark) root.classList.add('dark');
+        };
     }, []);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });

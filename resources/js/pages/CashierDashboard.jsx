@@ -81,14 +81,14 @@ export default function CashierDashboard() {
             </div>
 
             {/* ── Mini Hourly Sales Chart ── */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <h3 className="text-base font-semibold text-gray-700 dark:text-white mb-4 flex items-center gap-2">
                     <TrendingUp size={18} className="text-sky-500" />
                     Today's Sales by Hour
                 </h3>
 
                 {hourlyValues.every(v => v === 0) ? (
-                    <p className="text-sm text-gray-400 text-center py-8">
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
                         No sales recorded for today yet.
                     </p>
                 ) : (
@@ -98,8 +98,8 @@ export default function CashierDashboard() {
                             const widthPct = (value / maxHourly) * 100;
                             return (
                                 <div key={label} className="flex items-center gap-3">
-                                    <span className="text-xs text-gray-500 w-12">{label}</span>
-                                    <div className="flex-1 bg-gray-100 rounded-lg h-6 overflow-hidden">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 w-12">{label}</span>
+                                    <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-lg h-6 overflow-hidden">
                                         <div
                                             className="h-full bg-sky-500 rounded-lg transition-all duration-300 flex items-center justify-end"
                                             style={{ width: `${widthPct}%` }}
@@ -119,19 +119,19 @@ export default function CashierDashboard() {
             </div>
 
             {/* ── Recent Sales ── */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                        <Clock size={18} className="text-gray-500" />
+                    <h3 className="text-base font-semibold text-gray-700 dark:text-white flex items-center gap-2">
+                        <Clock size={18} className="text-gray-500 dark:text-gray-400" />
                         Recent Sales
                         {allRecentSales.length > 0 && (
-                            <span className="text-xs font-normal text-gray-400">({allRecentSales.length})</span>
+                            <span className="text-xs font-normal text-gray-400 dark:text-gray-500">({allRecentSales.length})</span>
                         )}
                     </h3>
                     {allRecentSales.length > 0 && (
                         <Link
                             to="/sales-history"
-                            className="text-xs text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors"
+                            className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1 transition-colors"
                         >
                             View All <ArrowRight size={12} />
                         </Link>
@@ -139,55 +139,55 @@ export default function CashierDashboard() {
                 </div>
 
                 {recentSales.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-8">
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
                         No recent sales.
                     </p>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-gray-50 border-b border-gray-200">
+                            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
                                 <tr>
-                                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Receipt
                                     </th>
-                                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Date &amp; Time
                                     </th>
-                                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Customer
                                     </th>
-                                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Total
                                     </th>
-                                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Status
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                 {recentSales.map(sale => (
-                                    <tr key={sale.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-800 font-medium">
+                                    <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-800 dark:text-gray-200 font-medium">
                                             {sale.receipt_number || `#${sale.id}`}
                                         </td>
-                                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-500">
+                                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400">
                                             {sale.sale_date
                                                 ? new Date(sale.sale_date).toLocaleString()
                                                 : '—'}
                                         </td>
-                                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-500">
+                                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400">
                                             {sale.customer_name || 'Walk-in Customer'}
                                         </td>
-                                        <td className="px-4 py-2.5 whitespace-nowrap text-right text-gray-700 font-medium">
+                                        <td className="px-4 py-2.5 whitespace-nowrap text-right text-gray-700 dark:text-gray-300 font-medium">
                                             ${Number(sale.total_amount || 0).toFixed(2)}
                                         </td>
                                         <td className="px-4 py-2.5 whitespace-nowrap text-right">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                                                 sale.status === 'completed'
-                                                    ? 'bg-green-100 text-green-700'
+                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                                     : sale.status === 'pending_cashier'
-                                                    ? 'bg-amber-100 text-amber-700'
-                                                    : 'bg-gray-100 text-gray-600'
+                                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                                             }`}>
                                                 {sale.status === 'completed'
                                                     ? 'Completed'
@@ -201,13 +201,13 @@ export default function CashierDashboard() {
                             </tbody>
                         </table>
                         {allRecentSales.length > 5 && (
-                            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                                <span className="text-xs text-gray-400">
+                            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
                                     Showing 5 of {allRecentSales.length} sales
                                 </span>
                                 <Link
                                     to="/sales-history"
-                                    className="text-xs text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors"
+                                    className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1 transition-colors"
                                 >
                                     View All <ArrowRight size={12} />
                                 </Link>

@@ -206,3 +206,84 @@
     color: #111827 !important; /* text-gray-900 */
 }
 
+/* ─────────────────────────────────────────────────────────
+   Dark Mode Global Overrides (No White Backgrounds & Clear Text)
+────────────────────────────────────────────────────────── */
+.dark,
+.dark body {
+    background-color: #111827 !important;
+    color: #f3f4f6 !important;
+}
+
+.dark main {
+    background-color: #111827 !important;
+}
+
+.dark .card,
+.dark .pos-cart-panel,
+.dark .pos-card,
+.dark .bg-white,
+.dark [class*="bg-white"],
+.dark .bg-gray-50,
+.dark .bg-sky-50,
+.dark .bg-blue-50,
+.dark .bg-slate-50,
+.dark [class*="bg-gradient-to-br"] {
+    background-color: #1f2937 !important;
+    background-image: none !important;
+    color: #f3f4f6 !important;
+    border-color: #374151 !important;
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: #ffffff !important;
+}
+
+.dark p, .dark span:not([class*="text-"]), .dark label, .dark div {
+    color: inherit;
+}
+
+.dark p, .dark label, .dark span:not([class*="text-"]):not(.text-emerald-500):not(.text-sky-500):not(.text-green-500):not(.text-amber-500):not(.text-red-500):not(.text-blue-500) {
+    color: #d1d5db !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+    border-color: #4b5563 !important;
+}
+
+.dark table {
+    color: #f3f4f6 !important;
+    background-color: #1f2937 !important;
+}
+
+.dark tr {
+    background-color: transparent !important;
+}
+
+.dark tr:hover {
+    background-color: #374151 !important;
+}
+
+.dark th {
+    background-color: #111827 !important;
+    color: #9ca3af !important;
+    border-color: #374151 !important;
+}
+
+.dark td {
+    border-color: #374151 !important;
+    color: #d1d5db !important;
+}
+
+.dark .dropdown-menu,
+.dark .modal-content,
+.dark .card-body {
+    background-color: #1f2937 !important;
+    color: #f3f4f6 !important;
+    border-color: #374151 !important;
+}
+

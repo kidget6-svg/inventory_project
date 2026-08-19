@@ -297,21 +297,16 @@ export default function SidebarLayout({ children, pageTitle }) {
 
                 {/* Theme Toggle - Bottom of Sidebar */}
                 {!collapsed && (
-                    <div className="p-4 border-t border-sky-200 dark:border-gray-700">
+                    <div className="p-4 border-t border-sky-200 dark:border-gray-700 flex justify-center">
                         <button
                             onClick={toggleTheme}
-                            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-sky-100 dark:hover:bg-gray-700 transition-colors"
+                            className="p-2.5 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-sky-100 dark:hover:bg-gray-700 transition-colors"
+                            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
                         >
                             {isDark ? (
-                                <>
-                                    <Sun size={18} className="text-amber-500" />
-                                    <span>Light Mode</span>
-                                </>
+                                <Sun size={20} className="text-amber-500" />
                             ) : (
-                                <>
-                                    <Moon size={18} className="text-sky-600" />
-                                    <span>Dark Mode</span>
-                                </>
+                                <Moon size={20} className="text-sky-600" />
                             )}
                         </button>
                     </div>

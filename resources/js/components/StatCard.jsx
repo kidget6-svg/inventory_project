@@ -135,8 +135,8 @@ export default function StatCard({
                     top-0 right-0
                     w-24 h-24
                     rounded-full
-                    bg-white
-                    opacity-50
+                    bg-sky-400 dark:bg-sky-600
+                    opacity-20 dark:opacity-10
                     blur-2xl
                     translate-x-8
                     -translate-y-8
