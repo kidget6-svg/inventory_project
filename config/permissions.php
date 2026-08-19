@@ -120,6 +120,8 @@ return [
             'purchasing_history.view',
             // Medicines (read-only for PO line items)
             'medicines.view',
+            // Roles & Permissions
+            'roles.manage',
         ],
     ],
 

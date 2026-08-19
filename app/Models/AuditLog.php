@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class AuditLog extends Model
 {
@@ -49,22 +51,22 @@ class AuditLog extends Model
     }
 
     // Scopes
-    public function scopeModule($query, $module)
+    public function scopeModule(Builder $query, string $module)
     {
         return $query->where('module', $module);
     }
 
-    public function scopeAction($query, $action)
+    public function scopeAction(Builder $query, string $action)
     {
         return $query->where('action', $action);
     }
 
-    public function scopeBetweenDates($query, $start, $end)
+    public function scopeBetweenDates(Builder $query, string $start, string $end)
     {
         return $query->whereBetween('created_at', [$start, $end]);
     }
 
-    public function scopeSearch($query, $search)
+    public function scopeSearch(Builder $query, string $search)
     {
         return $query->where('table_name', 'like', "%{$search}%")
                      ->orWhere('record_id', 'like', "%{$search}%")
@@ -111,10 +113,10 @@ class AuditLog extends Model
     }
 
     // Methods
-    public static function log($data)
+    public static function log(array $data)
     {
         return self::create([
-            'user_id' => $data['user_id'] ?? auth()->id(),
+            'user_id' => $data['user_id'] ?? Auth::id(),
             'action' => $data['action'],
             'module' => $data['module'],
             'table_name' => $data['table_name'] ?? null,

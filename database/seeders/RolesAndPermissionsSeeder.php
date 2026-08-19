@@ -16,7 +16,7 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected array $catalog = [
         // Page: Dashboard
-        'dashboard.view' => ['Dashboard', 'View Dashboard'],
+       'dashboard.view' => ['Dashboard', 'View Dashboard'],
 
         // Page: Medicines
         'medicines.view' => ['Medicines', 'View medicines page'],
@@ -105,6 +105,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'roles.create' => ['Roles & Permissions', 'Create a role'],
         'roles.edit' => ['Roles & Permissions', 'Edit a role'],
         'roles.delete' => ['Roles & Permissions', 'Delete a role'],
+        'roles.manage' => ['Roles & Permissions', 'Manage roles & permissions'],
     ];
 
     /**
@@ -176,6 +177,37 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales-history.print',
             'sales-history.export',
         ],
+        'purchasing_staff' => [
+            'dashboard.view',
+
+            'medicines.view',
+            'categories.view',
+            'suppliers.view',
+            'suppliers.create',
+            'suppliers.edit',
+            'suppliers.delete',
+
+            'purchase-orders.view',
+            'purchase-orders.create',
+            'purchase-orders.edit',
+            'purchase-orders.delete',
+            'purchase-orders.submit',
+            'purchase-orders.approve',
+            'purchase-orders.deliver',
+            'purchase-orders.complete',
+            'purchase-orders.cancel',
+            'purchase-orders.reopen',
+            'purchase-orders.send',
+            'purchase-orders.download',
+
+            'sales-history.view',
+            'sales-history.receipt',
+            'sales-history.download',
+            'sales-history.print',
+            'sales-history.export',
+
+            'reports.view',
+        ],
     ];
 
     public function run(): void
@@ -197,6 +229,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ['name' => 'Admin', 'slug' => 'admin', 'is_system' => true],
             ['name' => 'Pharmacist', 'slug' => 'pharmacist', 'is_system' => true],
             ['name' => 'Cashier', 'slug' => 'cashier', 'is_system' => true],
+            ['name' => 'Purchasing Staff', 'slug' => 'purchasing_staff', 'is_system' => true],
         ];
 
         $roleBySlug = [];
