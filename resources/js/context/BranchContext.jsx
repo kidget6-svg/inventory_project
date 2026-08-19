@@ -24,6 +24,8 @@ export function BranchProvider({ children }) {
                 list = res.data;
             } else if (res.data && Array.isArray(res.data.data)) {
                 list = res.data.data;
+            } else if (res.data && Array.isArray(res.data.branches)) {
+                list = res.data.branches;
             }
             setBranches(list);
         } catch (err) {
@@ -59,7 +61,7 @@ export function BranchProvider({ children }) {
 
     const selectedBranch = selectedBranchId === 'all'
         ? { id: 'all', name: 'All Branches', location_type: 'all' }
-        : branches.find(b => String(b.id) === String(selectedBranchId)) || { id: selectedBranchId, name: 'Selected Branch' };
+        : branches.find(b => String(b.id) === String(selectedBranchId)) || { id: selectedBranchId, name: 'Selected Branch', location_type: 'branch' };
 
     return (
         <BranchContext.Provider value={{

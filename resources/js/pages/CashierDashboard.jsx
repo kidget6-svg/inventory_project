@@ -10,6 +10,7 @@
 // /dashboard API endpoint (DashboardController::cashierDashboard).
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
@@ -19,6 +20,7 @@ import {
     Package,
     Clock,
     TrendingUp,
+    ArrowRight,
 } from 'lucide-react';
 
 export default function CashierDashboard() {
@@ -51,7 +53,8 @@ export default function CashierDashboard() {
     const hourlyValues = (data.todayHourlySales || []).map(h => Number(h.total));
     const maxHourly = Math.max(...hourlyValues, 1);
 
-    const recentSales = data.recentSales || [];
+    const allRecentSales = data.recentSales || [];
+    const recentSales = allRecentSales.slice(0, 5);
 
     return (
         <div className="space-y-6">
@@ -117,10 +120,23 @@ export default function CashierDashboard() {
 
             {/* ── Recent Sales ── */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <Clock size={18} className="text-gray-500" />
-                    Recent Sales
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-semibold text-gray-700 flex items-center gap-2">
+                        <Clock size={18} className="text-gray-500" />
+                        Recent Sales
+                        {allRecentSales.length > 0 && (
+                            <span className="text-xs font-normal text-gray-400">({allRecentSales.length})</span>
+                        )}
+                    </h3>
+                    {allRecentSales.length > 0 && (
+                        <Link
+                            to="/sales-history"
+                            className="text-xs text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors"
+                        >
+                            View All <ArrowRight size={12} />
+                        </Link>
+                    )}
+                </div>
 
                 {recentSales.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-8">
@@ -135,7 +151,7 @@ export default function CashierDashboard() {
                                         Receipt
                                     </th>
                                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Date & Time
+                                        Date &amp; Time
                                     </th>
                                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                         Customer
@@ -184,6 +200,19 @@ export default function CashierDashboard() {
                                 ))}
                             </tbody>
                         </table>
+                        {allRecentSales.length > 5 && (
+                            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                <span className="text-xs text-gray-400">
+                                    Showing 5 of {allRecentSales.length} sales
+                                </span>
+                                <Link
+                                    to="/sales-history"
+                                    className="text-xs text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1 transition-colors"
+                                >
+                                    View All <ArrowRight size={12} />
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

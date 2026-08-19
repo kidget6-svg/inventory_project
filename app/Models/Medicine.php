@@ -29,6 +29,7 @@ class Medicine extends Model
         'batch_number',
         'manufacturer',
         'branch_id',
+        'shelf_id',
         'image',
     ];
 

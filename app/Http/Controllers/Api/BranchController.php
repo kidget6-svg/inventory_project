@@ -15,14 +15,32 @@ class BranchController extends Controller
         try {
             $query = Branch::query();
 
+            // Authorization: If user is not admin, only return their assigned branch
+            $user = $request->user();
+            if ($user && $user->role !== 'admin' && $user->branch_id) {
+                $query->where('id', $user->branch_id);
+            }
+
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('location', 'like', "%{$search}%");
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('location', 'like', "%{$search}%")
+                      ->orWhere('code', 'like', "%{$search}%");
+                });
             }
 
             $perPage = $request->get('per_page', 15);
-            $branches = $query->latest()->paginate($perPage);
+
+            if ($perPage === 'all' || (int)$perPage === -1 || (is_numeric($perPage) && (int)$perPage < 0)) {
+                $allBranches = $query->orderBy('name')->get();
+                return response()->json([
+                    'success' => true,
+                    'data' => $allBranches
+                ]);
+            }
+
+            $branches = $query->latest()->paginate((int)$perPage);
 
             return response()->json([
                 'success' => true,
