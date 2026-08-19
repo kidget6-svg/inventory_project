@@ -13,9 +13,6 @@ use Illuminate\Validation\ValidationException;
 
 class CategoryController extends Controller
 {
-    /**
-     * Display a paginated list of categories with medicine counts.
-     */
     public function index(Request $request)
     {
         try {
@@ -44,35 +41,27 @@ class CategoryController extends Controller
                 'data' => $categories->items(),
                 'meta' => [
                     'current_page' => $categories->currentPage(),
-                    'last_page' => $categories->lastPage(),
-                    'per_page' => $categories->perPage(),
-                    'total' => $categories->total(),
-                ]
+                    'last_page'    => $categories->lastPage(),
+                    'per_page'     => $categories->perPage(),
+                    'total'        => $categories->total(),
+                ],
             ]);
-
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Query Error: ' . $e->getMessage()
+                'message' => 'Query Error: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    public function store(Request $request)
+    public function store(StoreCategoryRequest $request)
     {
         try {
-            // Check permissions
             if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
                 return response()->json(['message' => 'Only admin and pharmacists can create categories.'], 403);
             }
 
-            // Validate the request
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'shelf_location' => 'nullable|string|max:255',
-                'type' => 'required|in:medicine,retail,otc',
-            ]);
+            $validated = $request->validated();
 
             // Restriction: If category type is retail or otc, check if selected shelf is occupied by medicine
             if (in_array($validated['type'], ['retail', 'otc']) && !empty($validated['shelf_location'])) {
@@ -93,52 +82,40 @@ class CategoryController extends Controller
                 }
             }
 
-            // Create the category
             $category = Category::create($validated);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Category created successfully',
-                'data' => $category->loadCount('medicines')
+                'data'    => $category->loadCount('medicines'),
             ], 201);
-
         } catch (ValidationException $e) {
             return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'success'  => false,
+                'message'  => 'Validation failed',
+                'errors'   => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error creating category: ' . $e->getMessage()
+                'message' => 'Error creating category: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    /**
-     * Display the specified category.
-     */
     public function show(Category $category)
     {
         return response()->json($category->loadCount('medicines'));
     }
 
-    public function update(Request $request, Category $category)
+    public function update(UpdateCategoryRequest $request, Category $category)
     {
         try {
-            // Check permissions
             if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
                 return response()->json(['message' => 'Only admin and pharmacists can update categories.'], 403);
             }
 
-            // Validate the request
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'shelf_location' => 'nullable|string|max:255',
-                'type' => 'required|in:medicine,retail,otc',
-            ]);
+            $validated = $request->validated();
 
             // Restriction: If category type is retail or otc, check if selected shelf is occupied by medicine
             if (in_array($validated['type'], ['retail', 'otc']) && !empty($validated['shelf_location'])) {
@@ -159,25 +136,23 @@ class CategoryController extends Controller
                 }
             }
 
-            // Update the category
             $category->update($validated);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Category updated successfully',
-                'data' => $category->loadCount('medicines')
+                'data'    => $category->loadCount('medicines'),
             ]);
-
         } catch (ValidationException $e) {
             return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
+                'success'  => false,
+                'message'  => 'Validation failed',
+                'errors'   => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error updating category: ' . $e->getMessage()
+                'message' => 'Error updating category: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -185,29 +160,26 @@ class CategoryController extends Controller
     public function destroy(Request $request, Category $category)
     {
         try {
-            // Check permissions
             if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
                 return response()->json(['message' => 'Only admin and pharmacists can delete categories.'], 403);
             }
 
-            // Check if category has medicines
             if ($category->medicines()->count() > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cannot delete category with existing medicines. Move or delete the medicines first.'
+                    'message' => 'Cannot delete category with existing medicines. Move or delete the medicines first.',
                 ], 422);
             }
 
             $category->delete();
             return response()->json([
                 'success' => true,
-                'message' => 'Category deleted successfully'
+                'message' => 'Category deleted successfully',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error deleting category: ' . $e->getMessage()
+                'message' => 'Error deleting category: ' . $e->getMessage(),
             ], 500);
         }
     }

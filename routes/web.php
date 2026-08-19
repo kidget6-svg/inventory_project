@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
-use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ShelfController;
 use App\Http\Controllers\Api\UserController;
@@ -111,6 +110,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // ── Stock Movements ─────────────────────────────────────────────
     // Read + Write: admin, pharmacist
     Route::middleware('permission:stock_movements.view')->group(function () {
+        Route::get('/stock-movements/summary', [StockMovementController::class, 'getSummary']);
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
     });
@@ -119,15 +119,9 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
     });
 
-    // ── Low Stock Alerts ───────────────────────────────────────────
-    // Admin + Pharmacist
-    Route::middleware('permission:low_stock.view')->group(function () {
-        Route::get('/low-stock', [LowStockController::class, 'index']);
-    });
-
-    Route::middleware('permission:low_stock.order')->group(function () {
-        Route::post('/low-stock/order-now/{medicine}', [LowStockController::class, 'orderNow']);
-    });
+    // ── Low Stock ──────────────────────────────────────────────────
+    // Low stock alerts are now handled within StockManagement page.
+    // Redirect /low-stock to /stock-management via the React catch-all route.
 
     // ── Shelves ────────────────────────────────────────────────────
     // Admin + Pharmacist

@@ -31,13 +31,11 @@ class PurchaseOrder extends Model
         'total_amount',
         'status',
         'sent_at',
-        'delivered_at',
         'completed_at',
     ];
 
     protected $casts = [
         'sent_at' => 'datetime',
-        'delivered_at' => 'datetime',
         'completed_at' => 'datetime',
         'order_date' => 'date',
     ];
@@ -107,15 +105,6 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * Whether the order can be marked as delivered (sent only).
-     * Sent -> Delivered
-     */
-    public function canDeliver(): bool
-    {
-        return $this->status === 'sent';
-    }
-
-    /**
      * Whether the order can be approved (pending only).
      * Pending -> Approved
      */
@@ -125,12 +114,12 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * Whether the order can be completed (delivered or approved).
-     * Delivered -> Completed | Approved -> Completed
+     * Whether the order can be completed (sent or approved).
+     * Sent -> Completed | Approved -> Completed
      */
     public function canComplete(): bool
     {
-        return in_array($this->status, ['delivered', 'approved']);
+        return in_array($this->status, ['sent', 'approved']);
     }
 
     /**
@@ -213,22 +202,6 @@ class PurchaseOrder extends Model
 
         return $this->update([
             'status' => 'sent',
-        ]);
-    }
-
-    /**
-     * Mark the purchase order as delivered (sent -> delivered).
-     * Records the delivered_at timestamp.
-     */
-    public function deliver(): bool
-    {
-        if (! $this->canDeliver()) {
-            return false;
-        }
-
-        return $this->update([
-            'status' => 'delivered',
-            'delivered_at' => now(),
         ]);
     }
 
@@ -372,27 +345,6 @@ class PurchaseOrder extends Model
     // ==================================================================
 
     /**
-     * Mail drivers that provide delivery tracking (e.g. via webhooks).
-     * Drivers not in this list cannot confirm whether an email was
-     * actually delivered to the recipient.
-     */
-    public static function deliveryTrackingDrivers(): array
-    {
-        return ['ses', 'mailgun', 'postmark'];
-    }
-
-    /**
-     * Whether the currently configured mail driver can confirm
-     * email delivery (e.g. via webhooks or delivery receipts).
-     */
-    public static function mailDriverSupportsDeliveryTracking(): bool
-    {
-        $driver = config('mail.mailer') ?? config('mail.driver') ?? 'log';
-
-        return in_array($driver, self::deliveryTrackingDrivers());
-    }
-
-    /**
      * Human-readable "Sent At" display value.
      *
      * - "Not sent yet." when the email has not been dispatched.
@@ -404,29 +356,10 @@ class PurchaseOrder extends Model
             return 'Not sent yet.';
         }
 
-        return $this->sent_at->format('M d, Y h:i A');
-    }
-
-    /**
-     * Human-readable "Delivered At" display value.
-     *
-     * - The formatted timestamp when delivery has been confirmed.
-     * - "Delivery confirmation unavailable" when the current mail
-     *   driver does not provide delivery tracking.
-     * - "Not delivered yet." when tracking IS available but delivery
-     *   has not yet been confirmed.
-     */
-    public function deliveredAtDisplay(): string
-    {
-        if ($this->delivered_at) {
-            return $this->delivered_at->format('M d, Y h:i A');
-        }
-
-        if (! self::mailDriverSupportsDeliveryTracking()) {
-            return 'Delivery confirmation unavailable';
-        }
-
-        return 'Not delivered yet.';
+        return $this->sent_at
+            ->copy()
+            ->setTimezone(config('app.timezone'))
+            ->format('M d, Y, g:i A');
     }
 
     /**
@@ -435,13 +368,5 @@ class PurchaseOrder extends Model
     public function getSentAtDisplayAttribute(): string
     {
         return $this->sentAtDisplay();
-    }
-
-    /**
-     * Accessor so delivered_at_display is included in API/JSON responses.
-     */
-    public function getDeliveredAtDisplayAttribute(): string
-    {
-        return $this->deliveredAtDisplay();
     }
 }

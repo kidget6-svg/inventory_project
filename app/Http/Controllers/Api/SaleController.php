@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreMedicineSaleRequest;
+use App\Http\Requests\StoreRetailDraftRequest;
+use App\Http\Requests\StoreRetailSaleRequest;
+use App\Http\Requests\UpdateSaleStatusRequest;
 use App\Models\Sale;
 use App\Models\Medicine;
 use App\Models\RetailProduct;
@@ -21,6 +25,12 @@ class SaleController extends Controller
     public function index(Request $request)
     {
         $query = Sale::with(['items.itemable', 'user']);
+
+        // Branch scoping: pharmacists/cashiers see only their branch's sales
+        $user = $request->user();
+        if ($user->shouldScopeToBranch()) {
+            $query->where('branch_id', $user->branch_id);
+        }
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -44,22 +54,11 @@ class SaleController extends Controller
      *
      * @policy Only pharmacists may dispatch prescription sales.
      */
-    public function storePrescription(Request $request, SaleService $service)
+    public function storePrescription(StoreMedicineSaleRequest $request, SaleService $service)
     {
         abort_if(! $request->user()->hasRole('pharmacist'), 403, 'Unauthorized. Only pharmacists can process prescription sales.');
 
-        $validated = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.medicine_id' => 'required|exists:medicines,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'payment_method' => 'nullable|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
-            'amount_paid' => 'nullable|numeric|min:0',
-            // Prescription / patient information
-            'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required|string|max:50',
-            'customer_email' => 'nullable|email|max:255',
-            'notes' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         return DB::transaction(function () use ($validated, $request, $service) {
             $totalAmount = 0;
@@ -134,19 +133,11 @@ class SaleController extends Controller
      *
      * @policy Only pharmacists may dispatch retail drafts.
      */
-    public function storeRetailDraft(Request $request, SaleService $service)
+    public function storeRetailDraft(StoreRetailDraftRequest $request, SaleService $service)
     {
         abort_if(! $request->user()->hasRole('pharmacist'), 403, 'Unauthorized. Only pharmacists can dispatch retail drafts.');
 
-        $validated = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.id' => 'required|exists:retail_products,id',
-            'items.*.cartQty' => 'required|integer|min:1',
-            'customer_name' => 'nullable|string|max:255',
-            'customer_phone' => 'nullable|string|max:50',
-            'customer_email' => 'nullable|email|max:255',
-            'notes' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         return DB::transaction(function () use ($validated, $request, $service) {
             $totalAmount = 0;
@@ -213,17 +204,11 @@ class SaleController extends Controller
      *
      * @policy Only cashiers may process retail sales.
      */
-    public function storeRetail(Request $request, SaleService $service)
+    public function storeRetail(StoreRetailSaleRequest $request, SaleService $service)
     {
         abort_if(! $request->user()->hasRole('cashier'), 403, 'Unauthorized. Only cashiers can process retail sales.');
 
-        $validated = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.id' => 'required|exists:retail_products,id',
-            'items.*.cartQty' => 'required|integer|min:1',
-            'payment_method' => 'required|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
-            'amount_paid' => 'required|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         return DB::transaction(function () use ($validated, $request, $service) {
             $totalAmount = 0;
@@ -288,18 +273,13 @@ class SaleController extends Controller
      *
      * @policy Only cashiers may update sale status.
      */
-    public function updateStatus(Request $request, $id, SaleService $service)
+    public function updateStatus(UpdateSaleStatusRequest $request, $id, SaleService $service)
     {
         abort_if(! $request->user()->hasRole('cashier'), 403, 'Unauthorized. Only cashiers can update sale status.');
 
         $sale = Sale::findOrFail($id);
 
-        $validated = $request->validate([
-            'status' => 'required|string|in:pending,pending_cashier,completed,cancelled',
-            'payment_method' => 'required|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
-            'amount_paid' => 'required|numeric|min:0',
-            'change_amount' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         return DB::transaction(function () use ($sale, $validated, $service, $request) {
             $totalAmount = (float) $sale->total_amount;

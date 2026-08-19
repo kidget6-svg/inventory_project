@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreShelfRequest;
+use App\Http\Requests\UpdateShelfRequest;
 use App\Models\Shelf;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class ShelfController extends Controller
 {
@@ -24,7 +25,7 @@ class ShelfController extends Controller
             }
 
             $perPage = $request->get('per_page');
-            
+
             if ($perPage === 'all' || $perPage == -1) {
                 $allShelves = $query->latest()->get();
                 return response()->json($allShelves);
@@ -51,46 +52,22 @@ class ShelfController extends Controller
         }
     }
 
-    public function store(Request $request)
+    public function store(StoreShelfRequest $request)
     {
-        try {
-            // Check permissions
-            if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
-                return response()->json(['message' => 'Only admin and pharmacists can create shelves.'], 403);
-            }
-
-            // Validate the request
-            $validated = $request->validate([
-                'shelf_location' => 'required|string|max:255|unique:shelves,shelf_location',
-                'description' => 'nullable|string',
-                'capacity' => 'required|integer|min:1',
-                'branch_id' => 'nullable|exists:branches,id',
-            ]);
-
-            // Set name from shelf_location
-            $validated['name'] = $validated['shelf_location'];
-
-            // Create the shelf
-            $shelf = Shelf::create($validated);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Shelf created successfully',
-                'data' => $shelf->loadCount('medicines')
-            ], 201);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error creating shelf: ' . $e->getMessage()
-            ], 500);
+        if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
+            return response()->json(['message' => 'Only admin and pharmacists can create shelves.'], 403);
         }
+
+        $validated = $request->validated();
+        $validated['name'] = $validated['shelf_location'];
+
+        $shelf = Shelf::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Shelf created successfully',
+            'data'    => $shelf->loadCount('medicines'),
+        ], 201);
     }
 
     public function show(Shelf $shelf)
@@ -98,46 +75,22 @@ class ShelfController extends Controller
         return response()->json($shelf->loadCount('medicines'));
     }
 
-    public function update(Request $request, Shelf $shelf)
+    public function update(UpdateShelfRequest $request, Shelf $shelf)
     {
-        try {
-            // Check permissions
-            if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
-                return response()->json(['message' => 'Only admin and pharmacists can update shelves.'], 403);
-            }
-
-            // Validate the request
-            $validated = $request->validate([
-                'shelf_location' => 'required|string|max:255|unique:shelves,shelf_location,' . $shelf->id,
-                'description' => 'nullable|string',
-                'capacity' => 'required|integer|min:1',
-                'branch_id' => 'nullable|exists:branches,id',
-            ]);
-
-            // Set name from shelf_location
-            $validated['name'] = $validated['shelf_location'];
-
-            // Update the shelf
-            $shelf->update($validated);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Shelf updated successfully',
-                'data' => $shelf->loadCount('medicines')
-            ]);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error updating shelf: ' . $e->getMessage()
-            ], 500);
+        if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
+            return response()->json(['message' => 'Only admin and pharmacists can update shelves.'], 403);
         }
+
+        $validated = $request->validated();
+        $validated['name'] = $validated['shelf_location'];
+
+        $shelf->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Shelf updated successfully',
+            'data'    => $shelf->loadCount('medicines'),
+        ]);
     }
 
     public function destroy(Request $request, Shelf $shelf)

@@ -1,34 +1,38 @@
- import React, { useState, useEffect } from 'react';
+/**
+ * SupplierCreate.jsx – Create supplier form with full frontend + backend validation.
+ */
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { FieldError, FieldErrorsSummary } from '../components/FieldError';
 import { useAuth } from '../context/AuthContext';
+import { useValidation } from '../hooks/useValidation';
+import { supplierFormSchema } from '../utils/validation';
 import { ArrowLeft, Save, X } from 'lucide-react';
-
-const fields = [
-    ['name', 'Name'],
-    ['contact_person', 'Contact Person'],
-    ['phone', 'Phone'],
-    ['email', 'Email'],
-    ['address', 'Address'],
-];
 
 export default function SupplierCreate() {
     const navigate = useNavigate();
     const { can, loading: authLoading } = useAuth();
     const canManage = can('suppliers.manage');
 
-    const [form, setForm] = useState({
+    const {
+        values: form,
+        errors,
+        handleChange,
+        validate,
+        setErrors,
+        clearErrors,
+    } = useValidation(supplierFormSchema, {
         name: '',
         contact_person: '',
         phone: '',
         email: '',
         address: '',
     });
-    const [error, setError] = useState('');
+
     const [submitting, setSubmitting] = useState(false);
 
-    // Redirect if user lacks permission
     useEffect(() => {
         if (!authLoading && !canManage) {
             window.showToast('You do not have permission to create suppliers', 'error');
@@ -36,25 +40,40 @@ export default function SupplierCreate() {
         }
     }, [authLoading, canManage, navigate]);
 
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
+
+        // Pre-submit frontend validation — prevents submission if invalid
+        if (validate()) return;
+
         setSubmitting(true);
+        clearErrors();
+
         try {
             await api.post('/suppliers', form);
             window.showToast('Supplier created successfully', 'success');
             navigate('/suppliers');
         } catch (err) {
-            const msgs = err.response?.data?.errors;
-            setError(msgs ? Object.values(msgs).flat().join(' ') : 'Error saving supplier');
+            if (err.response?.status === 422) {
+                const backendErrors = err.response?.data?.errors;
+                if (backendErrors) {
+                    setErrors(backendErrors);
+                    window.showToast('Please fix the validation errors below', 'error');
+                }
+            } else {
+                const errorMsg = err.response?.data?.message || 'Error saving supplier';
+                window.showToast(errorMsg, 'error');
+            }
         } finally {
             setSubmitting(false);
         }
     };
 
     if (authLoading || !canManage) return <LoadingSpinner text="Checking permissions..." />;
+
+    const inputCls = (field) => `w-full px-3 py-2 border rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
+        errors[field] ? 'border-red-400 focus:border-red-400' : 'border-gray-200'
+    }`;
 
     return (
         <div className="space-y-6">
@@ -70,20 +89,65 @@ export default function SupplierCreate() {
             </div>
 
             <div className="card p-6">
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-3 text-sm">{error}</div>}
+                <FieldErrorsSummary errors={errors} />
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {fields.map(([name, label]) => (
-                        <div key={name} className={name === 'address' ? 'md:col-span-2' : ''}>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">{label}{name === 'name' && ' *'}</label>
-                            <input
-                                name={name}
-                                value={form[name]}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                required={name === 'name'}
-                            />
-                        </div>
-                    ))}
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label>
+                        <input
+                            name="name"
+                            value={form.name || ''}
+                            onChange={handleChange}
+                            className={inputCls('name')}
+                            required
+                        />
+                        <FieldError name="name" errors={errors} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Contact Person *</label>
+                        <input
+                            name="contact_person"
+                            value={form.contact_person || ''}
+                            onChange={handleChange}
+                            className={inputCls('contact_person')}
+                            required
+                        />
+                        <FieldError name="contact_person" errors={errors} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Phone *</label>
+                        <input
+                            name="phone"
+                            value={form.phone || ''}
+                            onChange={handleChange}
+                            className={inputCls('phone')}
+                            required
+                        />
+                        <FieldError name="phone" errors={errors} />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Email</label>
+                        <input
+                            name="email"
+                            type="email"
+                            value={form.email || ''}
+                            onChange={handleChange}
+                            className={inputCls('email')}
+                            placeholder="supplier@example.com"
+                        />
+                        <FieldError name="email" errors={errors} />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Address *</label>
+                        <textarea
+                            name="address"
+                            value={form.address || ''}
+                            onChange={handleChange}
+                            rows="3"
+                            className={inputCls('address')}
+                            required
+                        />
+                        <FieldError name="address" errors={errors} />
+                    </div>
                     <div className="md:col-span-2 flex justify-end gap-3">
                         <Link to="/suppliers" className="btn-secondary px-4 py-2 text-sm flex items-center gap-2">
                             <X size={16} />

@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreRoleRequest;
+use App\Http\Requests\UpdateRoleRequest;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class RoleController extends Controller
@@ -63,14 +64,8 @@ class RoleController extends Controller
      *
      * POST /api/roles
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreRoleRequest $request): JsonResponse
     {
-        $request->validate([
-            'name'        => 'required|string|max:255|unique:roles,name',
-            'description' => 'nullable|string',
-            'permissions' => 'nullable|array',
-        ]);
-
         $role = Role::create([
             'name'        => $request->name,
             'slug'        => Str::slug($request->name),
@@ -98,14 +93,8 @@ class RoleController extends Controller
      *
      * PUT /api/roles/{role}
      */
-    public function update(Request $request, Role $role): JsonResponse
+    public function update(UpdateRoleRequest $request, Role $role): JsonResponse
     {
-        $request->validate([
-            'name'        => 'sometimes|string|max:255|unique:roles,name,' . $role->id,
-            'description' => 'nullable|string',
-            'permissions' => 'nullable|array',
-        ]);
-
         $role->update([
             'name'        => $request->name ?? $role->name,
             'description' => $request->description ?? $role->description,

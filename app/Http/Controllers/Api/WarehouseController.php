@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\WarehouseReceiveRequest;
 use App\Models\Medicine;
 use App\Models\Batch;
 use App\Models\Shelf;
@@ -66,16 +67,10 @@ class WarehouseController extends Controller
         return response()->json($stock);
     }
 
-    public function receive(Request $request)
+    public function receive(WarehouseReceiveRequest $request)
     {
         try {
-            $validated = $request->validate([
-                'purchase_order_id' => 'required|exists:purchase_orders,id',
-                'batch_number' => 'required|string|max:255',
-                'expiry_date' => 'required|date|after:today',
-                'quantity' => 'required|integer|min:1',
-                'shelf_id' => 'nullable|exists:shelves,id',
-            ]);
+            $validated = $request->validated();
 
             $po = PurchaseOrder::findOrFail($validated['purchase_order_id']);
             $item = $po->items()->first();

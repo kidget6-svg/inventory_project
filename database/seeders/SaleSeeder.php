@@ -160,7 +160,7 @@ class SaleSeeder extends Seeder
 
             // ✅ FIXED: Use proper type values - 'prescription' or 'otc' only
             if (in_array('type', $columns)) {
-                $saleData['type'] = rand(0, 1) === 0 ? 'prescription' : 'otc';
+                $saleData['type'] = rand(0, 1) === 0 ? 'prescription' : 'retail';
             }
 
             if (in_array('notes', $columns)) {

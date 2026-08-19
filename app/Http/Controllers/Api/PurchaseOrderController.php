@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StorePurchaseOrderRequest;
+use App\Http\Requests\UpdatePurchaseOrderRequest;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Medicine;
@@ -21,24 +23,9 @@ class PurchaseOrderController extends Controller
         return response()->json($orders);
     }
 
-    public function store(Request $request)
+    public function store(StorePurchaseOrderRequest $request)
     {
-        $validated = $request->validate([
-            'supplier_id' => 'required|exists:suppliers,id',
-            'manufacturing_company' => 'nullable|string|max:255',
-            // Multi-item format (preferred)
-            'items' => 'nullable|array|min:1',
-            'items.*.medicine_id' => 'nullable|exists:medicines,id',
-            'items.*.retail_product_id' => 'nullable|exists:retail_products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'nullable|numeric|min:0',
-            // Legacy single-item format (backward compat)
-            'medicine_name' => 'nullable|string|max:255',
-            'medicine_id' => 'nullable|exists:medicines,id',
-            'retail_product_id' => 'nullable|exists:retail_products,id',
-            'quantity' => 'nullable|integer|min:1',
-            'unit_price' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         // Build items array from either format
         $items = $this->buildItemsArray($validated);
@@ -101,7 +88,7 @@ class PurchaseOrderController extends Controller
         return response()->json($purchaseOrder->load('supplier', 'items.medicine', 'items.itemable'));
     }
 
-    public function update(Request $request, PurchaseOrder $purchaseOrder)
+    public function update(UpdatePurchaseOrderRequest $request, PurchaseOrder $purchaseOrder)
     {
         // Only allow editing when status is draft, pending, or approved
         if (! $purchaseOrder->canEdit()) {
@@ -110,21 +97,7 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
-            'supplier_id' => 'required|exists:suppliers,id',
-            'manufacturing_company' => 'nullable|string|max:255',
-            'items' => 'nullable|array|min:1',
-            'items.*.medicine_id' => 'nullable|exists:medicines,id',
-            'items.*.retail_product_id' => 'nullable|exists:retail_products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'nullable|numeric|min:0',
-            // Legacy single-item (backward compat)
-            'medicine_name' => 'nullable|string|max:255',
-            'medicine_id' => 'nullable|exists:medicines,id',
-            'retail_product_id' => 'nullable|exists:retail_products,id',
-            'quantity' => 'nullable|integer|min:1',
-            'unit_price' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         $items = $this->buildItemsArray($validated);
 

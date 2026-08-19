@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { FieldError, FieldErrorsSummary } from '../components/FieldError';
 import { useAuth } from '../context/AuthContext';
+import { useValidation } from '../hooks/useValidation';
+import { categoryFormSchema } from '../utils/validation';
 import { ArrowLeft, Save, X } from 'lucide-react';
 
 export default function CategoryCreate() {
@@ -10,9 +13,15 @@ export default function CategoryCreate() {
     const { can, loading: authLoading } = useAuth();
     const canManage = can('categories.manage');
 
-    const [form, setForm] = useState({ name: '', description: '', shelf_location: '' });
-    const [error, setError] = useState('');
-    const [validationErrors, setValidationErrors] = useState({});
+    const {
+        values: form,
+        errors,
+        handleChange,
+        validate,
+        setErrors,
+        clearErrors,
+    } = useValidation(categoryFormSchema, { name: '', description: '', shelf_location: '' });
+
     const [submitting, setSubmitting] = useState(false);
 
     // Redirect if user lacks permission
@@ -23,35 +32,28 @@ export default function CategoryCreate() {
         }
     }, [authLoading, canManage, navigate]);
 
-    const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-        // Clear field-level error when user starts typing
-        if (validationErrors[e.target.name]) {
-            setValidationErrors(prev => ({ ...prev, [e.target.name]: '' }));
-        }
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setValidationErrors({});
+
+        // Frontend validation — prevents submission if invalid
+        if (validate()) return;
+
         setSubmitting(true);
+        clearErrors();
+
         try {
             await api.post('/categories', form);
             window.showToast('Category created successfully', 'success');
             navigate('/categories');
         } catch (err) {
             if (err.response?.status === 422) {
-                const errors = err.response?.data?.errors;
-                if (errors) {
-                    setValidationErrors(errors);
-                    const firstError = Object.values(errors).flat()[0];
-                    window.showToast(firstError, 'error');
+                const backendErrors = err.response?.data?.errors;
+                if (backendErrors) {
+                    setErrors(backendErrors);
+                    window.showToast('Please fix the validation errors below', 'error');
                 }
-                setError('Please fix the validation errors below');
             } else {
-                const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Error saving category';
-                setError(errorMsg);
+                const errorMsg = err.response?.data?.message || 'Error saving category';
                 window.showToast(errorMsg, 'error');
             }
         } finally {
@@ -75,52 +77,46 @@ export default function CategoryCreate() {
             </div>
 
             <div className="card p-6">
-                {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-3 text-sm border border-red-100">{error}</div>}
+                <FieldErrorsSummary errors={errors} />
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label>
                         <input
                             name="name"
-                            value={form.name}
+                            value={form.name || ''}
                             onChange={handleChange}
                             className={`w-full px-3 py-2 border rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
-                                validationErrors.name ? 'border-red-400 focus:border-red-400' : 'border-gray-200'
+                                errors.name ? 'border-red-400 focus:border-red-400' : 'border-gray-200'
                             }`}
                             required
                         />
-                        {validationErrors.name && (
-                            <p className="text-xs text-red-500 mt-1">{validationErrors.name[0]}</p>
-                        )}
+                        <FieldError name="name" errors={errors} />
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
                         <input
                             name="shelf_location"
-                            value={form.shelf_location}
+                            value={form.shelf_location || ''}
                             onChange={handleChange}
                             placeholder="e.g. A-2-3"
                             className={`w-full px-3 py-2 border rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
-                                validationErrors.shelf_location ? 'border-red-400 focus:border-red-400' : 'border-gray-200'
+                                errors.shelf_location ? 'border-red-400 focus:border-red-400' : 'border-gray-200'
                             }`}
                         />
-                        {validationErrors.shelf_location && (
-                            <p className="text-xs text-red-500 mt-1">{validationErrors.shelf_location[0]}</p>
-                        )}
+                        <FieldError name="shelf_location" errors={errors} />
                     </div>
                     <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
                         <textarea
                             name="description"
-                            value={form.description}
+                            value={form.description || ''}
                             onChange={handleChange}
                             rows="3"
                             className={`w-full px-3 py-2 border rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
-                                validationErrors.description ? 'border-red-400 focus:border-red-400' : 'border-gray-200'
+                                errors.description ? 'border-red-400 focus:border-red-400' : 'border-gray-200'
                             }`}
                         />
-                        {validationErrors.description && (
-                            <p className="text-xs text-red-500 mt-1">{validationErrors.description[0]}</p>
-                        )}
+                        <FieldError name="description" errors={errors} />
                     </div>
                     <div className="md:col-span-2 flex justify-end gap-3">
                         <Link to="/categories" className="btn-secondary px-4 py-2 text-sm flex items-center gap-2">

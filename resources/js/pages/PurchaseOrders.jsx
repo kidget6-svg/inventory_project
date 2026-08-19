@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../axios';
-import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {
@@ -39,18 +38,6 @@ const ActionIcon = ({ icon: Icon, tooltip, color = "sky", onClick, disabled = fa
 };
 
 export default function PurchaseOrders() {
-    const { hasPermission } = useAuth();
-    const canCreate = hasPermission('purchase-orders.create');
-    const canEdit = hasPermission('purchase-orders.edit');
-    const canDelete = hasPermission('purchase-orders.delete');
-    const canSubmit = hasPermission('purchase-orders.submit');
-    const canApprove = hasPermission('purchase-orders.approve');
-    const canDeliver = hasPermission('purchase-orders.deliver');
-    const canComplete = hasPermission('purchase-orders.complete');
-    const canCancel = hasPermission('purchase-orders.cancel');
-    const canReopen = hasPermission('purchase-orders.reopen');
-    const canSend = hasPermission('purchase-orders.send');
-    const canDownload = hasPermission('purchase-orders.download');
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -250,12 +237,12 @@ export default function PurchaseOrders() {
         actions.push({ icon: Eye, tooltip: 'View Details', color: 'sky', onClick: () => openView(order) });
 
         const pdfAvailable = status !== 'draft';
-        if (pdfAvailable && canDownload) {
+        if (pdfAvailable) {
             actions.push({ icon: FileText, tooltip: 'Generate PDF', color: 'purple', onClick: () => handlePreviewPdf(order) });
             actions.push({ icon: Download, tooltip: 'Download PDF', color: 'sky', onClick: () => handleDownloadPdf(order) });
         }
 
-        if (['pending', 'approved'].includes(status) && canSend) {
+        if (['pending', 'approved'].includes(status)) {
             actions.push({
                 icon: sendingOrderId === order.id ? Loader2 : Send,
                 tooltip: 'Send Purchase Order PDF to Supplier',
@@ -267,25 +254,25 @@ export default function PurchaseOrders() {
 
         switch (status) {
             case 'draft':
-                if (canEdit) actions.push({ icon: Edit, tooltip: 'Edit', color: 'sky', onClick: () => openEdit(order) });
-                if (canDelete) actions.push({ icon: Trash2, tooltip: 'Delete', color: 'red', onClick: () => handleDelete(order.id) });
-                if (canSubmit) actions.push({ icon: Upload, tooltip: 'Submit to Pending', color: 'purple', onClick: () => handleWorkflowAction(order, 'submit', 'Submit') });
+                actions.push({ icon: Edit, tooltip: 'Edit', color: 'sky', onClick: () => openEdit(order) });
+                actions.push({ icon: Trash2, tooltip: 'Delete', color: 'red', onClick: () => handleDelete(order.id) });
+                actions.push({ icon: Upload, tooltip: 'Submit to Pending', color: 'purple', onClick: () => handleWorkflowAction(order, 'submit', 'Submit') });
                 break;
 
             case 'pending':
-                if (canApprove) actions.push({ icon: CheckCircle, tooltip: 'Approve', color: 'green', onClick: () => handleWorkflowAction(order, 'approve', 'Approve') });
-                if (canCancel) actions.push({ icon: XCircle, tooltip: 'Reject', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Reject') });
+                actions.push({ icon: CheckCircle, tooltip: 'Approve', color: 'green', onClick: () => handleWorkflowAction(order, 'approve', 'Approve') });
+                actions.push({ icon: XCircle, tooltip: 'Reject', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Reject') });
                 break;
 
             case 'approved':
-                if (canComplete) actions.push({ icon: ClipboardCheck, tooltip: 'Mark Complete', color: 'green', onClick: () => handleWorkflowAction(order, 'complete', 'Mark Complete') });
+                actions.push({ icon: ClipboardCheck, tooltip: 'Mark Complete', color: 'green', onClick: () => handleWorkflowAction(order, 'complete', 'Mark Complete') });
                 break;
 
             case 'completed':
                 break;
 
             case 'cancelled':
-                if (canReopen) actions.push({ icon: RotateCcw, tooltip: 'Restore', color: 'purple', onClick: () => handleWorkflowAction(order, 'reopen', 'Restore') });
+                actions.push({ icon: RotateCcw, tooltip: 'Restore', color: 'purple', onClick: () => handleWorkflowAction(order, 'reopen', 'Restore') });
                 break;
 
             default:
@@ -525,12 +512,10 @@ export default function PurchaseOrders() {
                 <h3 className="text-base font-semibold text-gray-700">
                     All Purchase Orders ({meta?.total ?? orders.length})
                 </h3>
-                {canCreate && (
-                    <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm flex items-center gap-2">
-                        <Plus size={16} />
-                        New Order
-                    </button>
-                )}
+                <button onClick={openCreate} className="btn-primary px-4 py-2 text-sm flex items-center gap-2">
+                    <Plus size={16} />
+                    New Order
+                </button>
             </div>
 
             {error && (
@@ -632,15 +617,13 @@ export default function PurchaseOrders() {
                 ) : pdfPreviewData ? (
                     <div className="space-y-4">
                         <div className="flex justify-end gap-2">
-                            {canDownload && (
-                                <button
-                                    onClick={() => handleDownloadPdf(pdfPreviewData.purchase_order)}
-                                    className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
-                                >
-                                    <Download size={16} />
-                                    Download PDF
-                                </button>
-                            )}
+                            <button
+                                onClick={() => handleDownloadPdf(pdfPreviewData.purchase_order)}
+                                className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                            >
+                                <Download size={16} />
+                                Download PDF
+                            </button>
                             <button
                                 onClick={closePdfPreview}
                                 className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
@@ -767,7 +750,7 @@ export default function PurchaseOrders() {
 
                         {/* Status-aware icon-only action buttons */}
                         <div className="flex justify-end items-center gap-2 mt-6 pt-4 border-t border-gray-200">
-                            {modalItem.status?.toLowerCase() !== 'draft' && canDownload && (
+                            {modalItem.status?.toLowerCase() !== 'draft' && (
                                 <ActionIcon
                                     icon={Download}
                                     tooltip="Download PDF"
@@ -775,7 +758,7 @@ export default function PurchaseOrders() {
                                     onClick={handleModalDownloadPdf}
                                 />
                             )}
-                            {modalItem.status?.toLowerCase() === 'draft' && canSubmit && (
+                            {modalItem.status?.toLowerCase() === 'draft' && (
                                 <ActionIcon
                                     icon={Upload}
                                     tooltip="Submit to Pending"
@@ -783,7 +766,7 @@ export default function PurchaseOrders() {
                                     onClick={() => handleAction('submit', 'Submit')}
                                 />
                             )}
-                            {modalItem.status?.toLowerCase() === 'pending' && canSend && (
+                            {modalItem.status?.toLowerCase() === 'pending' && (
                                 <ActionIcon
                                     icon={Send}
                                     tooltip="Email Supplier"
@@ -791,7 +774,7 @@ export default function PurchaseOrders() {
                                     onClick={() => handleAction('send', 'Email Supplier')}
                                 />
                             )}
-                            {modalItem.status?.toLowerCase() === 'pending' && canApprove && (
+                            {modalItem.status?.toLowerCase() === 'pending' && (
                                 <ActionIcon
                                     icon={CheckCircle}
                                     tooltip="Approve"
@@ -799,7 +782,7 @@ export default function PurchaseOrders() {
                                     onClick={() => handleAction('approve', 'Approve')}
                                 />
                             )}
-                            {modalItem.status?.toLowerCase() === 'sent' && canDeliver && (
+                            {modalItem.status?.toLowerCase() === 'sent' && (
                                 <ActionIcon
                                     icon={Package}
                                     tooltip="Mark as Delivered"
@@ -807,7 +790,7 @@ export default function PurchaseOrders() {
                                     onClick={() => handleAction('deliver', 'Mark as Delivered')}
                                 />
                             )}
-                            {modalItem.status?.toLowerCase() === 'sent' && canSend && (
+                            {modalItem.status?.toLowerCase() === 'sent' && (
                                 <ActionIcon
                                     icon={Send}
                                     tooltip="Resend to Supplier"
@@ -815,7 +798,7 @@ export default function PurchaseOrders() {
                                     onClick={() => handleAction('resend', 'Resend to Supplier')}
                                 />
                             )}
-                            {['delivered', 'approved'].includes(modalItem.status?.toLowerCase()) && canComplete && (
+                            {['delivered', 'approved'].includes(modalItem.status?.toLowerCase()) && (
                                 <ActionIcon
                                     icon={ClipboardCheck}
                                     tooltip="Mark as Completed"
@@ -823,7 +806,7 @@ export default function PurchaseOrders() {
                                     onClick={() => handleAction('complete', 'Mark as Completed')}
                                 />
                             )}
-                            {['draft', 'pending', 'sent', 'delivered', 'approved'].includes(modalItem.status?.toLowerCase()) && canCancel && (
+                            {['draft', 'pending', 'sent', 'delivered', 'approved'].includes(modalItem.status?.toLowerCase()) && (
                                 <ActionIcon
                                     icon={XCircle}
                                     tooltip="Cancel"
@@ -831,7 +814,7 @@ export default function PurchaseOrders() {
                                     onClick={() => handleAction('cancel', 'Cancel')}
                                 />
                             )}
-                            {['draft', 'pending', 'approved'].includes(modalItem.status?.toLowerCase()) && canEdit && (
+                            {['draft', 'pending', 'approved'].includes(modalItem.status?.toLowerCase()) && (
                                 <ActionIcon
                                     icon={Edit}
                                     tooltip="Edit"
@@ -839,7 +822,7 @@ export default function PurchaseOrders() {
                                     onClick={() => { setShowModal(false); openEdit(modalItem); }}
                                 />
                             )}
-                            {modalItem.status?.toLowerCase() === 'draft' && canDelete && (
+                            {modalItem.status?.toLowerCase() === 'draft' && (
                                 <ActionIcon
                                     icon={Trash2}
                                     tooltip="Delete"
@@ -847,7 +830,7 @@ export default function PurchaseOrders() {
                                     onClick={handleViewDelete}
                                 />
                             )}
-                            {modalItem.status?.toLowerCase() === 'cancelled' && canReopen && (
+                            {modalItem.status?.toLowerCase() === 'cancelled' && (
                                 <ActionIcon
                                     icon={RotateCcw}
                                     tooltip="Reopen"

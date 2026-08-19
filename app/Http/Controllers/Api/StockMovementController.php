@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreStockMovementRequest;
 use App\Models\Medicine;
 use App\Models\RetailProduct;
 use App\Models\StockMovement;
@@ -18,6 +19,12 @@ class StockMovementController extends Controller
     {
         try {
             $query = StockMovement::with(['medicine', 'itemable', 'user', 'approver', 'completer']);
+
+            // Branch scoping: pharmacists/cashiers see only their branch's movements
+            $user = $request->user();
+            if ($user->shouldScopeToBranch()) {
+                $query->where('branch_id', $user->branch_id);
+            }
 
             if ($request->medicine_id) {
                 $query->where('medicine_id', $request->medicine_id);
@@ -70,28 +77,10 @@ class StockMovementController extends Controller
         }
     }
 
-    public function store(Request $request)
+    public function store(StoreStockMovementRequest $request)
     {
         try {
-            // Validate the request
-            $validated = $request->validate([
-                'type' => 'required|in:in,out,adjustment,return,transfer,damaged,expired,lost,correction,self,warehouse',
-                'reference' => 'nullable|string|max:255',
-                'notes' => 'nullable|string',
-                'source_type' => 'nullable|string|in:self,supplier,branch,sale,customer,warehouse',
-                'source_id' => 'nullable|integer',
-                'destination_type' => 'nullable|string|in:self,supplier,branch,sale,customer,warehouse',
-                'destination_id' => 'nullable|integer',
-                'branch_id' => 'nullable|integer',
-                'status' => 'nullable|string|in:pending,approved,completed,cancelled',
-                'items' => 'nullable|array|min:1',
-                'items.*.type' => 'required_with:items|in:medicine,retail',
-                'items.*.id' => 'required_with:items|integer|min:1',
-                'items.*.quantity' => 'required_with:items|integer|min:1',
-                'medicine_id' => 'nullable|exists:medicines,id',
-                'retail_product_id' => 'nullable|exists:retail_products,id',
-                'quantity' => 'nullable|integer|min:1',
-            ]);
+            $validated = $request->validated();
 
             $items = [];
             if (!empty($validated['items']) && is_array($validated['items'])) {

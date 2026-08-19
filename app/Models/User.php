@@ -80,6 +80,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if the user's view should be scoped to their branch.
+     * Admins and purchasing staff see all branches;
+     * pharmacists and cashiers see only their own branch.
+     */
+    public function shouldScopeToBranch(): bool
+    {
+        return !in_array($this->role, [self::ROLE_ADMIN, self::ROLE_PURCHASING_STAFF]);
+    }
+
+    /**
      * Check if the user account is pending.
      */
     public function isPending(): bool

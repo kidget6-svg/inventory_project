@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreRetailProductRequest;
+use App\Http\Requests\UpdateRetailProductRequest;
 use App\Models\RetailProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -44,63 +46,40 @@ class RetailProductController extends Controller
         return response()->json($retailProduct->load('supplier'));
     }
 
-    public function store(Request $request)
+    public function store(StoreRetailProductRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'sku' => 'nullable|string|max:100|unique:retail_products,sku',
-            'barcode' => 'nullable|string|max:100|unique:retail_products,barcode',
-            'category' => 'required|string|max:255',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'quantity' => 'nullable|integer|min:0',
-            'price' => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'reorder_level' => 'nullable|integer|min:0',
-            'expiry_date' => 'nullable|date',
-            'status' => 'nullable|string',
-            'description' => 'nullable|string',
-            'manufacturer' => 'nullable|string|max:255',
-            'shelf_location' => 'nullable|string|max:50',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
-
+        $validated = $request->validated();
         $validated = $this->handleImageUpload($validated, null);
 
         $product = RetailProduct::create($validated);
-        return response()->json($product->load('supplier'), 201);
+        return response()->json([
+            'success' => true,
+            'message' => 'Retail product created successfully',
+            'data'    => $product->load('supplier'),
+        ], 201);
     }
 
-    public function update(Request $request, RetailProduct $retailProduct)
+    public function update(UpdateRetailProductRequest $request, RetailProduct $retailProduct)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'sku' => ['nullable', 'string', 'max:100', \Illuminate\Validation\Rule::unique('retail_products', 'sku')->ignore($retailProduct->id)],
-            'barcode' => ['nullable', 'string', 'max:100', \Illuminate\Validation\Rule::unique('retail_products', 'barcode')->ignore($retailProduct->id)],
-            'category' => 'required|string|max:255',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'quantity' => 'nullable|integer|min:0',
-            'price' => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'reorder_level' => 'nullable|integer|min:0',
-            'expiry_date' => 'nullable|date',
-            'status' => 'nullable|string',
-            'description' => 'nullable|string',
-            'manufacturer' => 'nullable|string|max:255',
-            'shelf_location' => 'nullable|string|max:50',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
-
+        $validated = $request->validated();
         $validated = $this->handleImageUpload($validated, $retailProduct);
         $retailProduct->update($validated);
 
-        return response()->json($retailProduct->load('supplier'));
+        return response()->json([
+            'success' => true,
+            'message' => 'Retail product updated successfully',
+            'data'    => $retailProduct->load('supplier'),
+        ]);
     }
 
     public function destroy(RetailProduct $retailProduct)
     {
         $retailProduct->delete();
 
-        return response()->json(['message' => 'Retail product deleted']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Retail product deleted successfully',
+        ]);
     }
 
     protected function handleImageUpload(array $validated, ?RetailProduct $product = null): array
