@@ -68,6 +68,14 @@
                     <td class="label">Sale Type:</td>
                     <td>{{ ucfirst($sale->type ?? 'prescription') }}</td>
                 </tr>
+                @if($sale->customer_tin)
+                <tr>
+                    <td class="label">TIN:</td>
+                    <td>{{ $sale->customer_tin }}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                @endif
                 @if($sale->notes)
                 <tr>
                     <td class="label">Prescription Notes:</td>

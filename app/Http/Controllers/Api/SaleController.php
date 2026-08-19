@@ -56,9 +56,13 @@ class SaleController extends Controller
             'amount_paid' => 'nullable|numeric|min:0',
             // Prescription / patient information
             'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required|string|max:50',
+            'customer_phone' => ['required', 'string', 'max:50', 'regex:/^(\+2519\d{8}|09\d{8})$/'],
             'customer_email' => 'nullable|email|max:255',
+            'customer_tin' => 'nullable|string|max:255|regex:/^\d+$/',
             'notes' => 'nullable|string',
+        ], [
+            'customer_phone.regex' => 'The phone number must be a valid Ethiopian number (09XXXXXXXX or +2519XXXXXXXX).',
+            'customer_tin.regex' => 'The TIN number must contain digits only.',
         ]);
 
         return DB::transaction(function () use ($validated, $request, $service) {
@@ -107,6 +111,7 @@ class SaleController extends Controller
                 'customer_name' => $validated['customer_name'] ?? null,
                 'customer_phone' => $validated['customer_phone'] ?? null,
                 'customer_email' => $validated['customer_email'] ?? null,
+                'customer_tin' => $validated['customer_tin'] ?? null,
                 'notes' => $validated['notes'] ?? null,
             ]);
 
@@ -136,16 +141,20 @@ class SaleController extends Controller
      */
     public function storeRetailDraft(Request $request, SaleService $service)
     {
-        abort_if(! $request->user()->hasRole('pharmacist'), 403, 'Unauthorized. Only pharmacists can dispatch retail drafts.');
+        abort_if(! $request->user()->hasPermission('retail-otc-sales.draft'), 403, 'Unauthorized. Only pharmacists can dispatch retail drafts.');
 
         $validated = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|exists:retail_products,id',
             'items.*.cartQty' => 'required|integer|min:1',
             'customer_name' => 'nullable|string|max:255',
-            'customer_phone' => 'nullable|string|max:50',
+            'customer_phone' => ['required', 'string', 'max:50', 'regex:/^(\+2519\d{8}|09\d{8})$/'],
             'customer_email' => 'nullable|email|max:255',
+            'customer_tin' => 'nullable|string|max:255|regex:/^\d+$/',
             'notes' => 'nullable|string',
+        ], [
+            'customer_phone.regex' => 'The phone number must be a valid Ethiopian number (09XXXXXXXX or +2519XXXXXXXX).',
+            'customer_tin.regex' => 'The TIN number must contain digits only.',
         ]);
 
         return DB::transaction(function () use ($validated, $request, $service) {
@@ -190,6 +199,7 @@ class SaleController extends Controller
                 'customer_name' => $validated['customer_name'] ?? null,
                 'customer_phone' => $validated['customer_phone'] ?? null,
                 'customer_email' => $validated['customer_email'] ?? null,
+                'customer_tin' => $validated['customer_tin'] ?? null,
                 'notes' => $validated['notes'] ?? null,
             ]);
 
@@ -290,7 +300,7 @@ class SaleController extends Controller
      */
     public function updateStatus(Request $request, $id, SaleService $service)
     {
-        abort_if(! $request->user()->hasRole('cashier'), 403, 'Unauthorized. Only cashiers can update sale status.');
+        abort_if(! $request->user()->hasRole('cashier') && ! $request->user()->hasRole('admin'), 403, 'Unauthorized. Only cashiers can update sale status.');
 
         $sale = Sale::findOrFail($id);
 

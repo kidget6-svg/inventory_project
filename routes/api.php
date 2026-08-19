@@ -196,13 +196,22 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     Route::post('/sales/prescription', [SaleController::class, 'storePrescription'])
         ->middleware('permission:prescription-sales.dispense');
     Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft'])
-        ->middleware('role:pharmacist');
+        ->middleware('permission:retail-otc-sales.draft');
 
     // --------------------------------------------------------------------
     // Sales — Cashier Only (complete payment & finalize sales)
     // --------------------------------------------------------------------
     Route::middleware('role:cashier')->group(function () {
         Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
+    });
+
+    // --------------------------------------------------------------------
+    // Sales — Complete Payment (Cashier & Admin)
+    // Admin is allowed to complete prescription sales on behalf of the
+    // cashier (e.g. override / assist).  Pharmacists and other roles
+    // remain blocked.
+    // --------------------------------------------------------------------
+    Route::middleware('role:admin,cashier')->group(function () {
         Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
     });
 

@@ -19,6 +19,7 @@ class SaleFactory extends Factory
             'user_id' => User::factory(),
             'sale_date' => fake()->date(),
             'total_amount' => fake()->randomFloat(2, 10, 5000),
+            'customer_tin' => fake()->numerify('##########'),
         ];
     }
 }

@@ -340,14 +340,22 @@ export default function CashierPaymentQueue({ saleType }) {
                                     </div>
                                 </div>
 
-                                {/* Total */}
-                                <div className="flex items-baseline justify-between pt-2">
-                                    <span className="text-xs font-medium text-gray-500">Total Amount</span>
-                                    <span className="text-2xl font-bold text-green-600">
-                                        ${parseFloat(sale.total_amount).toFixed(2)}
-                                    </span>
-                                </div>
-                            </div>
+                                 {/* Customer TIN (if provided) */}
+                                 {sale.customer_tin && (
+                                     <div className="flex justify-between items-center pt-1">
+                                         <span className="text-xs font-medium text-gray-500">TIN</span>
+                                         <span className="text-sm text-gray-700 font-medium">{sale.customer_tin}</span>
+                                     </div>
+                                 )}
+
+                                 {/* Total */}
+                                 <div className="flex items-baseline justify-between pt-2">
+                                     <span className="text-xs font-medium text-gray-500">Total Amount</span>
+                                     <span className="text-2xl font-bold text-green-600">
+                                         ${parseFloat(sale.total_amount).toFixed(2)}
+                                     </span>
+                                 </div>
+                              </div>
 
                             {/* Card Footer */}
                             <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
@@ -391,6 +399,12 @@ export default function CashierPaymentQueue({ saleType }) {
                                 <span className="text-xs text-gray-500">Customer</span>
                                 <span className="text-sm text-gray-700">{selectedSale.customer_name || 'Walk-in Customer'}</span>
                             </div>
+                            {selectedSale.customer_tin && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-500">TIN</span>
+                                    <span className="text-sm text-gray-700 font-medium">{selectedSale.customer_tin}</span>
+                                </div>
+                            )}
                         </div>
 
                         <div>
@@ -566,6 +580,12 @@ export default function CashierPaymentQueue({ saleType }) {
                                 <span className="text-xs text-gray-500">Customer</span>
                                 <span className="text-sm font-medium text-gray-800">{completedSale.customer_name || 'Walk-in Customer'}</span>
                             </div>
+                            {completedSale.customer_tin && (
+                                <div className="flex justify-between">
+                                    <span className="text-xs text-gray-500">TIN</span>
+                                    <span className="text-sm font-medium text-gray-800">{completedSale.customer_tin}</span>
+                                </div>
+                            )}
                             {completedSale.notes && (
                                 <div className="flex justify-between">
                                     <span className="text-xs text-gray-500">Prescription Notes</span>

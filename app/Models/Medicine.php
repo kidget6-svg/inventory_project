@@ -27,14 +27,16 @@ class Medicine extends Model
         'reorder_level',
         'expiry_date',
         'status',
+        'description',
+        'manufacturer',
         'shelf_location',
         'shelf_id',
         'batch_number',
         'barcode',
+        'image',
     ];
 
-    // Explicitly clear $with so Eloquent doesn't query missing relationships like 'shelf'
-    protected $with = [];
+    protected $appends = ['image_url'];
 
     protected $casts = [
         'expiry_date' => 'date',

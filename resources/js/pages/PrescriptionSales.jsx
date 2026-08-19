@@ -53,6 +53,7 @@ export default function PrescriptionSales() {
     const [patientName, setPatientName] = useState('');
     const [patientPhone, setPatientPhone] = useState('');
     const [patientEmail, setPatientEmail] = useState('');
+    const [patientTin, setPatientTin] = useState('');
 
     // Prescription & Patient Information modal (opened before sending to cashier queue)
     const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
@@ -173,6 +174,7 @@ export default function PrescriptionSales() {
                 customer_name: patientName,
                 customer_phone: patientPhone,
                 customer_email: patientEmail || null,
+                customer_tin: patientTin || null,
             });
 
             window.showToast('Order dispatched to Cashier queue!', 'success');
@@ -180,12 +182,19 @@ export default function PrescriptionSales() {
             setPatientName('');
             setPatientPhone('');
             setPatientEmail('');
+            setPatientTin('');
             setShowPrescriptionModal(false);
         } catch (err) {
-            window.showToast(
-                err.response?.data?.message || 'Failed to send order',
-                'error'
-            );
+            const errors = err.response?.data?.errors;
+            if (errors) {
+                const firstError = Object.values(errors)[0][0];
+                window.showToast(firstError, 'error');
+            } else {
+                window.showToast(
+                    err.response?.data?.message || 'Failed to send order',
+                    'error'
+                );
+            }
         } finally {
             setSubmitting(false);
         }
@@ -317,16 +326,18 @@ export default function PrescriptionSales() {
                 title="Prescription & Patient Information"
                 titleIcon={Clipboard}
                 titleColor="text-sky-600"
-                fields={[
-                    { name: 'patientName', label: 'Patient Name', icon: User, placeholder: 'Enter patient name' },
-                    { name: 'patientPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number' },
-                    { name: 'patientEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
-                ]}
-                values={{ patientName, patientPhone, patientEmail }}
+                 fields={[
+                     { name: 'patientName', label: 'Patient Name', icon: User, placeholder: 'Enter patient name' },
+                     { name: 'patientPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number', phoneValidation: true },
+                     { name: 'patientEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
+                     { name: 'patientTin', label: 'TIN Number', icon: FileText, placeholder: 'Enter TIN number', numberValidation: true },
+                 ]}
+                values={{ patientName, patientPhone, patientEmail, patientTin }}
                 onChange={(key, value) => {
                     if (key === 'patientName') setPatientName(value);
                     else if (key === 'patientPhone') setPatientPhone(value);
                     else if (key === 'patientEmail') setPatientEmail(value);
+                    else if (key === 'patientTin') setPatientTin(value);
                 }}
                 onConfirm={confirmSendToCashier}
                 confirmLabel="Confirm & Send to Cashier Queue"

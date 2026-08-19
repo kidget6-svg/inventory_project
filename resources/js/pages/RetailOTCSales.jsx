@@ -7,7 +7,7 @@
 // products, quantity controls (+/-), remove-item, total price,
 // Clear Draft, and Send to Cashier Queue.
 //
-// The pharmacist can enter Customer Information (customer name, phone, email, notes)
+// The pharmacist can enter Customer Information (customer name, phone, email, TIN)
 // before dispatching the order to the Cashier Payment Queue.
 //
 // All shared UI is provided by the reusable components in
@@ -51,7 +51,7 @@ export default function RetailOTCSales() {
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
-    const [customerNotes, setCustomerNotes] = useState('');
+    const [customerTin, setCustomerTin] = useState('');
 
     // Customer Information modal (opened before sending to cashier queue)
     const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -159,14 +159,14 @@ export default function RetailOTCSales() {
                 customer_name: customerName || null,
                 customer_phone: customerPhone || null,
                 customer_email: customerEmail || null,
-                notes: customerNotes || null,
+                customer_tin: customerTin || null,
             });
             window.showToast('Order dispatched to Cashier queue!', 'success');
             setCart([]);
             setCustomerName('');
             setCustomerPhone('');
             setCustomerEmail('');
-            setCustomerNotes('');
+            setCustomerTin('');
             setShowCustomerModal(false);
         } catch (err) {
             window.showToast(
@@ -306,16 +306,16 @@ export default function RetailOTCSales() {
                 titleColor="text-emerald-600"
                 fields={[
                     { name: 'customerName', label: 'Customer Name', icon: User, placeholder: 'Enter customer name' },
-                    { name: 'customerPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number' },
+                    { name: 'customerPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number', phoneValidation: true },
                     { name: 'customerEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
-                    { name: 'customerNotes', label: 'Customer Notes', icon: FileText, placeholder: 'Notes or additional info' },
+                    { name: 'customerTin', label: 'TIN Number', icon: FileText, placeholder: 'Enter TIN number', numberValidation: true },
                 ]}
-                values={{ customerName, customerPhone, customerEmail, customerNotes }}
+                values={{ customerName, customerPhone, customerEmail, customerTin }}
                 onChange={(key, value) => {
                     if (key === 'customerName') setCustomerName(value);
                     else if (key === 'customerPhone') setCustomerPhone(value);
                     else if (key === 'customerEmail') setCustomerEmail(value);
-                    else if (key === 'customerNotes') setCustomerNotes(value);
+                    else if (key === 'customerTin') setCustomerTin(value);
                 }}
                 onConfirm={confirmSendToCashier}
                 confirmLabel="Confirm & Send to Cashier Queue"

@@ -70,6 +70,7 @@ class Sale extends Model
         'customer_name',
         'customer_phone',
         'customer_email',
+        'customer_tin',
         'payment_method',
         'payment_status',
         'amount_paid',
