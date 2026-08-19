@@ -17,6 +17,7 @@ class PurchaseOrder extends Model
 
     protected $fillable = [
         'supplier_id',
+        'manufacturing_company',
         'order_date',
         'total_amount',
         'status',
@@ -106,6 +107,12 @@ class PurchaseOrder extends Model
     /**
      * Whether the order can be completed (sent or approved).
      * Sent -> Completed | Approved -> Completed
+     *
+     * Note: "approved" orders are completed automatically when the
+     * PDF/Email is successfully sent to the supplier (see
+     * PurchaseOrderController::sendPdfToSupplier).  The manual
+     * "Mark Complete" button is no longer shown for approved orders
+     * in the UI, but the capability remains for the sent state.
      */
     public function canComplete(): bool
     {

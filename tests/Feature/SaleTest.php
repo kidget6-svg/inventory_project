@@ -25,6 +25,11 @@ class SaleTest extends TestCase
     {
         parent::setUp();
 
+        // Seed roles & permissions so that permission-based middleware
+        // (e.g. permission:prescription-sales.dispense) can resolve
+        // user permissions correctly in the test environment.
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+
         $this->admin = User::factory()->create(['role' => 'admin', 'status' => 'approved']);
         $this->pharmacist = User::factory()->create(['role' => 'pharmacist', 'status' => 'approved']);
         $this->cashier = User::factory()->create(['role' => 'cashier', 'status' => 'approved']);
@@ -511,7 +516,7 @@ class SaleTest extends TestCase
     }
 
     /** @test */
-    public function it_prevents_admin_from_creating_prescription_sale()
+    public function it_allows_admin_to_create_prescription_sale()
     {
         $response = $this->actingAs($this->admin)
             ->postJson('/api/sales/prescription', [
@@ -521,9 +526,12 @@ class SaleTest extends TestCase
                         'quantity' => 2,
                     ],
                 ],
+                'customer_name' => 'Admin Customer',
+                'customer_phone' => '0911234567',
             ]);
 
-        $response->assertForbidden();
+        $response->assertCreated()
+            ->assertJsonStructure(['message', 'sale']);
     }
 
     /** @test */
