@@ -89,11 +89,12 @@ export default function AdminDashboard() {
             {/* ─────────────────────────────────────────────────────────────────────────
                 Summary Cards ─────────────────────────────────────────────────────────
             ───────────────────────────────────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-6">
                 <StatCard value={data.totalUsers} label="Total Users" icon="users" color="indigo" />
                 <StatCard value={data.totalProducts} label="Total Medicines" icon="package" color="green" />
                 <StatCard value={`$${Number(data.totalRevenue || 0).toFixed(2)}`} label="Total Sales" icon="banknote" color="purple" />
                 <StatCard value={data.lowStockCount} label="Low Stock Medicines" icon="alert" color="red" />
+                <StatCard value={data.expiredCount} label="Expired Medicines" icon="calendar" color="orange" />
             </div>
 
             {/* ─────────────────────────────────────────────────────────────────────────

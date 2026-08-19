@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
+use App\Models\Batch;
 use App\Models\Sale;
 use App\Models\Supplier;
 use App\Models\PurchaseOrder;
@@ -50,10 +51,17 @@ class DashboardController extends Controller
     */
     private function expiredMedicines()
     {
-        return Medicine::whereNotNull('expiry_date')
+        return Batch::whereNotNull('expiry_date')
             ->where('expiry_date', '<', Carbon::today())
+            ->with('medicine')
             ->orderBy('expiry_date')
-            ->get();
+            ->get()
+            ->map(function ($b) {
+                $b->name = $b->medicine->name ?? 'Unknown Medicine';
+                $b->batch_number = $b->batch_number ?? null;
+                $b->expiry_date = $b->expiry_date ?? null;
+                return $b;
+            });
     }
 
     /*
@@ -63,11 +71,17 @@ class DashboardController extends Controller
     */
     private function expiringMedicines(int $days)
     {
-        return Medicine::whereNotNull('expiry_date')
+        return Batch::whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->addDays($days)])
-            ->with('category')
+            ->with('medicine')
             ->orderBy('expiry_date')
-            ->get();
+            ->get()
+            ->map(function ($b) {
+                $b->name = $b->medicine->name ?? 'Unknown Medicine';
+                $b->batch_number = $b->batch_number ?? null;
+                $b->expiry_date = $b->expiry_date ?? null;
+                return $b;
+            });
     }
 
     /*

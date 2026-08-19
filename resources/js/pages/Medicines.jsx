@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import api from '../axios';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
-import Stepper from '../components/Stepper';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
 import { 
     Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, 
-    Tag, DollarSign, Loader2, ChevronLeft, ChevronRight,
-    FileText, Plus, Upload, Image as ImageIcon
+    Tag, DollarSign, Loader2, FileText, Plus, Upload, Image as ImageIcon
 } from 'lucide-react';
 
 const statusOptions = [
@@ -32,8 +30,6 @@ const unitOptions = [
     'Pill(s)', 'Drops', 'Puffs', 'IU', 'Unit(s)', 'Sachet(s)', 'Vial(s)',
 ];
 
-const formSteps = ['Basic Info', 'Stock & Description', 'Status'];
-
 export default function Medicines() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -52,7 +48,6 @@ export default function Medicines() {
     const [meta, setMeta] = useState(null);
     const [page, setPage] = useState(1);
     const [submitting, setSubmitting] = useState(false);
-    const [step, setStep] = useState(0);
     const fileInputRef = useRef(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
@@ -61,7 +56,7 @@ export default function Medicines() {
 
     const [form, setForm] = useState({
         name: '', generic_name: '', batch_number: '', category_id: '',
-        quantity: '', description: '', status: 'active',
+        quantity: '', reorder_level: '', description: '', status: 'active',
         dosage_form: '', strength: '', unit: '',
     });
 
@@ -134,13 +129,11 @@ export default function Medicines() {
     const resetForm = () => {
         setForm({ 
             name: '', generic_name: '', batch_number: '', category_id: '', 
-            quantity: '', description: '', status: 'active',
-            manufacturer: '',
+            quantity: '', reorder_level: '', description: '', status: 'active',
             dosage_form: '', strength: '', unit: '' 
         });
         setEditId(null); 
         setError(''); 
-        setStep(0);
         setImagePreview(null);
         setImageFile(null);
         setDosageOther(false);
@@ -156,9 +149,9 @@ export default function Medicines() {
         setForm({
             name: m.name || '', generic_name: m.generic_name || '', batch_number: m.batch_number || '',
             category_id: m.category_id || '',
-            quantity: m.quantity || '', description: m.description || '',
+            quantity: m.quantity || '', reorder_level: m.reorder_level || '',
+            description: m.description || '',
             status: m.status || 'active',
-            manufacturer: m.manufacturer || '',
             dosage_form: m.dosage_form || '',
             strength: m.strength || '',
             unit: m.unit || '',
@@ -166,7 +159,6 @@ export default function Medicines() {
         setEditId(m.id); 
         setShowModal(true); 
         setError(''); 
-        setStep(0);
         setImagePreview(m.image_url || null);
         setImageFile(null);
         setDosageOther(!!m.dosage_form && !dosageFormOptions.includes(m.dosage_form));
@@ -177,9 +169,6 @@ export default function Medicines() {
         setViewMedicine(m);
         setShowViewModal(true);
     };
-
-    const nextStep = () => { setStep(s => Math.min(s + 1, formSteps.length - 1)); };
-    const prevStep = () => { setStep(s => Math.max(s - 1, 0)); };
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -293,173 +282,136 @@ export default function Medicines() {
 
     const isFiltered = filters.search || filters.category_id || filters.status;
 
-    const renderStepContent = () => {
-        switch (step) {
-            case 0:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Name *</label>
-                            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Paracetamol Extra" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Generic Name</label>
-                            <input type="text" name="generic_name" value={form.generic_name} onChange={handleChange} placeholder="e.g. Acetaminophen" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
-                            <select name="category_id" value={form.category_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
-                                <option value="">Select Category</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Dosage Form</label>
-                            <select
-                                name="dosage_form"
-                                value={dosageOther ? '__other__' : form.dosage_form}
-                                onChange={(e) => {
-                                    const v = e.target.value;
-                                    if (v === '__other__') {
-                                        setDosageOther(true);
-                                        setForm({ ...form, dosage_form: '' });
-                                    } else {
-                                        setDosageOther(false);
-                                        setForm({ ...form, dosage_form: v });
-                                    }
-                                }}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            >
-                                <option value="">Select Dosage Form</option>
-                                {dosageFormOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                                <option value="__other__">Other (specify)</option>
-                            </select>
-                            {dosageOther && (
-                                <input
-                                    type="text"
-                                    name="dosage_form"
-                                    value={form.dosage_form}
-                                    onChange={handleChange}
-                                    placeholder="Type custom dosage form"
-                                    className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                />
+    const renderFormFields = () => {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Name *</label>
+                    <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Paracetamol Extra" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Generic Name</label>
+                    <input type="text" name="generic_name" value={form.generic_name} onChange={handleChange} placeholder="e.g. Acetaminophen" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
+                    <select name="category_id" value={form.category_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
+                        <option value="">Select Category</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Dosage Form</label>
+                    <select
+                        name="dosage_form"
+                        value={dosageOther ? '__other__' : form.dosage_form}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '__other__') {
+                                setDosageOther(true);
+                                setForm({ ...form, dosage_form: '' });
+                            } else {
+                                setDosageOther(false);
+                                setForm({ ...form, dosage_form: v });
+                            }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                    >
+                        <option value="">Select Dosage Form</option>
+                        {dosageFormOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                        <option value="__other__">Other (specify)</option>
+                    </select>
+                    {dosageOther && (
+                        <input
+                            type="text"
+                            name="dosage_form"
+                            value={form.dosage_form}
+                            onChange={handleChange}
+                            placeholder="Type custom dosage form"
+                            className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        />
+                    )}
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Strength</label>
+                    <input type="text" name="strength" value={form.strength} onChange={handleChange} placeholder="e.g. 500mg, 10%" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Unit</label>
+                    <select
+                        name="unit"
+                        value={unitOther ? '__other__' : form.unit}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '__other__') {
+                                setUnitOther(true);
+                                setForm({ ...form, unit: '' });
+                            } else {
+                                setUnitOther(false);
+                                setForm({ ...form, unit: v });
+                            }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                    >
+                        <option value="">Select Unit</option>
+                        {unitOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                        <option value="__other__">Other (specify)</option>
+                    </select>
+                    {unitOther && (
+                        <input
+                            type="text"
+                            name="unit"
+                            value={form.unit}
+                            onChange={handleChange}
+                            placeholder="Type custom unit"
+                            className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        />
+                    )}
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+                    <input type="number" name="quantity" value={form.quantity} onChange={handleChange} placeholder="0" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level</label>
+                    <input type="number" name="reorder_level" value={form.reorder_level} onChange={handleChange} placeholder="10" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                    <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="discontinued">Discontinued</option>
+                    </select>
+                </div>
+                <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                    <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                </div>
+                <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Image</label>
+                    <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                            {imagePreview ? (
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                                <Package className="text-gray-300" size={28} />
                             )}
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Strength</label>
-                            <input type="text" name="strength" value={form.strength} onChange={handleChange} placeholder="e.g. 500mg, 10%" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
-                            <input type="text" name="manufacturer" value={form.manufacturer} onChange={handleChange} placeholder="e.g. GSK, Pfizer" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Unit</label>
-                            <select
-                                name="unit"
-                                value={unitOther ? '__other__' : form.unit}
-                                onChange={(e) => {
-                                    const v = e.target.value;
-                                    if (v === '__other__') {
-                                        setUnitOther(true);
-                                        setForm({ ...form, unit: '' });
-                                    } else {
-                                        setUnitOther(false);
-                                        setForm({ ...form, unit: v });
-                                    }
-                                }}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            >
-                                <option value="">Select Unit</option>
-                                {unitOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                                <option value="__other__">Other (specify)</option>
-                            </select>
-                            {unitOther && (
-                                <input
-                                    type="text"
-                                    name="unit"
-                                    value={form.unit}
-                                    onChange={handleChange}
-                                    placeholder="Type custom unit"
-                                    className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                />
-                            )}
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Image</label>
-                            <div className="flex items-center gap-4">
-                                <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <Package className="text-gray-300" size={28} />
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
-                                        onChange={handleImageChange}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
-                                    />
-                                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
-                                </div>
-                            </div>
+                        <div className="flex-1">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
+                                onChange={handleImageChange}
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
                         </div>
                     </div>
-                );
-            case 1:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
-                            <input type="number" name="quantity" value={form.quantity} onChange={handleChange} placeholder="0" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this medicine" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine Image</label>
-                            <div className="flex items-center gap-4">
-                                <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <Package className="text-gray-300" size={28} />
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
-                                        onChange={handleImageChange}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
-                                    />
-                                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            case 2:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2 flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                            <span className="text-sm font-medium text-gray-700">{form.status === 'active' ? 'Active' : form.status === 'inactive' ? 'Inactive' : 'Discontinued'}</span>
-                        </div>
-                    </div>
-                );
-            default: return null;
-        }
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -574,24 +526,17 @@ export default function Medicines() {
 
             {canWrite && (
                 <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Medicine' : 'Add New Medicine'} size="max-w-2xl">
-                    <Stepper steps={formSteps} currentStep={step} />
                     {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
-                    <form onSubmit={(e) => { e.preventDefault(); if (step === formSteps.length - 1) handleSubmit(); else nextStep(); }}>
-                        {renderStepContent()}
+                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+                        {renderFormFields()}
                         <div className="flex justify-between mt-6 pt-4 border-t border-sky-100">
-                            <button type="button" onClick={step === 0 ? () => setShowModal(false) : prevStep} className="btn-secondary flex items-center gap-1.5">
-                                <ChevronLeft size={16} /> {step === 0 ? 'Cancel' : 'Back'}
+                            <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex items-center gap-1.5">
+                                <X size={16} /> Cancel
                             </button>
-                            {step < formSteps.length - 1 ? (
-                                <button type="submit" className="btn-primary flex items-center gap-1.5">
-                                    Next <ChevronRight size={16} />
-                                </button>
-                            ) : (
-                                <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
-                                    {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
-                                        : <><Save size={16} /> {editId ? 'Update Medicine' : 'Create Medicine'}</>}
-                                </button>
-                            )}
+                            <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
+                                {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
+                                    : <><Save size={16} /> {editId ? 'Update Medicine' : 'Create Medicine'}</>}
+                            </button>
                         </div>
                     </form>
                 </Modal>
