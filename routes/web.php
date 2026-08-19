@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\PurchaseOrderController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
-use App\Http\Controllers\Api\LowStockController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\ShelfController;
 use App\Http\Controllers\Api\UserController;
@@ -80,13 +79,12 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // Purchase Orders (admin only)
     Route::middleware('role:admin')->group(function () {
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
-        Route::get('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
+        Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit']);
         Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
         Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
         Route::post('/purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send']);
         Route::post('/purchase-orders/{purchaseOrder}/send-email', [PurchaseOrderController::class, 'sendPdfToSupplier']);
         Route::post('/purchase-orders/{purchaseOrder}/resend', [PurchaseOrderController::class, 'resend']);
-        Route::post('/purchase-orders/{purchaseOrder}/deliver', [PurchaseOrderController::class, 'deliver']);
         Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve']);
         Route::post('/purchase-orders/{purchaseOrder}/process', [PurchaseOrderController::class, 'process']);
         Route::post('/purchase-orders/{purchaseOrder}/complete', [PurchaseOrderController::class, 'complete']);
@@ -129,11 +127,6 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::get('/stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
-    });
-
-    // Low Stock (admin + pharmacist)
-    Route::middleware('role:admin,pharmacist')->group(function () {
-        Route::get('/low-stock', [LowStockController::class, 'index']);
     });
 
     // Sales routes — Read-Only (Admin, Pharmacist, Cashier)

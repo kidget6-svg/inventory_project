@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../axios';
+import { useBranch } from '../context/BranchContext';
 import StatCard from '../components/StatCard';
 import BarChart from '../components/BarChart';
 import PieChart from '../components/PieChart';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SidebarLayout from '../components/SidebarLayout';
-import { Clock, AlertTriangle, Calendar, ShoppingCart, Package, Pill, Activity, User } from 'lucide-react';
+import { Clock, AlertTriangle, Calendar, ShoppingCart, Package, Pill, Activity, User, Building2 } from 'lucide-react';
 
 /**
  * Auto-refresh interval for the dashboard data (ms).
@@ -16,6 +17,7 @@ import { Clock, AlertTriangle, Calendar, ShoppingCart, Package, Pill, Activity, 
 const DASHBOARD_REFRESH_MS = 60 * 1000;
 
 export default function AdminDashboard() {
+    const { branchRefreshKey, selectedBranch } = useBranch();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -57,7 +59,7 @@ export default function AdminDashboard() {
             active = false;
             clearInterval(interval);
         };
-    }, []);
+    }, [branchRefreshKey]);
 
 
     const activityIcon = (name) => {
@@ -86,14 +88,34 @@ export default function AdminDashboard() {
 
     return (
         <>
+            {/* Contextual Branch Scoped View Indicator */}
+            {selectedBranch && selectedBranch.id !== 'all' && (
+                <div className="mb-6 p-4 rounded-2xl bg-sky-50 dark:bg-gray-800/80 border border-sky-200 dark:border-sky-800 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center font-bold shrink-0">
+                            <Building2 size={20} />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-gray-900 dark:text-white text-sm">
+                                Branch Scoped View: {selectedBranch.name} {selectedBranch.code ? `(${selectedBranch.code})` : ''}
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Showing medicines, retail products, stock levels, alerts, and sales analytics exclusively for this location.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ─────────────────────────────────────────────────────────────────────────
                 Summary Cards ─────────────────────────────────────────────────────────
             ───────────────────────────────────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-6">
                 <StatCard value={data.totalUsers} label="Total Users" icon="users" color="indigo" />
                 <StatCard value={data.totalProducts} label="Total Medicines" icon="package" color="green" />
                 <StatCard value={`$${Number(data.totalRevenue || 0).toFixed(2)}`} label="Total Sales" icon="banknote" color="purple" />
                 <StatCard value={data.lowStockCount} label="Low Stock Medicines" icon="alert" color="red" />
+                <StatCard value={data.expiredCount} label="Expired Medicines" icon="calendar" color="orange" />
             </div>
 
             {/* ─────────────────────────────────────────────────────────────────────────

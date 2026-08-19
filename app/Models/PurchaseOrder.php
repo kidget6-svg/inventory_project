@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Medicine;
+use App\Models\RetailProduct;
 use App\Models\StockMovement;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,17 +17,16 @@ class PurchaseOrder extends Model
 
     protected $fillable = [
         'supplier_id',
+        'manufacturing_company',
         'order_date',
         'total_amount',
         'status',
         'sent_at',
-        'delivered_at',
         'completed_at',
     ];
 
     protected $casts = [
         'sent_at' => 'datetime',
-        'delivered_at' => 'datetime',
         'completed_at' => 'datetime',
         'order_date' => 'date',
     ];
@@ -96,15 +96,6 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * Whether the order can be marked as delivered (sent only).
-     * Sent -> Delivered
-     */
-    public function canDeliver(): bool
-    {
-        return $this->status === 'sent';
-    }
-
-    /**
      * Whether the order can be approved (pending only).
      * Pending -> Approved
      */
@@ -114,12 +105,18 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * Whether the order can be completed (delivered or approved).
-     * Delivered -> Completed | Approved -> Completed
+     * Whether the order can be completed (sent or approved).
+     * Sent -> Completed | Approved -> Completed
+     *
+     * Note: "approved" orders are completed automatically when the
+     * PDF/Email is successfully sent to the supplier (see
+     * PurchaseOrderController::sendPdfToSupplier).  The manual
+     * "Mark Complete" button is no longer shown for approved orders
+     * in the UI, but the capability remains for the sent state.
      */
     public function canComplete(): bool
     {
-        return in_array($this->status, ['delivered', 'approved']);
+        return in_array($this->status, ['sent', 'approved']);
     }
 
     /**
@@ -190,7 +187,9 @@ class PurchaseOrder extends Model
 
     /**
      * Send the purchase order to the supplier (pending -> sent).
-     * Records the sent_at timestamp.
+     * The sent_at timestamp is recorded by the service layer
+     * (PurchaseOrderService::sendToSupplier) immediately after
+     * the email is successfully dispatched, so it is not set here.
      */
     public function send(): bool
     {
@@ -200,23 +199,6 @@ class PurchaseOrder extends Model
 
         return $this->update([
             'status' => 'sent',
-            'sent_at' => now(),
-        ]);
-    }
-
-    /**
-     * Mark the purchase order as delivered (sent -> delivered).
-     * Records the delivered_at timestamp.
-     */
-    public function deliver(): bool
-    {
-        if (! $this->canDeliver()) {
-            return false;
-        }
-
-        return $this->update([
-            'status' => 'delivered',
-            'delivered_at' => now(),
         ]);
     }
 
@@ -258,8 +240,8 @@ class PurchaseOrder extends Model
 
     /**
      * Complete the purchase order:
-     * - Update medicine stock quantities
-     * - Create stock movement records
+     * - Update stock quantities for medicines AND retail products
+     * - Create stock movement records (polymorphic)
      * - Prevent duplicate stock additions
      * - Records the completed_at timestamp
      * Delivered -> Completed | Approved -> Completed
@@ -273,27 +255,57 @@ class PurchaseOrder extends Model
         DB::beginTransaction();
 
         try {
-            foreach ($this->items as $item) {
-                $medicine = Medicine::lockForUpdate()->find($item->medicine_id);
+            $this->load('items');
 
-                if (! $medicine) {
-                    throw new \RuntimeException('Medicine not found for order item ' . $item->id);
+            foreach ($this->items as $item) {
+                // Resolve the product via polymorphic relationship (preferred)
+                $product = $item->itemable;
+
+                // Fallback to medicine relationship for legacy items
+                if (! $product && $item->medicine_id) {
+                    $product = Medicine::lockForUpdate()->find($item->medicine_id);
+                }
+
+                if (! $product) {
+                    throw new \RuntimeException('Product not found for order item ' . $item->id);
+                }
+
+                // Lock the product row for update
+                if ($product instanceof RetailProduct) {
+                    $product = RetailProduct::lockForUpdate()->find($product->id);
+                } elseif ($product instanceof Medicine) {
+                    $product = Medicine::lockForUpdate()->find($product->id);
+                }
+
+                if (! $product) {
+                    throw new \RuntimeException('Failed to lock product for order item ' . $item->id);
                 }
 
                 // Check if a stock movement already exists for this PO item
                 // to prevent duplicate stock additions
-                $existingMovement = StockMovement::where('medicine_id', $medicine->id)
+                $existingMovement = StockMovement::where('itemable_type', get_class($product))
+                    ->where('itemable_id', $product->id)
                     ->where('reference', 'PO-' . $this->id)
                     ->where('type', 'in')
                     ->exists();
 
+                // Also check legacy medicine_id column
+                if (! $existingMovement && $product instanceof Medicine) {
+                    $existingMovement = StockMovement::where('medicine_id', $product->id)
+                        ->where('reference', 'PO-' . $this->id)
+                        ->where('type', 'in')
+                        ->exists();
+                }
+
                 if (! $existingMovement) {
-                    if (! $medicine->increment('quantity', $item->quantity)) {
-                        throw new \RuntimeException('Failed to increment stock for medicine ' . $medicine->id);
+                    if (! $product->increment('quantity', $item->quantity)) {
+                        throw new \RuntimeException('Failed to increment stock for product ' . $product->id);
                     }
 
                     StockMovement::create([
-                        'medicine_id' => $medicine->id,
+                        'medicine_id' => $product instanceof Medicine ? $product->id : null,
+                        'itemable_type' => get_class($product),
+                        'itemable_id' => $product->id,
                         'type' => 'in',
                         'quantity' => $item->quantity,
                         'reference' => 'PO-' . $this->id,
@@ -323,5 +335,35 @@ class PurchaseOrder extends Model
 
             throw $e;
         }
+    }
+
+    // ==================================================================
+    // Email status display helpers
+    // ==================================================================
+
+    /**
+     * Human-readable "Sent At" display value.
+     *
+     * - "Not sent yet." when the email has not been dispatched.
+     * - The formatted timestamp once the email has been sent.
+     */
+    public function sentAtDisplay(): string
+    {
+        if (! $this->sent_at) {
+            return 'Not sent yet.';
+        }
+
+        return $this->sent_at
+            ->copy()
+            ->setTimezone(config('app.timezone'))
+            ->format('M d, Y, g:i A');
+    }
+
+    /**
+     * Accessor so sent_at_display is included in API/JSON responses.
+     */
+    public function getSentAtDisplayAttribute(): string
+    {
+        return $this->sentAtDisplay();
     }
 }

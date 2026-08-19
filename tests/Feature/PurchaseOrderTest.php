@@ -77,10 +77,8 @@ class PurchaseOrderTest extends TestCase
 
         $response = $this->actingAs($user)->postJson('/purchase-orders', [
             'supplier_id' => $supplier->id,
-            'order_date' => now()->toDateString(),
             'medicine_id' => $medicine->id,
             'quantity' => 25,
-            'unit_price' => 10.50,
         ]);
 
         $response->assertCreated()
@@ -99,7 +97,7 @@ class PurchaseOrderTest extends TestCase
         $this->assertDatabaseHas('purchase_order_items', [
             'medicine_id' => $medicine->id,
             'quantity' => 25,
-            'unit_price' => 10.50,
+            'unit_price' => 0,
         ]);
 
         // Verify medicine stock did NOT increase (stock is added on completion)
@@ -110,15 +108,15 @@ class PurchaseOrderTest extends TestCase
     public function test_create_purchase_order_requires_supplier_and_medicine()
     {
         $user = $this->adminUser();
+        $supplier = Supplier::factory()->create();
 
         $response = $this->actingAs($user)->postJson('/purchase-orders', [
-            'order_date' => now()->toDateString(),
+            'supplier_id' => $supplier->id,
             'quantity' => 10,
-            'unit_price' => 5.00,
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['supplier_id', 'medicine_id']);
+            ->assertJson(['message' => 'Medicine name or medicine ID is required']);
     }
 
     public function test_admin_can_edit_a_draft_purchase_order()
@@ -134,12 +132,9 @@ class PurchaseOrderTest extends TestCase
         // Edit the order: change quantity to 30
         $response = $this->actingAs($user)->putJson("/purchase-orders/{$order->id}", [
             'supplier_id' => $order->supplier_id,
-            'order_date' => now()->toDateString(),
             'medicine_id' => $medicine->id,
             'quantity' => 30,
-            'unit_price' => 10.00,
         ]);
-
         $response->assertOk()
             ->assertJsonFragment([
                 'status' => 'draft',
@@ -354,34 +349,11 @@ class PurchaseOrderTest extends TestCase
             ]);
     }
 
-    public function test_admin_can_deliver_a_sent_purchase_order()
-    {
-        $user = $this->adminUser();
-        $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 20, 'sent');
-
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/deliver");
-
-        $response->assertOk()
-            ->assertJsonFragment([
-                'status' => 'delivered',
-            ]);
-
-        $this->assertDatabaseHas('purchase_orders', [
-            'id' => $order->id,
-            'status' => 'delivered',
-        ]);
-
-        // Verify delivered_at was recorded
-        $order->refresh();
-        $this->assertNotNull($order->delivered_at);
-    }
-
-    public function test_admin_can_complete_a_delivered_purchase_order_and_stock_increases()
+    public function test_admin_can_complete_a_sent_purchase_order_and_stock_increases()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
-        $order = $this->createOrderWithItem($medicine, 25, 'delivered');
+        $order = $this->createOrderWithItem($medicine, 25, 'sent');
 
         $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
 
@@ -417,7 +389,7 @@ class PurchaseOrderTest extends TestCase
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
-        $order = $this->createOrderWithItem($medicine, 25, 'delivered');
+        $order = $this->createOrderWithItem($medicine, 25, 'sent');
 
         // Complete the order
         $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
@@ -427,7 +399,7 @@ class PurchaseOrderTest extends TestCase
         $this->assertEquals(125, $medicine->quantity);
 
         // Try to complete again (should not add stock again)
-        $order->update(['status' => 'delivered']);
+        $order->update(['status' => 'sent']);
         $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
 
         // Medicine stock should still be 125 (no duplicate addition)
@@ -465,10 +437,8 @@ class PurchaseOrderTest extends TestCase
 
         $response = $this->actingAs($user)->putJson("/purchase-orders/{$order->id}", [
             'supplier_id' => $order->supplier_id,
-            'order_date' => now()->toDateString(),
             'medicine_id' => $medicine->id,
             'quantity' => 30,
-            'unit_price' => 10.00,
         ]);
 
         $response->assertStatus(422)
@@ -508,31 +478,17 @@ class PurchaseOrderTest extends TestCase
             ]);
     }
 
-    public function test_cannot_deliver_non_sent_order()
+    public function test_cannot_complete_non_sent_order()
     {
         $user = $this->adminUser();
         $medicine = $this->createMedicine();
         $order = $this->createOrderWithItem($medicine, 20, 'pending');
 
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/deliver");
-
-        $response->assertStatus(422)
-            ->assertJsonFragment([
-                'message' => 'Cannot mark as delivered in pending status',
-            ]);
-    }
-
-    public function test_cannot_complete_non_delivered_order()
-    {
-        $user = $this->adminUser();
-        $medicine = $this->createMedicine();
-        $order = $this->createOrderWithItem($medicine, 20, 'sent');
-
         $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
 
         $response->assertStatus(422)
             ->assertJsonFragment([
-                'message' => 'Cannot complete order in sent status',
+                'message' => 'Cannot complete order in pending status',
             ]);
     }
 
@@ -628,13 +584,17 @@ class PurchaseOrderTest extends TestCase
             ]);
     }
 
-    public function test_can_complete_an_approved_purchase_order_and_stock_increases()
+    public function test_sending_pdf_email_to_approved_order_completes_it_and_stock_increases()
     {
+        Mail::fake();
+
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
         $order = $this->createOrderWithItem($medicine, 25, 'approved');
 
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
+        // After approval, sending the PDF/Email should automatically
+        // complete the order (stock added, status -> completed).
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/send-email");
 
         $response->assertOk()
             ->assertJsonFragment([
@@ -662,6 +622,44 @@ class PurchaseOrderTest extends TestCase
         // Verify completed_at was recorded
         $order->refresh();
         $this->assertNotNull($order->completed_at);
+
+        // Verify the email was sent to the supplier
+        Mail::assertSent(PurchaseOrderMail::class, function ($mail) use ($order) {
+            return $mail->hasTo($order->supplier->email)
+                && $mail->purchaseOrder->is($order);
+        });
+    }
+
+    public function test_sending_pdf_email_failure_keeps_order_approved()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine(100);
+        $order = $this->createOrderWithItem($medicine, 25, 'approved');
+
+        // Remove the supplier's email to simulate a sending failure.
+        // The controller validates the email before attempting to send,
+        // so this returns a 422 and the order must remain "approved".
+        $order->supplier->update(['email' => null]);
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/send-email");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Supplier does not have an email address',
+            ]);
+
+        // Verify the order is still approved (not completed)
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $order->id,
+            'status' => 'approved',
+        ]);
+
+        // Verify stock was NOT increased
+        $medicine->refresh();
+        $this->assertEquals(100, $medicine->quantity);
+
+        // Verify no stock movement was created
+        $this->assertEquals(0, StockMovement::where('reference', 'PO-' . $order->id)->count());
     }
 
     // ------------------------------------------------------------------

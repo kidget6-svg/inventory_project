@@ -5,123 +5,193 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class MedicineController extends Controller
 {
+    /**
+     * GET /api/medicines
+     */
     public function index(Request $request)
     {
-        $query = Medicine::with(['category', 'supplier', 'shelf']);
+        try {
+            $query = Medicine::with(['category']);
 
-        // Search by name, generic name, or batch number
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('batch_number', 'like', "%{$search}%");
-            });
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+            if ($branchScope) {
+                $query->where('branch_id', $branchScope);
+            }
+
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('generic_name', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('category_id')) {
+                $query->where('category_id', $request->category_id);
+            }
+
+            if ($request->filled('shelf_id')) {
+                $query->where('shelf_id', $request->shelf_id);
+            }
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            $perPage = $request->get('per_page');
+            
+            // If requesting all records
+            if ($perPage === 'all' || $perPage == -1) {
+                $allMedicines = $query->latest()->get();
+                return response()->json($allMedicines);
+            }
+
+            // Paginated response
+            $medicines = $query->latest()->paginate($perPage ?? 15);
+
+            return response()->json([
+                'data' => $medicines->items(),
+                'meta' => [
+                    'current_page' => $medicines->currentPage(),
+                    'last_page' => $medicines->lastPage(),
+                    'per_page' => $medicines->perPage(),
+                    'total' => $medicines->total(),
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Query Error: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Filter by category
-        if ($categoryId = $request->input('category_id')) {
-            $query->where('category_id', $categoryId);
-        }
-
-        // Filter by supplier
-        if ($supplierId = $request->input('supplier_id')) {
-            $query->where('supplier_id', $supplierId);
-        }
-
-        // Filter by shelf
-        if ($shelfId = $request->input('shelf_id')) {
-            $query->where('shelf_id', $shelfId);
-        }
-
-        // Filter by status
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        $perPage = (int) $request->input('per_page', 10);
-        $medicines = $query->latest()->paginate($perPage);
-
-        $medicines->getCollection()->each->syncAutomaticExpiryState();
-
-        return response()->json($medicines);
     }
 
+    /**
+     * POST /api/medicines
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
-            'barcode' => 'nullable|string|max:255|unique:medicines,barcode',
             'category_id' => 'required|exists:categories,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'shelf_id' => 'nullable|exists:shelves,id',
             'quantity' => 'required|integer|min:0',
             'unit_price' => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'selling_price' => 'nullable|numeric|min:0',
             'reorder_level' => 'required|integer|min:0',
-            'expiry_date' => 'nullable|date',
             'status' => 'in:active,inactive,expired,discontinued',
             'description' => 'nullable|string',
+            'dosage_form' => 'nullable|string|max:50',
+            'strength' => 'nullable|string|max:50',
+            'unit' => 'nullable|string|20',
             'manufacturer' => 'nullable|string|max:255',
-            'shelf_location' => 'nullable|string|max:50',
+            'branch_id' => 'nullable|exists:branches,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
         $validated = $this->handleImageUpload($validated, null);
 
+        // New medicines start with zero stock; the initial quantity is recorded
+        // through the automatic stock movement created after creation.
+        $validated['quantity'] = 0;
+
+        // Assign the creating user's branch so branch-scoped users can see it,
+        // or respect the explicitly passed / active branch for admins.
+        if (empty($validated['branch_id'])) {
+            $userBranch = $request->user()->getBranchScope($request);
+            if ($userBranch) {
+                $validated['branch_id'] = $userBranch;
+            }
+        }
+
         $medicine = Medicine::create($validated);
-        return response()->json($medicine->load(['category', 'supplier', 'shelf']), 201);
+        return response()->json($medicine->load(['category']), 201);
     }
 
+    /**
+     * GET /api/medicines/{medicine}
+     */
     public function show(Medicine $medicine)
     {
-        $medicine->syncAutomaticExpiryState();
-
-        return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+        return response()->json($medicine->load(['category']));
     }
 
-    public function getLowStock()
+    /**
+     * GET /api/medicines/low-stock
+     */
+    public function getLowStock(Request $request)
     {
-        $medicines = Medicine::with(['category', 'supplier'])
-            ->whereColumn('quantity', '<=', 'reorder_level')
-            ->orderBy('quantity')
-            ->paginate(10);
+        try {
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
 
-        return response()->json($medicines);
+            $query = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+                ->with('category')
+                ->when($branchScope, function ($q) use ($branchScope) {
+                    $q->where('branch_id', $branchScope);
+                })
+                ->orderBy('quantity');
+
+            $medicines = $query->paginate(10);
+
+            return response()->json([
+                'success' => true,
+                'data'    => $medicines->items(),
+                'meta'    => [
+                    'current_page' => $medicines->currentPage(),
+                    'last_page'    => $medicines->lastPage(),
+                    'per_page'     => $medicines->perPage(),
+                    'total'        => $medicines->total(),
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
+    /**
+     * PUT /api/medicines/{medicine}
+     */
     public function update(Request $request, Medicine $medicine)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
-            'barcode' => ['nullable', 'string', 'max:100', Rule::unique('medicines', 'barcode')->ignore($medicine->id)],
+            'batch_number' => 'nullable|string|max:255',
             'category_id' => 'required|exists:categories,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'shelf_id' => 'nullable|exists:shelves,id',
             'quantity' => 'required|integer|min:0',
             'unit_price' => 'nullable|numeric|min:0',
-            'purchase_price' => 'nullable|numeric|min:0',
-            'selling_price' => 'nullable|numeric|min:0',
+            'reorder_level' => 'required|integer|min:0',
+            'status' => 'in:active,inactive,expired,discontinued',
             'description' => 'nullable|string',
+            'dosage_form' => 'nullable|string|max:50',
+            'strength' => 'nullable|string|max:50',
+            'unit' => 'nullable|string|20',
             'manufacturer' => 'nullable|string|max:255',
-            'shelf_location' => 'nullable|string|max:50',
+            'branch_id' => 'nullable|exists:branches,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
         $validated = $this->handleImageUpload($validated, $medicine);
         $medicine->update($validated);
-        $medicine->syncAutomaticExpiryState();
-        return response()->json($medicine->load(['category', 'supplier', 'shelf']));
+        return response()->json($medicine->load(['category']));
     }
 
+    /**
+     * PATCH /api/medicines/{medicine}/status
+     */
     public function updateStatus(Request $request, Medicine $medicine)
     {
         $validated = $request->validate([
@@ -140,7 +210,49 @@ class MedicineController extends Controller
     }
 
     /**
-     * Store an uploaded medicine image (if present) on the public disk.
+     * DELETE /api/medicines/{id}
+     */
+    public function destroy($id)
+    {
+        try {
+            $medicine = Medicine::find($id);
+
+            if (!$medicine) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Medicine not found'
+                ], 404);
+            }
+
+            DB::transaction(function () use ($medicine) {
+                if (Schema::hasTable('stock_movements') && Schema::hasColumn('stock_movements', 'medicine_id')) {
+                    DB::table('stock_movements')->where('medicine_id', $medicine->id)->delete();
+                }
+                if (Schema::hasTable('sale_items') && Schema::hasColumn('sale_items', 'medicine_id')) {
+                    DB::table('sale_items')->where('medicine_id', $medicine->id)->delete();
+                }
+                if (Schema::hasTable('purchase_order_items') && Schema::hasColumn('purchase_order_items', 'medicine_id')) {
+                    DB::table('purchase_order_items')->where('medicine_id', $medicine->id)->delete();
+                }
+
+                $medicine->delete();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Medicine deleted successfully'
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete medicine: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Store an uploaded medicine image on the public disk.
      * Deletes any previously stored image when updating.
      */
     protected function handleImageUpload(array $validated, ?Medicine $medicine = null): array
@@ -151,20 +263,12 @@ class MedicineController extends Controller
             return $validated;
         }
 
-        // Remove a previously stored image when updating
         if ($medicine && $medicine->image && Storage::disk('public')->exists($medicine->image)) {
             Storage::disk('public')->delete($medicine->image);
         }
 
         $path = $request->file('image')->store('medicine-images', 'public');
-        $validated['image'] = $path;
 
-        return $validated;
-    }
-
-    public function destroy(Medicine $medicine)
-    {
-        $medicine->delete();
-        return response()->json(['message' => 'Medicine deleted']);
+        return array_merge($validated, ['image' => $path]);
     }
 }

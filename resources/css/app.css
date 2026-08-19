@@ -175,6 +175,15 @@
     .pos-prescription-info {
         @apply border border-gray-200 dark:border-gray-700;
     }
+
+    /* POS pagination controls */
+    .pos-pagination {
+        @apply flex items-center justify-center gap-4 mt-6 mb-4;
+    }
+
+    .pos-pagination-btn {
+        @apply flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200;
+    }
 }
 
 /* Custom Overrides to force white background and dark text on Login & Registration input fields */

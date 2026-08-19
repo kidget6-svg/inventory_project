@@ -25,6 +25,11 @@ class SaleTest extends TestCase
     {
         parent::setUp();
 
+        // Seed roles & permissions so that permission-based middleware
+        // (e.g. permission:prescription-sales.dispense) can resolve
+        // user permissions correctly in the test environment.
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+
         $this->admin = User::factory()->create(['role' => 'admin', 'status' => 'approved']);
         $this->pharmacist = User::factory()->create(['role' => 'pharmacist', 'status' => 'approved']);
         $this->cashier = User::factory()->create(['role' => 'cashier', 'status' => 'approved']);
@@ -61,6 +66,9 @@ class SaleTest extends TestCase
                         'quantity' => 2,
                     ],
                 ],
+                'customer_name' => 'John Doe',
+                'customer_phone' => '0911234567',
+                'notes' => 'Take with food',
             ]);
 
         $response->assertCreated()
@@ -69,6 +77,9 @@ class SaleTest extends TestCase
         $this->assertDatabaseHas('sales', [
             'type' => 'prescription',
             'status' => 'pending_cashier',
+            'customer_name' => 'John Doe',
+            'customer_phone' => '0911234567',
+            'notes' => 'Take with food',
         ]);
     }
 
@@ -505,7 +516,7 @@ class SaleTest extends TestCase
     }
 
     /** @test */
-    public function it_prevents_admin_from_creating_prescription_sale()
+    public function it_allows_admin_to_create_prescription_sale()
     {
         $response = $this->actingAs($this->admin)
             ->postJson('/api/sales/prescription', [
@@ -515,9 +526,12 @@ class SaleTest extends TestCase
                         'quantity' => 2,
                     ],
                 ],
+                'customer_name' => 'Admin Customer',
+                'customer_phone' => '0911234567',
             ]);
 
-        $response->assertForbidden();
+        $response->assertCreated()
+            ->assertJsonStructure(['message', 'sale']);
     }
 
     /** @test */
@@ -583,14 +597,20 @@ class SaleTest extends TestCase
     }
 
     /** @test */
-    public function it_prevents_non_admin_from_accessing_sales_history()
+    public function it_allows_cashier_to_access_sales_history()
     {
         Sale::factory()->count(3)->create(['status' => 'completed']);
 
         $response = $this->actingAs($this->cashier)
             ->getJson('/api/sales/history');
 
-        $response->assertForbidden();
+        $response->assertOk();
+    }
+
+    /** @test */
+    public function it_prevents_pharmacist_from_accessing_sales_history()
+    {
+        Sale::factory()->count(3)->create(['status' => 'completed']);
 
         $response = $this->actingAs($this->pharmacist)
             ->getJson('/api/sales/history');
@@ -599,11 +619,22 @@ class SaleTest extends TestCase
     }
 
     /** @test */
-    public function it_prevents_non_admin_from_exporting_sales()
+    public function it_allows_cashier_to_export_sales()
     {
         Sale::factory()->create(['status' => 'completed']);
 
         $response = $this->actingAs($this->cashier)
+            ->get('/api/sales/export?type=sales&format=csv');
+
+        $response->assertOk();
+    }
+
+    /** @test */
+    public function it_prevents_pharmacist_from_exporting_sales()
+    {
+        Sale::factory()->create(['status' => 'completed']);
+
+        $response = $this->actingAs($this->pharmacist)
             ->get('/api/sales/export?type=sales&format=csv');
 
         $response->assertForbidden();

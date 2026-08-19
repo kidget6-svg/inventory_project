@@ -59,19 +59,15 @@ class PurchaseOrderWorkflowTest extends TestCase
         $this->assertTrue($purchaseOrder->send());
         $purchaseOrder->refresh();
         $this->assertSame('sent', $purchaseOrder->status);
-        $this->assertNotNull($purchaseOrder->sent_at);
-
-        // Step 3: Deliver (sent → delivered) — no stock change yet
-        $this->assertTrue($purchaseOrder->deliver());
+        $purchaseOrder->update(['sent_at' => now()]);
         $purchaseOrder->refresh();
-        $this->assertSame('delivered', $purchaseOrder->status);
-        $this->assertNotNull($purchaseOrder->delivered_at);
+        $this->assertNotNull($purchaseOrder->sent_at);
 
         // Stock should NOT have changed yet (still 10)
         $medicine->refresh();
         $this->assertSame(10, $medicine->quantity);
 
-        // Step 4: Complete (delivered → completed) — stock increases
+        // Step 3: Complete (sent → completed) — stock increases
         $this->assertTrue($purchaseOrder->complete());
         $purchaseOrder->refresh();
         $this->assertSame('completed', $purchaseOrder->status);

@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../axios';
 import { useAuth } from '../context/AuthContext';
+import { useBranch } from '../context/BranchContext';
 import Modal from '../components/Modal';
-import Stepper from '../components/Stepper';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
-import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Calendar, Tag, DollarSign, Barcode, Camera, Loader2, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Tag, DollarSign, Barcode, Loader2, ShoppingBag } from 'lucide-react';
 
 const statusOptions = [
     { value: '', label: 'All Statuses' },
@@ -26,10 +26,9 @@ const categoryOptions = [
     { value: 'Personal Care', label: 'Personal Care' },
 ];
 
-const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
-
 export default function RetailProducts() {
     const { user, hasPermission } = useAuth();
+    const { branchRefreshKey } = useBranch();
     const navigate = useNavigate();
     const canCreate = hasPermission('retail-products.create');
     const canEdit = hasPermission('retail-products.edit');
@@ -47,15 +46,12 @@ export default function RetailProducts() {
     const [meta, setMeta] = useState(null);
     const [page, setPage] = useState(1);
     const [submitting, setSubmitting] = useState(false);
-    const [scanning, setScanning] = useState(false);
-    const videoRef = useRef(null);
-    const [step, setStep] = useState(0);
 
     const [form, setForm] = useState({
-        name: '', sku: '', barcode: '', category: 'General', supplier_id: '',
-        quantity: '', price: '', purchase_price: '', reorder_level: '',
-        expiry_date: '', status: 'active',
-        description: '', manufacturer: '', shelf_location: '',
+        name: '', sku: '', barcode: '', category: 'General',
+        price: '', reorder_level: '',
+        status: 'active',
+        description: '',
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState('');
@@ -75,19 +71,82 @@ export default function RetailProducts() {
         if (filters.status) params.status = filters.status;
         api.get('/retail-products', { params })
             .then(r => {
-                setProducts(r.data.data || r.data);
-                setMeta(r.data);
+                // Handle both paginated and non-paginated responses
+                if (r.data && r.data.data) {
+                    setProducts(r.data.data || []);
+                    setMeta(r.data);
+                } else if (Array.isArray(r.data)) {
+                    setProducts(r.data);
+                    setMeta(null);
+                } else {
+                    setProducts([]);
+                    setMeta(null);
+                }
             })
-            .catch(err => { console.error(err); setError('Failed to load retail products'); })
+            .catch(err => { 
+                console.error(err); 
+                setError('Failed to load retail products');
+                setProducts([]);
+            })
             .finally(() => setLoading(false));
     };
 
-    const loadCategories = () => { api.get('/categories').then(r => setCategories(r.data)).catch(err => console.error(err)); };
-    const loadSuppliers = () => { api.get('/suppliers').then(r => setSuppliers(r.data)).catch(err => console.error(err)); };
+    const loadCategories = () => { 
+        api.get('/categories', { params: { per_page: -1 } })
+            .then(r => {
+                // Handle different response formats
+                let categoriesData = [];
+                if (Array.isArray(r.data)) {
+                    categoriesData = r.data;
+                } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
+                    categoriesData = r.data.data;
+                } else if (r.data && r.data.categories && Array.isArray(r.data.categories)) {
+                    categoriesData = r.data.categories;
+                } else {
+                    console.warn('Unexpected categories response format:', r.data);
+                }
+                setCategories(categoriesData);
+            })
+            .catch(err => { 
+                console.error('Error loading categories:', err); 
+                setCategories([]);
+            }); 
+    };
 
-    useEffect(() => { loadCategories(); loadSuppliers(); }, []);
-    useEffect(() => { setPage(1); }, [filters.search, filters.category, filters.supplier_id, filters.status]);
-    useEffect(() => { loadProducts(); }, [filters, page]);
+    const loadSuppliers = () => { 
+        api.get('/suppliers', { params: { per_page: -1 } })
+            .then(r => {
+                // Handle different response formats
+                let suppliersData = [];
+                if (Array.isArray(r.data)) {
+                    suppliersData = r.data;
+                } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
+                    suppliersData = r.data.data;
+                } else if (r.data && r.data.suppliers && Array.isArray(r.data.suppliers)) {
+                    suppliersData = r.data.suppliers;
+                } else {
+                    console.warn('Unexpected suppliers response format:', r.data);
+                }
+                setSuppliers(suppliersData);
+            })
+            .catch(err => { 
+                console.error('Error loading suppliers:', err); 
+                setSuppliers([]);
+            }); 
+    };
+
+    useEffect(() => { 
+        loadCategories(); 
+        loadSuppliers(); 
+    }, []);
+
+    useEffect(() => { 
+        setPage(1); 
+    }, [filters.search, filters.category, filters.supplier_id, filters.status]);
+
+    useEffect(() => { 
+        loadProducts(); 
+    }, [filters, page, branchRefreshKey]);
 
     const handlePageChange = (p) => setPage(p);
 
@@ -104,10 +163,15 @@ export default function RetailProducts() {
     const resetFilters = () => setFilters({ search: '', category: '', supplier_id: '', status: '' });
 
     const resetForm = () => {
-        setForm({ name: '', sku: '', barcode: '', category: 'General', supplier_id: '', quantity: '', price: '', purchase_price: '', reorder_level: '', expiry_date: '', status: 'active', description: '', manufacturer: '', shelf_location: '' });
+        setForm({ 
+            name: '', sku: '', barcode: '', category: 'General',
+            price: '', reorder_level: '',
+            status: 'active', description: '',
+        });
         setImageFile(null);
         setImagePreview('');
-        setEditId(null); setError(''); setStep(0);
+        setEditId(null); 
+        setError(''); 
     };
 
     const openCreate = () => { resetForm(); setShowModal(true); };
@@ -115,21 +179,18 @@ export default function RetailProducts() {
     const openEdit = (p) => {
         setForm({
             name: p.name || '', sku: p.sku || '', barcode: p.barcode || '', category: p.category || 'General',
-            supplier_id: p.supplier_id || '', quantity: p.quantity || '', price: p.price || '',
-            purchase_price: p.purchase_price || '', reorder_level: p.reorder_level || '',
-            expiry_date: p.expiry_date ? new Date(p.expiry_date).toISOString().split('T')[0] : '',
-            status: p.status || 'active', description: p.description || '', manufacturer: p.manufacturer || '',
-            shelf_location: p.shelf_location || '',
+            price: p.price || '',
+            reorder_level: p.reorder_level || '',
+            status: p.status || 'active', description: p.description || '',
         });
         setImageFile(null);
         setImagePreview(p.image_url || '');
-        setEditId(p.id); setShowModal(true); setError(''); setStep(0);
+        setEditId(p.id); 
+        setShowModal(true); 
+        setError(''); 
     };
 
     const openView = (p) => { setViewProduct(p); setShowViewModal(true); };
-
-    const nextStep = () => { setStep(s => Math.min(s + 1, formSteps.length - 1)); };
-    const prevStep = () => { setStep(s => Math.max(s - 1, 0)); };
 
     const handleSubmit = async () => {
         setError('');
@@ -142,6 +203,7 @@ export default function RetailProducts() {
                         formData.append(key, value);
                     }
                 });
+                formData.append('quantity', 0);
                 formData.append('image', imageFile);
 
                 const headers = { Accept: 'application/json' };
@@ -155,10 +217,17 @@ export default function RetailProducts() {
                     window.showToast('Retail product created successfully', 'success');
                 }
             } else {
-                if (editId) { await api.put(`/retail-products/${editId}`, form); window.showToast('Retail product updated successfully', 'success'); }
-                else { await api.post('/retail-products', form); window.showToast('Retail product created successfully', 'success'); }
+                const payload = { ...form, quantity: 0 };
+                if (editId) { 
+                    await api.put(`/retail-products/${editId}`, payload); 
+                    window.showToast('Retail product updated successfully', 'success'); 
+                } else { 
+                    await api.post('/retail-products', payload); 
+                    window.showToast('Retail product created successfully', 'success'); 
+                }
             }
-            setShowModal(false); loadProducts();
+            setShowModal(false); 
+            loadProducts();
         } catch (err) {
             const msgs = err.response?.data?.errors;
             setError(msgs ? Object.values(msgs).flat().join(' ') : 'Error saving retail product');
@@ -167,202 +236,104 @@ export default function RetailProducts() {
 
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this retail product?')) return;
-        try { await api.delete(`/retail-products/${id}`); window.showToast('Retail product deleted successfully', 'success'); loadProducts(); }
-        catch (err) { window.showToast('Failed to delete retail product', 'error'); }
-    };
-
-    const startBarcodeScan = async () => {
-        if (!('BarcodeDetector' in window)) { window.showToast('Barcode scanning is not supported in this browser.', 'error'); return; }
-        setScanning(true);
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
-            scanLoop();
-        } catch (err) { window.showToast('Could not access camera: ' + err.message, 'error'); setScanning(false); }
-    };
-
-    const scanLoop = useCallback(async () => {
-        if (!scanning) return;
-        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
-        try {
-            if (videoRef.current) {
-                const barcodes = await detector.detect(videoRef.current);
-                if (barcodes.length > 0) {
-                    setForm(prev => ({ ...prev, barcode: barcodes[0].rawValue }));
-                    stopBarcodeScan();
-                    window.showToast('Barcode scanned: ' + barcodes[0].rawValue, 'success');
-                    return;
-                }
-            }
-            requestAnimationFrame(scanLoop);
-        } catch (err) { requestAnimationFrame(scanLoop); }
-    }, [scanning]);
-
-    const stopBarcodeScan = () => {
-        setScanning(false);
-        if (videoRef.current && videoRef.current.srcObject) {
-            videoRef.current.srcObject.getTracks().forEach(t => t.stop());
-            videoRef.current.srcObject = null;
+        try { 
+            await api.delete(`/retail-products/${id}`); 
+            window.showToast('Retail product deleted successfully', 'success'); 
+            loadProducts(); 
+        } catch (err) { 
+            window.showToast('Failed to delete retail product', 'error'); 
         }
     };
 
-    useEffect(() => { return () => stopBarcodeScan(); }, []);
-
     const getStatusBadge = (status) => {
-        const config = { active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' }, inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' }, expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }, discontinued: { bg: 'bg-orange-100', text: 'orange-700', label: 'Discontinued' } };
+        const config = { 
+            active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' }, 
+            inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' }, 
+            expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }, 
+            discontinued: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Discontinued' } 
+        };
         const cfg = config[status] || config.active;
         return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>;
     };
 
     const isFiltered = filters.search || filters.category || filters.supplier_id || filters.status;
 
-    const renderStepContent = () => {
-        switch (step) {
-            case 0:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
-                            <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                    <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input type="text" name="barcode" value={form.barcode} onChange={handleChange} placeholder="Scan or type barcode" className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono" />
-                                </div>
-                                <button type="button" onClick={startBarcodeScan} disabled={scanning} className="px-3 py-2 bg-sky-500 text-white rounded-lg text-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5 disabled:opacity-60">
-                                    {scanning ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                                    {scanning ? 'Scanning...' : 'Scan'}
-                                </button>
-                            </div>
-                            {scanning && (
-                                <div className="mt-2 relative">
-                                    <video ref={videoRef} className="w-full max-w-xs rounded-lg border-2 border-sky-400" />
-                                    <button type="button" onClick={stopBarcodeScan} className="mt-1 text-xs text-red-600 hover:underline">Cancel scan</button>
-                                </div>
+    const renderFormFields = () => {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
+                    <div className="relative">
+                        <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <input type="text" name="barcode" value={form.barcode} onChange={handleChange} placeholder="Enter or scan barcode" className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono" />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Product Name *</label>
+                    <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Lipstick - Ruby Red" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">SKU</label>
+                    <input type="text" name="sku" value={form.sku} onChange={handleChange} placeholder="e.g. COS-001" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
+                    <select name="category" value={form.category} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
+                        {categoryOptions.filter(o => o.value).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Selling Price *</label>
+                    <div className="relative">
+                        <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
+                    <input type="number" name="reorder_level" value={form.reorder_level} onChange={handleChange} placeholder="10" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                    <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="discontinued">Discontinued</option>
+                    </select>
+                </div>
+                <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                    <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this product" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+                </div>
+                <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Product Image</label>
+                    <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+                            {imagePreview ? (
+                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                                <Package className="text-gray-300" size={28} />
                             )}
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Product Name *</label>
-                            <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Lipstick - Ruby Red" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">SKU</label>
-                            <input type="text" name="sku" value={form.sku} onChange={handleChange} placeholder="e.g. COS-001" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Category *</label>
-                            <select name="category" value={form.category} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
-                                {categoryOptions.filter(o => o.value).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
-                            <input type="text" name="manufacturer" value={form.manufacturer} onChange={handleChange} placeholder="e.g. GSK" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
-                            <input type="text" name="shelf_location" value={form.shelf_location} onChange={handleChange} placeholder="e.g. A-2-3" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier</label>
-                            <select name="supplier_id" value={form.supplier_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
-                                <option value="">Select Supplier</option>
-                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Additional details about this product" rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Product Image</label>
-                            <div className="flex items-center gap-4">
-                                <div className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <Package className="text-gray-300" size={28} />
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <input
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
-                                        onChange={(e) => {
-                                            const file = e.target.files[0];
-                                            if (file) {
-                                                setImageFile(file);
-                                                setImagePreview(URL.createObjectURL(file));
-                                            }
-                                        }}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
-                                    />
-                                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
-                                </div>
-                            </div>
+                        <div className="flex-1">
+                            <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        setImageFile(file);
+                                        setImagePreview(URL.createObjectURL(file));
+                                    }
+                                }}
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF up to 2MB</p>
                         </div>
                     </div>
-                );
-            case 1:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
-                            <input type="number" name="quantity" value={form.quantity} onChange={handleChange} placeholder="0" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Selling Price *</label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Purchase Price</label>
-                            <div className="relative">
-                                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input type="number" name="purchase_price" value={form.purchase_price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
-                            <input type="number" name="reorder_level" value={form.reorder_level} onChange={handleChange} placeholder="10" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>
-                    </div>
-                );
-            case 2:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date</label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input type="date" name="expiry_date" value={form.expiry_date} onChange={handleChange} className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                            <select name="status" value={form.status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="expired">Expired</option>
-                                <option value="discontinued">Discontinued</option>
-                            </select>
-                        </div>
-                        <div className="md:col-span-2 p-4 bg-sky-50 rounded-xl border border-sky-200">
-                            <h4 className="text-sm font-semibold text-sky-800 mb-2">Review Summary</h4>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div><span className="text-gray-500">Name:</span> <span className="font-medium">{form.name || '---'}</span></div>
-                                <div><span className="text-gray-500">Category:</span> <span className="font-medium">{form.category || '---'}</span></div>
-                                <div><span className="text-gray-500">Barcode:</span> <span className="font-medium">{form.barcode || '---'}</span></div>
-                                <div><span className="text-gray-500">Quantity:</span> <span className="font-medium">{form.quantity || '0'}</span></div>
-                                <div><span className="text-gray-500">Selling Price:</span> <span className="font-medium">{form.price ? `$${form.price}` : '---'}</span></div>
-                                <div><span className="text-gray-500">Status:</span> <span className="font-medium">{form.status}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            default: return null;
-        }
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -383,7 +354,9 @@ export default function RetailProducts() {
                         <Package className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                         <select name="supplier_id" value={filters.supplier_id} onChange={handleFilterChange} className="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none appearance-none">
                             <option value="">All Suppliers</option>
-                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {Array.isArray(suppliers) && suppliers.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
                         </select>
                     </div>
                     <div className="relative w-full md:w-48">
@@ -486,24 +459,17 @@ export default function RetailProducts() {
 
             {(canCreate || canEdit) && (
                 <Modal open={showModal} onClose={() => setShowModal(false)} title={editId ? 'Edit Retail Product' : 'Add New Retail Product'} size="max-w-2xl">
-                    <Stepper steps={formSteps} currentStep={step} />
                     {error && <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm border border-red-100">{error}</div>}
-                    <form onSubmit={(e) => { e.preventDefault(); if (step === formSteps.length - 1) handleSubmit(); else nextStep(); }}>
-                        {renderStepContent()}
+                    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+                        {renderFormFields()}
                         <div className="flex justify-between mt-6 pt-4 border-t border-sky-100">
-                            <button type="button" onClick={step === 0 ? () => setShowModal(false) : prevStep} className="btn-secondary flex items-center gap-1.5">
-                                <ChevronLeft size={16} /> {step === 0 ? 'Cancel' : 'Back'}
+                            <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex items-center gap-1.5">
+                                <X size={16} /> Cancel
                             </button>
-                            {step < formSteps.length - 1 ? (
-                                <button type="submit" className="btn-primary flex items-center gap-1.5">
-                                    Next <ChevronRight size={16} />
-                                </button>
-                            ) : (
-                                <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
-                                    {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
-                                        : <><Save size={16} /> {editId ? 'Update Product' : 'Create Product'}</>}
-                                </button>
-                            )}
+                            <button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 disabled:opacity-60">
+                                {submitting ? <><Loader2 size={16} className="animate-spin" /> {editId ? 'Updating...' : 'Creating...'}</>
+                                    : <><Save size={16} /> {editId ? 'Update Product' : 'Create Product'}</>}
+                            </button>
                         </div>
                     </form>
                 </Modal>
@@ -549,7 +515,6 @@ export default function RetailProducts() {
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Category</label><p className="text-sm text-gray-600">{viewProduct.category || 'General'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewProduct.supplier?.name || 'No Supplier'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Manufacturer</label><p className="text-sm text-gray-600">{viewProduct.manufacturer || '---'}</p></div>
-                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Shelf Location</label><p className="text-sm text-gray-600">{viewProduct.shelf_location || '---'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Status</label><div className="mt-1">{getStatusBadge(viewProduct.status)}</div></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label><p className="text-sm font-medium text-gray-800">{viewProduct.quantity}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label><p className="text-sm text-gray-600">{viewProduct.reorder_level}</p></div>

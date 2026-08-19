@@ -36,7 +36,7 @@ class UserController extends Controller
         $query->where('status', $status);
     }
 
-    $users = $query->orderBy('created_at', 'desc')->paginate(10);
+    $users = $query->with('branch')->orderBy('created_at', 'desc')->paginate(10);
 
     return response()->json($users);
 }
@@ -78,8 +78,9 @@ class UserController extends Controller
             'phone_number'                      => 'nullable|string|max:20',
             'password'                          => 'required|confirmed|min:8',
             'role'                              => ['required', Rule::exists('roles', 'slug')],
-            'gender'                            => 'nullable|in:male,female',
-            'date_of_birth'                     => 'nullable|date|before_or_equal:-20 years',
+            'branch_id'                         => ['nullable', 'exists:branches,id'],
+            'gender'                            => 'nullable|in:male,female,other',
+            'date_of_birth'                     => 'nullable|date',
             'address'                           => 'nullable|string',
             'profile_photo'                     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'license_number'                    => 'nullable|string|max:255',
@@ -108,6 +109,7 @@ class UserController extends Controller
             'password'      => Hash::make($request->password),
             'role'          => $request->role,
             'role_id'       => Role::where('slug', $request->role)->value('id'),
+            'branch_id'     => in_array($request->role, ['pharmacist', 'cashier']) ? $request->branch_id : null,
             'status'        => User::STATUS_APPROVED,
             'gender'        => $request->gender,
             'date_of_birth' => $request->date_of_birth,
@@ -170,6 +172,7 @@ class UserController extends Controller
             'phone_number'                      => 'nullable|string|max:20',
             'password'                          => 'nullable|confirmed|min:8',
             'role'                              => ['required', Rule::exists('roles', 'slug')],
+            'branch_id'                         => ['nullable', 'exists:branches,id'],
             'status'                            => 'nullable|in:pending,approved,rejected',
             'gender'                            => 'nullable|in:male,female',
             'date_of_birth'                     => 'nullable|date|before_or_equal:-20 years',
@@ -200,6 +203,7 @@ class UserController extends Controller
             'phone_number'  => $request->phone_number,
             'role'          => $request->role,
             'role_id'       => Role::where('slug', $request->role)->value('id'),
+            'branch_id'     => in_array($request->role, ['pharmacist', 'cashier']) ? $request->branch_id : null,
             'gender'        => $request->gender,
             'date_of_birth' => $request->date_of_birth,
             'address'       => $request->address,

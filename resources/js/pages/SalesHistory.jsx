@@ -494,9 +494,14 @@ export default function SalesHistory() {
                                         {selectedSale.items && selectedSale.items.length > 0 ? (
                                             selectedSale.items.map((item, idx) => (
                                                 <tr key={item.id || idx}>
-                                                    <td className="px-3 py-2 font-medium text-gray-800">
-                                                        {item.itemable?.name || item.medicine?.name || 'Product'}
-                                                    </td>
+                                                     <td className="px-3 py-2 font-medium text-gray-800 flex items-center justify-between">
+                                                         <span>{item.itemable?.name || item.medicine?.name || 'Product'}</span>
+                                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                                             item.itemable_type?.includes('RetailProduct') ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'
+                                                         }`}>
+                                                             {item.itemable_type?.includes('RetailProduct') ? 'Retail / OTC' : 'Medicine'}
+                                                         </span>
+                                                     </td>
                                                     <td className="px-3 py-2 text-center text-gray-600">{item.quantity}</td>
                                                     <td className="px-3 py-2 text-right text-gray-600">${parseFloat(item.unit_price || 0).toFixed(2)}</td>
                                                     <td className="px-3 py-2 text-right font-medium text-gray-800">${parseFloat(item.subtotal || 0).toFixed(2)}</td>

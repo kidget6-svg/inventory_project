@@ -1,134 +1,217 @@
 <?php
-// app/Http/Controllers/Api/StockMovementController.php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;  // ← Add this line
-use App\Models\Medicine;
 use App\Models\StockMovement;
+use App\Models\Medicine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class StockMovementController extends Controller
 {
+    /**
+     * Display a listing of stock movements with statistics and filters.
+     */
     public function index(Request $request)
     {
-        $query = StockMovement::with(['medicine', 'user']);
+        try {
+            $query = StockMovement::with(['medicine', 'user']);
 
-        // Filter by medicine
-        if ($request->medicine_id) {
-            $query->where('medicine_id', $request->medicine_id);
+            // Filter by search (medicine name, generic name, barcode, or reference)
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('medicine', function ($mq) use ($search) {
+                        $mq->where('name', 'like', "%{$search}%")
+                           ->orWhere('generic_name', 'like', "%{$search}%")
+                           ->orWhere('barcode', 'like', "%{$search}%");
+                    })
+                    ->orWhere('reference', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%");
+                });
+            }
+
+            // Filter by movement type (IN, OUT, ADJUSTMENT)
+            if ($request->filled('type')) {
+                $query->where('type', $request->type);
+            }
+
+            // Filter by medicine ID
+            if ($request->filled('medicine_id')) {
+                $query->where('medicine_id', $request->medicine_id);
+            }
+
+            // Filter by date range
+            if ($request->filled('start_date')) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->filled('end_date')) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+
+            // Order by most recent movements first
+            $movements = $query->latest()->paginate($request->get('per_page', 15));
+
+            // Calculate movement statistics for frontend KPI cards
+            $stats = [
+                'total_movements'   => StockMovement::count(),
+                'total_in'          => StockMovement::where('type', 'IN')->count(),
+                'total_out'         => StockMovement::where('type', 'OUT')->count(),
+                'total_adjustments' => StockMovement::where('type', 'ADJUSTMENT')->count(),
+                'qty_in'            => (int) StockMovement::where('type', 'IN')->sum('quantity'),
+                'qty_out'           => (int) StockMovement::where('type', 'OUT')->sum('quantity'),
+            ];
+
+            return response()->json([
+                'movements' => $movements,
+                'stats'     => $stats,
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('StockMovement Index Error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch stock movements: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Filter by type
-        if ($request->type && in_array($request->type, ['in', 'out', 'adjustment', 'return', 'damaged'])) {
-            $query->where('type', $request->type);
-        }
-
-        // Date range filter
-        if ($request->start_date) {
-            $query->whereDate('created_at', '>=', $request->start_date);
-        }
-        if ($request->end_date) {
-            $query->whereDate('created_at', '<=', $request->end_date);
-        }
-
-        $movements = $query->latest()->paginate(50);
-
-        return response()->json([
-            'movements' => $movements,
-            'medicines' => Medicine::orderBy('name')->get(['id', 'name', 'quantity'])
-        ]);
     }
 
+    /**
+     * Store a newly recorded stock movement in storage.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'medicine_id' => 'required|exists:medicines,id',
-            'type' => 'required|in:in,out,adjustment,return,damaged',
-            'quantity' => 'required|integer|min:1',
-            'reference' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
+            'medicine_id'      => 'required|exists:medicines,id',
+            'type'             => 'required|in:in,out,adjustment,return,transfer,damaged,expired,lost,correction,self,warehouse',
+            'quantity'         => 'required|integer|min:1',
+            'reference'        => 'nullable|string|max:255',
+            'notes'            => 'nullable|string|max:1000',
+            'source_type'      => 'nullable|string|in:self,supplier,branch,sale,customer,warehouse',
+            'source_id'        => 'nullable|integer',
+            'destination_type' => 'nullable|string|in:self,supplier,branch,sale,customer,warehouse',
+            'destination_id'   => 'nullable|integer',
+            'branch_id'        => 'nullable|integer',
+            'status'           => 'nullable|string|in:pending,approved,completed,cancelled',
         ]);
 
-        $response = DB::transaction(function () use ($validated) {
-            $medicine = Medicine::lockForUpdate()->findOrFail($validated['medicine_id']);
-            $oldQuantity = $medicine->quantity;
+        try {
+            return DB::transaction(function () use ($validated, $request) {
+                $medicine = Medicine::lockForUpdate()->findOrFail($validated['medicine_id']);
+                $qty = (int) $validated['quantity'];
+                $oldQuantity = (int) $medicine->quantity;
 
-            // Check for stock out
-            if (in_array($validated['type'], ['out', 'damaged'])) {
-                if ($validated['quantity'] > $medicine->quantity) {
-                    throw ValidationException::withMessages([
-                        'quantity' => "Insufficient stock. Available: {$medicine->quantity}"
-                    ]);
+                if (in_array($validated['type'], ['in', 'return', 'transfer', 'warehouse'])) {
+                    $medicine->quantity += $qty;
+                } elseif (in_array($validated['type'], ['out', 'damaged', 'expired', 'lost', 'correction', 'self'])) {
+                    if ($medicine->quantity < $qty) {
+                        return response()->json([
+                            'message' => 'Insufficient stock for outward movement. Available stock: ' . $medicine->quantity
+                        ], 422);
+                    }
+                    $medicine->quantity -= $qty;
+                } elseif ($validated['type'] === 'adjustment') {
+                    $medicine->quantity = $qty;
                 }
-            }
 
-            // Calculate new quantity
-            $newQuantity = $oldQuantity;
-            if (in_array($validated['type'], ['in', 'return'])) {
-                $newQuantity += $validated['quantity'];
-            } else if (in_array($validated['type'], ['out', 'damaged', 'adjustment'])) {
-                $newQuantity -= $validated['quantity'];
-            }
+                $medicine->save();
 
-            // Create movement record
-            $movement = StockMovement::create([
-                'medicine_id' => $validated['medicine_id'],
-                'user_id' => auth()->id(),
-                'type' => $validated['type'],
-                'quantity' => $validated['quantity'],
-                'before_quantity' => $oldQuantity,
-                'after_quantity' => $newQuantity,
-                'reference' => $validated['reference'] ?? null,
-                'notes' => $validated['notes'] ?? null,
+                $movement = StockMovement::create([
+                    'medicine_id'      => $validated['medicine_id'],
+                    'user_id'          => Auth::id() ?? 1,
+                    'type'             => $validated['type'],
+                    'quantity'         => $qty,
+                    'before_quantity'  => $oldQuantity,
+                    'after_quantity'   => $medicine->quantity,
+                    'reference'        => $validated['reference'] ?? null,
+                    'notes'            => $validated['notes'] ?? null,
+                    'source_type'      => $validated['source_type'] ?? null,
+                    'source_id'        => $validated['source_id'] ?? null,
+                    'destination_type' => $validated['destination_type'] ?? null,
+                    'destination_id'   => $validated['destination_id'] ?? null,
+                    'branch_id'        => $validated['branch_id'] ?? null,
+                    'status'           => $validated['status'] ?? 'pending',
+                    'ip_address'       => $request->ip(),
+                    'device_info'      => $request->userAgent(),
+                ]);
+
+                return response()->json([
+                    'message'  => 'Stock movement recorded successfully',
+                    'movement' => $movement->load('medicine', 'user'),
+                    'medicine' => $medicine,
+                ], 201);
+            });
+
+        } catch (\Throwable $e) {
+            Log::error('StockMovement Store Error: ' . $e->getMessage(), [
+                'trace'   => $e->getTraceAsString(),
+                'request' => $request->all(),
             ]);
 
-            // Update medicine quantity
-            $medicine->update(['quantity' => $newQuantity]);
-
-            return [
-                'movement' => $movement->load('medicine'),
-                'medicine' => $medicine
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Stock movement recorded successfully',
-            'data' => $response
-        ], 201);
+            return response()->json([
+                'message' => 'Failed to record stock movement.',
+                'error'   => config('app.debug') ? $e->getMessage() : 'Internal server error.',
+            ], 500);
+        }
     }
 
+    /**
+     * Display specified stock movement details.
+     */
     public function show($id)
     {
-        $movement = StockMovement::with(['medicine', 'user'])->findOrFail($id);
-        return response()->json($movement);
+        try {
+            $movement = StockMovement::with(['medicine', 'user'])->findOrFail($id);
+
+            return response()->json([
+                'data' => $movement
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Stock movement not found.'
+            ], 404);
+        }
     }
 
-    public function getTypes()
+    /**
+     * Remove the specified stock movement and revert medicine stock.
+     */
+    public function destroy($id)
     {
-        return response()->json([
-            'types' => [
-                ['value' => 'in', 'label' => 'Stock In', 'color' => 'green'],
-                ['value' => 'out', 'label' => 'Stock Out', 'color' => 'red'],
-                ['value' => 'adjustment', 'label' => 'Adjustment', 'color' => 'orange'],
-                ['value' => 'return', 'label' => 'Return', 'color' => 'blue'],
-                ['value' => 'damaged', 'label' => 'Damaged', 'color' => 'red'],
-            ]
-        ]);
-    }
+        try {
+            $movement = StockMovement::with('medicine')->findOrFail($id);
 
-    public function getSummary()
-    {
-        $summary = [
-            'total_in' => StockMovement::where('type', 'in')->sum('quantity'),
-            'total_out' => StockMovement::where('type', 'out')->sum('quantity'),
-            'total_adjustments' => StockMovement::where('type', 'adjustment')->sum('quantity'),
-            'total_returns' => StockMovement::where('type', 'return')->sum('quantity'),
-            'total_damaged' => StockMovement::where('type', 'damaged')->sum('quantity'),
-        ];
+            if ($movement->medicine) {
+                DB::transaction(function () use ($movement) {
+                    $medicine = $movement->medicine;
+                    $qty = (int) $movement->quantity;
 
-        return response()->json($summary);
+                    if (in_array($movement->type, ['IN', 'in', 'return', 'transfer'])) {
+                        $medicine->quantity = max(0, (int) $medicine->quantity - $qty);
+                    } elseif (in_array($movement->type, ['OUT', 'out', 'damaged', 'expired', 'lost', 'correction', 'self'])) {
+                        $medicine->quantity += $qty;
+                    } elseif ($movement->type === 'ADJUSTMENT' || $movement->type === 'adjustment') {
+                        $medicine->quantity = $movement->before_quantity ?? $medicine->quantity;
+                    }
+
+                    $medicine->save();
+                });
+            }
+
+            $movement->delete();
+
+            return response()->json([
+                'message' => 'Stock movement deleted and stock reverted successfully'
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('StockMovement Delete Error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to delete stock movement.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error.',
+            ], 500);
+        }
     }
 }

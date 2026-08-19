@@ -22,6 +22,12 @@ class SaleController extends Controller
     {
         $query = Sale::with(['items.itemable', 'user']);
 
+        // Branch scoping: pharmacists/cashiers see only their branch's sales
+        $user = $request->user();
+        if ($user->shouldScopeToBranch()) {
+            $query->where('branch_id', $user->branch_id);
+        }
+
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
@@ -46,7 +52,7 @@ class SaleController extends Controller
      */
     public function storePrescription(Request $request, SaleService $service)
     {
-        abort_if(! $request->user()->hasRole('pharmacist'), 403, 'Unauthorized. Only pharmacists can process prescription sales.');
+        abort_if(! $request->user()->hasPermission('prescription-sales.dispense'), 403, 'Unauthorized. Only pharmacists can process prescription sales.');
 
         $validated = $request->validate([
             'items' => 'required|array|min:1',
@@ -55,10 +61,12 @@ class SaleController extends Controller
             'payment_method' => 'nullable|string|in:' . implode(',', array_keys(Sale::paymentMethods())),
             'amount_paid' => 'nullable|numeric|min:0',
             // Prescription / patient information
-            'customer_name' => 'nullable|string|max:255',
-            'customer_phone' => 'nullable|string|max:50',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|max:50',
             'customer_email' => 'nullable|email|max:255',
             'notes' => 'nullable|string',
+            'discount_type' => 'nullable|in:percentage,fixed',
+            'discount' => 'nullable|numeric|min:0',
         ]);
 
         return DB::transaction(function () use ($validated, $request, $service) {
@@ -88,6 +96,9 @@ class SaleController extends Controller
                 ];
             }
 
+            $discountAmount = $this->calculateDiscount($totalAmount, $validated['discount_type'] ?? null, $validated['discount'] ?? 0);
+            $netAmount = max(0, $totalAmount - $discountAmount);
+
             $hasPaymentInfo = !empty($validated['payment_method']) && !empty($validated['amount_paid']);
 
             $sale = Sale::create([
@@ -96,11 +107,13 @@ class SaleController extends Controller
                 'type' => 'prescription',
                 'status' => $hasPaymentInfo ? 'completed' : 'pending_cashier',
                 'total_amount' => $totalAmount,
-                'net_amount' => $totalAmount,
+                'net_amount' => $netAmount,
+                'discount_type' => $validated['discount_type'] ?? null,
+                'discount' => $discountAmount,
                 'payment_method' => $validated['payment_method'] ?? 'cash',
                 'amount_paid' => $validated['amount_paid'] ?? 0,
                 'change_amount' => $hasPaymentInfo
-                    ? $service->calculateChange($totalAmount, (float) $validated['amount_paid'], $validated['payment_method'])
+                    ? $service->calculateChange($netAmount, (float) $validated['amount_paid'], $validated['payment_method'])
                     : 0,
                 'payment_status' => $hasPaymentInfo ? 'paid' : 'pending',
                 'receipt_number' => $hasPaymentInfo ? Sale::generateReceiptNumber() : null,
@@ -146,6 +159,8 @@ class SaleController extends Controller
             'customer_phone' => 'nullable|string|max:50',
             'customer_email' => 'nullable|email|max:255',
             'notes' => 'nullable|string',
+            'discount_type' => 'nullable|in:percentage,fixed',
+            'discount' => 'nullable|numeric|min:0',
         ]);
 
         return DB::transaction(function () use ($validated, $request, $service) {
@@ -175,13 +190,18 @@ class SaleController extends Controller
                 ];
             }
 
+            $discountAmount = $this->calculateDiscount($totalAmount, $validated['discount_type'] ?? null, $validated['discount'] ?? 0);
+            $netAmount = max(0, $totalAmount - $discountAmount);
+
             $sale = Sale::create([
                 'user_id' => $request->user()->id,
                 'sale_date' => now(),
                 'type' => 'retail',
                 'status' => 'pending_cashier',
                 'total_amount' => $totalAmount,
-                'net_amount' => $totalAmount,
+                'net_amount' => $netAmount,
+                'discount_type' => $validated['discount_type'] ?? null,
+                'discount' => $discountAmount,
                 'payment_method' => 'cash',
                 'amount_paid' => 0,
                 'change_amount' => 0,
@@ -202,6 +222,130 @@ class SaleController extends Controller
                 'sale' => $sale->load('items.itemable')
             ], 201);
         });
+    }
+
+    /**
+     * Unified POS dispatch — pharmacist or cashier sends an order to
+     * the checkout queue. Supports mixed medicine + retail/OTC items,
+     * customer information, and discounts.
+     *
+     * @policy Allowed for pharmacists and cashiers.
+     */
+    public function storeDispatch(Request $request, SaleService $service)
+    {
+        abort_if(! in_array($request->user()->role, ['pharmacist', 'cashier'], true), 403, 'Unauthorized. Only pharmacists and cashiers can dispatch orders.');
+
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.type' => 'required|in:medicine,retail',
+            'items.*.id' => 'required|integer',
+            'items.*.quantity' => 'required|integer|min:1',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_phone' => 'nullable|string|max:50',
+            'customer_email' => 'nullable|email|max:255',
+            'notes' => 'nullable|string',
+            'discount_type' => 'nullable|in:percentage,fixed',
+            'discount' => 'nullable|numeric|min:0',
+        ]);
+
+        return DB::transaction(function () use ($validated, $request, $service) {
+            $totalAmount = 0;
+            $itemsToCreate = [];
+            $hasMedicine = false;
+
+            foreach ($validated['items'] as $item) {
+                if ($item['type'] === 'medicine') {
+                    $medicine = Medicine::findOrFail($item['id']);
+                    $hasMedicine = true;
+
+                    if ($medicine->quantity < $item['quantity']) {
+                        return response()->json([
+                            'message' => "Insufficient stock for {$medicine->name}"
+                        ], 422);
+                    }
+
+                    $unitPrice = $medicine->selling_price ?? $medicine->unit_price ?? 0;
+                    $subtotal = $unitPrice * $item['quantity'];
+                    $totalAmount += $subtotal;
+
+                    $itemsToCreate[] = [
+                        'medicine_id' => $medicine->id,
+                        'itemable_id' => $medicine->id,
+                        'itemable_type' => Medicine::class,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $unitPrice,
+                        'subtotal' => $subtotal,
+                    ];
+                } else {
+                    $product = RetailProduct::findOrFail($item['id']);
+
+                    if ($product->quantity < $item['quantity']) {
+                        return response()->json([
+                            'message' => "Insufficient stock for {$product->name}"
+                        ], 422);
+                    }
+
+                    $unitPrice = $product->price;
+                    $subtotal = $unitPrice * $item['quantity'];
+                    $totalAmount += $subtotal;
+
+                    $itemsToCreate[] = [
+                        'medicine_id' => null,
+                        'itemable_id' => $product->id,
+                        'itemable_type' => RetailProduct::class,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $unitPrice,
+                        'subtotal' => $subtotal,
+                    ];
+                }
+            }
+
+            $discountAmount = $this->calculateDiscount($totalAmount, $validated['discount_type'] ?? null, $validated['discount'] ?? 0);
+            $netAmount = max(0, $totalAmount - $discountAmount);
+
+            $sale = Sale::create([
+                'user_id' => $request->user()->id,
+                'sale_date' => now(),
+                'type' => $hasMedicine ? 'prescription' : 'retail',
+                'status' => 'pending_cashier',
+                'total_amount' => $totalAmount,
+                'net_amount' => $netAmount,
+                'discount_type' => $validated['discount_type'] ?? null,
+                'discount' => $discountAmount,
+                'payment_method' => 'cash',
+                'amount_paid' => 0,
+                'change_amount' => 0,
+                'payment_status' => 'pending',
+                'receipt_number' => null,
+                'customer_name' => $validated['customer_name'] ?? null,
+                'customer_phone' => $validated['customer_phone'] ?? null,
+                'customer_email' => $validated['customer_email'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            foreach ($itemsToCreate as $itemData) {
+                $sale->items()->create($itemData);
+            }
+
+            return response()->json([
+                'message' => 'Order sent to Checkout',
+                'sale' => $sale->load('items.itemable')
+            ], 201);
+        });
+    }
+
+    /**
+     * Calculate the discount amount for a subtotal.
+     */
+    private function calculateDiscount(float $subtotal, ?string $type, float $value): float
+    {
+        if ($type === 'percentage' && $value > 0) {
+            return round($subtotal * (min(100, $value) / 100), 2);
+        }
+        if ($type === 'fixed' && $value > 0) {
+            return round(min($subtotal, $value), 2);
+        }
+        return 0.0;
     }
 
     /**
@@ -302,7 +446,7 @@ class SaleController extends Controller
         ]);
 
         return DB::transaction(function () use ($sale, $validated, $service, $request) {
-            $totalAmount = (float) $sale->total_amount;
+            $totalAmount = (float) ($sale->net_amount ?? $sale->total_amount);
             $amountPaid = (float) $validated['amount_paid'];
             $paymentMethod = $validated['payment_method'];
 

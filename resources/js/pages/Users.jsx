@@ -64,6 +64,8 @@ export default function Users(){
 
     const [roles, setRoles] = useState([]);
 
+    const [branches, setBranches] = useState([]);
+
 
     const [showModal,setShowModal] = useState(false);
 
@@ -80,13 +82,14 @@ export default function Users(){
 
 
 
-    const [form,setForm] = useState({
+const [form,setForm] = useState({
 
         name:"",
         email:"",
         password:"",
         password_confirmation:"",
-        role:"cashier"
+        role:"cashier",
+        branch_id: null
 
     });
 
@@ -101,6 +104,12 @@ export default function Users(){
     useEffect(()=>{
         api.get("/roles")
             .then(r => setRoles(r.data.roles || []))
+            .catch(() => {});
+    },[]);
+
+    useEffect(()=>{
+        api.get("/branches")
+            .then(r => setBranches(r.data?.data || r.data || []))
             .catch(() => {});
     },[]);
 
@@ -172,7 +181,8 @@ export default function Users(){
             email:"",
             password:"",
             password_confirmation:"",
-            role:"cashier"
+            role:"cashier",
+            branch_id: null
 
         });
 
@@ -216,7 +226,8 @@ export default function Users(){
 
             password_confirmation:"",
 
-            role:user.role
+            role:user.role,
+            branch_id: user.branch_id || ""
 
         });
 
@@ -277,7 +288,7 @@ export default function Users(){
             else{
 
                 await api.post(
-                    "/register",
+                    "/users",
                     payload
                 );
 
@@ -1455,6 +1466,24 @@ className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 </div>
 
 
+<div className="mt-4">
+	<label className="text-sm font-medium">Branch</label>
+	<select
+		name="branch_id"
+		value={form.branch_id}
+		onChange={handleChange}
+		className="w-full mt-1 py-3 px-4 border rounded-xl"
+	>
+		<option value="">Select Branch</option>
+{branches.map(branch=>
+		<option key={branch.id} value={branch.id}>
+			{branch.name}
+		</option>
+	)}
+	</select>
+</div>
+
+
 
 <div>
 
@@ -2058,6 +2087,13 @@ Role
 
 
 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
+
+Branch
+
+</th>
+
+
+<th className="px-6 py-4 text-left text-sm">
 
 Status
 

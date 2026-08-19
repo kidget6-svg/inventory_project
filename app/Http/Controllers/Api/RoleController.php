@@ -22,7 +22,7 @@ class RoleController extends Controller
             'slug' => $role->slug,
             'description' => $role->description,
             'is_system' => $role->is_system,
-            'permissions' => $role->permissions->pluck('slug')->all(),
+            'permissions' => $role->slug === 'admin' ? Permission::pluck('slug')->all() : $role->permissions->pluck('slug')->all(),
         ]);
 
         $permissions = Permission::orderBy('group')->orderBy('name')->get();
@@ -78,8 +78,12 @@ class RoleController extends Controller
             'description' => $request->description,
         ]);
 
-        if (!$role->is_system) {
-            $role->permissions()->sync($this->permissionIds($request->input('permissions', [])));
+        $slugs = $request->input('permissions', []);
+
+        if ($role->slug === 'admin') {
+            $role->permissions()->sync(Permission::pluck('id')->all());
+        } else {
+            $role->permissions()->sync($this->permissionIds($slugs));
         }
 
         return response()->json([
@@ -126,7 +130,7 @@ class RoleController extends Controller
             'slug' => $role->slug,
             'description' => $role->description,
             'is_system' => $role->is_system,
-            'permissions' => $role->permissions->pluck('slug')->all(),
+            'permissions' => $role->slug === 'admin' ? Permission::pluck('slug')->all() : $role->permissions->pluck('slug')->all(),
         ];
     }
 }
