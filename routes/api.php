@@ -81,6 +81,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/warehouse/stock', [WarehouseController::class, 'stock']);
         Route::get('/warehouse/receiving-history', [WarehouseController::class, 'receivingHistory']);
         Route::get('/warehouse/transfer-requests', [WarehouseController::class, 'transferRequests']);
+        Route::get('/warehouse/shelves/{id}/items', [WarehouseController::class, 'shelfItems']);
 
         // Branches Read
         Route::get('/branches', [BranchController::class, 'index']);
@@ -193,6 +194,13 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     Route::middleware('role:pharmacist')->group(function () {
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
         Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
+    });
+
+    // --------------------------------------------------------------------
+    // Unified POS Dispatch (Pharmacist + Cashier) — sends order to checkout
+    // --------------------------------------------------------------------
+    Route::middleware('role:pharmacist,cashier')->group(function () {
+        Route::post('/sales/dispatch', [SaleController::class, 'storeDispatch']);
     });
 
     // --------------------------------------------------------------------

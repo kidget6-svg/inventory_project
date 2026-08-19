@@ -39,6 +39,7 @@ export default function Medicines() {
 
     const [medicines, setMedicines] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [branches, setBranches] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [showViewModal, setShowViewModal] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -56,7 +57,7 @@ export default function Medicines() {
 
     const [form, setForm] = useState({
         name: '', generic_name: '', batch_number: '', category_id: '',
-        quantity: '', reorder_level: '', description: '', status: 'active',
+        reorder_level: '', description: '', status: 'active', branch_id: '',
         dosage_form: '', strength: '', unit: '',
     });
 
@@ -100,9 +101,19 @@ export default function Medicines() {
             .then(r => setCategories(Array.isArray(r.data.data) ? r.data.data : (Array.isArray(r.data.categories?.data) ? r.data.categories.data : (Array.isArray(r.data.categories) ? r.data.categories : []))))
             .catch(err => console.error(err)); 
     };
+
+    const loadBranches = () => { 
+        api.get('/branches')
+            .then(r => {
+                const d = r.data;
+                setBranches(Array.isArray(d) ? d : (Array.isArray(d.data) ? d.data : []));
+            })
+            .catch(err => console.error(err)); 
+    };
     
     useEffect(() => { 
         loadCategories(); 
+        loadBranches();
     }, []);
 
     useEffect(() => { 
@@ -129,7 +140,7 @@ export default function Medicines() {
     const resetForm = () => {
         setForm({ 
             name: '', generic_name: '', batch_number: '', category_id: '', 
-            quantity: '', reorder_level: '', description: '', status: 'active',
+            reorder_level: '', description: '', status: 'active', branch_id: '',
             dosage_form: '', strength: '', unit: '' 
         });
         setEditId(null); 
@@ -149,9 +160,10 @@ export default function Medicines() {
         setForm({
             name: m.name || '', generic_name: m.generic_name || '', batch_number: m.batch_number || '',
             category_id: m.category_id || '',
-            quantity: m.quantity || '', reorder_level: m.reorder_level || '',
+            reorder_level: m.reorder_level || '',
             description: m.description || '',
             status: m.status || 'active',
+            branch_id: m.branch_id || '',
             dosage_form: m.dosage_form || '',
             strength: m.strength || '',
             unit: m.unit || '',
@@ -204,6 +216,7 @@ export default function Medicines() {
                 formData.append(key, form[key]);
             }
         });
+        formData.append('quantity', 0);
         
         if (imageFile) {
             formData.append('image', imageFile);
@@ -217,22 +230,10 @@ export default function Medicines() {
                 });
                 window.showToast('Medicine updated successfully', 'success');
             } else {
-                const response = await api.post('/medicines', formData, {
+                await api.post('/medicines', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 window.showToast('Medicine created successfully', 'success');
-                
-                // Automatically create stock movement for new medicine with initial quantity
-                if (form.quantity && form.quantity > 0 && response.data.id) {
-                    await api.post('/stock-movements', {
-                        medicine_id: response.data.id,
-                        type: 'in',
-                        quantity: form.quantity,
-                        reference: 'NEW-MED-' + Date.now(),
-                        notes: 'Initial stock added for new medicine',
-                        branch_id: user?.branch_id || undefined,
-                    });
-                }
             }
             setShowModal(false); 
             loadMedicines();
@@ -369,8 +370,11 @@ export default function Medicines() {
                     )}
                 </div>
                 <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
-                    <input type="number" name="quantity" value={form.quantity} onChange={handleChange} placeholder="0" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Branch *</label>
+                    <select name="branch_id" value={form.branch_id} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required>
+                        <option value="">Select Branch</option>
+                        {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level</label>

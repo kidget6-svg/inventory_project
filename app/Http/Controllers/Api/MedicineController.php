@@ -93,6 +93,7 @@ class MedicineController extends Controller
             'strength' => 'nullable|string|max:50',
             'unit' => 'nullable|string|20',
             'manufacturer' => 'nullable|string|max:255',
+            'branch_id' => 'nullable|exists:branches,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
@@ -168,6 +169,7 @@ class MedicineController extends Controller
             'strength' => 'nullable|string|max:50',
             'unit' => 'nullable|string|20',
             'manufacturer' => 'nullable|string|max:255',
+            'branch_id' => 'nullable|exists:branches,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 

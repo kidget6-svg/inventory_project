@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../axios';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
-import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Tag, DollarSign, Barcode, Camera, Loader2, ShoppingBag } from 'lucide-react';
+import { Search, Filter, Eye, Edit, Trash2, X, Save, Package, Tag, DollarSign, Barcode, Loader2, ShoppingBag } from 'lucide-react';
 
 const statusOptions = [
     { value: '', label: 'All Statuses' },
@@ -44,12 +44,10 @@ export default function RetailProducts() {
     const [meta, setMeta] = useState(null);
     const [page, setPage] = useState(1);
     const [submitting, setSubmitting] = useState(false);
-    const [scanning, setScanning] = useState(false);
-    const videoRef = useRef(null);
 
     const [form, setForm] = useState({
         name: '', sku: '', barcode: '', category: 'General',
-        quantity: '', price: '', reorder_level: '',
+        price: '', reorder_level: '',
         status: 'active',
         description: '',
     });
@@ -165,7 +163,7 @@ export default function RetailProducts() {
     const resetForm = () => {
         setForm({ 
             name: '', sku: '', barcode: '', category: 'General',
-            quantity: '', price: '', reorder_level: '',
+            price: '', reorder_level: '',
             status: 'active', description: '',
         });
         setImageFile(null);
@@ -179,7 +177,7 @@ export default function RetailProducts() {
     const openEdit = (p) => {
         setForm({
             name: p.name || '', sku: p.sku || '', barcode: p.barcode || '', category: p.category || 'General',
-            quantity: p.quantity || '', price: p.price || '',
+            price: p.price || '',
             reorder_level: p.reorder_level || '',
             status: p.status || 'active', description: p.description || '',
         });
@@ -203,6 +201,7 @@ export default function RetailProducts() {
                         formData.append(key, value);
                     }
                 });
+                formData.append('quantity', 0);
                 formData.append('image', imageFile);
 
                 const headers = { Accept: 'application/json' };
@@ -216,11 +215,12 @@ export default function RetailProducts() {
                     window.showToast('Retail product created successfully', 'success');
                 }
             } else {
+                const payload = { ...form, quantity: 0 };
                 if (editId) { 
-                    await api.put(`/retail-products/${editId}`, form); 
+                    await api.put(`/retail-products/${editId}`, payload); 
                     window.showToast('Retail product updated successfully', 'success'); 
                 } else { 
-                    await api.post('/retail-products', form); 
+                    await api.post('/retail-products', payload); 
                     window.showToast('Retail product created successfully', 'success'); 
                 }
             }
@@ -243,56 +243,6 @@ export default function RetailProducts() {
         }
     };
 
-    const startBarcodeScan = async () => {
-        if (!('BarcodeDetector' in window)) { 
-            window.showToast('Barcode scanning is not supported in this browser.', 'error'); 
-            return; 
-        }
-        setScanning(true);
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            if (videoRef.current) { 
-                videoRef.current.srcObject = stream; 
-                await videoRef.current.play(); 
-            }
-            scanLoop();
-        } catch (err) { 
-            window.showToast('Could not access camera: ' + err.message, 'error'); 
-            setScanning(false); 
-        }
-    };
-
-    const scanLoop = useCallback(async () => {
-        if (!scanning) return;
-        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
-        try {
-            if (videoRef.current) {
-                const barcodes = await detector.detect(videoRef.current);
-                if (barcodes.length > 0) {
-                    setForm(prev => ({ ...prev, barcode: barcodes[0].rawValue }));
-                    stopBarcodeScan();
-                    window.showToast('Barcode scanned: ' + barcodes[0].rawValue, 'success');
-                    return;
-                }
-            }
-            requestAnimationFrame(scanLoop);
-        } catch (err) { 
-            requestAnimationFrame(scanLoop); 
-        }
-    }, [scanning]);
-
-    const stopBarcodeScan = () => {
-        setScanning(false);
-        if (videoRef.current && videoRef.current.srcObject) {
-            videoRef.current.srcObject.getTracks().forEach(t => t.stop());
-            videoRef.current.srcObject = null;
-        }
-    };
-
-    useEffect(() => { 
-        return () => stopBarcodeScan(); 
-    }, []);
-
     const getStatusBadge = (status) => {
         const config = { 
             active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' }, 
@@ -311,22 +261,10 @@ export default function RetailProducts() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
-                    <div className="flex gap-2">
-                        <div className="relative flex-1">
-                            <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                            <input type="text" name="barcode" value={form.barcode} onChange={handleChange} placeholder="Scan or type barcode" className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono" />
-                        </div>
-                        <button type="button" onClick={startBarcodeScan} disabled={scanning} className="px-3 py-2 bg-sky-500 text-white rounded-lg text-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5 disabled:opacity-60">
-                            {scanning ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                            {scanning ? 'Scanning...' : 'Scan'}
-                        </button>
+                    <div className="relative">
+                        <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <input type="text" name="barcode" value={form.barcode} onChange={handleChange} placeholder="Enter or scan barcode" className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono" />
                     </div>
-                    {scanning && (
-                        <div className="mt-2 relative">
-                            <video ref={videoRef} className="w-full max-w-xs rounded-lg border-2 border-sky-400" />
-                            <button type="button" onClick={stopBarcodeScan} className="mt-1 text-xs text-red-600 hover:underline">Cancel scan</button>
-                        </div>
-                    )}
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Product Name *</label>
@@ -348,10 +286,6 @@ export default function RetailProducts() {
                         <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                         <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="0.00" step="0.01" min="0" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
                     </div>
-                </div>
-                <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
-                    <input type="number" name="quantity" value={form.quantity} onChange={handleChange} placeholder="0" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
                 </div>
                 <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
@@ -579,7 +513,6 @@ export default function RetailProducts() {
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Category</label><p className="text-sm text-gray-600">{viewProduct.category || 'General'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label><p className="text-sm text-gray-600">{viewProduct.supplier?.name || 'No Supplier'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Manufacturer</label><p className="text-sm text-gray-600">{viewProduct.manufacturer || '---'}</p></div>
-                            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Shelf Location</label><p className="text-sm text-gray-600">{viewProduct.shelf_location || '---'}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Status</label><div className="mt-1">{getStatusBadge(viewProduct.status)}</div></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Quantity</label><p className="text-sm font-medium text-gray-800">{viewProduct.quantity}</p></div>
                             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Reorder Level</label><p className="text-sm text-gray-600">{viewProduct.reorder_level}</p></div>

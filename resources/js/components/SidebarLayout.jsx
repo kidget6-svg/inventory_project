@@ -32,10 +32,8 @@ const menuItems = [
 
     // Point of Sale
     { section: 'Point of Sale' },
-    { to: '/prescription-sales', label: 'Prescription Sales', icon: FileText, permissions: ['prescription-sales.view'] },
-    { to: '/prescription-sales-cashier', label: 'Prescription Checkout', icon: FileText, permissions: ['prescription-checkout.view'] },
-    { to: '/retail-otc-sales', label: 'Retail & OTC Sales', icon: ShoppingBag, permissions: ['retail-otc-sales.view'] },
-    { to: '/retail-sales', label: 'Retail Point of Sale', icon: ShoppingBag, permissions: ['retail-pos.view'] },
+    { to: '/sales', label: 'Sales', icon: ShoppingCart, permissions: ['prescription-sales.view', 'retail-otc-sales.view', 'retail-pos.view'] },
+    { to: '/sales-checkout', label: 'Sales Checkout', icon: DollarSign, permissions: ['prescription-checkout.view', 'retail-pos.view'] },
 
     // Reports & Analytics
     { section: 'Reports & Analytics' },

@@ -78,17 +78,17 @@ const adminActions = [
 
 const pharmacistActions = [
     {
-        to: '/prescription-sales',
-        label: 'Prescription Sales',
-        description: 'Dispense medications',
+        to: '/sales',
+        label: 'New Sale',
+        description: 'Add items & send to checkout',
         icon: Plus,
         color: 'blue',
     },
     {
-        to: '/retail-otc-sales',
-        label: 'Retail & OTC Sales',
-        description: 'Sell OTC products',
-        icon: ShoppingBag,
+        to: '/sales-checkout',
+        label: 'Sales Checkout',
+        description: 'Process payments',
+        icon: ShoppingCart,
         color: 'blue',
     },
     {
@@ -117,10 +117,17 @@ const pharmacistActions = [
 
 const cashierActions = [
     {
-        to: '/retail-sales',
-        label: 'New Sale',
-        description: 'Sell retail products',
+        to: '/sales-checkout',
+        label: 'Sales Checkout',
+        description: 'Process pending payments',
         icon: Plus,
+        color: 'blue',
+    },
+    {
+        to: '/sales',
+        label: 'New Sale',
+        description: 'Create an order',
+        icon: ShoppingCart,
         color: 'blue',
     },
     {

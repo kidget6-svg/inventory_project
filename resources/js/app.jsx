@@ -23,6 +23,8 @@ import PrescriptionSales from './pages/PrescriptionSales';
 import CashierPrescriptionSales from './pages/CashierPrescriptionSales';
 import RetailSales from './pages/RetailSales';
 import RetailOTCSales from './pages/RetailOTCSales';
+import Sales from './pages/Sales';
+import SalesCheckout from './pages/SalesCheckout';
 import RetailProducts from './pages/RetailProducts';
 import StockMovements from './pages/StockMovements';
 import Reports from './pages/Reports';
@@ -67,8 +69,7 @@ function DashboardRouter() {
 
 function SalesRedirect() {
     const { hasPermission } = useAuth();
-    if (hasPermission('sales.prescription')) return <Navigate to="/prescription-sales" replace />;
-    if (hasPermission('sales.retail')) return <Navigate to="/retail-sales" replace />;
+    if (hasPermission('prescription-sales.view') || hasPermission('retail-otc-sales.view') || hasPermission('retail-pos.view')) return <Navigate to="/sales" replace />;
     return <Navigate to="/dashboard" replace />;
 }
 
@@ -135,21 +136,27 @@ function App() {
             } />
 
             {/* Sales Routes */}
-            <Route path="/prescription-sales" element={
-                <ProtectedRoute permissions={['sales.prescription']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+            <Route path="/sales" element={
+                <ProtectedRoute permissions={['prescription-sales.view', 'retail-otc-sales.view', 'retail-pos.view']} title="Sales"><Sales /></ProtectedRoute>
             } />
-            <Route path="/prescription-sales-cashier" element={
-                <ProtectedRoute permissions={['sales.checkout']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
-            } />
-            <Route path="/retail-otc-sales" element={
-                <ProtectedRoute permissions={['sales.retail']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
-            } />
-            <Route path="/retail-sales" element={
-                <ProtectedRoute permissions={['sales.retail']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+            <Route path="/sales-checkout" element={
+                <ProtectedRoute permissions={['prescription-checkout.view', 'retail-pos.view']} title="Sales Checkout"><SalesCheckout /></ProtectedRoute>
             } />
 
-            {/* Permission-based redirect for legacy /sales path */}
-            <Route path="/sales" element={<ProtectedRoute><SalesRedirect /></ProtectedRoute>} />
+            {/* Legacy sales routes (kept for compatibility, no sidebar links) */}
+            <Route path="/prescription-sales" element={
+                <ProtectedRoute permissions={['prescription-sales.view']} title="Prescription Sales"><PrescriptionSales /></ProtectedRoute>
+            } />
+            <Route path="/prescription-sales-cashier" element={
+                <ProtectedRoute permissions={['prescription-checkout.view']} title="Prescription Checkout"><CashierPrescriptionSales /></ProtectedRoute>
+            } />
+            <Route path="/retail-otc-sales" element={
+                <ProtectedRoute permissions={['retail-otc-sales.view']} title="Retail & OTC Sales"><RetailOTCSales /></ProtectedRoute>
+            } />
+            <Route path="/retail-sales" element={
+                <ProtectedRoute permissions={['retail-pos.view']} title="Retail Point of Sale"><RetailSales /></ProtectedRoute>
+            } />
+            <Route path="/sales-legacy" element={<ProtectedRoute><SalesRedirect /></ProtectedRoute>} />
 
             {/* Receipt Page */}
             <Route path="/receipt/:id" element={

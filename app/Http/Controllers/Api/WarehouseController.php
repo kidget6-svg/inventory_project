@@ -11,6 +11,7 @@ use App\Models\PurchaseOrder;
 use App\Models\StockMovement;
 use App\Models\StockTransfer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class WarehouseController extends Controller
@@ -103,6 +104,8 @@ public function stats(Request $request)
             $validated = $request->validate([
                 'purchase_order_id' => 'required|exists:purchase_orders,id',
                 'batch_number' => 'required|string|max:255',
+                'barcode' => 'nullable|string|max:255',
+                'manufacturer' => 'nullable|string|max:255',
                 'expiry_date' => 'required|date|after:today',
                 'quantity' => 'required|integer|min:1',
                 'shelf_id' => 'nullable|exists:shelves,id',
@@ -116,6 +119,8 @@ public function stats(Request $request)
             $batch = Batch::create([
                 'medicine_id' => $medicine->id,
                 'batch_number' => $validated['batch_number'],
+                'barcode' => $validated['barcode'] ?? null,
+                'manufacturer' => $validated['manufacturer'] ?? null,
                 'expiry_date' => $validated['expiry_date'],
                 'quantity' => $validated['quantity'],
                 'shelf_id' => $validated['shelf_id'] ?? null,
@@ -140,6 +145,7 @@ public function stats(Request $request)
                 'quantity' => $validated['quantity'],
                 'before_quantity' => $oldQuantity,
                 'after_quantity' => $medicine->quantity,
+                'manufacturer' => $validated['manufacturer'] ?? null,
                 'user_id' => auth()->id(),
                 'source_type' => 'supplier',
                 'source_id' => $po->supplier_id,
@@ -172,7 +178,7 @@ public function stats(Request $request)
             });
         });
 
-        $transfers = $query->with(['medicine', 'toBranch', 'requestedBy'])
+        $transfers = $query->with(['medicine', 'fromBranch', 'toBranch', 'requestedBy'])
             ->latest()
             ->get();
 
@@ -234,17 +240,136 @@ public function stats(Request $request)
         }
     }
 
-    public function completeTransfer($id)
+    public function shelfItems($id)
     {
-        $transfer = StockTransfer::findOrFail($id);
-        $transfer->status = 'completed';
-        $transfer->completed_by = auth()->id();
-        $transfer->save();
+        $shelf = Shelf::findOrFail($id);
+        $items = $shelf->medicines()->with('category')->orderBy('name')->get();
 
         return response()->json([
-            'success' => true,
-            'message' => 'Transfer completed successfully'
+            'shelf' => $shelf,
+            'items' => $items,
+            'total_items' => $items->sum('quantity'),
+            'item_count' => $items->count(),
         ]);
+    }
+
+    public function completeTransfer($id)
+    {
+        try {
+            $transfer = StockTransfer::with('medicine')->findOrFail($id);
+
+            if ($transfer->status === StockTransfer::STATUS_COMPLETED) {
+                return response()->json(['success' => true, 'message' => 'Transfer already completed']);
+            }
+
+            DB::transaction(function () use ($transfer) {
+                $source = $transfer->medicine;
+                $qty = (int) $transfer->quantity;
+
+                if (!$source) {
+                    throw new \Exception('Transfer medicine not found');
+                }
+
+                if ($source->quantity < $qty) {
+                    throw ValidationException::withMessages([
+                        'quantity' => "Insufficient stock for {$source->name}. Available: {$source->quantity}"
+                    ]);
+                }
+
+                // Decrement source (warehouse or branch) stock
+                $sourceOld = $source->quantity;
+                $source->quantity -= $qty;
+                $source->save();
+
+                // Find or create the destination medicine for the target branch
+                $dest = Medicine::where('branch_id', $transfer->to_branch_id)
+                    ->where('name', $source->name)
+                    ->first();
+
+                if ($dest) {
+                    $destOld = $dest->quantity;
+                    $dest->quantity += $qty;
+                    $dest->save();
+                } else {
+                    $dest = Medicine::create([
+                        'name' => $source->name,
+                        'generic_name' => $source->generic_name,
+                        'category_id' => $source->category_id,
+                        'reorder_level' => $source->reorder_level,
+                        'status' => $source->status,
+                        'description' => $source->description,
+                        'dosage_form' => $source->dosage_form,
+                        'strength' => $source->strength,
+                        'unit' => $source->unit,
+                        'batch_number' => $source->batch_number,
+                        'manufacturer' => $source->manufacturer,
+                        'quantity' => $qty,
+                        'branch_id' => $transfer->to_branch_id,
+                    ]);
+                    $destOld = 0;
+                }
+
+                // Source outgoing movement
+                StockMovement::create([
+                    'medicine_id' => $source->id,
+                    'itemable_type' => Medicine::class,
+                    'itemable_id' => $source->id,
+                    'type' => 'out',
+                    'quantity' => $qty,
+                    'before_quantity' => $sourceOld,
+                    'after_quantity' => $source->quantity,
+                    'manufacturer' => $source->manufacturer,
+                    'user_id' => auth()->id(),
+                    'source_type' => $transfer->from_branch_id ? 'branch' : 'warehouse',
+                    'source_id' => $transfer->from_branch_id,
+                    'destination_type' => 'branch',
+                    'destination_id' => $transfer->to_branch_id,
+                    'reference' => 'TRANSFER-' . $transfer->id,
+                    'status' => 'completed',
+                ]);
+
+                // Destination incoming movement
+                StockMovement::create([
+                    'medicine_id' => $dest->id,
+                    'itemable_type' => Medicine::class,
+                    'itemable_id' => $dest->id,
+                    'type' => 'in',
+                    'quantity' => $qty,
+                    'before_quantity' => $destOld,
+                    'after_quantity' => $dest->quantity,
+                    'manufacturer' => $source->manufacturer,
+                    'user_id' => auth()->id(),
+                    'source_type' => $transfer->from_branch_id ? 'branch' : 'warehouse',
+                    'source_id' => $transfer->from_branch_id,
+                    'destination_type' => 'branch',
+                    'destination_id' => $transfer->to_branch_id,
+                    'branch_id' => $transfer->to_branch_id,
+                    'reference' => 'TRANSFER-' . $transfer->id,
+                    'status' => 'completed',
+                ]);
+
+                // Mark transfer complete
+                $transfer->status = StockTransfer::STATUS_COMPLETED;
+                $transfer->completed_by = auth()->id();
+                $transfer->actual_delivery = now();
+                $transfer->save();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transfer completed and stock updated for the destination branch'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        }
     }
 
     public function receivingHistory(Request $request)

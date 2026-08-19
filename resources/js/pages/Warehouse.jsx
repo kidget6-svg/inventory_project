@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
@@ -10,14 +10,14 @@ import {
     XCircle, Clock, AlertTriangle, Calendar,
     Upload, ArrowUpRight, ArrowDownRight,
     Building2, User, FileText, Barcode,
-    ChevronDown, ChevronRight
+    ChevronDown, ChevronRight, Loader2, X
 } from 'lucide-react';
 
 const tabs = [
     { id: 'shelves', label: 'Shelves', icon: Layers },
     { id: 'stock', label: 'Stock Inventory', icon: Boxes },
     { id: 'receiving', label: 'Receiving History', icon: Upload },
-    { id: 'transfers', label: 'Transfer Requests', icon: Truck },
+    { id: 'transfers', label: 'Transfer History', icon: Truck },
 ];
 
 export default function WarehousePage() {
@@ -32,9 +32,16 @@ export default function WarehousePage() {
     const [purchaseOrders, setPurchaseOrders] = useState([]);
     const [showReceivingModal, setShowReceivingModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false);
+    const [showShelfModal, setShowShelfModal] = useState(false);
+    const [shelfDetail, setShelfDetail] = useState(null);
+    const [shelfLoading, setShelfLoading] = useState(false);
+    const [scanning, setScanning] = useState(false);
+    const videoRef = useRef(null);
     const [selectedPO, setSelectedPO] = useState(null);
     const [batchData, setBatchData] = useState({
         batch_number: '',
+        barcode: '',
+        manufacturer: '',
         expiry_date: '',
         quantity: '',
         shelf_id: '',
@@ -101,6 +108,8 @@ export default function WarehousePage() {
             await api.post('/warehouse/receive', {
                 purchase_order_id: selectedPO.id,
                 batch_number: batchData.batch_number,
+                barcode: batchData.barcode || undefined,
+                manufacturer: batchData.manufacturer || undefined,
                 expiry_date: batchData.expiry_date,
                 quantity: batchData.quantity,
                 shelf_id: batchData.shelf_id || undefined,
@@ -108,7 +117,7 @@ export default function WarehousePage() {
             window.showToast('Stock received successfully', 'success');
             setShowReceivingModal(false);
             setSelectedPO(null);
-            setBatchData({ batch_number: '', expiry_date: '', quantity: '', shelf_id: '' });
+            setBatchData({ batch_number: '', barcode: '', manufacturer: '', expiry_date: '', quantity: '', shelf_id: '' });
             loadWarehouseData();
         } catch (err) {
             window.showToast(err.response?.data?.message || 'Failed to receive stock', 'error');
@@ -116,6 +125,76 @@ export default function WarehousePage() {
             setSubmitting(false);
         }
     };
+
+    // Open shelf detail modal showing all items on a shelf
+    const openShelfDetail = async (shelf) => {
+        setShowShelfModal(true);
+        setShelfLoading(true);
+        try {
+            const res = await api.get(`/warehouse/shelves/${shelf.id}/items`);
+            setShelfDetail(res.data);
+        } catch (err) {
+            window.showToast('Failed to load shelf items', 'error');
+        } finally {
+            setShelfLoading(false);
+        }
+    };
+
+    const closeShelfDetail = () => {
+        setShowShelfModal(false);
+        setShelfDetail(null);
+    };
+
+    // Barcode scan for receiving stock
+    const startBarcodeScan = async () => {
+        if (!('BarcodeDetector' in window)) {
+            window.showToast('Barcode scanning is not supported in this browser.', 'error');
+            return;
+        }
+        setScanning(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+            }
+            scanLoop();
+        } catch (err) {
+            window.showToast('Could not access camera: ' + err.message, 'error');
+            setScanning(false);
+        }
+    };
+
+    const scanLoop = useCallback(async () => {
+        if (!scanning) return;
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
+        try {
+            if (videoRef.current) {
+                const barcodes = await detector.detect(videoRef.current);
+                if (barcodes.length > 0) {
+                    setBatchData(prev => ({ ...prev, barcode: barcodes[0].rawValue }));
+                    stopBarcodeScan();
+                    window.showToast('Barcode scanned: ' + barcodes[0].rawValue, 'success');
+                    return;
+                }
+            }
+            requestAnimationFrame(scanLoop);
+        } catch (err) {
+            requestAnimationFrame(scanLoop);
+        }
+    }, [scanning]);
+
+    const stopBarcodeScan = () => {
+        setScanning(false);
+        if (videoRef.current && videoRef.current.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+            videoRef.current.srcObject = null;
+        }
+    };
+
+    useEffect(() => {
+        return () => stopBarcodeScan();
+    }, []);
 
     // Handle transfer approval
     const handleApproveTransfer = async (transferId) => {
@@ -281,7 +360,7 @@ export default function WarehousePage() {
             </h3>
             <div className="flex flex-wrap items-center gap-3">
                 <p className="text-sm text-gray-500 flex-1 min-w-[200px]">
-                    Request stock to be transferred to a branch. Track approval and delivery from the Transfer Requests tab.
+                    Request stock to be transferred to a branch. Track approval and delivery from the Transfer History tab.
                 </p>
                 <button
                     onClick={openTransferModal}
@@ -302,7 +381,11 @@ export default function WarehousePage() {
                              utilization >= 70 ? 'bg-amber-500' :
                              utilization >= 50 ? 'bg-yellow-500' : 'bg-sky-500';
                 return (
-                    <div key={shelf.id} className="card p-5 hover:shadow-md transition-shadow">
+                    <div
+                        key={shelf.id}
+                        onClick={() => openShelfDetail(shelf)}
+                        className="card p-5 hover:shadow-md transition-shadow cursor-pointer"
+                    >
                         <div className="flex items-center gap-3 mb-3">
                             <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
                                 <Layers className="w-5 h-5 text-sky-600" />
@@ -341,7 +424,7 @@ export default function WarehousePage() {
                         </div>
                         <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-xs">
                             <span className="text-gray-500">Status: {shelf.status || 'Active'}</span>
-                            <button className="text-sky-600 hover:underline">View Details</button>
+                            <button className="text-sky-600 hover:underline">View Items ({shelf.current_items || 0})</button>
                         </div>
                     </div>
                 );
@@ -369,7 +452,7 @@ export default function WarehousePage() {
                             <tr key={item.id} className="hover:bg-gray-50/30">
                                 <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.name}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{item.batch_number || '---'}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{item.shelf_location || '---'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500">{item.shelf?.name || '---'}</td>
                                 <td className="px-4 py-3 text-center text-sm font-semibold">{item.quantity}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">
                                     {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '---'}
@@ -446,6 +529,9 @@ export default function WarehousePage() {
                             </h4>
                             <div className="flex flex-wrap gap-3 text-xs text-gray-500">
                                 <span className="flex items-center gap-1">
+                                    <Building2 size={12} /> From: {request.from_branch?.name || 'Warehouse'}
+                                </span>
+                                <span className="flex items-center gap-1">
                                     <Building2 size={12} /> To: {request.to_branch?.name || 'Branch'}
                                 </span>
                                 <span className="flex items-center gap-1">
@@ -488,7 +574,7 @@ export default function WarehousePage() {
             {transferRequests.length === 0 && (
                 <div className="text-center py-8 text-gray-400">
                     <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No transfer requests</p>
+                    <p>No transfer history yet</p>
                 </div>
             )}
         </div>
@@ -570,6 +656,62 @@ export default function WarehousePage() {
             {/* Tab Content */}
             {renderTabContent()}
 
+            {/* Shelf Detail Modal */}
+            <Modal
+                open={showShelfModal}
+                onClose={closeShelfDetail}
+                title={shelfDetail?.shelf?.name || 'Shelf Items'}
+                size="max-w-2xl"
+            >
+                {shelfLoading ? (
+                    <div className="py-10 text-center text-gray-400 text-sm">Loading shelf items...</div>
+                ) : shelfDetail ? (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 bg-gray-50 rounded-lg">
+                                <p className="text-xs text-gray-500">Location</p>
+                                <p className="text-sm font-semibold text-gray-800">{shelfDetail.shelf?.shelf_location || '---'}</p>
+                            </div>
+                            <div className="p-3 bg-gray-50 rounded-lg">
+                                <p className="text-xs text-gray-500">Items on Shelf</p>
+                                <p className="text-sm font-semibold text-gray-800">{shelfDetail.item_count || 0} products · {shelfDetail.total_items || 0} units</p>
+                            </div>
+                        </div>
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">Medicine</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">Generic</th>
+                                        <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">Qty</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {shelfDetail.items?.length > 0 ? shelfDetail.items.map(item => (
+                                        <tr key={item.id} className="hover:bg-gray-50/50">
+                                            <td className="px-4 py-2.5 text-sm font-medium text-gray-800">{item.name}</td>
+                                            <td className="px-4 py-2.5 text-sm text-gray-500">{item.generic_name || '---'}</td>
+                                            <td className="px-4 py-2.5 text-center text-sm font-semibold">{item.quantity}</td>
+                                            <td className="px-4 py-2.5">
+                                                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">{item.status || 'Active'}</span>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr><td colSpan="4" className="px-4 py-8 text-center text-gray-400">No medicines on this shelf</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="flex justify-end pt-2">
+                            <button type="button" onClick={closeShelfDetail} className="btn-secondary flex items-center gap-1.5">
+                                <X size={16} /> Close
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
+            </Modal>
+
             {/* Receiving Modal */}
             <Modal
                 open={showReceivingModal}
@@ -590,6 +732,46 @@ export default function WarehousePage() {
                             onChange={(e) => setBatchData({ ...batchData, batch_number: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                             required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={batchData.barcode}
+                                    onChange={(e) => setBatchData({ ...batchData, barcode: e.target.value })}
+                                    placeholder="Enter or scan barcode"
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={startBarcodeScan}
+                                disabled={scanning}
+                                className="px-3 py-2 bg-sky-500 text-white rounded-lg text-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                            >
+                                {scanning ? <Loader2 size={16} className="animate-spin" /> : <Barcode size={16} />}
+                                {scanning ? 'Scanning...' : 'Scan'}
+                            </button>
+                        </div>
+                        {scanning && (
+                            <div className="mt-2 relative">
+                                <video ref={videoRef} className="w-full max-w-xs rounded-lg border-2 border-sky-400" />
+                                <button type="button" onClick={stopBarcodeScan} className="mt-1 text-xs text-red-600 hover:underline">Cancel scan</button>
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
+                        <input
+                            type="text"
+                            value={batchData.manufacturer}
+                            onChange={(e) => setBatchData({ ...batchData, manufacturer: e.target.value })}
+                            placeholder="e.g. GSK, Pfizer"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                         />
                     </div>
                     <div>

@@ -28,6 +28,7 @@ class Medicine extends Model
         'unit',
         'batch_number',
         'manufacturer',
+        'branch_id',
         'image',
     ];
 
