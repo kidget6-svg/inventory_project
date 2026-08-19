@@ -44,6 +44,7 @@ export default function StockManagement() {
     const [showRestockModal, setShowRestockModal] = useState(false);
     const [restockQty, setRestockQty] = useState('');
     const [restockNotes, setRestockNotes] = useState('');
+    const [restockManufacturer, setRestockManufacturer] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
     // Load all data
@@ -153,6 +154,7 @@ export default function StockManagement() {
                 quantity: Number(restockQty),
                 reference: 'Manual restock',
                 notes: restockNotes || '',
+                manufacturer: restockManufacturer || null,
             };
             if (selectedItem.product_type === 'retail') {
                 payload.retail_product_id = selectedItem.id;
@@ -166,6 +168,7 @@ export default function StockManagement() {
             setSelectedItem(null);
             setRestockQty('');
             setRestockNotes('');
+            setRestockManufacturer('');
             loadData();
         } catch (err) {
             window.showToast('Failed to restock item', 'error');
@@ -381,7 +384,7 @@ export default function StockManagement() {
                                             <Eye size={16} />
                                         </button>
                                         <button
-                                            onClick={() => { setSelectedItem(item); setShowRestockModal(true); }}
+                                            onClick={() => { setSelectedItem(item); setRestockManufacturer(item.manufacturer || ''); setShowRestockModal(true); }}
                                             className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
                                         >
                                             Restock
@@ -507,7 +510,7 @@ export default function StockManagement() {
                                             <p className="text-xs text-gray-500">Qty: {item.quantity} / Reorder: {item.reorder_level ?? 10}</p>
                                         </div>
                                         <button
-                                            onClick={() => { setSelectedItem(item); setShowRestockModal(true); }}
+                                            onClick={() => { setSelectedItem(item); setRestockManufacturer(item.manufacturer || ''); setShowRestockModal(true); }}
                                             className="px-3 py-1 bg-sky-500 text-white rounded text-xs font-semibold hover:bg-sky-600"
                                         >
                                             Restock
@@ -617,7 +620,7 @@ export default function StockManagement() {
                                 Close
                             </button>
                             <button
-                                onClick={() => { setShowViewModal(false); setShowRestockModal(true); }}
+                                onClick={() => { setShowViewModal(false); setRestockManufacturer(selectedItem.manufacturer || ''); setShowRestockModal(true); }}
                                 className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
                             >
                                 <Package size={16} /> Restock
@@ -654,6 +657,16 @@ export default function StockManagement() {
                                 min="1"
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                 required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
+                            <input
+                                type="text"
+                                value={restockManufacturer}
+                                onChange={(e) => setRestockManufacturer(e.target.value)}
+                                placeholder="e.g., GSK, Pfizer"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                             />
                         </div>
                         <div>

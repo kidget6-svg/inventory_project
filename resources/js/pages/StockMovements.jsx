@@ -54,6 +54,7 @@ export default function StockMovements() {
     const [categories, setCategories] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [users, setUsers] = useState([]);
+    const [branches, setBranches] = useState([]);
     const [summary, setSummary] = useState(null);
     const [hasError, setHasError] = useState(false);
 
@@ -69,6 +70,8 @@ export default function StockMovements() {
         notes: '',
         source_type: '',
         destination_type: '',
+        source_branch_id: '',
+        destination_branch_id: '',
         branch_id: '',
         status: 'pending'
     });
@@ -190,6 +193,8 @@ export default function StockMovements() {
             notes: '',
             source_type: '',
             destination_type: '',
+            source_branch_id: '',
+            destination_branch_id: '',
             branch_id: '',
             status: 'pending'
         });
@@ -217,6 +222,8 @@ export default function StockMovements() {
             notes: '',
             source_type: '',
             destination_type: '',
+            source_branch_id: '',
+            destination_branch_id: '',
             branch_id: '',
             status: 'pending'
         });
@@ -229,17 +236,21 @@ export default function StockMovements() {
     const loadMedicinesForSelect = async () => {
         setFormLoading(true);
         try {
-            const [medRes, retailRes] = await Promise.all([
+            const [medRes, retailRes, branchRes] = await Promise.all([
                 api.get('/medicines', { params: { per_page: 1000 } }),
                 api.get('/retail-products', { params: { per_page: 1000 } }),
+                api.get('/branches'),
             ]);
             const medList = Array.isArray(medRes.data?.data) ? medRes.data.data :
                 Array.isArray(medRes.data?.medicines?.data) ? medRes.data.medicines.data :
                     Array.isArray(medRes.data) ? medRes.data : [];
             const retailList = Array.isArray(retailRes.data?.data) ? retailRes.data.data :
                 Array.isArray(retailRes.data) ? retailRes.data : [];
+            const branchList = Array.isArray(branchRes.data?.data) ? branchRes.data.data :
+                Array.isArray(branchRes.data) ? branchRes.data : [];
             setMedicines(medList);
             setRetailProducts(retailList);
+            setBranches(branchList);
         } catch (err) {
             console.error(err);
         } finally {
@@ -260,6 +271,7 @@ export default function StockMovements() {
             name: product.name,
             quantity: 1,
             stock: product.quantity || 0,
+            manufacturer: product.manufacturer || '',
             isRetail: type === 'retail'
         }]);
         // Close dropdown
@@ -317,8 +329,11 @@ export default function StockMovements() {
                     quantity: item.quantity,
                     reference: form.reference,
                     notes: form.notes,
+                    manufacturer: item.manufacturer || null,
                     source_type: form.source_type,
+                    source_id: form.source_type === 'branch' ? (form.source_branch_id || null) : null,
                     destination_type: form.destination_type,
+                    destination_id: form.destination_type === 'branch' ? (form.destination_branch_id || null) : null,
                     branch_id: form.branch_id,
                     status: form.status,
                     medicine_id: item.type === 'medicine' ? item.id : null,
@@ -379,6 +394,8 @@ export default function StockMovements() {
             notes: item.notes || '',
             source_type: item.source_type || '',
             destination_type: item.destination_type || '',
+            source_branch_id: item.source_id || '',
+            destination_branch_id: item.destination_id || '',
             branch_id: item.branch_id || '',
             status: 'pending'
         });
@@ -857,6 +874,7 @@ export default function StockMovements() {
                                                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">#</th>
                                                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
                                                 <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Type</th>
+                                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Manufacturer</th>
                                                 <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Qty</th>
                                                 <th className="px-3 py-2 w-8"></th>
                                             </tr>
@@ -884,6 +902,17 @@ export default function StockMovements() {
                                                     </td>
                                                     <td className="px-3 py-2">
                                                         <input
+                                                            type="text"
+                                                            value={item.manufacturer || ''}
+                                                            onChange={(e) => setSelectedItems(prev => prev.map((x, i) =>
+                                                                i === index ? { ...x, manufacturer: e.target.value } : x
+                                                            ))}
+                                                            className="w-36 px-2 py-1 text-sm border border-gray-200 rounded focus:border-sky-400 outline-none"
+                                                            placeholder="e.g. GSK, Pfizer"
+                                                        />
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <input
                                                             type="number"
                                                             value={item.quantity}
                                                             onChange={(e) => updateItemQty(index, e.target.value)}
@@ -905,7 +934,7 @@ export default function StockMovements() {
                                         </tbody>
                                         <tfoot>
                                             <tr className="border-t-2 border-gray-200 bg-gray-50">
-                                                <td colSpan="2" className="px-3 py-2 text-right text-xs font-bold text-gray-700">Total Items:</td>
+                                                <td colSpan="3" className="px-3 py-2 text-right text-xs font-bold text-gray-700">Total Items:</td>
                                                 <td className="px-3 py-2 text-center text-sm font-bold text-gray-900">{selectedItems.length}</td>
                                                 <td></td>
                                                 <td></td>
@@ -938,11 +967,7 @@ export default function StockMovements() {
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
                                  <select name="source_type" value={form.source_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
                                      <option value="">None</option>
-                                     <option value="self">Self</option>
-                                     <option value="supplier">Supplier</option>
                                      <option value="branch">Branch</option>
-                                     <option value="sale">Sale</option>
-                                     <option value="customer">Customer</option>
                                      <option value="warehouse">Warehouse</option>
                                  </select>
                              </div>
@@ -950,15 +975,29 @@ export default function StockMovements() {
                                  <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
                                  <select name="destination_type" value={form.destination_type} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
                                      <option value="">None</option>
-                                     <option value="self">Self</option>
-                                     <option value="supplier">Supplier</option>
                                      <option value="branch">Branch</option>
-                                     <option value="sale">Sale</option>
-                                     <option value="customer">Customer</option>
                                      <option value="warehouse">Warehouse</option>
                                  </select>
                             </div>
                         </div>
+                        {form.source_type === 'branch' && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Source Branch *</label>
+                                <select name="source_branch_id" value={form.source_branch_id} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white" required>
+                                    <option value="">Select Source Branch</option>
+                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        {form.destination_type === 'branch' && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Branch *</label>
+                                <select name="destination_branch_id" value={form.destination_branch_id} onChange={handleChange} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white" required>
+                                    <option value="">Select Destination Branch</option>
+                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Reference & Notes */}
                         <div>

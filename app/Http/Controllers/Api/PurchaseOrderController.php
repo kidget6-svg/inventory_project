@@ -31,6 +31,7 @@ class PurchaseOrderController extends Controller
             'items.*.retail_product_id' => 'nullable|exists:retail_products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'nullable|numeric|min:0',
+            'items.*.manufacturer' => 'nullable|string|max:255',
             // Legacy single-item format (backward compat)
             'medicine_name' => 'nullable|string|max:255',
             'medicine_id' => 'nullable|exists:medicines,id',
@@ -66,6 +67,7 @@ class PurchaseOrderController extends Controller
                     'itemable_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
+                    'manufacturer' => $item['manufacturer'] ?? null,
                     'subtotal' => $subtotal,
                 ];
             }
@@ -115,6 +117,7 @@ class PurchaseOrderController extends Controller
             'items.*.retail_product_id' => 'nullable|exists:retail_products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'nullable|numeric|min:0',
+            'items.*.manufacturer' => 'nullable|string|max:255',
             // Legacy single-item (backward compat)
             'medicine_name' => 'nullable|string|max:255',
             'medicine_id' => 'nullable|exists:medicines,id',
@@ -149,6 +152,7 @@ class PurchaseOrderController extends Controller
                     'itemable_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
+                    'manufacturer' => $item['manufacturer'] ?? null,
                     'subtotal' => $subtotal,
                 ];
             }

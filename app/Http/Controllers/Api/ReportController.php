@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Batch;
 use App\Models\Category;
 use App\Models\Medicine;
 use App\Models\RetailProduct;
@@ -46,23 +47,18 @@ class ReportController extends Controller
         $sales = $saleQuery->latest()->get();
         $purchases = PurchaseOrder::with('supplier')->orderBy('created_at', 'desc')->get();
 
-        $expiringMed = Medicine::whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [
-                \Carbon\Carbon::today(),
-                \Carbon\Carbon::today()->addDays(90)
-            ])
-            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
+        $expiringMed = Batch::whereNotNull('expiry_date')
+            ->with('medicine')
+            ->when($branchScope, fn($q) => $q->whereHas('medicine', fn($q2) => $q2->where('branch_id', $branchScope)))
             ->orderBy('expiry_date')
-            ->get()->map(function($m) {
-                $m->product_type = 'medicine';
-                return $m;
+            ->get()->map(function($b) {
+                $b->product_type = 'medicine';
+                $b->name = $b->medicine->name ?? 'Unknown Medicine';
+                $b->sku = $b->batch_number;
+                return $b;
             });
 
         $expiringRetail = RetailProduct::whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [
-                \Carbon\Carbon::today(),
-                \Carbon\Carbon::today()->addDays(90)
-            ])
             ->orderBy('expiry_date')
             ->get()->map(function($r) {
                 $r->product_type = 'retail';

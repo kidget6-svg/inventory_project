@@ -16,6 +16,7 @@ class PurchaseOrderItem extends Model
         'itemable_id',
         'quantity',
         'unit_price',
+        'manufacturer',
         'subtotal',
     ];
 

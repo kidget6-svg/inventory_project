@@ -156,20 +156,27 @@ export default function StockMovementCreate() {
     const [notes, setNotes] = useState('');
     const [sourceType, setSourceType] = useState('');
     const [destinationType, setDestinationType] = useState('');
+    const [sourceBranchId, setSourceBranchId] = useState('');
+    const [destinationBranchId, setDestinationBranchId] = useState('');
+    const [branches, setBranches] = useState([]);
 
     useEffect(() => {
         Promise.all([
             api.get('/medicines', { params: { per_page: 1000 } }),
             api.get('/retail-products', { params: { per_page: 1000 } }),
+            api.get('/branches'),
         ])
-            .then(([medRes, retailRes]) => {
+            .then(([medRes, retailRes, branchRes]) => {
                 const medList = Array.isArray(medRes.data?.data) ? medRes.data.data :
                     Array.isArray(medRes.data?.medicines?.data) ? medRes.data.medicines.data :
                     Array.isArray(medRes.data) ? medRes.data : [];
                 const retailList = Array.isArray(retailRes.data?.data) ? retailRes.data.data :
                     Array.isArray(retailRes.data) ? retailRes.data : [];
+                const branchList = Array.isArray(branchRes.data?.data) ? branchRes.data.data :
+                    Array.isArray(branchRes.data) ? branchRes.data : [];
                 setMedicines(medList);
                 setRetailProducts(retailList);
+                setBranches(branchList);
             })
             .catch(() => setError('Failed to load products'))
             .finally(() => setLoading(false));
@@ -194,6 +201,7 @@ export default function StockMovementCreate() {
             id: product.id,
             name: product.name,
             quantity: 1,
+            manufacturer: product.manufacturer || '',
         }]);
         setSelectedProduct(null);
         setSearchTerm('');
@@ -236,11 +244,14 @@ export default function StockMovementCreate() {
                 reference: reference || null,
                 notes: notes || null,
                 source_type: sourceType || null,
+                source_id: sourceType === 'branch' ? (sourceBranchId || null) : null,
                 destination_type: destinationType || null,
+                destination_id: destinationType === 'branch' ? (destinationBranchId || null) : null,
                 items: items.map(i => ({
                     type: i.type,
                     id: i.id,
                     quantity: i.quantity,
+                    manufacturer: i.manufacturer || null,
                 })),
             };
 
@@ -378,6 +389,7 @@ export default function StockMovementCreate() {
                                     <tr className="bg-gray-50">
                                         <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
                                         <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 w-24">Type</th>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Manufacturer</th>
                                         <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 w-28">Quantity</th>
                                         <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 w-24">Stock</th>
                                         <th className="px-3 py-2 w-10"></th>
@@ -396,6 +408,17 @@ export default function StockMovementCreate() {
                                                 <span className={`px-2 py-0.5 rounded text-xs font-semibold ${it.type === 'medicine' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
                                                     {it.type === 'medicine' ? 'Medicine' : 'Retail'}
                                                 </span>
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                <input
+                                                    type="text"
+                                                    value={it.manufacturer || ''}
+                                                    onChange={(e) => setItems(prev => prev.map((x, idx) =>
+                                                        idx === i ? { ...x, manufacturer: e.target.value } : x
+                                                    ))}
+                                                    className="w-36 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:border-sky-400 outline-none"
+                                                    placeholder="e.g. GSK, Pfizer"
+                                                />
                                             </td>
                                             <td className="px-3 py-2 text-right">
                                                 <input
@@ -498,26 +521,38 @@ export default function StockMovementCreate() {
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
-                            <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                            <select value={sourceType} onChange={(e) => { setSourceType(e.target.value); setSourceBranchId(''); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
                                 <option value="">None</option>
-                                <option value="self">Self</option>
-                                <option value="supplier">Supplier</option>
                                 <option value="branch">Branch</option>
-                                <option value="sale">Sale</option>
-                                <option value="customer">Customer</option>
+                                <option value="warehouse">Warehouse</option>
                             </select>
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
-                            <select value={destinationType} onChange={(e) => setDestinationType(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                            <select value={destinationType} onChange={(e) => { setDestinationType(e.target.value); setDestinationBranchId(''); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
                                 <option value="">None</option>
-                                <option value="self">Self</option>
-                                <option value="supplier">Supplier</option>
                                 <option value="branch">Branch</option>
-                                <option value="sale">Sale</option>
-                                <option value="customer">Customer</option>
+                                <option value="warehouse">Warehouse</option>
                             </select>
                         </div>
+                        {sourceType === 'branch' && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Source Branch *</label>
+                                <select value={sourceBranchId} onChange={(e) => setSourceBranchId(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white" required>
+                                    <option value="">Select Source Branch</option>
+                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        {destinationType === 'branch' && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Branch *</label>
+                                <select value={destinationBranchId} onChange={(e) => setDestinationBranchId(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white" required>
+                                    <option value="">Select Destination Branch</option>
+                                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                     </div>
                 </div>
 

@@ -19,7 +19,6 @@ class Medicine extends Model
         'name',
         'generic_name',
         'category_id',
-        'supplier_id',
         'quantity',
         'reorder_level',
         'status',
@@ -28,11 +27,10 @@ class Medicine extends Model
         'strength',
         'unit',
         'batch_number',
-        'barcode',
+        'manufacturer',
         'image',
     ];
 
-    // Explicitly clear $with so Eloquent doesn't query missing relationships like 'shelf'
     protected $with = [];
 
     protected $casts = [
@@ -54,6 +52,11 @@ class Medicine extends Model
     public function shelf()
     {
         return $this->belongsTo(Shelf::class);
+    }
+
+        public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function purchaseOrderItems()

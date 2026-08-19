@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Medicine;
 use App\Models\Batch;
 use App\Models\Shelf;
@@ -35,7 +36,10 @@ public function stats(Request $request)
             return $query->where('branch_id', $branchScope);
         })->whereColumn('quantity', '<=', 'reorder_level')->count();
         $pendingRequests = StockTransfer::when($branchScope, function ($query) use ($branchScope) {
-            return $query->where('branch_id', $branchScope);
+            return $query->where(function ($q) use ($branchScope) {
+                $q->where('to_branch_id', $branchScope)
+                    ->orWhere('from_branch_id', $branchScope);
+            });
         })->where('status', 'pending')->count();
 
         return response()->json([
@@ -83,8 +87,10 @@ public function stats(Request $request)
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where('name', 'like', "%{$search}%")
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
                   ->orWhere('generic_name', 'like', "%{$search}%");
+            });
         }
 
         $stock = $query->paginate(20);
@@ -99,6 +105,7 @@ public function stats(Request $request)
                 'batch_number' => 'required|string|max:255',
                 'expiry_date' => 'required|date|after:today',
                 'quantity' => 'required|integer|min:1',
+                'shelf_id' => 'nullable|exists:shelves,id',
             ]);
 
             $po = PurchaseOrder::findOrFail($validated['purchase_order_id']);
@@ -111,14 +118,18 @@ public function stats(Request $request)
                 'batch_number' => $validated['batch_number'],
                 'expiry_date' => $validated['expiry_date'],
                 'quantity' => $validated['quantity'],
+                'shelf_id' => $validated['shelf_id'] ?? null,
                 'received_by' => auth()->id(),
                 'purchase_order_id' => $po->id,
                 'received_at' => now(),
             ]);
 
-            // Update medicine quantity
+            // Update medicine quantity and shelf
             $oldQuantity = $medicine->quantity;
             $medicine->quantity += $validated['quantity'];
+            if (!empty($validated['shelf_id'])) {
+                $medicine->shelf_id = $validated['shelf_id'];
+            }
             $medicine->save();
 
             // Create stock movement
@@ -155,7 +166,10 @@ public function stats(Request $request)
         $branchScope = $user->getBranchScope();
 
         $query = StockTransfer::when($branchScope, function ($query) use ($branchScope) {
-            return $query->where('branch_id', $branchScope);
+            return $query->where(function ($q) use ($branchScope) {
+                $q->where('to_branch_id', $branchScope)
+                    ->orWhere('from_branch_id', $branchScope);
+            });
         });
 
         $transfers = $query->with(['medicine', 'toBranch', 'requestedBy'])
@@ -176,6 +190,48 @@ public function stats(Request $request)
             'success' => true,
             'message' => 'Transfer approved successfully'
         ]);
+    }
+
+    public function store(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'medicine_id' => 'required|exists:medicines,id',
+                'to_branch_id' => 'required|exists:branches,id',
+                'quantity' => 'required|integer|min:1',
+                'priority' => 'nullable|in:low,medium,high,urgent',
+                'expected_delivery' => 'nullable|date',
+                'notes' => 'nullable|string|max:1000',
+            ]);
+
+            $toBranch = Branch::findOrFail($validated['to_branch_id']);
+            $user = $request->user();
+
+            $transfer = StockTransfer::create([
+                'medicine_id' => $validated['medicine_id'],
+                'from_branch_id' => $user->branch_id ?? null,
+                'to_branch_id' => $validated['to_branch_id'],
+                'from_location' => $user->branch ? $user->branch->name : 'Central Warehouse',
+                'to_location' => $toBranch->name,
+                'quantity' => $validated['quantity'],
+                'status' => StockTransfer::STATUS_PENDING,
+                'priority' => $validated['priority'] ?? StockTransfer::PRIORITY_MEDIUM,
+                'expected_delivery' => $validated['expected_delivery'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'requested_by' => $user->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transfer request created successfully',
+                'data' => $transfer->load(['medicine', 'toBranch', 'requestedBy'])
+            ], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'errors' => $e->errors()
+            ], 422);
+        }
     }
 
     public function completeTransfer($id)
@@ -209,7 +265,9 @@ public function stats(Request $request)
             return $query->where('branch_id', $branchScope);
         });
 
-        $history = $query->latest()->paginate(20);
+        $history = $query->with(['medicine', 'user', 'itemable', 'supplier'])
+            ->latest()
+            ->paginate(20);
         return response()->json($history);
     }
 }

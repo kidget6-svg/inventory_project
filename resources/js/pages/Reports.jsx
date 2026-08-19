@@ -333,7 +333,19 @@ export default function Reports() {
 
             {activeTab === 'expiring' && (
                 <div className="card overflow-hidden">
-                    <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">Expiring Soon Report ({expiringData.length})</h3></div>
+                    <div className="px-5 py-3 border-b border-sky-100 flex items-center justify-between flex-wrap gap-2">
+                        <h3 className="font-semibold text-gray-700">Expiry Report — Expiring Soon (90 days) ({expiringData.length})</h3>
+                        {expiringData.length > 0 && (
+                            <div className="flex gap-2 text-xs">
+                                <span className="px-2.5 py-1 rounded-full bg-red-100 text-red-700 font-semibold">
+                                    {expiringData.filter(i => i.daysLeft < 0).length} Expired
+                                </span>
+                                <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">
+                                    {expiringData.filter(i => i.daysLeft >= 0 && i.daysLeft <= 90).length} Expiring Soon
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <table className="w-full">
                         <thead><tr className="bg-sky-50">
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 uppercase">Type</th>
@@ -341,23 +353,40 @@ export default function Reports() {
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('batch_number')}>Batch / SKU{sortIcon('batch_number')}</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('quantity')}>Qty{sortIcon('quantity')}</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>Expiry Date{sortIcon('expiry_date')}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Days Left</th>
                         </tr></thead>
                         <tbody>
-                            {expiringData.length > 0 ? expiringData.map(item => (
-                                <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
-                                    <td className="px-4 py-3">
-                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                            item.product_type === 'retail' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'
-                                        }`}>
-                                            {item.product_type === 'retail' ? 'Retail / OTC' : 'Medicine'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-sm font-medium">{item.name}</td>
-                                    <td className="px-4 py-3 text-sm">{item.batch_number || item.sku || '---'}</td>
-                                    <td className="px-4 py-3 text-sm">{item.quantity}</td>
-                                    <td className="px-4 py-3 text-sm font-semibold text-orange-600">{item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '---'}</td>
-                                </tr>
-                            )) : emptyRow(5, 'No expiring items')}
+                            {expiringData.length > 0 ? expiringData.map(item => {
+                                const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
+                                const expired = daysLeft < 0;
+                                const urgent = !expired && daysLeft <= 30;
+                                const soon = !expired && daysLeft <= 90;
+                                return (
+                                    <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                                item.product_type === 'retail' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'
+                                            }`}>
+                                                {item.product_type === 'retail' ? 'Retail / OTC' : 'Medicine'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm font-medium">{item.name}</td>
+                                        <td className="px-4 py-3 text-sm">{item.batch_number || item.sku || '---'}</td>
+                                        <td className="px-4 py-3 text-sm">{item.quantity}</td>
+                                        <td className="px-4 py-3 text-sm font-semibold text-orange-600">{item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '---'}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                                expired ? 'bg-red-100 text-red-700' :
+                                                urgent ? 'bg-red-100 text-red-700' :
+                                                soon ? 'bg-amber-100 text-amber-700' :
+                                                'bg-green-100 text-green-700'
+                                            }`}>
+                                                {expired ? `Expired (${Math.abs(daysLeft)}d ago)` : `${daysLeft} days left`}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                );
+                            }) : emptyRow(6, 'No items with expiry dates')}
                         </tbody>
                     </table>
                 </div>

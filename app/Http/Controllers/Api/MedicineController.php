@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class MedicineController extends Controller
 {
@@ -18,7 +17,7 @@ class MedicineController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Medicine::with(['category', 'supplier']);
+            $query = Medicine::with(['category']);
 
             // Branch scoping: pharmacists/cashiers see only their branch's medicines
             $user = $request->user();
@@ -36,10 +35,6 @@ class MedicineController extends Controller
 
             if ($request->filled('category_id')) {
                 $query->where('category_id', $request->category_id);
-            }
-
-            if ($request->filled('supplier_id')) {
-                $query->where('supplier_id', $request->supplier_id);
             }
 
             if ($request->filled('shelf_id')) {
@@ -88,9 +83,7 @@ class MedicineController extends Controller
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
-            'barcode' => 'nullable|string|max:255|unique:medicines,barcode',
             'category_id' => 'required|exists:categories,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
             'quantity' => 'required|integer|min:0',
             'unit_price' => 'nullable|numeric|min:0',
             'reorder_level' => 'required|integer|min:0',
@@ -99,13 +92,23 @@ class MedicineController extends Controller
             'dosage_form' => 'nullable|string|max:50',
             'strength' => 'nullable|string|max:50',
             'unit' => 'nullable|string|20',
+            'manufacturer' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
         $validated = $this->handleImageUpload($validated, null);
 
+        // New medicines start with zero stock; the initial quantity is recorded
+        // through the automatic stock movement created after creation.
+        $validated['quantity'] = 0;
+
+        // Assign the creating user's branch so branch-scoped users can see it.
+        if ($request->user()->shouldScopeToBranch()) {
+            $validated['branch_id'] = $request->user()->branch_id;
+        }
+
         $medicine = Medicine::create($validated);
-        return response()->json($medicine->load(['category', 'supplier']), 201);
+        return response()->json($medicine->load(['category']), 201);
     }
 
     /**
@@ -113,7 +116,7 @@ class MedicineController extends Controller
      */
     public function show(Medicine $medicine)
     {
-        return response()->json($medicine->load(['category', 'supplier']));
+        return response()->json($medicine->load(['category']));
     }
 
     /**
@@ -155,9 +158,7 @@ class MedicineController extends Controller
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
-            'barcode' => ['nullable', 'string', 'max:100', Rule::unique('medicines', 'barcode')->ignore($medicine->id)],
             'category_id' => 'required|exists:categories,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
             'quantity' => 'required|integer|min:0',
             'unit_price' => 'nullable|numeric|min:0',
             'reorder_level' => 'required|integer|min:0',
@@ -166,12 +167,13 @@ class MedicineController extends Controller
             'dosage_form' => 'nullable|string|max:50',
             'strength' => 'nullable|string|max:50',
             'unit' => 'nullable|string|20',
+            'manufacturer' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
         $validated = $this->handleImageUpload($validated, $medicine);
         $medicine->update($validated);
-        return response()->json($medicine->load(['category', 'supplier']));
+        return response()->json($medicine->load(['category']));
     }
 
     /**

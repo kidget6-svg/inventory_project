@@ -37,6 +37,7 @@ export default function WarehousePage() {
         batch_number: '',
         expiry_date: '',
         quantity: '',
+        shelf_id: '',
     });
     const [submitting, setSubmitting] = useState(false);
     const [filters, setFilters] = useState({
@@ -44,6 +45,12 @@ export default function WarehousePage() {
         supplier_id: '',
         date_from: '',
         date_to: '',
+    });
+    const [branches, setBranches] = useState([]);
+    const [medicines, setMedicines] = useState([]);
+    const [transferForm, setTransferForm] = useState({
+        medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
+        expected_delivery: '', notes: '',
     });
 
     // Helper to safely extract array from API response
@@ -96,11 +103,12 @@ export default function WarehousePage() {
                 batch_number: batchData.batch_number,
                 expiry_date: batchData.expiry_date,
                 quantity: batchData.quantity,
+                shelf_id: batchData.shelf_id || undefined,
             });
             window.showToast('Stock received successfully', 'success');
             setShowReceivingModal(false);
             setSelectedPO(null);
-            setBatchData({ batch_number: '', expiry_date: '', quantity: '' });
+            setBatchData({ batch_number: '', expiry_date: '', quantity: '', shelf_id: '' });
             loadWarehouseData();
         } catch (err) {
             window.showToast(err.response?.data?.message || 'Failed to receive stock', 'error');
@@ -130,6 +138,42 @@ export default function WarehousePage() {
             loadWarehouseData();
         } catch (err) {
             window.showToast('Failed to complete transfer', 'error');
+        }
+    };
+
+    // Open new transfer request modal (loads branches + medicines)
+    const openTransferModal = async () => {
+        setTransferForm({
+            medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
+            expected_delivery: '', notes: '',
+        });
+        try {
+            const [branchesRes, medsRes] = await Promise.all([
+                api.get('/branches'),
+                api.get('/medicines', { params: { per_page: 'all' } }),
+            ]);
+            setBranches(asArray(branchesRes));
+            setMedicines(asArray(medsRes));
+        } catch (err) {
+            console.error(err);
+        }
+        setShowTransferModal(true);
+    };
+
+    // Create a new transfer request
+    const handleCreateTransfer = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await api.post('/warehouse/transfers', transferForm);
+            window.showToast('Transfer request created successfully', 'success');
+            setShowTransferModal(false);
+            loadWarehouseData();
+        } catch (err) {
+            const msgs = err.response?.data?.errors;
+            window.showToast(msgs ? Object.values(msgs).flat().join(' ') : 'Failed to create transfer request', 'error');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -228,6 +272,27 @@ export default function WarehousePage() {
         </div>
     );
 
+    // Render new transfer request section
+    const renderTransferSection = () => (
+        <div className="card p-5 mb-6 border-2 border-dashed border-purple-200 bg-purple-50/30">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <Truck size={16} className="text-purple-600" />
+                New Transfer Request
+            </h3>
+            <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-gray-500 flex-1 min-w-[200px]">
+                    Request stock to be transferred to a branch. Track approval and delivery from the Transfer Requests tab.
+                </p>
+                <button
+                    onClick={openTransferModal}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 flex items-center gap-2"
+                >
+                    <Plus size={16} /> Create Transfer Request
+                </button>
+            </div>
+        </div>
+    );
+
     // Render shelves tab
     const renderShelves = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -254,16 +319,24 @@ export default function WarehousePage() {
                                 {utilization}%
                             </span>
                         </div>
-                        <div className="space-y-2">
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                                <div
-                                    className={`h-2 rounded-full transition-all duration-500 ${color}`}
-                                    style={{ width: `${utilization}%` }}
-                                />
+                        <div>
+                            <div className="flex justify-between items-center mb-1.5">
+                                <span className="text-xs font-medium text-gray-600">
+                                    {shelf.current_items || 0} / {shelf.capacity || 100} items
+                                </span>
+                                <span className={`text-xs font-bold ${
+                                    utilization >= 90 ? 'text-red-600' :
+                                    utilization >= 70 ? 'text-amber-600' :
+                                    utilization >= 50 ? 'text-yellow-600' : 'text-sky-600'
+                                }`}>
+                                    {Math.min(100, Math.max(0, utilization))}%
+                                </span>
                             </div>
-                            <div className="flex justify-between text-xs text-gray-500">
-                                <span>{shelf.current_items || 0} items</span>
-                                <span>Capacity: {shelf.capacity || 100}</span>
+                            <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-500 ${color}`}
+                                    style={{ width: `${Math.min(100, Math.max(0, utilization))}%` }}
+                                />
                             </div>
                         </div>
                         <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-xs">
@@ -467,6 +540,9 @@ export default function WarehousePage() {
             {/* Receiving Section */}
             {renderReceivingSection()}
 
+            {/* New Transfer Request Section */}
+            {renderTransferSection()}
+
             {/* Tabs */}
             <div className="border-b border-gray-200">
                 <nav className="flex overflow-x-auto gap-1">
@@ -527,6 +603,19 @@ export default function WarehousePage() {
                         />
                     </div>
                     <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
+                        <select
+                            value={batchData.shelf_id}
+                            onChange={(e) => setBatchData({ ...batchData, shelf_id: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        >
+                            <option value="">Select Shelf</option>
+                            {shelves.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}{s.shelf_location ? ` — ${s.shelf_location}` : ''}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity Received *</label>
                         <input
                             type="number"
@@ -547,6 +636,98 @@ export default function WarehousePage() {
                             className="btn-primary flex items-center gap-2 disabled:opacity-60"
                         >
                             {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Receiving...</> : <><CheckCircle size={16} /> Confirm Receiving</>}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* New Transfer Request Modal */}
+            <Modal
+                open={showTransferModal}
+                onClose={() => setShowTransferModal(false)}
+                title="New Transfer Request"
+                size="max-w-lg"
+            >
+                <form onSubmit={handleCreateTransfer} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
+                        <select
+                            value={transferForm.medicine_id}
+                            onChange={(e) => setTransferForm({ ...transferForm, medicine_id: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            required
+                        >
+                            <option value="">Select Medicine</option>
+                            {medicines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">To Branch *</label>
+                        <select
+                            value={transferForm.to_branch_id}
+                            onChange={(e) => setTransferForm({ ...transferForm, to_branch_id: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            required
+                        >
+                            <option value="">Select Branch</option>
+                            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+                            <input
+                                type="number"
+                                value={transferForm.quantity}
+                                onChange={(e) => setTransferForm({ ...transferForm, quantity: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                min="1"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Priority</label>
+                            <select
+                                value={transferForm.priority}
+                                onChange={(e) => setTransferForm({ ...transferForm, priority: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Expected Delivery</label>
+                        <input
+                            type="date"
+                            value={transferForm.expected_delivery}
+                            onChange={(e) => setTransferForm({ ...transferForm, expected_delivery: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                        <textarea
+                            value={transferForm.notes}
+                            onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
+                            rows="2"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            placeholder="Optional notes"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button type="button" onClick={() => setShowTransferModal(false)} className="btn-secondary">
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="btn-primary flex items-center gap-2 disabled:opacity-60"
+                        >
+                            {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creating...</> : <><Plus size={16} /> Create Transfer Request</>}
                         </button>
                     </div>
                 </form>

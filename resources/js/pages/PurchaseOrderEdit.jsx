@@ -50,6 +50,7 @@ export default function PurchaseOrderEdit() {
                         id: oi.itemable_id || oi.medicine_id,
                         name: oi.itemable?.name || oi.medicine?.name || 'Unknown',
                         quantity: oi.quantity || 1,
+                        manufacturer: oi.manufacturer || '',
                     };
                 });
                 setItems(loadedItems);
@@ -80,6 +81,7 @@ export default function PurchaseOrderEdit() {
             id: product.id,
             name: product.name,
             quantity: 1,
+            manufacturer: product.manufacturer || '',
         }]);
     };
 
@@ -115,6 +117,7 @@ export default function PurchaseOrderEdit() {
                     medicine_id: i.type === 'medicine' ? i.id : null,
                     retail_product_id: i.type === 'retail' ? i.id : null,
                     quantity: parseInt(i.quantity) || 1,
+                    manufacturer: i.manufacturer || null,
                 })),
             };
             await api.put(`/purchase-orders/${id}`, payload);
@@ -295,6 +298,7 @@ export default function PurchaseOrderEdit() {
                                         <tr className="bg-gray-50">
                                             <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
                                             <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 w-24">Type</th>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Manufacturer</th>
                                             <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-24">Qty</th>
                                             <th className="px-4 py-2 w-12"></th>
                                         </tr>
@@ -315,6 +319,15 @@ export default function PurchaseOrderEdit() {
                                                     }>
                                                         {it.type === 'medicine' ? 'Medicine' : 'OTC'}
                                                     </span>
+                                                </td>
+                                                <td className="px-4 py-2">
+                                                    <input
+                                                        type="text"
+                                                        value={it.manufacturer || ''}
+                                                        onChange={(e) => updateItem(i, 'manufacturer', e.target.value)}
+                                                        className="w-40 px-2 py-1 text-sm border border-gray-200 rounded focus:border-sky-400 outline-none"
+                                                        placeholder="e.g. GSK, Pfizer"
+                                                    />
                                                 </td>
                                                 <td className="px-4 py-2">
                                                     <input
@@ -340,7 +353,7 @@ export default function PurchaseOrderEdit() {
                                     </tbody>
                                     <tfoot>
                                         <tr className="border-t-2 border-gray-200 bg-gray-50">
-                                            <td colSpan="2" className="px-4 py-2 text-right text-xs font-bold text-gray-700">Total Items:</td>
+                                            <td colSpan="3" className="px-4 py-2 text-right text-xs font-bold text-gray-700">Total Items:</td>
                                             <td className="px-4 py-2 text-right text-sm font-bold text-gray-900">{items.length}</td>
                                             <td></td>
                                         </tr>

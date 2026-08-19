@@ -233,6 +233,9 @@ class RolesAndPermissionsSeeder extends Seeder
             ));
         }
 
+        // Admin role always holds every permission.
+        $roleBySlug['admin']->permissions()->sync(Permission::pluck('id')->all());
+
         // Backfill role_id for existing users based on their role slug.
         foreach (User::all(['id', 'role']) as $user) {
             $role = $roleBySlug[$user->role] ?? null;

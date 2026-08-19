@@ -124,6 +124,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
         // Warehouse Write
         Route::post('/warehouse/receive', [WarehouseController::class, 'receive']);
+        Route::post('/warehouse/transfers', [WarehouseController::class, 'store']);
         Route::post('/warehouse/transfer/{id}/approve', [WarehouseController::class, 'approveTransfer']);
         Route::post('/warehouse/transfer/{id}/complete', [WarehouseController::class, 'completeTransfer']);
     });
