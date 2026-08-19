@@ -188,6 +188,9 @@ export default function SidebarLayout({ children, pageTitle }) {
                         <div className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider ${roleBadgeStyle[user?.role] || 'bg-gray-100 text-gray-600'}`}>
                             {user?.role || 'Guest'}
                         </div>
+                        <div className="text-[9px] text-gray-400 mt-0.5 truncate w-full px-2 text-center">
+                            {branchName}
+                        </div>
                     </div>
                 )}
 
@@ -223,25 +226,8 @@ export default function SidebarLayout({ children, pageTitle }) {
                     )}
                 </nav>
 
-                {/* Bottom User Info - shown when expanded */}
-                {!collapsed && (
-                    <div className="p-4 border-t border-sky-200">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
-                                {userInitial}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold text-gray-900 truncate">{user?.name || 'User'}</div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${roleBadgeStyle[user?.role] || 'bg-gray-100 text-gray-600'}`}>
-                                        {user?.role || 'Guest'}
-                                    </div>
-                                    <span className="text-[10px] text-gray-400 truncate">{branchName}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* REMOVED: Bottom User Info - No more duplication */}
+                {/* The user info is now only shown at the top and in the collapsed view */}
             </aside>
 
             {/* Main Content */}
