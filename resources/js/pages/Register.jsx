@@ -8,6 +8,15 @@ export default function Register() {
     const { register } = useAuth();
     const navigate = useNavigate();
     const [step, setStep] = useState(0);
+
+    // Calculate date of birth limit (at least 20 years old)
+    const maxDob = (() => {
+        const today = new Date();
+        const year = today.getFullYear() - 20;
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    })();
     const [form, setForm] = useState({
         first_name: '', last_name: '', email: '', phone_number: '',
         password: '', password_confirmation: '', role: 'cashier', gender: '',
@@ -139,7 +148,6 @@ export default function Register() {
                             <option value="">Select gender</option>
                             <option value="male">Male</option>
                             <option value="female">Female</option>
-                            <option value="other">Other</option>
                         </select>
                     </div>
                 </div>
@@ -147,7 +155,7 @@ export default function Register() {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Date of Birth</label>
                     <div className="relative">
                         <Calendar className="absolute left-3.5 top-3.5 text-gray-400" size={18} />
-                        <input type="date" name="date_of_birth" value={form.date_of_birth} onChange={handleChange} className="input-field pl-11" />
+                        <input type="date" name="date_of_birth" value={form.date_of_birth} onChange={handleChange} max={maxDob} className="input-field pl-11" />
                     </div>
                 </div>
             </div>
@@ -324,7 +332,7 @@ export default function Register() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-sky-100 via-sky-50 to-white py-8 px-4">
             <div className="max-w-2xl mx-auto">
-                <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8">
+                <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8 registration-form-container">
                     {/* Header */}
                     <div className="text-center mb-6">
                         <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-sky-600 mb-4 transition-colors">

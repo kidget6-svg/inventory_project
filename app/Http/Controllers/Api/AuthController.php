@@ -155,4 +155,81 @@ class AuthController extends Controller
     {
         return response()->json($request->user());
     }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ], [
+            'email.exists' => 'No user found with this email address.',
+        ]);
+
+        $email = $request->email;
+        $code = rand(100000, 999999);
+
+        \DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            [
+                'token' => \Hash::make($code),
+                'created_at' => now()
+            ]
+        );
+
+        try {
+            \Mail::to($email)->send(new \App\Mail\ResetPasswordCodeMail((string)$code));
+        } catch (\Throwable $e) {
+            \Log::error('Error sending reset password code email:', ['exception' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'Failed to send reset code email. Please contact support.',
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'Reset code has been sent to your email.',
+        ]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $email = $request->email;
+        $code = $request->token;
+
+        $record = \DB::table('password_reset_tokens')->where('email', $email)->first();
+
+        if (!$record) {
+            return response()->json([
+                'message' => 'Invalid email or reset request.',
+            ], 400);
+        }
+
+        $createdAt = \Carbon\Carbon::parse($record->created_at);
+        if ($createdAt->addHours(1)->isPast()) {
+            \DB::table('password_reset_tokens')->where('email', $email)->delete();
+            return response()->json([
+                'message' => 'Reset code has expired. Please request a new one.',
+            ], 400);
+        }
+
+        if (!\Hash::check($code, $record->token)) {
+            return response()->json([
+                'message' => 'Invalid reset code.',
+            ], 400);
+        }
+
+        $user = User::where('email', $email)->first();
+        $user->password = \Hash::make($request->password);
+        $user->save();
+
+        \DB::table('password_reset_tokens')->where('email', $email)->delete();
+
+        return response()->json([
+            'message' => 'Your password has been reset successfully.',
+        ]);
+    }
 }

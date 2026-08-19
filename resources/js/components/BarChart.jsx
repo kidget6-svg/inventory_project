@@ -108,7 +108,7 @@ export default function BarChart({
     return (
         <div className="card p-5 h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-600">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-white">
                     {title}
                 </h3>
             </div>

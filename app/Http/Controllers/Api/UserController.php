@@ -78,8 +78,8 @@ class UserController extends Controller
             'phone_number'                      => 'nullable|string|max:20',
             'password'                          => 'required|confirmed|min:8',
             'role'                              => ['required', Rule::exists('roles', 'slug')],
-            'gender'                            => 'nullable|in:male,female,other',
-            'date_of_birth'                     => 'nullable|date',
+            'gender'                            => 'nullable|in:male,female',
+            'date_of_birth'                     => 'nullable|date|before_or_equal:-20 years',
             'address'                           => 'nullable|string',
             'profile_photo'                     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'license_number'                    => 'nullable|string|max:255',
@@ -94,6 +94,9 @@ class UserController extends Controller
             'qualification'                     => 'nullable|string|max:255',
             'license_document'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
             'qualification_document'            => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        ], [
+            'date_of_birth.before_or_equal' => 'You must be at least 20 years old.',
+            'gender.in' => 'Gender must be male or female.',
         ]);
 
         $data = [
@@ -168,8 +171,8 @@ class UserController extends Controller
             'password'                          => 'nullable|confirmed|min:8',
             'role'                              => ['required', Rule::exists('roles', 'slug')],
             'status'                            => 'nullable|in:pending,approved,rejected',
-            'gender'                            => 'nullable|in:male,female,other',
-            'date_of_birth'                     => 'nullable|date',
+            'gender'                            => 'nullable|in:male,female',
+            'date_of_birth'                     => 'nullable|date|before_or_equal:-20 years',
             'address'                           => 'nullable|string',
             'profile_photo'                     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'license_number'                    => 'nullable|string|max:255',
@@ -184,6 +187,9 @@ class UserController extends Controller
             'qualification'                     => 'nullable|string|max:255',
             'license_document'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
             'qualification_document'            => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        ], [
+            'date_of_birth.before_or_equal' => 'You must be at least 20 years old.',
+            'gender.in' => 'Gender must be male or female.',
         ]);
 
         $user->update([

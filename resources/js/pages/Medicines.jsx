@@ -408,7 +408,7 @@ export default function Medicines() {
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Reorder Level *</label>
                             <input type="number" name="reorder_level" value={form.reorder_level} onChange={handleChange} placeholder="10" min="0" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" required />
-                        </div>}
+                        </div>
                     </div>
                 );
             case 2:

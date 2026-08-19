@@ -37,8 +37,8 @@ class RegisterController extends Controller
             'phone_number'             => 'nullable|string|max:20',
             'password'                 => 'required|confirmed|min:8',
             'role'                     => 'required|in:pharmacist,cashier',
-            'gender'                   => 'nullable|in:male,female,other',
-            'date_of_birth'            => 'nullable|date',
+            'gender'                   => 'nullable|in:male,female',
+            'date_of_birth'            => 'nullable|date|before_or_equal:-20 years',
             'address'                  => 'nullable|string',
             'profile_photo'            => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'license_number'                => 'required_if:role,pharmacist|string|max:255',
@@ -53,6 +53,9 @@ class RegisterController extends Controller
             'qualification'                 => 'required_if:role,pharmacist|string|max:255',
             'license_document'              => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
             'qualification_document'      => 'required_if:role,pharmacist|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        ], [
+            'date_of_birth.before_or_equal' => 'You must be at least 20 years old.',
+            'gender.in' => 'Gender must be male or female.',
         ]);
 
         $data = [

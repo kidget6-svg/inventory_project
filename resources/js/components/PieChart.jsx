@@ -141,8 +141,8 @@ export default function PieChart({ labels = [], values = [] }) {
     };
 
     return (
-        <div className="bg-white rounded-[16px] shadow p-6 flex flex-col items-center h-full">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">
+        <div className="card p-6 flex flex-col items-center h-full">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
                 Inventory by Category
             </h3>
             <div className="relative w-full flex-1 min-h-[200px] flex items-center justify-center">

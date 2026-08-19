@@ -25,8 +25,11 @@ import api from "../axios";
 import Pagination from '../components/Pagination';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-
-
+const DEFAULT_ROLES = [
+    { name: "Admin", slug: "admin" },
+    { name: "Pharmacist", slug: "pharmacist" },
+    { name: "Cashier", slug: "cashier" }
+];
 
 export default function Users(){
 
@@ -1048,22 +1051,15 @@ focus:ring-blue-500
 >
 
 
-<option value="all">
-
+<option value="all" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
 All Roles
-
 </option>
 
-
-{roles.map(role=>(
-<option key={role.slug} value={role.slug}>{role.name}</option>
+{(roles.length > 0 ? roles : DEFAULT_ROLES).map(role=>(
+<option key={role.slug} value={role.slug} className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{role.name}</option>
 ))}
 
-
-
 </select>
-
-
 
 <select
 
@@ -1089,10 +1085,10 @@ focus:ring-blue-500
 
 >
 
-<option value="all">All Statuses</option>
-<option value="approved">Approved</option>
-<option value="pending">Pending Approval</option>
-<option value="rejected">Rejected</option>
+<option value="all" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">All Statuses</option>
+<option value="approved" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">Approved</option>
+<option value="pending" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">Pending Approval</option>
+<option value="rejected" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">Rejected</option>
 
 </select>
 
@@ -1431,13 +1427,15 @@ focus:ring-blue-500
 
 
 {
-roles.map(role=>(
+(roles.length > 0 ? roles : DEFAULT_ROLES).map(role=>(
 
 <option
 
 key={role.slug}
 
 value={role.slug}
+
+className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 
 >
 

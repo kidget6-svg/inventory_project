@@ -176,3 +176,24 @@
         @apply border border-gray-200 dark:border-gray-700;
     }
 }
+
+/* Custom Overrides to force white background and dark text on Login & Registration input fields */
+.registration-form-container input[type="text"],
+.registration-form-container input[type="email"],
+.registration-form-container input[type="tel"],
+.registration-form-container input[type="date"],
+.registration-form-container input[type="number"],
+.registration-form-container input[type="password"],
+.registration-form-container select,
+.registration-form-container textarea {
+    background-color: #ffffff !important;
+    color: #111827 !important; /* text-gray-900 */
+}
+
+.login-form-container input[type="text"],
+.login-form-container input[type="email"],
+.login-form-container input[type="password"] {
+    background-color: #ffffff !important;
+    color: #111827 !important; /* text-gray-900 */
+}
+

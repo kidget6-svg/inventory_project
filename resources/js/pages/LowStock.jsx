@@ -72,8 +72,9 @@ const DonutChart = ({
                     cy={cy}
                     r={r}
                     fill="none"
-                    stroke="#f1f5f9"
+                    stroke="currentColor"
                     strokeWidth={strokeWidth}
+                    className="text-gray-100 dark:text-gray-700"
                 />
                 {/* Progress circle */}
                 <circle
@@ -92,8 +93,8 @@ const DonutChart = ({
             </svg>
             {/* Center content */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-gray-800">{value}</span>
-                <span className="text-[10px] text-gray-400 text-center leading-tight">{title}</span>
+                <span className="text-xl font-bold text-gray-800 dark:text-white">{value}</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-400 text-center leading-tight">{title}</span>
             </div>
         </div>
     );
@@ -380,17 +381,17 @@ export default function LowStock() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <AlertTriangle className="w-7 h-7 text-amber-500" />
                         Low Stock Management
                     </h1>
-                    <p className="text-sm text-gray-500">Monitor inventory health with visual metrics</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Monitor inventory health with visual metrics</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <button onClick={loadData} className="px-4 py-2 text-sm flex items-center gap-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all">
+                    <button onClick={loadData} className="px-4 py-2 text-sm flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all">
                         <RefreshCw size={16} /> Refresh
                     </button>
-                    <button className="px-4 py-2 text-sm flex items-center gap-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all">
+                    <button className="px-4 py-2 text-sm flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all">
                         <Download size={16} /> Export
                     </button>
                 </div>
@@ -401,7 +402,7 @@ export default function LowStock() {
                 ============================================================ */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
                 {/* Total Items */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow">
                     <DonutChart
                         data={donutData.total.data}
                         title="Total Items"
@@ -411,12 +412,12 @@ export default function LowStock() {
                         size={130}
                         strokeWidth={10}
                     />
-                    <p className="text-xs text-gray-400 mt-2">All medicines in inventory</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-400 mt-2">All medicines in inventory</p>
                 </div>
 
                 {/* Out of Stock */}
                 <div 
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
+                    className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => handleDonutClick('outOfStock')}
                 >
                     <DonutChart
@@ -429,12 +430,12 @@ export default function LowStock() {
                         strokeWidth={10}
                         active={filters.status === 'out'}
                     />
-                    <p className="text-xs text-gray-400 mt-2">{metrics.outOfStockPercentage.toFixed(1)}% of total</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-400 mt-2">{metrics.outOfStockPercentage.toFixed(1)}% of total</p>
                 </div>
 
                 {/* Low Stock */}
                 <div 
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
+                    className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => handleDonutClick('lowStock')}
                 >
                     <DonutChart
@@ -447,11 +448,11 @@ export default function LowStock() {
                         strokeWidth={10}
                         active={filters.status === 'low'}
                     />
-                    <p className="text-xs text-gray-400 mt-2">{metrics.lowStockPercentage.toFixed(1)}% of total</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-400 mt-2">{metrics.lowStockPercentage.toFixed(1)}% of total</p>
                 </div>
 
                 {/* Stock Value */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow">
                     <DonutChart
                         data={donutData.stockValue.data}
                         title="Stock Value"
@@ -461,12 +462,12 @@ export default function LowStock() {
                         size={130}
                         strokeWidth={10}
                     />
-                    <p className="text-xs text-gray-400 mt-2">Total inventory value</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-400 mt-2">Total inventory value</p>
                 </div>
 
                 {/* Expired */}
                 <div 
-                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
+                    className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col items-center hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => handleDonutClick('expired')}
                 >
                     <DonutChart
@@ -479,14 +480,14 @@ export default function LowStock() {
                         strokeWidth={10}
                         active={filters.status === 'expired'}
                     />
-                    <p className="text-xs text-gray-400 mt-2">{metrics.expiredPercentage.toFixed(1)}% of total</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-400 mt-2">{metrics.expiredPercentage.toFixed(1)}% of total</p>
                 </div>
             </div>
 
             {/* ============================================================
                 FILTERS
                 ============================================================ */}
-            <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-4 shadow-sm">
+            <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm">
                 <div className="flex flex-col lg:flex-row gap-3">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
@@ -496,32 +497,32 @@ export default function LowStock() {
                             placeholder="Search medicine, generic, barcode..."
                             value={filters.search}
                             onChange={handleFilterChange}
-                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:focus:ring-sky-900/30 outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                         />
                     </div>
-                    <select name="category_id" value={filters.category_id} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none min-w-[140px]">
-                        <option value="">All Categories</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    <select name="category_id" value={filters.category_id} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none min-w-[140px] bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                        <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">All Categories</option>
+                        {categories.map(c => <option key={c.id} value={c.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{c.name}</option>)}
                     </select>
-                    <select name="supplier_id" value={filters.supplier_id} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none min-w-[140px]">
-                        <option value="">All Suppliers</option>
-                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    <select name="supplier_id" value={filters.supplier_id} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none min-w-[140px] bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                        <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">All Suppliers</option>
+                        {suppliers.map(s => <option key={s.id} value={s.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">{s.name}</option>)}
                     </select>
-                    <select name="status" value={filters.status} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none min-w-[130px]">
-                        <option value="">All Status</option>
-                        <option value="critical">Critical</option>
-                        <option value="low">Low Stock</option>
-                        <option value="out">Out of Stock</option>
-                        <option value="expired">Expired</option>
+                    <select name="status" value={filters.status} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none min-w-[130px] bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                        <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">All Status</option>
+                        <option value="critical" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Critical</option>
+                        <option value="low" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Low Stock</option>
+                        <option value="out" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Out of Stock</option>
+                        <option value="expired" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Expired</option>
                     </select>
-                    <select name="sort" value={filters.sort} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none min-w-[140px]">
-                        <option value="name_asc">Name A-Z</option>
-                        <option value="name_desc">Name Z-A</option>
-                        <option value="quantity_asc">Stock Low-High</option>
-                        <option value="quantity_desc">Stock High-Low</option>
+                    <select name="sort" value={filters.sort} onChange={handleFilterChange} className="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm outline-none min-w-[140px] bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                        <option value="name_asc" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Name A-Z</option>
+                        <option value="name_desc" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Name Z-A</option>
+                        <option value="quantity_asc" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Stock Low-High</option>
+                        <option value="quantity_desc" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Stock High-Low</option>
                     </select>
                     {isFiltered && (
-                        <button onClick={resetFilters} className="px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl border border-red-200 transition-colors flex items-center gap-1">
+                        <button onClick={resetFilters} className="px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-900/50 transition-colors flex items-center gap-1">
                             <X size={14} /> Clear
                         </button>
                     )}
@@ -531,7 +532,7 @@ export default function LowStock() {
             {/* ============================================================
                 TABLE
                 ============================================================ */}
-            <div ref={tableRef} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div ref={tableRef} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1000px]">
                         <thead className="bg-gradient-to-r from-sky-600 to-blue-600 text-white">
@@ -546,39 +547,39 @@ export default function LowStock() {
                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {filteredMedicines.length === 0 ? (
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                             {filteredMedicines.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="px-4 py-12 text-center">
                                         <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-                                        <p className="text-gray-800 font-semibold">All Stocked Up!</p>
-                                        <p className="text-sm text-gray-500">No medicines match your current filters.</p>
+                                        <p className="text-gray-800 dark:text-gray-200 font-semibold">All Stocked Up!</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">No medicines match your current filters.</p>
                                     </td>
                                 </tr>
                             ) : filteredMedicines.map((medicine) => {
                                 const status = getStockStatus(medicine);
                                 return (
-                                    <tr key={medicine.id} className="hover:bg-sky-50/30 transition-colors cursor-pointer" onClick={() => { setSelectedMedicine(medicine); setShowModal(true); }}>
+                                    <tr key={medicine.id} className="hover:bg-sky-50/30 dark:hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => { setSelectedMedicine(medicine); setShowModal(true); }}>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                                                <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
                                                     <Package size={16} className="text-gray-400" />
                                                 </div>
-                                                <span className="font-medium text-gray-800 text-sm">{medicine.name || 'Unknown'}</span>
+                                                <span className="font-medium text-gray-800 dark:text-gray-200 text-sm">{medicine.name || 'Unknown'}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">{medicine.category?.name || '---'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{medicine.category?.name || '---'}</td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`font-bold text-sm ${status.key === 'out' ? 'text-red-600' : status.key === 'critical' ? 'text-orange-600' : 'text-amber-600'}`}>
                                                 {medicine.quantity || 0}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-center text-sm text-gray-500">{medicine.reorder_level || 0}</td>
+                                        <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{medicine.reorder_level || 0}</td>
                                         <td className="px-4 py-3 text-center">{getStatusBadge(medicine)}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-500">
+                                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                             {medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : '---'}
                                         </td>
-                                        <td className="px-4 py-3 text-center text-sm text-gray-500">{medicine.supplier?.name || '---'}</td>
+                                        <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{medicine.supplier?.name || '---'}</td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex justify-end gap-1">
                                                 <button onClick={(e) => { e.stopPropagation(); setSelectedMedicine(medicine); setShowModal(true); }} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors" title="View">
@@ -607,29 +608,29 @@ export default function LowStock() {
                 {selectedMedicine && (
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-3 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Generic Name</p>
-                                <p className="text-sm font-medium text-gray-800">{selectedMedicine.generic_name || '---'}</p>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Generic Name</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-white">{selectedMedicine.generic_name || '---'}</p>
                             </div>
-                            <div className="p-3 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Status</p>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Status</p>
                                 <div className="mt-1">{getStatusBadge(selectedMedicine)}</div>
                             </div>
-                            <div className="p-3 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Current Stock</p>
-                                <p className="text-sm font-bold text-gray-800">{selectedMedicine.quantity || 0}</p>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Current Stock</p>
+                                <p className="text-sm font-bold text-gray-800 dark:text-white">{selectedMedicine.quantity || 0}</p>
                             </div>
-                            <div className="p-3 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Reorder Level</p>
-                                <p className="text-sm font-medium text-gray-800">{selectedMedicine.reorder_level || 0}</p>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Reorder Level</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-white">{selectedMedicine.reorder_level || 0}</p>
                             </div>
-                            <div className="p-3 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Expiry Date</p>
-                                <p className="text-sm font-medium text-gray-800">{selectedMedicine.expiry_date ? new Date(selectedMedicine.expiry_date).toLocaleDateString() : '---'}</p>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Expiry Date</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-white">{selectedMedicine.expiry_date ? new Date(selectedMedicine.expiry_date).toLocaleDateString() : '---'}</p>
                             </div>
-                            <div className="p-3 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500">Supplier</p>
-                                <p className="text-sm font-medium text-gray-800">{selectedMedicine.supplier?.name || '---'}</p>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Supplier</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-white">{selectedMedicine.supplier?.name || '---'}</p>
                             </div>
                         </div>
                         <div className="flex gap-2 pt-2">
