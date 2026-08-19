@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useBranch } from '../context/BranchContext';
 import {
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign,
     ArrowLeftRight, BarChart3, Menu, X, LogOut, Users,
     Package, PanelLeftClose, PanelLeft, ChevronDown, UserCircle, Settings,
     ShoppingBag, FileText, ShieldCheck, Warehouse, Building2, Boxes,
-    Bell, ClipboardList, Store, GitBranch, Moon, Sun
+    Bell, ClipboardList, Store, GitBranch, Moon, Sun, Check, Globe
 } from 'lucide-react';
 
 const menuItems = [
@@ -17,7 +18,7 @@ const menuItems = [
 
     // Product Management
     { section: 'Product Management' },
-    { to: '/categories', label: 'Categories', icon: FolderTree, permissions: ['categories.view'] },
+    { to: '/categories', label: 'Categories & Shelves', icon: FolderTree, permissions: ['categories.view'] },
     { to: '/medicines', label: 'Medicines', icon: Pill, permissions: ['medicines.view'] },
     { to: '/retail-products', label: 'Retail & OTC Products', icon: Package, permissions: ['retail-products.view'] },
 
@@ -78,29 +79,19 @@ const roleBadgeStyle = {
     cashier: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
-function getBranchDisplayName(user) {
-    if (!user) return 'Loading...';
-    if (user.role === 'admin') return 'All Branches';
-    if (user.branch?.location_type === 'warehouse') return 'Central Warehouse';
-    return user.branch?.name || 'No Branch Assigned';
-}
-
-function getBranchIcon(user) {
-    if (!user) return <Building2 size={14} className="text-gray-400" />;
-    if (user.role === 'admin') return <GitBranch size={14} className="text-purple-400" />;
-    if (user.branch?.location_type === 'warehouse') return <Warehouse size={14} className="text-sky-400" />;
-    return <Store size={14} className="text-green-400" />;
-}
-
 export default function SidebarLayout({ children, pageTitle }) {
     const { user, logout, hasAnyPermission } = useAuth();
     const { theme, toggleTheme } = useTheme();
+    const { branches, selectedBranchId, selectedBranch, setSelectedBranchId } = useBranch();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+    const [branchMenuOpen, setBranchMenuOpen] = useState(false);
     const accountMenuRef = useRef(null);
+    const branchMenuRef = useRef(null);
 
+    const isAdmin = user?.role === 'admin';
     const menu = buildMenu(menuItems, hasAnyPermission, user?.role || 'guest');
 
     const handleLogout = async () => {
@@ -113,6 +104,9 @@ export default function SidebarLayout({ children, pageTitle }) {
             if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) {
                 setAccountMenuOpen(false);
             }
+            if (branchMenuRef.current && !branchMenuRef.current.contains(e.target)) {
+                setBranchMenuOpen(false);
+            }
         }
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -121,8 +115,12 @@ export default function SidebarLayout({ children, pageTitle }) {
     const sidebarWidth = collapsed ? 'md:w-20' : 'md:w-64';
     const mainMargin = collapsed ? 'md:ml-20' : 'md:ml-64';
     const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
-    const branchName = getBranchDisplayName(user);
-    const branchIcon = getBranchIcon(user);
+
+    const getBranchIconElement = (locationType, size = 14) => {
+        if (locationType === 'warehouse') return <Warehouse size={size} className="text-sky-500 shrink-0" />;
+        if (locationType === 'all') return <Globe size={size} className="text-purple-500 shrink-0" />;
+        return <Store size={size} className="text-emerald-500 shrink-0" />;
+    };
 
     const isDark = theme === 'dark';
 
@@ -151,8 +149,17 @@ export default function SidebarLayout({ children, pageTitle }) {
                             <div className="min-w-0">
                                 <div className="text-base font-bold text-gray-900 dark:text-white tracking-tight truncate">EthioPharmacy</div>
                                 <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 truncate">
-                                    {branchIcon}
-                                    <span className="font-medium truncate">{branchName}</span>
+                                    {isAdmin ? (
+                                        <span className="inline-flex items-center gap-1 font-medium text-sky-700 dark:text-sky-300">
+                                            <GitBranch size={12} className="text-purple-500" />
+                                            Admin Portal
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 font-medium truncate">
+                                            {getBranchIconElement(user?.branch?.location_type)}
+                                            {user?.branch?.name || 'Assigned Branch'}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -167,6 +174,47 @@ export default function SidebarLayout({ children, pageTitle }) {
                     </button>
                 </div>
 
+                {/* Branch Switcher (Top of Sidebar - for Admins) */}
+                {isAdmin && (
+                    <div className="px-3 pt-3 pb-2 border-b border-sky-200 dark:border-gray-700">
+                        {collapsed ? (
+                            <div className="flex justify-center" title={`Active Branch: ${selectedBranch.name}`}>
+                                <button
+                                    onClick={() => setCollapsed(false)}
+                                    className="w-10 h-10 rounded-xl bg-white dark:bg-gray-700 border border-sky-200 dark:border-gray-600 flex items-center justify-center text-sky-600 dark:text-sky-400 hover:bg-sky-50 shadow-sm"
+                                >
+                                    {getBranchIconElement(selectedBranch.location_type, 18)}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="bg-white dark:bg-gray-700/80 rounded-xl p-2.5 border border-sky-200 dark:border-gray-600 shadow-sm">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300 flex items-center gap-1.5">
+                                        <Building2 size={13} className="text-sky-600 dark:text-sky-400" />
+                                        Select Branch
+                                    </span>
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300">
+                                        {selectedBranchId === 'all' ? 'All' : selectedBranch?.code || 'Active'}
+                                    </span>
+                                </div>
+                                <select
+                                    value={selectedBranchId}
+                                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                                    className="w-full text-xs font-semibold px-2.5 py-2 bg-sky-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-sky-200 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-sky-400 cursor-pointer transition-all"
+                                >
+                                    <option value="all">🏢 All Branches (Global)</option>
+                                    {branches.map(b => (
+                                        <option key={b.id} value={b.id}>
+                                            {b.location_type === 'warehouse' ? '📦 ' : '🏪 '}
+                                            {b.name} {b.code ? `(${b.code})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* User Info - Collapsed View */}
                 {collapsed && (
                     <div className="flex flex-col items-center py-3 border-b border-sky-200 dark:border-gray-700">
@@ -180,7 +228,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                             {user?.role || 'Guest'}
                         </div>
                         <div className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 truncate w-full px-2 text-center">
-                            {branchName}
+                            {isAdmin ? selectedBranch.name : (user?.branch?.name || 'No Branch')}
                         </div>
                     </div>
                 )}
@@ -244,13 +292,61 @@ export default function SidebarLayout({ children, pageTitle }) {
             <main className={`flex-1 ${mainMargin} min-h-screen transition-all duration-300 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
                 {/* Top Bar */}
                 <div className={`sticky top-0 z-30 ${isDark ? 'bg-gray-800/80 backdrop-blur-md border-gray-700' : 'bg-white/80 backdrop-blur-md border-sky-200/60'} border-b px-6 py-3 flex items-center justify-between`}>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} tracking-tight`}>
                             {pageTitle || 'Dashboard'}
                         </h2>
-                        {user && user.role !== 'admin' && user.branch && (
+                        
+                        {/* Branch Indicator in Header */}
+                        {isAdmin ? (
+                            <div className="relative" ref={branchMenuRef}>
+                                <button
+                                    onClick={() => setBranchMenuOpen(!branchMenuOpen)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-xl bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-700 hover:bg-sky-100 transition-colors"
+                                >
+                                    {getBranchIconElement(selectedBranch.location_type, 13)}
+                                    <span className="hidden sm:inline">Branch:</span>
+                                    <span>{selectedBranch.name}</span>
+                                    <ChevronDown size={13} className={`transition-transform ${branchMenuOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {branchMenuOpen && (
+                                    <div className={`absolute left-0 mt-2 w-60 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-sky-100'} rounded-xl shadow-xl border py-1.5 z-50`}>
+                                        <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 border-b border-gray-100 dark:border-gray-700">
+                                            Switch Branch View
+                                        </div>
+                                        <button
+                                            onClick={() => { setSelectedBranchId('all'); setBranchMenuOpen(false); }}
+                                            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium ${
+                                                selectedBranchId === 'all' ? 'bg-sky-50 dark:bg-sky-900/40 text-sky-600 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Globe size={14} className="text-purple-500" />
+                                                <span>All Branches (Global)</span>
+                                            </div>
+                                            {selectedBranchId === 'all' && <Check size={14} className="text-sky-600" />}
+                                        </button>
+                                        {branches.map(b => (
+                                            <button
+                                                key={b.id}
+                                                onClick={() => { setSelectedBranchId(b.id); setBranchMenuOpen(false); }}
+                                                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium ${
+                                                    String(selectedBranchId) === String(b.id) ? 'bg-sky-50 dark:bg-sky-900/40 text-sky-600 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    {getBranchIconElement(b.location_type, 14)}
+                                                    <span>{b.name}</span>
+                                                </div>
+                                                {String(selectedBranchId) === String(b.id) && <Check size={14} className="text-sky-600" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : user?.branch && (
                             <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/30 rounded-full border border-sky-200 dark:border-sky-800">
-                                <Store size={12} />
+                                {getBranchIconElement(user.branch.location_type, 12)}
                                 {user.branch.name}
                             </span>
                         )}

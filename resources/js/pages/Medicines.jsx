@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../axios';
 import { useAuth } from '../context/AuthContext';
+import { useBranch } from '../context/BranchContext';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
@@ -32,6 +33,7 @@ const unitOptions = [
 
 export default function Medicines() {
     const { user } = useAuth();
+    const { branchRefreshKey } = useBranch();
     const navigate = useNavigate();
     const isAdmin = user?.role === 'admin';
     const isPharmacist = user?.role === 'pharmacist';
@@ -122,7 +124,7 @@ export default function Medicines() {
 
     useEffect(() => { 
         loadMedicines(); 
-    }, [filters, page]);
+    }, [filters, page, branchRefreshKey]);
 
     const handlePageChange = (p) => setPage(p);
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });

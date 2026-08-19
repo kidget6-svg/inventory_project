@@ -65,6 +65,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
         // Shelves Read
         Route::get('/shelves', [ShelfController::class, 'index']);
+        Route::get('/shelves/{id}/items', [ShelfController::class, 'items']);
         Route::get('/shelves/{shelf}', [ShelfController::class, 'show']);
 
         // Suppliers Read

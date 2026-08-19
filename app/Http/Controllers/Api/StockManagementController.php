@@ -11,22 +11,35 @@ use Illuminate\Http\Request;
 
 class StockManagementController extends Controller
 {
-    public function summary()
+    public function summary(Request $request)
     {
         try {
-            $totalStock = Medicine::sum('quantity') + RetailProduct::sum('quantity');
-            $lowStock = Medicine::whereColumn('quantity', '<=', 'reorder_level')->count() + RetailProduct::whereColumn('quantity', '<=', 'reorder_level')->count();
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+
+            $totalStock = Medicine::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->sum('quantity') 
+                        + RetailProduct::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->sum('quantity');
+            $lowStock = Medicine::whereColumn('quantity', '<=', 'reorder_level')->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count() 
+                      + RetailProduct::whereColumn('quantity', '<=', 'reorder_level')->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count();
             
-            $expiringSoonBatches = Batch::whereBetween('expiry_date', [now(), now()->addDays(90)])->count();
-            $expiringSoonRetail = RetailProduct::whereBetween('expiry_date', [now(), now()->addDays(90)])->count();
+            $expiringSoonBatches = Batch::whereBetween('expiry_date', [now(), now()->addDays(90)])
+                ->when($branchScope, fn($q) => $q->whereHas('medicine', fn($m) => $m->where('branch_id', $branchScope)))
+                ->count();
+            $expiringSoonRetail = RetailProduct::whereBetween('expiry_date', [now(), now()->addDays(90)])
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
+                ->count();
             $expiringSoon = $expiringSoonBatches + $expiringSoonRetail;
 
-            $expiredBatches = Batch::where('expiry_date', '<', now())->count();
-            $expiredRetail = RetailProduct::where('expiry_date', '<', now())->count();
+            $expiredBatches = Batch::where('expiry_date', '<', now())
+                ->when($branchScope, fn($q) => $q->whereHas('medicine', fn($m) => $m->where('branch_id', $branchScope)))
+                ->count();
+            $expiredRetail = RetailProduct::where('expiry_date', '<', now())
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
+                ->count();
             $expired = $expiredBatches + $expiredRetail;
 
-            $damagedMed = Medicine::whereIn('status', ['damaged', 'quarantined'])->count();
-            $damagedRetail = RetailProduct::whereIn('status', ['damaged', 'quarantined'])->count();
+            $damagedMed = Medicine::whereIn('status', ['damaged', 'quarantined'])->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count();
+            $damagedRetail = RetailProduct::whereIn('status', ['damaged', 'quarantined'])->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count();
             $damaged = $damagedMed + $damagedRetail;
 
             return response()->json([
@@ -48,10 +61,12 @@ class StockManagementController extends Controller
     public function currentStock(Request $request)
     {
         try {
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
             $search = $request->input('search');
             $categoryId = $request->input('category_id');
 
-            $medicinesQuery = Medicine::with(['category', 'supplier']);
+            $medicinesQuery = Medicine::with(['category', 'supplier'])->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
             if ($search) {
                 $medicinesQuery->where(function($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -67,7 +82,7 @@ class StockManagementController extends Controller
                 return $m;
             });
 
-            $retailQuery = RetailProduct::with(['supplier']);
+            $retailQuery = RetailProduct::with(['supplier', 'branch'])->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
             if ($search) {
                 $retailQuery->where(function($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -100,10 +115,14 @@ class StockManagementController extends Controller
         }
     }
 
-    public function lowStock()
+    public function lowStock(Request $request)
     {
         try {
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+
             $medicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->with('category')
                 ->get()
                 ->map(function($m) {
@@ -112,6 +131,7 @@ class StockManagementController extends Controller
                 });
 
             $retail = RetailProduct::whereColumn('quantity', '<=', 'reorder_level')
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->get()
                 ->map(function($r) {
                     $r->product_type = 'retail';
@@ -125,6 +145,7 @@ class StockManagementController extends Controller
                 'all' => $medicines->concat($retail)->values(),
             ]);
         } catch (\Exception $e) {
+            \Log::error('StockManagement lowStock error: ' . $e->getMessage());
             return response()->json([
                 'error' => $e->getMessage(),
                 'message' => 'Failed to load low stock'
@@ -132,10 +153,14 @@ class StockManagementController extends Controller
         }
     }
 
-    public function expiry()
+    public function expiry(Request $request)
     {
         try {
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+
             $expiredBatches = Batch::where('expiry_date', '<', now())
+                ->when($branchScope, fn($q) => $q->whereHas('medicine', fn($m) => $m->where('branch_id', $branchScope)))
                 ->with('medicine')
                 ->get()
                 ->map(function($b) {
@@ -145,6 +170,7 @@ class StockManagementController extends Controller
                 });
 
             $expiredRetail = RetailProduct::where('expiry_date', '<', now())
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->get()
                 ->map(function($r) {
                     $r->product_type = 'retail';
@@ -152,6 +178,7 @@ class StockManagementController extends Controller
                 });
 
             $expiringSoonBatches = Batch::whereBetween('expiry_date', [now(), now()->addDays(90)])
+                ->when($branchScope, fn($q) => $q->whereHas('medicine', fn($m) => $m->where('branch_id', $branchScope)))
                 ->with('medicine')
                 ->get()
                 ->map(function($b) {
@@ -161,6 +188,7 @@ class StockManagementController extends Controller
                 });
 
             $expiringSoonRetail = RetailProduct::whereBetween('expiry_date', [now(), now()->addDays(90)])
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->get()
                 ->map(function($r) {
                     $r->product_type = 'retail';
@@ -172,6 +200,7 @@ class StockManagementController extends Controller
                 'expiring_soon' => $expiringSoonBatches->concat($expiringSoonRetail)->values(),
             ]);
         } catch (\Exception $e) {
+            \Log::error('StockManagement expiry error: ' . $e->getMessage());
             return response()->json([
                 'error' => $e->getMessage(),
                 'message' => 'Failed to load expiry data'
@@ -179,10 +208,14 @@ class StockManagementController extends Controller
         }
     }
 
-    public function damaged()
+    public function damaged(Request $request)
     {
         try {
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+
             $medicines = Medicine::whereIn('status', ['damaged', 'quarantined'])
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->get()
                 ->map(function($m) {
                     $m->product_type = 'medicine';
@@ -190,6 +223,7 @@ class StockManagementController extends Controller
                 });
 
             $retail = RetailProduct::whereIn('status', ['damaged', 'quarantined'])
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->get()
                 ->map(function($r) {
                     $r->product_type = 'retail';
@@ -203,6 +237,7 @@ class StockManagementController extends Controller
                 'all' => $medicines->concat($retail)->values(),
             ]);
         } catch (\Exception $e) {
+            \Log::error('StockManagement damaged error: ' . $e->getMessage());
             return response()->json([
                 'error' => $e->getMessage(),
                 'message' => 'Failed to load damaged items'

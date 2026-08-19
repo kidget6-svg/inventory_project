@@ -16,19 +16,19 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
         $user = Auth::user();
 
         if ($user->isAdmin()) {
-            return $this->adminDashboard();
+            return $this->adminDashboard($request);
         }
 
         if ($user->isPharmacist()) {
-            return $this->pharmacistDashboard();
+            return $this->pharmacistDashboard($request);
         }
 
-        return $this->cashierDashboard();
+        return $this->cashierDashboard($request);
     }
 
     /*
@@ -36,9 +36,10 @@ class DashboardController extends Controller
     | Shared helper: low-stock medicines
     |--------------------------------------------------------------------------
     */
-    private function lowStockMedicines()
+    private function lowStockMedicines(?int $branchScope = null)
     {
         return Medicine::whereColumn('quantity', '<=', 'reorder_level')
+            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
             ->with('category')
             ->orderBy('quantity')
             ->get();
@@ -49,10 +50,15 @@ class DashboardController extends Controller
     | Shared helper: expired medicines
     |--------------------------------------------------------------------------
     */
-    private function expiredMedicines()
+    private function expiredMedicines(?int $branchScope = null)
     {
         return Batch::whereNotNull('expiry_date')
             ->where('expiry_date', '<', Carbon::today())
+            ->when($branchScope, function ($q) use ($branchScope) {
+                $q->where(function ($sub) use ($branchScope) {
+                    $sub->whereHas('medicine', fn($m) => $m->where('branch_id', $branchScope));
+                });
+            })
             ->with('medicine')
             ->orderBy('expiry_date')
             ->get()
@@ -69,10 +75,15 @@ class DashboardController extends Controller
     | Shared helper: medicines expiring within N days
     |--------------------------------------------------------------------------
     */
-    private function expiringMedicines(int $days)
+    private function expiringMedicines(int $days, ?int $branchScope = null)
     {
         return Batch::whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [Carbon::today(), Carbon::today()->addDays($days)])
+            ->when($branchScope, function ($q) use ($branchScope) {
+                $q->where(function ($sub) use ($branchScope) {
+                    $sub->whereHas('medicine', fn($m) => $m->where('branch_id', $branchScope));
+                });
+            })
             ->with('medicine')
             ->orderBy('expiry_date')
             ->get()
@@ -89,24 +100,29 @@ class DashboardController extends Controller
     | Shared helper: inventory status counts
     |--------------------------------------------------------------------------
     */
-    private function inventoryStatus(): array
+    private function inventoryStatus(?int $branchScope = null): array
     {
         return [
             'inStock' => Medicine::where('quantity', '>', 0)
                 ->whereColumn('quantity', '>', 'reorder_level')
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->where(function ($q) {
                     $q->whereNull('expiry_date')
                         ->orWhere('expiry_date', '>=', Carbon::today());
                 })->count(),
             'lowStock' => Medicine::where('quantity', '>', 0)
                 ->whereColumn('quantity', '<=', 'reorder_level')
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->where(function ($q) {
                     $q->whereNull('expiry_date')
                         ->orWhere('expiry_date', '>=', Carbon::today());
                 })->count(),
-            'outOfStock' => Medicine::where('quantity', 0)->count(),
+            'outOfStock' => Medicine::where('quantity', 0)
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
+                ->count(),
             'expired' => Medicine::whereNotNull('expiry_date')
                 ->where('expiry_date', '<', Carbon::today())
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                 ->count(),
         ];
     }
@@ -116,17 +132,20 @@ class DashboardController extends Controller
     | Shared helper: sales analytics (daily / weekly / monthly)
     |--------------------------------------------------------------------------
     */
-    private function salesAnalytics(): array
+    private function salesAnalytics(?int $branchScope = null): array
     {
         // Daily – last 7 days
         $daily = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today(null)->subDays($i);
+            $dailyQuery = Sale::whereDate('sale_date', '=', $date)
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
+
             $daily[] = [
                 'label' => $date->format('D'),
                 'date'  => $date->format('Y-m-d'),
-                'total' => (float) Sale::whereDate('sale_date', '=', $date)->sum('total_amount'),
-                'count' => Sale::whereDate('sale_date', '=', $date)->count(),
+                'total' => (float) (clone $dailyQuery)->sum('total_amount'),
+                'count' => (clone $dailyQuery)->count(),
             ];
         }
 
@@ -135,10 +154,13 @@ class DashboardController extends Controller
         for ($i = 3; $i >= 0; $i--) {
             $start = Carbon::today(null)->subWeeks($i)->startOfWeek();
             $end   = Carbon::today(null)->subWeeks($i)->endOfWeek();
+            $weeklyQuery = Sale::whereBetween('sale_date', [$start, $end], 'and')
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
+
             $weekly[] = [
                 'label' => $start->format('M d') . ' – ' . $end->format('M d'),
-                'total' => (float) Sale::whereBetween('sale_date', [$start, $end], 'and')->sum('total_amount'),
-                'count' => Sale::whereBetween('sale_date', [$start, $end], 'and')->count(),
+                'total' => (float) (clone $weeklyQuery)->sum('total_amount'),
+                'count' => (clone $weeklyQuery)->count(),
             ];
         }
 
@@ -146,14 +168,14 @@ class DashboardController extends Controller
         $monthly = [];
         for ($i = 5; $i >= 0; $i--) {
             $month = Carbon::today(null)->subMonths($i);
+            $monthlyQuery = Sale::whereYear('sale_date', '=', $month->year)
+                ->whereMonth('sale_date', '=', $month->month)
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
+
             $monthly[] = [
                 'label' => $month->format('M Y'),
-                'total' => (float) Sale::whereYear('sale_date', '=', $month->year)
-                    ->whereMonth('sale_date', '=', $month->month)
-                    ->sum('total_amount'),
-                'count' => Sale::whereYear('sale_date', '=', $month->year)
-                    ->whereMonth('sale_date', '=', $month->month)
-                    ->count(),
+                'total' => (float) (clone $monthlyQuery)->sum('total_amount'),
+                'count' => (clone $monthlyQuery)->count(),
             ];
         }
 
@@ -165,13 +187,13 @@ class DashboardController extends Controller
     | Shared helper: purchase vs sales totals
     |--------------------------------------------------------------------------
     */
-    private function purchaseVsSales(): array
+    private function purchaseVsSales(?int $branchScope = null): array
     {
         return [
             'totalPurchases' => (float) PurchaseOrder::where('status', 'completed', 'and')->sum('total_amount'),
-            'totalSales'     => (float) Sale::sum('total_amount'),
+            'totalSales'     => (float) Sale::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->sum('total_amount'),
             'purchaseCount'  => PurchaseOrder::where('status', 'completed', 'and')->count(),
-            'salesCount'     => Sale::count(),
+            'salesCount'     => Sale::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
         ];
     }
 
@@ -195,12 +217,13 @@ class DashboardController extends Controller
     | Shared helper: recent activities (built from existing model timestamps)
     |--------------------------------------------------------------------------
     */
-    private function recentActivities(int $limit = 4): array
+    private function recentActivities(int $limit = 4, ?int $branchScope = null): array
     {
         $activities = [];
 
         // Recent sales
-        foreach (Sale::latest()->take($limit)->get() as $sale) {
+        $salesQuery = Sale::latest()->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
+        foreach ($salesQuery->take($limit)->get() as $sale) {
             $createdAt = $sale->created_at ?? Carbon::now();
 
             $activities[] = [
@@ -216,7 +239,6 @@ class DashboardController extends Controller
 
         // Recent purchase orders
         foreach (PurchaseOrder::with('supplier')->latest()->take($limit)->get() as $po) {
-            // Use the most specific timestamp available for accurate activity tracking
             $activityAt = $po->completed_at
                 ?? $po->sent_at
                 ?? $po->updated_at
@@ -245,7 +267,8 @@ class DashboardController extends Controller
         }
 
         // Recent stock movements
-        foreach (StockMovement::with('medicine')->latest()->take($limit)->get() as $movement) {
+        $movementsQuery = StockMovement::with('medicine')->latest()->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
+        foreach ($movementsQuery->take($limit)->get() as $movement) {
             $createdAt = $movement->created_at ?? Carbon::now();
 
             $medicineName = $movement->medicine
@@ -279,33 +302,37 @@ class DashboardController extends Controller
     | Admin dashboard – full data set
     |--------------------------------------------------------------------------
     */
-    private function adminDashboard()
+    private function adminDashboard(\Illuminate\Http\Request $request)
     {
-        $totalMedicines       = Medicine::count();
-        $totalStock           = Medicine::sum('quantity');
-        $totalSuppliers       = Supplier::count();
-        $totalUsers           = User::count();
+        $user = Auth::user();
+        $branchScope = $user ? $user->getBranchScope($request) : null;
 
-        $lowStockMedicines    = $this->lowStockMedicines();
+        $totalMedicines       = Medicine::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count();
+        $totalStock           = Medicine::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->sum('quantity');
+        $totalSuppliers       = Supplier::count();
+        $totalUsers           = User::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count();
+
+        $lowStockMedicines    = $this->lowStockMedicines($branchScope);
         $lowStockCount        = $lowStockMedicines->count();
 
-        $expiredMedicines     = $this->expiredMedicines();
+        $expiredMedicines     = $this->expiredMedicines($branchScope);
         $expiredCount         = $expiredMedicines->count();
 
-        $expiring30           = $this->expiringMedicines(30);
-        $expiring60           = $this->expiringMedicines(60);
-        $expiring90           = $this->expiringMedicines(90);
+        $expiring30           = $this->expiringMedicines(30, $branchScope);
+        $expiring60           = $this->expiringMedicines(60, $branchScope);
+        $expiring90           = $this->expiringMedicines(90, $branchScope);
 
         $pendingPOs           = PurchaseOrder::where('status', 'pending')->count();
 
-        $todaySalesCount      = Sale::whereDate('sale_date', Carbon::today())->count();
-        $todayRevenue         = Sale::whereDate('sale_date', Carbon::today())->sum('total_amount');
+        $todaySalesQuery      = Sale::whereDate('sale_date', Carbon::today())->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
+        $todaySalesCount      = (clone $todaySalesQuery)->count();
+        $todayRevenue         = (clone $todaySalesQuery)->sum('total_amount');
 
-        $salesAnalytics       = $this->salesAnalytics();
-        $purchaseVsSales      = $this->purchaseVsSales();
-        $inventoryStatus      = $this->inventoryStatus();
+        $salesAnalytics       = $this->salesAnalytics($branchScope);
+        $purchaseVsSales      = $this->purchaseVsSales($branchScope);
+        $inventoryStatus      = $this->inventoryStatus($branchScope);
         $poStats              = $this->purchaseOrderStats();
-        $activities           = $this->recentActivities(4);
+        $activities           = $this->recentActivities(4, $branchScope);
 
         $recentPurchaseOrders = PurchaseOrder::with('supplier')
             ->latest()->take(5)->get();
@@ -316,7 +343,9 @@ class DashboardController extends Controller
             'revenue' => array_column($salesAnalytics['daily'], 'total'),
         ];
 
-        $inventoryChartData = Category::with('medicines')->get()->map(function ($category) {
+        $inventoryChartData = Category::with(['medicines' => function($q) use ($branchScope) {
+            $q->when($branchScope, fn($sub) => $sub->where('branch_id', $branchScope));
+        }])->get()->map(function ($category) {
             return [
                 'category'       => $category->name,
                 'total_stock'    => (int) $category->medicines->sum('quantity'),
@@ -334,9 +363,9 @@ class DashboardController extends Controller
             'todaySalesCount'        => $todaySalesCount,
             'todayRevenue'           => $todayRevenue,
             'totalUsers'             => $totalUsers,
-            'totalRevenue'           => (float) Sale::sum('total_amount'),
-            'pharmacistCount'        => User::where('role', 'pharmacist')->count(),
-            'cashierCount'           => User::where('role', 'cashier')->count(),
+            'totalRevenue'           => (float) Sale::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->sum('total_amount'),
+            'pharmacistCount'        => User::where('role', 'pharmacist')->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+            'cashierCount'           => User::where('role', 'cashier')->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
             'pendingUsersCount'      => User::where('status', 'pending')->count(),
 
             // ---- Lists ----
@@ -378,24 +407,27 @@ class DashboardController extends Controller
     | Pharmacist dashboard – inventory & expiry focus
     |--------------------------------------------------------------------------
     */
-    private function pharmacistDashboard()
+    private function pharmacistDashboard(\Illuminate\Http\Request $request)
     {
-        $totalMedicines       = Medicine::count();
-        $totalStock           = Medicine::sum('quantity');
+        $user = Auth::user();
+        $branchScope = $user ? $user->getBranchScope($request) : null;
 
-        $lowStockMedicines    = $this->lowStockMedicines();
+        $totalMedicines       = Medicine::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count();
+        $totalStock           = Medicine::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->sum('quantity');
+
+        $lowStockMedicines    = $this->lowStockMedicines($branchScope);
         $lowStockCount        = $lowStockMedicines->count();
 
-        $expiredMedicines     = $this->expiredMedicines();
+        $expiredMedicines     = $this->expiredMedicines($branchScope);
         $expiredCount         = $expiredMedicines->count();
 
-        $expiring30           = $this->expiringMedicines(30);
-        $expiring60           = $this->expiringMedicines(60);
-        $expiring90           = $this->expiringMedicines(90);
+        $expiring30           = $this->expiringMedicines(30, $branchScope);
+        $expiring60           = $this->expiringMedicines(60, $branchScope);
+        $expiring90           = $this->expiringMedicines(90, $branchScope);
 
-        $salesAnalytics       = $this->salesAnalytics();
-        $inventoryStatus      = $this->inventoryStatus();
-        $activities           = $this->recentActivities(4);
+        $salesAnalytics       = $this->salesAnalytics($branchScope);
+        $inventoryStatus      = $this->inventoryStatus($branchScope);
+        $activities           = $this->recentActivities(4, $branchScope);
 
         return response()->json([
             // ---- Summary cards ----
@@ -435,13 +467,17 @@ class DashboardController extends Controller
     | Cashier dashboard – sales focus
     |--------------------------------------------------------------------------
     */
-    private function cashierDashboard()
+    private function cashierDashboard(\Illuminate\Http\Request $request)
     {
-        $todaySalesCount      = Sale::whereDate('sale_date', Carbon::today())->count();
-        $todayRevenue         = Sale::whereDate('sale_date', Carbon::today())->sum('total_amount');
-        $totalMedicines       = Medicine::count();
+        $user = Auth::user();
+        $branchScope = $user ? $user->getBranchScope($request) : null;
 
-        $recentSales          = Sale::latest()->take(10)->get();
+        $todaySalesQuery      = Sale::whereDate('sale_date', Carbon::today())->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
+        $todaySalesCount      = (clone $todaySalesQuery)->count();
+        $todayRevenue         = (clone $todaySalesQuery)->sum('total_amount');
+        $totalMedicines       = Medicine::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count();
+
+        $recentSales          = Sale::latest()->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->take(10)->get();
 
         // Today's sales by hour for a mini chart
         $todayHourly = [];
@@ -449,6 +485,7 @@ class DashboardController extends Controller
             $todayHourly[] = [
                 'label' => sprintf('%02d:00', $h),
                 'total' => (float) Sale::whereDate('sale_date', Carbon::today())
+                    ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
                     ->whereTime('sale_date', '>=', sprintf('%02d:00:00', $h))
                     ->whereTime('sale_date', '<', sprintf('%02d:00:00', $h + 1))
                     ->sum('total_amount'),

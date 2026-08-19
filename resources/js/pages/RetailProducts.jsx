@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../axios';
 import { useAuth } from '../context/AuthContext';
+import { useBranch } from '../context/BranchContext';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
@@ -27,6 +28,7 @@ const categoryOptions = [
 
 export default function RetailProducts() {
     const { user, hasPermission } = useAuth();
+    const { branchRefreshKey } = useBranch();
     const navigate = useNavigate();
     const canCreate = hasPermission('retail-products.create');
     const canEdit = hasPermission('retail-products.edit');
@@ -144,7 +146,7 @@ export default function RetailProducts() {
 
     useEffect(() => { 
         loadProducts(); 
-    }, [filters, page]);
+    }, [filters, page, branchRefreshKey]);
 
     const handlePageChange = (p) => setPage(p);
 

@@ -135,19 +135,47 @@ class User extends Authenticatable
     /**
      * Check whether the user should be scoped to a specific branch.
      * Pharmacists and cashiers see only their assigned branch.
-     * Admins see all branches.
+     * Admins can optionally scope to a specific branch via X-Branch-Id header or branch_id query.
      */
-    public function shouldScopeToBranch(): bool
+    public function shouldScopeToBranch(?\Illuminate\Http\Request $request = null): bool
     {
-        return in_array($this->role, ['pharmacist', 'cashier']) && !empty($this->branch_id);
+        if (in_array($this->role, ['pharmacist', 'cashier']) && !empty($this->branch_id)) {
+            return true;
+        }
+
+        return $this->getActiveBranchId($request) !== null;
     }
 
     /**
-     * Get the branch_id this user is scoped to (null for admin = all branches).
+     * Get the active branch_id (from user assigned branch for staff, or X-Branch-Id header / param for admin).
      */
-    public function getBranchScope(): ?int
+    public function getActiveBranchId(?\Illuminate\Http\Request $request = null): ?int
     {
-        return $this->shouldScopeToBranch() ? $this->branch_id : null;
+        if (in_array($this->role, ['pharmacist', 'cashier']) && !empty($this->branch_id)) {
+            return (int) $this->branch_id;
+        }
+
+        $req = $request ?: request();
+        if ($req) {
+            $headerVal = $req->header('X-Branch-Id');
+            if ($headerVal && $headerVal !== 'all' && is_numeric($headerVal)) {
+                return (int) $headerVal;
+            }
+            $queryVal = $req->get('branch_id');
+            if ($queryVal && $queryVal !== 'all' && is_numeric($queryVal)) {
+                return (int) $queryVal;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the branch_id this user is scoped to (null = all branches).
+     */
+    public function getBranchScope(?\Illuminate\Http\Request $request = null): ?int
+    {
+        return $this->getActiveBranchId($request);
     }
 
     /**

@@ -12,7 +12,11 @@ class ShelfController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Shelf::withCount('medicines');
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+
+            $query = Shelf::withCount('medicines')
+                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -64,10 +68,18 @@ class ShelfController extends Controller
                 'shelf_location' => 'required|string|max:255|unique:shelves,shelf_location',
                 'description' => 'nullable|string',
                 'capacity' => 'required|integer|min:1',
+                'branch_id' => 'nullable|exists:branches,id',
             ]);
 
             // Set name from shelf_location
             $validated['name'] = $validated['shelf_location'];
+
+            if (empty($validated['branch_id'])) {
+                $userBranch = $request->user()->getBranchScope($request);
+                if ($userBranch) {
+                    $validated['branch_id'] = $userBranch;
+                }
+            }
 
             // Create the shelf
             $shelf = Shelf::create($validated);
@@ -94,7 +106,20 @@ class ShelfController extends Controller
 
     public function show(Shelf $shelf)
     {
-        return response()->json($shelf->loadCount('medicines'));
+        return response()->json($shelf->loadCount('medicines')->load('medicines.category'));
+    }
+
+    public function items($id)
+    {
+        $shelf = Shelf::findOrFail($id);
+        $items = $shelf->medicines()->with('category')->orderBy('name')->get();
+
+        return response()->json([
+            'shelf' => $shelf,
+            'items' => $items,
+            'total_items' => $items->sum('quantity'),
+            'item_count' => $items->count(),
+        ]);
     }
 
     public function update(Request $request, Shelf $shelf)
@@ -110,6 +135,7 @@ class ShelfController extends Controller
                 'shelf_location' => 'required|string|max:255|unique:shelves,shelf_location,' . $shelf->id,
                 'description' => 'nullable|string',
                 'capacity' => 'required|integer|min:1',
+                'branch_id' => 'nullable|exists:branches,id',
             ]);
 
             // Set name from shelf_location

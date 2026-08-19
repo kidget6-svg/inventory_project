@@ -19,10 +19,10 @@ class MedicineController extends Controller
         try {
             $query = Medicine::with(['category']);
 
-            // Branch scoping: pharmacists/cashiers see only their branch's medicines
             $user = $request->user();
-            if ($user->shouldScopeToBranch()) {
-                $query->where('branch_id', $user->branch_id);
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+            if ($branchScope) {
+                $query->where('branch_id', $branchScope);
             }
 
             if ($request->filled('search')) {
@@ -103,9 +103,13 @@ class MedicineController extends Controller
         // through the automatic stock movement created after creation.
         $validated['quantity'] = 0;
 
-        // Assign the creating user's branch so branch-scoped users can see it.
-        if ($request->user()->shouldScopeToBranch()) {
-            $validated['branch_id'] = $request->user()->branch_id;
+        // Assign the creating user's branch so branch-scoped users can see it,
+        // or respect the explicitly passed / active branch for admins.
+        if (empty($validated['branch_id'])) {
+            $userBranch = $request->user()->getBranchScope($request);
+            if ($userBranch) {
+                $validated['branch_id'] = $userBranch;
+            }
         }
 
         $medicine = Medicine::create($validated);
@@ -123,13 +127,20 @@ class MedicineController extends Controller
     /**
      * GET /api/medicines/low-stock
      */
-    public function getLowStock()
+    public function getLowStock(Request $request)
     {
         try {
-            $medicines = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+
+            $query = Medicine::whereColumn('quantity', '<=', 'reorder_level')
                 ->with('category')
-                ->orderBy('quantity')
-                ->paginate(10);
+                ->when($branchScope, function ($q) use ($branchScope) {
+                    $q->where('branch_id', $branchScope);
+                })
+                ->orderBy('quantity');
+
+            $medicines = $query->paginate(10);
 
             return response()->json([
                 'success' => true,

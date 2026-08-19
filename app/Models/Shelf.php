@@ -23,6 +23,13 @@ class Shelf extends Model
         'status' => 'string',
     ];
 
+    protected $appends = [
+        'utilization',
+        'current_items',
+        'status_label',
+        'status_color',
+    ];
+
     // Relationships
     public function branch()
     {

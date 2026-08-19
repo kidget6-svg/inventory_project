@@ -39,6 +39,7 @@ class RetailProduct extends Model
         'description',
         'manufacturer',
         'shelf_location',
+        'branch_id',
         'image',
     ];
 
@@ -55,6 +56,11 @@ class RetailProduct extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function getImageUrlAttribute(): string
