@@ -3,7 +3,8 @@ import api from '../axios';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
-import { Search, Filter, Calendar, Download, Printer, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import Pagination from '../components/Pagination';
+import { Search, Filter, Calendar, Download, Printer, Eye } from 'lucide-react';
 
 const PAYMENT_LABELS = {
     cash: 'Cash',
@@ -51,6 +52,8 @@ export default function SalesHistory() {
     });
     const [currentPage, setCurrentPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [perPage, setPerPage] = useState(10);
     const [cashiers, setCashiers] = useState([]);
 
     // Detail Modal state
@@ -74,6 +77,8 @@ export default function SalesHistory() {
             setSales(data.data || []);
             setLastPage(data.last_page || 1);
             setCurrentPage(data.current_page || page);
+            setTotal(data.total || 0);
+            setPerPage(data.per_page || 10);
         } catch (err) {
             window.showToast('Failed to load sales history', 'error');
         } finally {
@@ -390,27 +395,13 @@ export default function SalesHistory() {
 
                 {/* Pagination */}
                 {lastPage > 1 && (
-                    <div className="flex justify-between items-center px-4 py-3 border-t border-gray-200">
-                        <div className="text-sm text-gray-500">
-                            Page {currentPage} of {lastPage}
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => fetchSales(currentPage - 1)}
-                                disabled={currentPage <= 1}
-                                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
-                            <button
-                                onClick={() => fetchSales(currentPage + 1)}
-                                disabled={currentPage >= lastPage}
-                                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-                            >
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
-                    </div>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={lastPage}
+                        totalItems={total}
+                        itemsPerPage={perPage}
+                        onPageChange={fetchSales}
+                    />
                 )}
             </div>
 

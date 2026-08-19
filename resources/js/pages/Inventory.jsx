@@ -494,9 +494,7 @@ export default function Inventory() {
                             </table>
                         </div>
                     </div>
-                    <div className="p-4">
-                        <Pagination meta={movementsMeta} onPageChange={(p) => setMovementsPage(p)} />
-                    </div>
+                    <Pagination meta={movementsMeta} onPageChange={(p) => setMovementsPage(p)} />
                 </div>
             )}
 

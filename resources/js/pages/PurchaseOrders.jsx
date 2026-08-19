@@ -469,15 +469,13 @@ export default function PurchaseOrders() {
                 </button>
             </div>
 
-            {error && (
-                <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">
-                    {error}
-                </div>
-            )}
+                {error && (
+                    <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">
+                        {error}
+                    </div>
+                )}
 
-            <Pagination meta={meta} onPageChange={handlePageChange} />
-
-            {loading ? (
+                {loading ? (
                 <LoadingSpinner text="Loading purchase orders..." />
             ) : (
                 <div className="card overflow-hidden">
@@ -544,6 +542,8 @@ export default function PurchaseOrders() {
                     </div>
                 </div>
             )}
+
+            <Pagination meta={meta} onPageChange={handlePageChange} />
 
             {/* PDF Preview Modal */}
             <Modal
