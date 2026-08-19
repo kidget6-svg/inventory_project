@@ -153,7 +153,6 @@ export default function Login() {
                                 <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome Back</h2>
                                 <p className="text-gray-500 mt-1.5 text-sm">Sign in to your account</p>
                             </div>
-                            </div>
 
                             {resetSuccessMessage && (
                                 <div className="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 border border-emerald-100">
