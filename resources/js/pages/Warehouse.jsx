@@ -35,6 +35,11 @@ export default function WarehousePage() {
     const [showShelfModal, setShowShelfModal] = useState(false);
     const [shelfDetail, setShelfDetail] = useState(null);
     const [shelfLoading, setShelfLoading] = useState(false);
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [completingTransfer, setCompletingTransfer] = useState(null);
+    const [completeShelfId, setCompleteShelfId] = useState('');
+    const [destShelves, setDestShelves] = useState([]);
+    const [completeLoading, setCompleteLoading] = useState(false);
     const [scanning, setScanning] = useState(false);
     const videoRef = useRef(null);
     const [selectedPO, setSelectedPO] = useState(null);
@@ -120,7 +125,11 @@ export default function WarehousePage() {
             setBatchData({ batch_number: '', barcode: '', manufacturer: '', expiry_date: '', quantity: '', shelf_id: '' });
             loadWarehouseData();
         } catch (err) {
-            window.showToast(err.response?.data?.message || 'Failed to receive stock', 'error');
+            const errs = err.response?.data?.errors;
+            const msg = err.response?.data?.message
+                || (errs ? Object.values(errs).flat().join(' ') : null)
+                || 'Failed to receive stock';
+            window.showToast(msg, 'error');
         } finally {
             setSubmitting(false);
         }
@@ -208,15 +217,48 @@ export default function WarehousePage() {
         }
     };
 
-    // Handle transfer completion
-    const handleCompleteTransfer = async (transferId) => {
-        if (!confirm('Mark this transfer as completed?')) return;
+    // Handle transfer completion (requires a destination branch shelf)
+    const openCompleteModal = async (transfer) => {
+        setCompletingTransfer(transfer);
+        setCompleteShelfId('');
+        setCompleteLoading(false);
         try {
-            await api.post(`/warehouse/transfer/${transferId}/complete`);
+            const res = await api.get('/shelves', {
+                params: {
+                    location_type: 'branch',
+                    branch_id: transfer.to_branch_id,
+                    product_type: 'medicine',
+                },
+            });
+            setDestShelves(asArray(res));
+        } catch (err) {
+            setDestShelves([]);
+        }
+        setShowCompleteModal(true);
+    };
+
+    const confirmCompleteTransfer = async () => {
+        if (!completingTransfer || !completeShelfId) {
+            window.showToast('Please select a destination shelf', 'error');
+            return;
+        }
+        setCompleteLoading(true);
+        try {
+            await api.post(`/warehouse/transfer/${completingTransfer.id}/complete`, {
+                shelf_id: completeShelfId,
+            });
             window.showToast('Transfer completed successfully', 'success');
+            setShowCompleteModal(false);
+            setCompletingTransfer(null);
             loadWarehouseData();
         } catch (err) {
-            window.showToast('Failed to complete transfer', 'error');
+            const errs = err.response?.data?.errors;
+            const msg = err.response?.data?.message
+                || (errs ? Object.values(errs).flat().join(' ') : null)
+                || 'Failed to complete transfer';
+            window.showToast(msg, 'error');
+        } finally {
+            setCompleteLoading(false);
         }
     };
 
@@ -372,14 +414,20 @@ export default function WarehousePage() {
         </div>
     );
 
-    // Render shelves tab
+    // Render shelves tab (Warehouse shelves ONLY)
     const renderShelves = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {shelves.map(shelf => {
-                const utilization = shelf.utilization || 0;
+                const capacity = shelf.capacity || 100;
+                const current = shelf.current_quantity ?? shelf.current_items ?? 0;
+                const utilization = shelf.utilization ?? Math.min(100, Math.round((current / capacity) * 100));
+                const remaining = shelf.remaining_capacity ?? Math.max(0, capacity - current);
                 const color = utilization >= 90 ? 'bg-red-500' :
                              utilization >= 70 ? 'bg-amber-500' :
                              utilization >= 50 ? 'bg-yellow-500' : 'bg-sky-500';
+                const statusLabel = shelf.occupancy_status_label
+                    || (utilization >= 100 ? 'Full' : utilization >= 90 ? 'Almost Full' : utilization >= 70 ? 'Filling' : utilization >= 1 ? 'Available' : 'Empty');
+                const productLabel = shelf.product_type === 'retail_otc' ? 'Retail & OTC' : 'Medicine';
                 return (
                     <div
                         key={shelf.id}
@@ -390,45 +438,55 @@ export default function WarehousePage() {
                             <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
                                 <Layers className="w-5 h-5 text-sky-600" />
                             </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-800">{shelf.name}</h4>
-                                <p className="text-xs text-gray-500">{shelf.shelf_location}</p>
+                            <div className="min-w-0">
+                                <h4 className="font-semibold text-gray-800 truncate">{shelf.name}</h4>
+                                <p className="text-xs text-gray-500 truncate">{shelf.code || shelf.shelf_location}</p>
                             </div>
                             <span className={`ml-auto px-2 py-1 rounded-full text-xs font-semibold ${
                                 utilization >= 90 ? 'bg-red-100 text-red-700' :
                                 utilization >= 70 ? 'bg-amber-100 text-amber-700' :
                                 'bg-green-100 text-green-700'
                             }`}>
-                                {utilization}%
+                                {utilization}% Used
                             </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-3 text-[11px]">
+                            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Central Warehouse</span>
+                            <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">{productLabel}</span>
                         </div>
                         <div>
                             <div className="flex justify-between items-center mb-1.5">
                                 <span className="text-xs font-medium text-gray-600">
-                                    {shelf.current_items || 0} / {shelf.capacity || 100} items
+                                    {current} / {capacity} items
                                 </span>
                                 <span className={`text-xs font-bold ${
                                     utilization >= 90 ? 'text-red-600' :
                                     utilization >= 70 ? 'text-amber-600' :
                                     utilization >= 50 ? 'text-yellow-600' : 'text-sky-600'
                                 }`}>
-                                    {Math.min(100, Math.max(0, utilization))}%
+                                    {utilization}%
                                 </span>
                             </div>
                             <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                                 <div
                                     className={`h-full rounded-full transition-all duration-500 ${color}`}
-                                    style={{ width: `${Math.min(100, Math.max(0, utilization))}%` }}
+                                    style={{ width: `${utilization}%` }}
                                 />
                             </div>
+                            <p className="text-[11px] text-gray-500 mt-1.5">
+                                {remaining} Available · Status: {statusLabel}
+                            </p>
                         </div>
                         <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-xs">
-                            <span className="text-gray-500">Status: {shelf.status || 'Active'}</span>
-                            <button className="text-sky-600 hover:underline">View Items ({shelf.current_items || 0})</button>
+                            <span className="text-gray-500 capitalize">{shelf.status || 'active'}</span>
+                            <button className="text-sky-600 hover:underline">View Items ({current})</button>
                         </div>
                     </div>
                 );
             })}
+            {shelves.length === 0 && (
+                <div className="col-span-full text-center py-8 text-gray-400">No warehouse shelves found</div>
+            )}
         </div>
     );
 
@@ -562,7 +620,7 @@ export default function WarehousePage() {
                         )}
                         {request.status === 'in_transit' && (
                             <button
-                                onClick={() => handleCompleteTransfer(request.id)}
+                                onClick={() => openCompleteModal(request)}
                                 className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700"
                             >
                                 Complete
@@ -785,17 +843,28 @@ export default function WarehousePage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf Location</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Warehouse Shelf *</label>
                         <select
                             value={batchData.shelf_id}
                             onChange={(e) => setBatchData({ ...batchData, shelf_id: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                            required
                         >
-                            <option value="">Select Shelf</option>
-                            {shelves.map(s => (
-                                <option key={s.id} value={s.id}>{s.name}{s.shelf_location ? ` — ${s.shelf_location}` : ''}</option>
-                            ))}
+                            <option value="">Select Warehouse Shelf</option>
+                            {shelves.map(s => {
+                                const cap = s.capacity || 100;
+                                const cur = s.current_quantity ?? s.current_items ?? 0;
+                                const rem = s.remaining_capacity ?? Math.max(0, cap - cur);
+                                return (
+                                    <option key={s.id} value={s.id} disabled={rem <= 0}>
+                                        {s.name} ({s.code || s.shelf_location}) — {rem} spaces left
+                                    </option>
+                                );
+                            })}
                         </select>
+                        <p className="text-[11px] text-gray-400 mt-1">
+                            Received stock can only be placed on warehouse shelves.
+                        </p>
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity Received *</label>
@@ -913,6 +982,57 @@ export default function WarehousePage() {
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Complete Transfer — Destination Shelf Modal */}
+            <Modal
+                open={showCompleteModal}
+                onClose={() => setShowCompleteModal(false)}
+                title="Complete Transfer — Select Destination Shelf"
+                size="max-w-lg"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                        Transfer to <span className="font-semibold">{completingTransfer?.to_branch?.name || 'branch'}</span>.
+                        Choose a <span className="font-semibold">Medicine</span> shelf belonging to that branch. Capacity is enforced.
+                    </p>
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Shelf *</label>
+                        <select
+                            value={completeShelfId}
+                            onChange={(e) => setCompleteShelfId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                        >
+                            <option value="">Select Branch Medicine Shelf</option>
+                            {destShelves.map(s => {
+                                const cap = s.capacity || 100;
+                                const cur = s.current_quantity ?? s.current_items ?? 0;
+                                const rem = s.remaining_capacity ?? Math.max(0, cap - cur);
+                                return (
+                                    <option key={s.id} value={s.id} disabled={rem <= 0}>
+                                        {s.name} ({s.code || s.shelf_location}) — {rem} spaces left
+                                    </option>
+                                );
+                            })}
+                        </select>
+                        {destShelves.length === 0 && (
+                            <p className="text-[11px] text-gray-400 mt-1">No medicine shelves found for this branch.</p>
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button type="button" onClick={() => setShowCompleteModal(false)} className="btn-secondary">
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={confirmCompleteTransfer}
+                            disabled={completeLoading || !completeShelfId}
+                            className="btn-primary flex items-center gap-2 disabled:opacity-60"
+                        >
+                            {completeLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Completing...</> : <><CheckCircle size={16} /> Complete Transfer</>}
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

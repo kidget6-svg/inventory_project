@@ -56,23 +56,33 @@ public function stats(Request $request)
     public function shelves(Request $request)
     {
         $user = $request->user();
-        $branchScope = $user->getBranchScope();
 
-        $shelves = Shelf::when($branchScope, function ($query) use ($branchScope) {
-            return $query->where('branch_id', $branchScope);
-        })->withCount('medicines')->get()->map(function ($shelf) {
-            $totalItems = $shelf->medicines()->sum('quantity');
-            $capacity = $shelf->capacity ?? 100;
-            return [
-                'id' => $shelf->id,
-                'name' => $shelf->name,
-                'shelf_location' => $shelf->shelf_location,
-                'capacity' => $capacity,
-                'current_items' => $totalItems,
-                'utilization' => $capacity > 0 ? round(($totalItems / $capacity) * 100) : 0,
-                'status' => $shelf->status ?? 'active',
-            ];
-        });
+        // Warehouse page shows ONLY warehouse shelves.
+        $shelves = Shelf::where('location_type', Shelf::LOCATION_WAREHOUSE)
+            ->withCount(['medicines', 'retailProducts'])
+            ->get()
+            ->map(function ($shelf) {
+                $capacity = $shelf->capacity ?? 100;
+                $current = $shelf->current_quantity ?? 0;
+                return [
+                    'id' => $shelf->id,
+                    'name' => $shelf->name,
+                    'code' => $shelf->code,
+                    'shelf_location' => $shelf->shelf_location,
+                    'location_type' => $shelf->location_type,
+                    'product_type' => $shelf->product_type,
+                    'branch_id' => $shelf->branch_id,
+                    'warehouse_id' => $shelf->warehouse_id,
+                    'capacity' => $capacity,
+                    'current_quantity' => $current,
+                    'current_items' => $current,
+                    'remaining_capacity' => max(0, $capacity - $current),
+                    'utilization' => $capacity > 0 ? min(100, round(($current / $capacity) * 100)) : 0,
+                    'occupancy_status' => $shelf->occupancy_status,
+                    'occupancy_status_label' => $shelf->occupancy_status_label,
+                    'status' => $shelf->status ?? 'active',
+                ];
+            });
 
         return response()->json($shelves);
     }
@@ -115,6 +125,18 @@ public function stats(Request $request)
             $item = $po->items()->first();
             $medicine = Medicine::findOrFail($item->medicine_id);
 
+            // Received stock MUST go onto a warehouse shelf only.
+            $shelf = null;
+            if (!empty($validated['shelf_id'])) {
+                $shelf = Shelf::findOrFail($validated['shelf_id']);
+                if ($shelf->location_type !== Shelf::LOCATION_WAREHOUSE) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Received stock can only be placed on a warehouse shelf.',
+                    ], 422);
+                }
+            }
+
             // Create batch
             $batch = Batch::create([
                 'medicine_id' => $medicine->id,
@@ -136,6 +158,11 @@ public function stats(Request $request)
                 $medicine->shelf_id = $validated['shelf_id'];
             }
             $medicine->save();
+
+            // Enforce shelf capacity on the warehouse shelf.
+            if ($shelf) {
+                $shelf->addStock($validated['quantity']);
+            }
 
             // Create stock movement
             StockMovement::create([
@@ -253,7 +280,7 @@ public function stats(Request $request)
         ]);
     }
 
-    public function completeTransfer($id)
+    public function completeTransfer(Request $request, $id)
     {
         try {
             $transfer = StockTransfer::with('medicine')->findOrFail($id);
@@ -262,7 +289,29 @@ public function stats(Request $request)
                 return response()->json(['success' => true, 'message' => 'Transfer already completed']);
             }
 
-            DB::transaction(function () use ($transfer) {
+            $validated = $request->validate([
+                'shelf_id' => 'required|exists:shelves,id',
+            ]);
+
+            // Validate the destination shelf BEFORE touching any stock.
+            $destShelf = Shelf::findOrFail($validated['shelf_id']);
+            if ($destShelf->location_type !== Shelf::LOCATION_BRANCH) {
+                throw ValidationException::withMessages([
+                    'shelf_id' => 'Destination shelf must be a branch shelf.',
+                ]);
+            }
+            if ((int) $destShelf->branch_id !== (int) $transfer->to_branch_id) {
+                throw ValidationException::withMessages([
+                    'shelf_id' => 'Destination shelf does not belong to the destination branch.',
+                ]);
+            }
+            if ($destShelf->product_type !== Shelf::PRODUCT_MEDICINE) {
+                throw ValidationException::withMessages([
+                    'shelf_id' => 'Destination shelf is not a medicine shelf for this branch.',
+                ]);
+            }
+
+            DB::transaction(function () use ($transfer, $destShelf) {
                 $source = $transfer->medicine;
                 $qty = (int) $transfer->quantity;
 
@@ -274,6 +323,14 @@ public function stats(Request $request)
                     throw ValidationException::withMessages([
                         'quantity' => "Insufficient stock for {$source->name}. Available: {$source->quantity}"
                     ]);
+                }
+
+                // Free capacity on the source shelf (warehouse or branch) if it sits on one.
+                if ($source->shelf_id) {
+                    $srcShelf = Shelf::find($source->shelf_id);
+                    if ($srcShelf) {
+                        $srcShelf->removeStock($qty);
+                    }
                 }
 
                 // Decrement source (warehouse or branch) stock
@@ -289,6 +346,7 @@ public function stats(Request $request)
                 if ($dest) {
                     $destOld = $dest->quantity;
                     $dest->quantity += $qty;
+                    $dest->shelf_id = $destShelf->id;
                     $dest->save();
                 } else {
                     $dest = Medicine::create([
@@ -305,9 +363,13 @@ public function stats(Request $request)
                         'manufacturer' => $source->manufacturer,
                         'quantity' => $qty,
                         'branch_id' => $transfer->to_branch_id,
+                        'shelf_id' => $destShelf->id,
                     ]);
                     $destOld = 0;
                 }
+
+                // Enforce destination shelf capacity.
+                $destShelf->addStock($qty);
 
                 // Source outgoing movement
                 StockMovement::create([

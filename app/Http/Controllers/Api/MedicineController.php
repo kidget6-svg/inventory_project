@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
+use App\Models\Shelf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class MedicineController extends Controller
 {
@@ -181,8 +183,57 @@ class MedicineController extends Controller
             'unit' => 'nullable|string|20',
             'manufacturer' => 'nullable|string|max:255',
             'branch_id' => 'nullable|exists:branches,id',
+            'shelf_id' => 'nullable|exists:shelves,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
+
+        $oldShelfId = $medicine->shelf_id;
+        $oldQty = (int) $medicine->quantity;
+        $newShelfId = $validated['shelf_id'] ?? null;
+        $newQty = (int) $validated['quantity'];
+
+        // Enforce that a selected shelf belongs to the medicine's branch/location.
+        if ($newShelfId && $newShelfId != $oldShelfId) {
+            $shelf = Shelf::findOrFail($newShelfId);
+            $medicineBranch = $validated['branch_id'] ?? $medicine->branch_id;
+            if ($shelf->location_type === Shelf::LOCATION_BRANCH && (int) $shelf->branch_id !== (int) $medicineBranch) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected shelf does not belong to this medicine\'s branch.',
+                ], 422);
+            }
+        }
+
+        // Adjust shelf capacity using the difference, never old + new.
+        if ($newShelfId != $oldShelfId || $newQty != $oldQty) {
+            try {
+                if ($oldShelfId && $oldShelfId != $newShelfId) {
+                    $oldShelf = Shelf::find($oldShelfId);
+                    if ($oldShelf) {
+                        $oldShelf->removeStock($oldQty);
+                    }
+                }
+                if ($newShelfId) {
+                    $newShelf = Shelf::findOrFail($newShelfId);
+                    if ($newShelfId == $oldShelfId) {
+                        $delta = $newQty - $oldQty;
+                        if ($delta > 0) {
+                            $newShelf->addStock($delta);
+                        } elseif ($delta < 0) {
+                            $newShelf->removeStock(-$delta);
+                        }
+                    } else {
+                        $newShelf->addStock($newQty);
+                    }
+                }
+            } catch (ValidationException $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => collect($e->errors())->flatten()->first(),
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+        }
 
         $validated = $this->handleImageUpload($validated, $medicine);
         $medicine->update($validated);

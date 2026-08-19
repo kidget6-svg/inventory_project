@@ -8,7 +8,7 @@ import Pagination from '../components/Pagination';
 import { 
     Eye, Edit, Trash2, Plus, Save, X, Calendar, Tag, 
     Package, Layers, BarChart3, AlertCircle, CheckCircle, Search,
-    LayoutGrid, List, Pill, ChevronRight, Boxes
+    LayoutGrid, List, Pill, ChevronRight, Boxes, Building2
 } from 'lucide-react';
 
 const TABS = [
@@ -18,7 +18,7 @@ const TABS = [
 
 export default function Categories() {
     const { user, hasPermission } = useAuth();
-    const { branchRefreshKey } = useBranch();
+    const { branchRefreshKey, branches, selectedBranchId } = useBranch();
     const canCreate = hasPermission('categories.create');
     const canEdit = hasPermission('categories.edit');
     const canDelete = hasPermission('categories.delete');
@@ -29,6 +29,7 @@ export default function Categories() {
     const [searchTerm, setSearchTerm] = useState('');
     const [categories, setCategories] = useState([]);
     const [shelves, setShelves] = useState([]);
+    const [warehouseShelves, setWarehouseShelves] = useState([]);
     const [allShelves, setAllShelves] = useState([]); // For dropdown
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -42,8 +43,12 @@ export default function Categories() {
     const [modalType, setModalType] = useState('category');
     const [form, setForm] = useState({ 
         name: '', 
+        code: '',
         description: '', 
         shelf_location: '',
+        location_type: 'branch',
+        product_type: 'medicine',
+        branch_id: '',
         capacity: 100
     });
     const [submitting, setSubmitting] = useState(false);
@@ -104,29 +109,34 @@ export default function Categories() {
     const loadShelves = () => {
         setLoading(true);
         setError('');
-        api.get('/shelves', { params: { search: searchTerm, per_page: 15 } })
-            .then(r => { 
-                let data = [];
-                let metaData = null;
-                
-                if (Array.isArray(r.data)) {
-                    data = r.data;
-                } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
-                    data = r.data.data;
-                    metaData = r.data.meta || r.data;
-                } else if (r.data && r.data.shelves && Array.isArray(r.data.shelves)) {
-                    data = r.data.shelves;
-                    metaData = r.data;
-                } else {
-                    console.warn('Unexpected shelves response:', r.data);
-                }
-                setShelves(data);
-                setMeta(metaData);
+
+        const branchParams = { location_type: 'branch', per_page: 15, search: searchTerm };
+        if (selectedBranchId && selectedBranchId !== 'all') {
+            branchParams.branch_id = selectedBranchId;
+        }
+
+        Promise.all([
+            api.get('/shelves', { params: branchParams }),
+            api.get('/shelves', { params: { location_type: 'warehouse', per_page: -1 } }),
+        ])
+            .then(([branchRes, whRes]) => {
+                const parse = (r) => {
+                    if (Array.isArray(r.data)) return r.data;
+                    if (r.data && r.data.data && Array.isArray(r.data.data)) return r.data.data;
+                    if (r.data && r.data.shelves && Array.isArray(r.data.shelves)) return r.data.shelves;
+                    return [];
+                };
+                setShelves(parse(branchRes));
+                setWarehouseShelves(parse(whRes));
+                if (branchRes.data && branchRes.data.meta) setMeta(branchRes.data.meta);
+                else if (Array.isArray(branchRes.data)) setMeta(null);
+                else setMeta(branchRes.data || null);
             })
             .catch(err => { 
                 console.error(err); 
                 setError('Failed to load shelves');
                 setShelves([]);
+                setWarehouseShelves([]);
             })
             .finally(() => setLoading(false));
     };
@@ -198,7 +208,16 @@ export default function Categories() {
         setModalItem(null);
         setForm(type === 'category' 
             ? { name: '', description: '', shelf_location: '' }
-            : { shelf_location: '', description: '', capacity: 100 }
+            : {
+                name: '',
+                code: '',
+                shelf_location: '',
+                description: '',
+                location_type: 'branch',
+                product_type: 'medicine',
+                branch_id: selectedBranchId && selectedBranchId !== 'all' ? selectedBranchId : '',
+                capacity: 100,
+            }
         );
         setError('');
         setValidationErrors({});
@@ -220,8 +239,13 @@ export default function Categories() {
                 shelf_location: item.shelf_location || '' 
             }
             : {
+                name: item.name || '',
+                code: item.code || '',
                 shelf_location: item.shelf_location || '',
                 description: item.description || '',
+                location_type: item.location_type || 'branch',
+                product_type: item.product_type || 'medicine',
+                branch_id: item.branch_id ? String(item.branch_id) : '',
                 capacity: item.capacity || 100
             }
         );
@@ -271,8 +295,13 @@ export default function Categories() {
             } else {
                 const capacity = parseInt(form.capacity) || 100;
                 payload = {
-                    shelf_location: form.shelf_location,
+                    name: form.name,
+                    code: form.code || form.shelf_location,
+                    shelf_location: form.shelf_location || form.code,
                     description: form.description || '',
+                    location_type: form.location_type,
+                    product_type: form.product_type,
+                    branch_id: form.location_type === 'branch' ? (form.branch_id || null) : null,
                     capacity: capacity
                 };
             }
@@ -435,16 +464,21 @@ export default function Categories() {
     );
 
     // Shelves Card View (matching Warehouse Shelves layout)
-    const renderShelvesCardView = () => (
+    const renderShelfCards = (list) => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {shelves.map(shelf => {
-                const totalItems = shelf.current_items ?? (shelf.medicines_count || 0);
+            {list.map(shelf => {
                 const capacity = shelf.capacity || 100;
-                const percent = shelf.utilization ?? Math.min(100, Math.round((totalItems / capacity) * 100));
+                const current = shelf.current_quantity ?? shelf.current_items ?? (shelf.medicines_count || 0);
+                const percent = shelf.utilization ?? Math.min(100, Math.round((current / capacity) * 100));
+                const remaining = shelf.remaining_capacity ?? Math.max(0, capacity - current);
                 const progressColor = getProgressColor(percent);
                 const textColor = getProgressTextColor(percent);
-                const status = getShelfStatus(shelf);
-                const StatusIcon = status.icon;
+                const productLabel = shelf.product_type === 'retail_otc' ? 'Retail & OTC' : 'Medicine';
+                const locationLabel = shelf.location_type === 'warehouse'
+                    ? 'Central Warehouse'
+                    : (shelf.branch?.name || branches.find(b => String(b.id) === String(shelf.branch_id))?.name || 'Branch');
+                const statusLabel = shelf.occupancy_status_label || (percent >= 100 ? 'Full' : percent >= 90 ? 'Almost Full' : percent >= 70 ? 'Filling' : percent >= 1 ? 'Available' : 'Empty');
+                const statusColor = shelf.occupancy_color || 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
 
                 return (
                     <div
@@ -459,11 +493,11 @@ export default function Categories() {
                                         <Layers className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-900 dark:text-white text-base">
-                                            {shelf.shelf_location || shelf.name}
+                                        <h4 className="font-bold text-gray-900 dark:text-white text-base truncate max-w-[150px]">
+                                            {shelf.name || shelf.shelf_location}
                                         </h4>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">
-                                            {shelf.description || 'Warehouse Shelf Unit'}
+                                            {shelf.code || shelf.shelf_location} · {locationLabel}
                                         </p>
                                     </div>
                                 </div>
@@ -472,8 +506,13 @@ export default function Categories() {
                                     percent >= 70 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
                                     'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
                                 }`}>
-                                    {percent}% Full
+                                    {percent}% Used
                                 </span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 my-2 text-[11px]">
+                                <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{productLabel}</span>
+                                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{locationLabel}</span>
                             </div>
 
                             {/* Capacity Progress */}
@@ -481,7 +520,7 @@ export default function Categories() {
                                 <div className="flex justify-between items-center text-xs">
                                     <span className="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
                                         <Boxes size={13} className="text-sky-500" />
-                                        Stock Load: {totalItems} / {capacity}
+                                        {current} / {capacity} items
                                     </span>
                                     <span className={`font-bold ${textColor}`}>
                                         {percent}%
@@ -498,19 +537,18 @@ export default function Categories() {
 
                         {/* Card Footer Actions */}
                         <div className="mt-2 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 ${status.className}`}>
-                                <StatusIcon size={11} />
-                                {status.label}
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusColor}`}>
+                                {statusLabel}
                             </span>
 
                             <div className="flex items-center gap-1.5">
                                 <button
                                     onClick={() => openShelfItems(shelf)}
                                     className="px-2.5 py-1 text-xs font-semibold text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-1"
-                                    title="Inspect Medicines"
+                                    title="Inspect Items"
                                 >
                                     <Eye size={14} />
-                                    <span>Items ({shelf.medicines_count ?? 0})</span>
+                                    <span>Items ({current})</span>
                                 </button>
                                 {canWrite && (
                                     <>
@@ -684,7 +722,32 @@ export default function Categories() {
                 </div>
             </div>
 
-            {shelfViewMode === 'card' ? renderShelvesCardView() : renderShelvesTableView()}
+            {shelfViewMode === 'card' ? (
+                <div className="space-y-8">
+                    {warehouseShelves.length > 0 && (
+                        <section>
+                            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                <Building2 size={16} className="text-amber-600" />
+                                Central Warehouse Shelves
+                            </h3>
+                            {renderShelfCards(warehouseShelves)}
+                        </section>
+                    )}
+                    <section>
+                        <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+                            <Building2 size={16} className="text-sky-600" />
+                            {selectedBranchId && selectedBranchId !== 'all'
+                                ? `${branches.find(b => String(b.id) === String(selectedBranchId))?.name || 'Branch'} Shelves`
+                                : 'Branch Shelves'}
+                        </h3>
+                        {shelves.length > 0 ? renderShelfCards(shelves) : (
+                            <div className="text-center py-8 text-gray-400">No branch shelves found</div>
+                        )}
+                    </section>
+                </div>
+            ) : (
+                renderShelvesTableView()
+            )}
         </div>
     );
 
@@ -983,38 +1046,107 @@ export default function Categories() {
                         {modalType === 'shelf' && (
                             <>
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Shelf Location *</label>
+                                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Shelf Name *</label>
                                     <input
-                                        name="shelf_location"
-                                        value={form.shelf_location}
+                                        name="name"
+                                        value={form.name}
                                         onChange={handleChange}
-                                        placeholder="e.g. A-2-3"
+                                        placeholder="e.g. Medicine Shelf A"
                                         className={`w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
-                                            validationErrors.shelf_location ? 'border-red-400 focus:border-red-400' : 'border-gray-200 dark:border-gray-700'
+                                            validationErrors.name ? 'border-red-400 focus:border-red-400' : 'border-gray-200 dark:border-gray-700'
                                         }`}
                                         required
                                     />
-                                    {validationErrors.shelf_location && (
-                                        <p className="text-xs text-red-500 mt-1">{validationErrors.shelf_location[0]}</p>
+                                    {validationErrors.name && (
+                                        <p className="text-xs text-red-500 mt-1">{validationErrors.name[0]}</p>
                                     )}
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Capacity *</label>
-                                    <input
-                                        type="number"
-                                        name="capacity"
-                                        value={form.capacity}
-                                        onChange={handleChange}
-                                        min="1"
-                                        className={`w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
-                                            validationErrors.capacity ? 'border-red-400 focus:border-red-400' : 'border-gray-200 dark:border-gray-700'
-                                        }`}
-                                        required
-                                    />
-                                    {validationErrors.capacity && (
-                                        <p className="text-xs text-red-500 mt-1">{validationErrors.capacity[0]}</p>
-                                    )}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Shelf Code *</label>
+                                        <input
+                                            name="code"
+                                            value={form.code}
+                                            onChange={handleChange}
+                                            placeholder="e.g. MSA-01"
+                                            className={`w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
+                                                validationErrors.code ? 'border-red-400 focus:border-red-400' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                            required
+                                        />
+                                        {validationErrors.code && (
+                                            <p className="text-xs text-red-500 mt-1">{validationErrors.code[0]}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Capacity *</label>
+                                        <input
+                                            type="number"
+                                            name="capacity"
+                                            value={form.capacity}
+                                            onChange={handleChange}
+                                            min="1"
+                                            className={`w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none ${
+                                                validationErrors.capacity ? 'border-red-400 focus:border-red-400' : 'border-gray-200 dark:border-gray-700'
+                                            }`}
+                                            required
+                                        />
+                                        {validationErrors.capacity && (
+                                            <p className="text-xs text-red-500 mt-1">{validationErrors.capacity[0]}</p>
+                                        )}
+                                    </div>
                                 </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Location Type *</label>
+                                        <select
+                                            name="location_type"
+                                            value={form.location_type}
+                                            onChange={handleChange}
+                                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                        >
+                                            <option value="branch">Branch</option>
+                                            <option value="warehouse">Warehouse</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Product Type *</label>
+                                        <select
+                                            name="product_type"
+                                            value={form.product_type}
+                                            onChange={handleChange}
+                                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                        >
+                                            <option value="medicine">Medicine</option>
+                                            <option value="retail_otc">Retail &amp; OTC</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                {form.location_type === 'branch' && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Branch *</label>
+                                        <select
+                                            name="branch_id"
+                                            value={form.branch_id}
+                                            onChange={handleChange}
+                                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                                            required={form.location_type === 'branch'}
+                                        >
+                                            <option value="">Select Branch</option>
+                                            {branches.map(b => (
+                                                <option key={b.id} value={String(b.id)}>{b.name}</option>
+                                            ))}
+                                        </select>
+                                        {validationErrors.branch_id && (
+                                            <p className="text-xs text-red-500 mt-1">{validationErrors.branch_id[0]}</p>
+                                        )}
+                                    </div>
+                                )}
+                                {form.location_type === 'warehouse' && (
+                                    <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                                        This is a <strong>Warehouse</strong> shelf. It is not assigned to any branch and can only hold received warehouse stock.
+                                    </div>
+                                )}
                             </>
                         )}
 
