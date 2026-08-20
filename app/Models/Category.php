@@ -16,6 +16,7 @@ class Category extends Model
         'icon',
         'color',
         'status',
+        'branch_id',
     ];
 
     protected $casts = [
@@ -23,6 +24,11 @@ class Category extends Model
     ];
 
     // Relationships
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     public function medicines()
     {
         return $this->hasMany(Medicine::class);

@@ -34,6 +34,8 @@ import Settings from './pages/Settings';
 import ReceiptPage from './pages/ReceiptPage';
 import SalesHistory from './pages/SalesHistory';
 import Branches from './pages/Branches';
+import AuditLogs from './pages/AuditLogs';
+import Alerts from './pages/Alerts';
 
 function ProtectedRoute({ children, permissions, title }) {
     const { user, loading, hasAnyPermission } = useAuth();
@@ -104,8 +106,14 @@ function App() {
             <Route path="/roles" element={
                 <ProtectedRoute permissions={['roles.manage']} title="Roles & Permissions"><RolesPermissions /></ProtectedRoute>
             } />
+            <Route path="/audit-logs" element={
+                <ProtectedRoute permissions={['audit.view']} title="Audit Logs"><AuditLogs /></ProtectedRoute>
+            } />
             <Route path="/branches" element={
                 <ProtectedRoute title="Branch Management"><Branches /></ProtectedRoute>
+            } />
+            <Route path="/alerts" element={
+                <ProtectedRoute permissions={['alerts.view']} title="Alerts"><Alerts /></ProtectedRoute>
             } />
 
             {/* Account pages */}

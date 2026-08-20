@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Line } from "react-chartjs-2";
 import "./chartRegistry";
 import { chartColors, baseChartOptions } from "./chartRegistry";
+import { formatCurrency, formatCompact } from "../utils/money";
 
 export default function SalesChart({
     data: analytics,
@@ -103,7 +104,7 @@ export default function SalesChart({
                     },
 
                     label(context){
-                        return "Sales : $" + Number(context.parsed.y).toFixed(2);
+                        return "Sales : " + formatCurrency(context.parsed.y);
                     }
                 }
             }
@@ -122,7 +123,11 @@ export default function SalesChart({
                     font:{
                         size:12,
                         weight:"600"
-                    }
+                    },
+                    maxRotation: 0,
+                    minRotation: 0,
+                    autoSkip: true,
+                    autoSkipPadding: 12,
                 }
             },
 
@@ -141,7 +146,7 @@ export default function SalesChart({
                 ticks:{
                     color:"#64748B",
 
-                    callback:(value)=>"$"+value
+                    callback:(value)=>formatCompact(value)
                 }
             }
         }

@@ -24,6 +24,7 @@ import {
 import api from "../axios";
 import Pagination from '../components/Pagination';
 import { useAuth } from '../context/AuthContext';
+import { useBranch } from '../context/BranchContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 
@@ -31,6 +32,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 export default function Users(){
 
     const { user: currentUser } = useAuth();
+    // branchRefreshKey increments whenever the admin switches branches via
+    // the sidebar/header branch selector — used to trigger re-fetches.
+    const { branchRefreshKey } = useBranch();
 
 
     const [users,setUsers] = useState([]);
@@ -144,8 +148,10 @@ const [form,setForm] = useState({
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm]);
 
-    useEffect(() => { setPage(1); }, [search, roleFilter, statusFilter]);
-    useEffect(() => { fetchUsers(); }, [page, search, roleFilter, statusFilter]);
+    useEffect(() => { setPage(1); }, [search, roleFilter, statusFilter, branchRefreshKey]);
+    useEffect(() => { fetchUsers(); }, [page, search, roleFilter, statusFilter, branchRefreshKey]);
+    // Re-fetch stats whenever branch changes so the count cards stay in sync.
+    useEffect(() => { fetchUserStats(); }, [branchRefreshKey]);
 
 
 

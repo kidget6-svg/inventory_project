@@ -3,7 +3,11 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: '/api',
   headers: {
-    'Content-Type': 'application/json',
+    // NOTE: Do NOT set 'Content-Type' here.
+    // When sending JSON, axios sets it automatically.
+    // When sending FormData (image uploads), the browser must set
+    // 'multipart/form-data; boundary=...' automatically — a hardcoded
+    // 'application/json' default would override it and break file uploads.
     'Accept': 'application/json',
   },
 });

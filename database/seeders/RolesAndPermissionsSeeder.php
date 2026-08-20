@@ -82,6 +82,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Page: Prescription Sales (pharmacist)
         'prescription-sales.view' => ['Prescription Sales', 'View prescription sales page'],
         'prescription-sales.dispense' => ['Prescription Sales', 'Dispense & send to cashier'],
+        'create-prescription-sales' => ['Prescription Sales', 'Add a prescription medicine to an order'],
 
         // Page: Retail & OTC Sales (pharmacist)
         'retail-otc-sales.view' => ['Retail & OTC Sales', 'View retail & OTC sales page'],
@@ -104,6 +105,12 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Page: Reports
         'reports.view' => ['Reports', 'View reports page'],
+
+        // Page: Sales (Unified POS)
+        'apply-sales-discount' => ['Sales', 'Apply a discount to a sale'],
+
+        // Page: Audit Logs
+        'audit.view' => ['Audit Logs', 'View audit logs page'],
 
         // Page: Users
         'users.view' => ['Users', 'View users page'],
@@ -154,6 +161,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
             'prescription-sales.view',
             'prescription-sales.dispense',
+            'create-prescription-sales',
+            'apply-sales-discount',
 
             'retail-otc-sales.view',
             'retail-otc-sales.draft',
@@ -167,6 +176,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
             'warehouse.view',
             'branches.view',
+
+            'audit.view',
         ],
         'cashier' => [
             'dashboard.view',

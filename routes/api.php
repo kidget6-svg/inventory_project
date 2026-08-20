@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\CategoryController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Api\StockManagementController;
 use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\AlertController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,6 +89,10 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         // Branches Read
         Route::get('/branches', [BranchController::class, 'index']);
         Route::get('/branches/stats', [BranchController::class, 'stats']);
+
+        // Alerts
+        Route::get('/alerts', [AlertController::class, 'index']);
+        Route::get('/alerts/summary', [AlertController::class, 'summary']);
     });
 
     // --------------------------------------------------------------------
@@ -166,6 +172,16 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/purchase-orders/{purchaseOrder}/preview', [PurchaseOrderController::class, 'preview']);
         Route::get('/purchase-orders/{purchaseOrder}/download', [PurchaseOrderController::class, 'download']);
         Route::apiResource('purchase-orders', PurchaseOrderController::class);
+    });
+
+    // --------------------------------------------------------------------
+    // Audit Logs — Viewable by users with the audit.view permission
+    // --------------------------------------------------------------------
+    Route::middleware('permission:audit.view')->group(function () {
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+        Route::get('/audit-logs/stats', [AuditLogController::class, 'stats']);
+        Route::get('/audit-logs/modules', [AuditLogController::class, 'modules']);
+        Route::get('/audit-logs/export', [AuditLogController::class, 'export']);
     });
 
     // --------------------------------------------------------------------

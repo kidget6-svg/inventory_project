@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useBranch } from '../context/BranchContext';
+import api from '../axios';
 import {
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign,
     ArrowLeftRight, BarChart3, Menu, X, LogOut, Users,
@@ -117,6 +118,43 @@ export default function SidebarLayout({ children, pageTitle }) {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // ── Unread alert badge ─────────────────────────────────────────────────
+    const [unreadAlertCount, setUnreadAlertCount] = useState(0);
+
+    const fetchAlertSummary = useCallback(async () => {
+        if (!user) return;
+        try {
+            const res = await api.get('/alerts/summary');
+            const total = res.data?.total ?? 0;
+            // Subtract locally-read IDs
+            let readCount = 0;
+            try {
+                readCount = JSON.parse(localStorage.getItem('alerts_read_ids') || '[]').length;
+            } catch { /* ignore */ }
+            setUnreadAlertCount(Math.max(0, total - readCount));
+        } catch {
+            // Silently ignore — badge is non-critical
+        }
+    }, [user, selectedBranchId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        fetchAlertSummary();
+        const interval = setInterval(fetchAlertSummary, 60_000);
+        return () => clearInterval(interval);
+    }, [fetchAlertSummary]);
+
+    // Re-fetch badge when branch changes
+    useEffect(() => {
+        fetchAlertSummary();
+    }, [selectedBranchId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Listen for read-state changes dispatched by Alerts page
+    useEffect(() => {
+        const handler = () => fetchAlertSummary();
+        window.addEventListener('alertsRead', handler);
+        return () => window.removeEventListener('alertsRead', handler);
+    }, [fetchAlertSummary]);
 
     const sidebarWidth = collapsed ? 'md:w-20' : 'md:w-64';
     const mainMargin = collapsed ? 'md:ml-20' : 'md:ml-64';
@@ -281,15 +319,31 @@ export default function SidebarLayout({ children, pageTitle }) {
                                 onClick={() => setSidebarOpen(false)}
                                 title={collapsed ? item.label : undefined}
                                 className={({ isActive }) =>
-                                    `flex items-center gap-3 mx-2 px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-150 ${collapsed ? 'md:justify-center md:px-0 md:mx-3' : ''
+                                    `relative flex items-center gap-3 mx-2 px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-150 ${collapsed ? 'md:justify-center md:px-0 md:mx-3' : ''
                                     } ${isActive
                                         ? 'bg-sky-500 text-white shadow-sm'
                                         : 'text-gray-800 dark:text-gray-200 hover:bg-sky-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                                     }`
                                 }
                             >
-                                <item.icon size={18} className="shrink-0" />
-                                {!collapsed && <span>{item.label}</span>}
+                                <div className="relative shrink-0">
+                                    <item.icon size={18} />
+                                    {/* Collapsed: dot badge on Alerts icon */}
+                                    {collapsed && item.to === '/alerts' && unreadAlertCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                                    )}
+                                </div>
+                                {!collapsed && (
+                                    <>
+                                        <span className="flex-1">{item.label}</span>
+                                        {/* Expanded: count badge on Alerts */}
+                                        {item.to === '/alerts' && unreadAlertCount > 0 && (
+                                            <span className="ml-auto min-w-[20px] h-5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5">
+                                                {unreadAlertCount > 99 ? '99+' : unreadAlertCount}
+                                            </span>
+                                        )}
+                                    </>
+                                )}
                             </NavLink>
                         )
                     )}

@@ -18,6 +18,7 @@ class Batch extends Model
 
     protected $fillable = [
         'medicine_id',
+        'product_id',
         'batch_number',
         'barcode',
         'manufacturing_date',
@@ -31,6 +32,8 @@ class Batch extends Model
         'received_at',
         'status',
         'notes',
+        'unit_cost',
+        'selling_price',
     ];
 
     protected $casts = [

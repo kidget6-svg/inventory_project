@@ -159,14 +159,19 @@ export default function StockMovementCreate() {
     const [sourceBranchId, setSourceBranchId] = useState('');
     const [destinationBranchId, setDestinationBranchId] = useState('');
     const [branches, setBranches] = useState([]);
+    const [suppliers, setSuppliers] = useState([]);
+    const [selectedSupplierId, setSelectedSupplierId] = useState('');
+    const [shelves, setShelves] = useState([]);
+    const [selectedShelfId, setSelectedShelfId] = useState('');
 
     useEffect(() => {
         Promise.all([
             api.get('/medicines', { params: { per_page: 1000 } }),
             api.get('/retail-products', { params: { per_page: 1000 } }),
             api.get('/branches'),
+            api.get('/suppliers'),
         ])
-            .then(([medRes, retailRes, branchRes]) => {
+            .then(([medRes, retailRes, branchRes, supplierRes]) => {
                 const medList = Array.isArray(medRes.data?.data) ? medRes.data.data :
                     Array.isArray(medRes.data?.medicines?.data) ? medRes.data.medicines.data :
                     Array.isArray(medRes.data) ? medRes.data : [];
@@ -174,13 +179,31 @@ export default function StockMovementCreate() {
                     Array.isArray(retailRes.data) ? retailRes.data : [];
                 const branchList = Array.isArray(branchRes.data?.data) ? branchRes.data.data :
                     Array.isArray(branchRes.data) ? branchRes.data : [];
+                const supplierList = Array.isArray(supplierRes.data?.data) ? supplierRes.data.data :
+                    Array.isArray(supplierRes.data?.suppliers?.data) ? supplierRes.data.suppliers.data :
+                    Array.isArray(supplierRes.data) ? supplierRes.data : [];
                 setMedicines(medList);
                 setRetailProducts(retailList);
                 setBranches(branchList);
+                setSuppliers(supplierList);
             })
             .catch(() => setError('Failed to load products'))
             .finally(() => setLoading(false));
     }, []);
+
+    useEffect(() => {
+        if (destinationType === 'branch' && destinationBranchId) {
+            api.get('/shelves', { params: { branch_id: destinationBranchId, location_type: 'branch' } })
+                .then(res => {
+                    const list = Array.isArray(res.data?.data) ? res.data.data :
+                        Array.isArray(res.data) ? res.data : [];
+                    setShelves(list);
+                })
+                .catch(() => setShelves([]));
+        } else {
+            setShelves([]);
+        }
+    }, [destinationType, destinationBranchId]);
 
     useEffect(() => {
         function handleClick(e) {
@@ -245,8 +268,10 @@ export default function StockMovementCreate() {
                 notes: notes || null,
                 source_type: sourceType || null,
                 source_id: sourceType === 'branch' ? (sourceBranchId || null) : null,
+                supplier_id: sourceType === 'supplier' ? (selectedSupplierId || null) : null,
                 destination_type: destinationType || null,
                 destination_id: destinationType === 'branch' ? (destinationBranchId || null) : null,
+                shelf_id: selectedShelfId || null,
                 items: items.map(i => ({
                     type: i.type,
                     id: i.id,
@@ -521,15 +546,16 @@ export default function StockMovementCreate() {
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Source Type</label>
-                            <select value={sourceType} onChange={(e) => { setSourceType(e.target.value); setSourceBranchId(''); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                            <select value={sourceType} onChange={(e) => { setSourceType(e.target.value); setSourceBranchId(''); setSelectedSupplierId(''); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
                                 <option value="">None</option>
                                 <option value="branch">Branch</option>
                                 <option value="warehouse">Warehouse</option>
+                                <option value="supplier">Supplier</option>
                             </select>
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Type</label>
-                            <select value={destinationType} onChange={(e) => { setDestinationType(e.target.value); setDestinationBranchId(''); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                            <select value={destinationType} onChange={(e) => { setDestinationType(e.target.value); setDestinationBranchId(''); setSelectedShelfId(''); }} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
                                 <option value="">None</option>
                                 <option value="branch">Branch</option>
                                 <option value="warehouse">Warehouse</option>
@@ -544,12 +570,30 @@ export default function StockMovementCreate() {
                                 </select>
                             </div>
                         )}
+                        {sourceType === 'supplier' && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Supplier *</label>
+                                <select value={selectedSupplierId} onChange={(e) => setSelectedSupplierId(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white" required>
+                                    <option value="">Select Supplier</option>
+                                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                         {destinationType === 'branch' && (
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Branch *</label>
                                 <select value={destinationBranchId} onChange={(e) => setDestinationBranchId(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white" required>
                                     <option value="">Select Destination Branch</option>
                                     {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        {destinationType === 'branch' && shelves.length > 0 && (
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1">Shelf</label>
+                                <select value={selectedShelfId} onChange={(e) => setSelectedShelfId(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 outline-none bg-white">
+                                    <option value="">Select Shelf</option>
+                                    {shelves.map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
                                 </select>
                             </div>
                         )}

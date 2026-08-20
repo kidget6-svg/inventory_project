@@ -32,6 +32,7 @@ class StockMovement extends Model
         'itemable_type',
         'itemable_id',
         'batch_id',
+        'shelf_id',
         'type',
         'quantity',
         'before_quantity',
@@ -87,6 +88,11 @@ class StockMovement extends Model
     public function batch()
     {
         return $this->belongsTo(Batch::class);
+    }
+
+    public function shelf()
+    {
+        return $this->belongsTo(Shelf::class);
     }
 
     public function user()

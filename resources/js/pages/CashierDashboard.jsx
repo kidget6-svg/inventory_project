@@ -9,11 +9,13 @@
 // and a list of recent sales — all sourced from the existing
 // /dashboard API endpoint (DashboardController::cashierDashboard).
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../axios';
+import { useBranch } from '../context/BranchContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
+import { formatCurrency, formatCompactCurrency } from '../utils/money';
 import {
     ShoppingCart,
     Banknote,
@@ -24,22 +26,32 @@ import {
 } from 'lucide-react';
 
 export default function CashierDashboard() {
+    const { branchRefreshKey } = useBranch();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const requestId = useRef(0);
 
     useEffect(() => {
+        const id = ++requestId.current;
+        setData(null);
+        setLoading(true);
+
         api.get('/dashboard')
             .then(r => {
+                if (id !== requestId.current) return;
                 setData(r.data);
                 setError('');
             })
             .catch(err => {
+                if (id !== requestId.current) return;
                 setError('Failed to load dashboard data');
                 console.error(err);
             })
-            .finally(() => setLoading(false));
-    }, []);
+            .finally(() => {
+                if (id === requestId.current) setLoading(false);
+            });
+    }, [branchRefreshKey]);
 
     if (loading) return <LoadingSpinner text="Loading dashboard..." />;
 
@@ -67,7 +79,7 @@ export default function CashierDashboard() {
                     color="green"
                 />
                 <StatCard
-                    value={`$${todayRevenue.toFixed(2)}`}
+                    value={formatCompactCurrency(todayRevenue)}
                     label="Today's Revenue"
                     icon="banknote"
                     color="blue"
@@ -106,7 +118,7 @@ export default function CashierDashboard() {
                                         >
                                             {value > 0 && (
                                                 <span className="text-xs text-white font-medium pr-2">
-                                                    ${value.toFixed(2)}
+                                                    {formatCompactCurrency(value)}
                                                 </span>
                                             )}
                                         </div>
@@ -179,7 +191,7 @@ export default function CashierDashboard() {
                                             {sale.customer_name || 'Walk-in Customer'}
                                         </td>
                                         <td className="px-4 py-2.5 whitespace-nowrap text-right text-gray-700 font-medium">
-                                            ${Number(sale.total_amount || 0).toFixed(2)}
+                                            {formatCurrency(sale.total_amount)}
                                         </td>
                                         <td className="px-4 py-2.5 whitespace-nowrap text-right">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${

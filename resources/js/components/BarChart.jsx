@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bar } from 'react-chartjs-2';
 import { baseChartOptions } from './chartRegistry';
+import { formatCurrency, formatCompact } from '../utils/money';
 /**
  * Modern BarChart — uses Chart.js (via react-chartjs-2) for a clean,
  * professional look with rounded bars, smooth animations, and minimal
@@ -33,10 +34,10 @@ export default function BarChart({
     };
     const barColor = colorMap[color] || colorMap.blue;
 
-    /* Format a single bar value for the tooltip / y-axis. */
+    /* Format a single bar value for the tooltip. */
     const formatValue = (val) => {
-        if (currency) return `$${Number(val).toFixed(2)}`;
-        return `${valuePrefix}${Number(val)}${valueSuffix}`;
+        if (currency) return formatCurrency(val);
+        return `${valuePrefix}${Number(val).toLocaleString()}${valueSuffix}`;
     };
 
     const chartData = {
@@ -49,8 +50,8 @@ export default function BarChart({
                 borderColor: barColor,
                 borderRadius: 6,
                 borderWidth: 0,
-                barThickness: 24,
-                maxBarThickness: 34,
+                barPercentage: 0.65,
+                categoryPercentage: 0.7,
             },
         ],
     };
@@ -59,6 +60,9 @@ export default function BarChart({
         ...baseChartOptions,
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+            padding: { top: 12, right: 4, left: 4 },
+        },
         animation: {
             duration: 900,
             easing: 'easeOutQuart',
@@ -84,23 +88,31 @@ export default function BarChart({
         scales: {
             x: {
                 grid: { display: false },
-                ticks: { font: { size: 11 }, color: '#9ca3af' },
                 border: { display: false },
+                offset: true,
+                ticks: {
+                    font: { size: 11 },
+                    color: '#9ca3af',
+                    maxRotation: 0,
+                    minRotation: 0,
+                    autoSkip: true,
+                    autoSkipPadding: 10,
+                    maxTicksLimit: labels.length > 14 ? 14 : labels.length,
+                },
             },
             y: {
+                beginAtZero: true,
                 grid: {
                     color: 'rgba(226, 232, 240, 0.6)',
                     drawBorder: false,
                 },
+                border: { display: false },
                 ticks: {
                     font: { size: 11 },
                     color: '#9ca3af',
-                    callback: (val) => {
-                        if (currency) return `$${val}`;
-                        return val;
-                    },
+                    maxTicksLimit: 7,
+                    callback: (val) => (currency ? formatCompact(val) : val),
                 },
-                border: { display: false },
             },
         },
     };
@@ -112,7 +124,7 @@ export default function BarChart({
                     {title}
                 </h3>
             </div>
-            <div className="flex-1 h-[230px]">
+            <div className="flex-1 min-h-[260px] h-[260px] sm:h-[320px]">
                 {labels.length > 0 ? (
                     <Bar data={chartData} options={options} />
                 ) : (

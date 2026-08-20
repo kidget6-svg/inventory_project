@@ -315,14 +315,10 @@ export default function Medicines() {
         try {
             if (editId) {
                 formData.append('_method', 'PUT');
-                await api.post(`/medicines/${editId}`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await api.post(`/medicines/${editId}`, formData);
                 window.showToast('Medicine updated successfully', 'success');
             } else {
-                await api.post('/medicines', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await api.post('/medicines', formData);
                 window.showToast('Medicine created successfully', 'success');
             }
             setShowModal(false); 
