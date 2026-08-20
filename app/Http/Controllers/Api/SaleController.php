@@ -393,11 +393,11 @@ class SaleController extends Controller
         abort_if(
             ! in_array(
                 $request->user()->role,
-                ['pharmacist', 'cashier'],
+                ['admin', 'pharmacist', 'cashier'],
                 true
             ),
             403,
-            'Unauthorized. Only pharmacists and cashiers can dispatch orders.'
+            'Unauthorized. Only pharmacists, cashiers, and admins can dispatch orders.'
         );
 
         $validated = $request->validate([
@@ -413,10 +413,14 @@ class SaleController extends Controller
                 'required|integer|min:1',
 
             'customer_name' =>
-                'nullable|string|max:255',
+                'required|string|max:255',
 
-            'customer_phone' =>
-                'nullable|string|max:50',
+            'customer_phone' => [
+                'required',
+                'string',
+                'max:50',
+                'regex:/^(\+2519\d{8}|\+2517\d{8}|09\d{8}|07\d{8})$/'
+            ],
 
             'customer_email' =>
                 'nullable|email|max:255',
@@ -436,6 +440,12 @@ class SaleController extends Controller
 
             'discount' =>
                 'nullable|numeric|min:0',
+        ], [
+            'customer_phone.regex' =>
+                'The phone number must be a valid Ethiopian number (09XXXXXXXX or +2519XXXXXXXX).',
+
+            'customer_tin.regex' =>
+                'The TIN number must contain digits only.',
         ]);
 
         return DB::transaction(function () use ($validated, $request) {

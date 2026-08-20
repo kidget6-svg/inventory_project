@@ -692,7 +692,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware('role:pharmacist,cashier')->group(function () {
+    Route::middleware('role:admin,pharmacist,cashier')->group(function () {
 
         Route::post('/sales/dispatch', [
             SaleController::class,
