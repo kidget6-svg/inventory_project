@@ -1,539 +1,539 @@
-import React, { useEffect, useState } from "react";
+import { useLanguage } from "../context/LanguageContext";import React, { useEffect, useState } from "react";
 import {
-    User,
-    Mail,
-    Lock,
-    Eye,
-    EyeOff,
-    Edit,
-    Trash2,
-    Plus,
-    Search,
-    X,
-    Save,
-    Loader2,
-    WalletCards,
-    ShieldCheck,
-    Pill,
-    Check,
-    Ban,
-    CheckCircle2,
-    Clock,
-    XCircle,
-} from "lucide-react";
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Edit,
+  Trash2,
+  Plus,
+  Search,
+  X,
+  Save,
+  Loader2,
+  WalletCards,
+  ShieldCheck,
+  Pill,
+  Check,
+  Ban,
+  CheckCircle2,
+  Clock,
+  XCircle } from
+"lucide-react";
 import api from "../axios";
 import Pagination from '../components/Pagination';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 const DEFAULT_ROLES = [
-    { name: "Admin", slug: "admin" },
-    { name: "Pharmacist", slug: "pharmacist" },
-    { name: "Cashier", slug: "cashier" }
-];
-
-export default function Users(){
-
-    const { user: currentUser } = useAuth();
+{ name: "Admin", slug: "admin" },
+{ name: "Pharmacist", slug: "pharmacist" },
+{ name: "Cashier", slug: "cashier" }];
 
 
-    const [users,setUsers] = useState([]);
+export default function Users() {const { t } = useLanguage();
 
-    const [initialLoading,setInitialLoading] = useState(true);
+  const { user: currentUser } = useAuth();
 
-    const [error,setError] = useState("");
 
-    const [meta, setMeta] = useState(null);
-    const [page, setPage] = useState(1);
+  const [users, setUsers] = useState([]);
 
-    const [searchTerm, setSearchTerm] = useState("");
-    const [search,setSearch] = useState("");
+  const [initialLoading, setInitialLoading] = useState(true);
 
-    const [roleFilter,setRoleFilter] = useState("all");
+  const [error, setError] = useState("");
 
-    // Status filter (All Statuses / Approved / Pending Approval / Rejected)
-    const [statusFilter, setStatusFilter] = useState(() => {
-        const params = new URLSearchParams(window.location.search);
-        return params.get("status") || "all";
+  const [meta, setMeta] = useState(null);
+  const [page, setPage] = useState(1);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [search, setSearch] = useState("");
+
+  const [roleFilter, setRoleFilter] = useState("all");
+
+  // Status filter (All Statuses / Approved / Pending Approval / Rejected)
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("status") || "all";
+  });
+
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [processingAction, setProcessingAction] = useState(false);
+  const [userStats, setUserStats] = useState(null);
+
+  const [roles, setRoles] = useState([]);
+
+  const [branches, setBranches] = useState([]);
+
+
+  const [showModal, setShowModal] = useState(false);
+
+  const [editingUser, setEditingUser] = useState(null);
+
+
+  const [submitting, setSubmitting] = useState(false);
+
+
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [showConfirm, setShowConfirm] = useState(false);
+
+
+
+  const [form, setForm] = useState({
+
+    name: "",
+    email: "",
+    password: "",
+    password_confirmation: "",
+    role: "cashier",
+    branch_id: null
+
+  });
+
+
+
+
+
+  useEffect(() => {
+    fetchUserStats();
+  }, []);
+
+  useEffect(() => {
+    api.get("/roles").
+    then((r) => setRoles(r.data.roles || [])).
+    catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api.get("/branches").
+    then((r) => setBranches(r.data?.data || r.data || [])).
+    catch(() => {});
+  }, []);
+
+  const handlePageChange = (p) => setPage(p);
+
+
+
+
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get("/users", {
+        params: {
+          page,
+          search: search,
+          role: roleFilter,
+          status: statusFilter
+        }
+      });
+      setUsers(response.data.data || response.data);
+      setMeta(response.data);
+      setError("");
+    } catch (e) {
+      setError(t("Failed to load users"));
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setSearch(searchTerm);
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  useEffect(() => {setPage(1);}, [search, roleFilter, statusFilter]);
+  useEffect(() => {fetchUsers();}, [page, search, roleFilter, statusFilter]);
+
+
+
+
+
+
+  const handleChange = (e) => {
+
+    setForm({
+
+      ...form,
+
+      [e.target.name]: e.target.value
+
     });
 
-    const [showRejectModal, setShowRejectModal] = useState(false);
-    const [rejectTarget, setRejectTarget] = useState(null);
-    const [rejectReason, setRejectReason] = useState("");
-    const [processingAction, setProcessingAction] = useState(false);
-    const [userStats, setUserStats] = useState(null);
-
-    const [roles, setRoles] = useState([]);
-
-    const [branches, setBranches] = useState([]);
-
-
-    const [showModal,setShowModal] = useState(false);
-
-    const [editingUser,setEditingUser] = useState(null);
-
-
-    const [submitting,setSubmitting] = useState(false);
+  };
 
 
 
-    const [showPassword,setShowPassword] = useState(false);
-
-    const [showConfirm,setShowConfirm] = useState(false);
 
 
 
-const [form,setForm] = useState({
+  const resetForm = () => {
 
-        name:"",
-        email:"",
-        password:"",
-        password_confirmation:"",
-        role:"cashier",
-        branch_id: null
+
+    setForm({
+
+      name: "",
+      email: "",
+      password: "",
+      password_confirmation: "",
+      role: "cashier",
+      branch_id: null
 
     });
 
 
+    setEditingUser(null);
 
+    setShowPassword(false);
 
+    setShowConfirm(false);
 
-    useEffect(()=>{
-        fetchUserStats();
-    },[]);
-
-    useEffect(()=>{
-        api.get("/roles")
-            .then(r => setRoles(r.data.roles || []))
-            .catch(() => {});
-    },[]);
-
-    useEffect(()=>{
-        api.get("/branches")
-            .then(r => setBranches(r.data?.data || r.data || []))
-            .catch(() => {});
-    },[]);
-
-    const handlePageChange = (p) => setPage(p);
+  };
 
 
 
 
 
-    const fetchUsers = async()=>{
-        try {
-            const response = await api.get("/users", {
-                params: {
-                    page,
-                    search: search,
-                    role: roleFilter,
-                    status: statusFilter,
-                }
-            });
-            setUsers(response.data.data || response.data);
-            setMeta(response.data);
-            setError("");
-        } catch (e) {
-            setError('Failed to load users');
-        } finally {
-            setInitialLoading(false);
-        }
+
+  const openCreate = () => {
+
+    resetForm();
+
+    setShowModal(true);
+
+  };
+
+
+
+
+
+
+  const openEdit = (user) => {
+
+
+    setForm({
+
+      name: user.name,
+
+      email: user.email,
+
+      password: "",
+
+      password_confirmation: "",
+
+      role: user.role,
+      branch_id: user.branch_id || ""
+
+    });
+
+
+    setEditingUser(user);
+
+    setShowModal(true);
+
+
+  };
+
+
+
+
+
+
+
+  const closeModal = () => {
+
+    setShowModal(false);
+
+    resetForm();
+
+  };
+
+
+
+
+
+
+  const handleSubmit = async (e) => {
+
+    e.preventDefault();
+
+    setSubmitting(true);
+
+    const nameParts = (form.name || "").trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || nameParts[0] || "";
+
+    const payload = {
+      ...form,
+      first_name: firstName,
+      last_name: lastName
     };
 
-    useEffect(() => {
-        const delayDebounceFn = setTimeout(() => {
-            setSearch(searchTerm);
-        }, 400);
+    try {
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm]);
+      if (editingUser) {
 
-    useEffect(() => { setPage(1); }, [search, roleFilter, statusFilter]);
-    useEffect(() => { fetchUsers(); }, [page, search, roleFilter, statusFilter]);
+        await api.put(
+          `/users/${editingUser.id}`,
+          payload
+        );
 
+      } else
 
+      {
 
+        await api.post(
+          "/users",
+          payload
+        );
 
+      }
 
 
-    const handleChange=(e)=>{
 
-        setForm({
+      await fetchUsers();
 
-            ...form,
+      await fetchUserStats();
 
-            [e.target.name]:e.target.value
 
-        });
+      closeModal();
 
-    };
 
+    }
 
 
+    catch (error) {
 
 
+      const messages =
+      error.response?.data?.errors;
 
-    const resetForm=()=>{
 
+      setError(
 
-        setForm({
+        messages ?
 
-            name:"",
-            email:"",
-            password:"",
-            password_confirmation:"",
-            role:"cashier",
-            branch_id: null
+        Object.values(messages).
+        flat().
+        join(" ") :
 
-        });
+        "Operation failed"
 
+      );
 
-        setEditingUser(null);
 
-        setShowPassword(false);
+    } finally
 
-        setShowConfirm(false);
 
-    };
+    {
 
 
+      setSubmitting(false);
 
 
+    }
 
 
-    const openCreate=()=>{
+  };
 
-        resetForm();
 
-        setShowModal(true);
 
-    };
 
 
 
+  const handleApprove = async (user) => {
+    if (!window.confirm(`Approve ${user.name}?`)) return;
+    setProcessingAction(true);
+    try {
+      await api.post(`/users/${user.id}/approve`);
+      window.showToast && window.showToast(t("User approved successfully."), 'success');
+      await fetchUsers();
+      await fetchUserStats();
+    } catch (error) {
+      setError(t("Failed to approve user. Please try again."));
+    } finally {
+      setProcessingAction(false);
+    }
+  };
 
+  // Open reject modal (capture reason) for the selected pending user
+  const handleReject = (user) => {
+    setRejectTarget(user);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
 
+  const closeRejectModal = () => {
+    setShowRejectModal(false);
+    setRejectTarget(null);
+    setRejectReason('');
+  };
 
-    const openEdit=(user)=>{
+  const submitReject = async () => {
+    if (!rejectTarget) return;
+    if (!window.confirm(`Reject ${rejectTarget.name}?`)) return;
+    setProcessingAction(true);
+    try {
+      await api.post(`/users/${rejectTarget.id}/reject`, { reason: rejectReason });
+      window.showToast && window.showToast(t("User registration rejected."), 'success');
+      closeRejectModal();
+      await fetchUsers();
+      await fetchUserStats();
+    } catch (error) {
+      setError(t("Failed to reject user. Please try again."));
+    } finally {
+      setProcessingAction(false);
+    }
+  };
 
+  const handleDelete = async (id) => {
 
-        setForm({
 
-            name:user.name,
+    if (!window.confirm("Delete this user?"))
+    return;
 
-            email:user.email,
 
-            password:"",
 
-            password_confirmation:"",
+    try {
 
-            role:user.role,
-            branch_id: user.branch_id || ""
 
-        });
+      await api.delete(`/users/${id}`);
 
 
-        setEditingUser(user);
+      fetchUsers();
 
-        setShowModal(true);
+      fetchUserStats();
 
 
-    };
+    }
 
+    catch (error) {
 
+      setError(t("Failed to delete user"));
 
+    }
 
 
+  };
 
+  const fetchUserStats = async () => {
+    try {
+      const r = await api.get('/users/stats');
+      setUserStats(r.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-    const closeModal=()=>{
 
-        setShowModal(false);
 
-        resetForm();
 
-    };
 
 
+  const filteredUsers = users;
 
 
 
 
-    const handleSubmit=async(e)=>{
 
-        e.preventDefault();
+  const approvedUsers = userStats?.approved ?? users.filter((user) => user.status === "approved" || !user.status).length;
+  const totalUsers = userStats?.total ?? meta?.total ?? users.length;
 
-        setSubmitting(true);
 
-        const nameParts = (form.name || "").trim().split(/\s+/);
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || nameParts[0] || "";
+  const adminCount =
+  userStats?.admin ??
+  users.filter(
+    (user) => user.role === "admin"
+  ).length;
 
-        const payload = {
-            ...form,
-            first_name: firstName,
-            last_name: lastName,
-        };
 
-        try{
+  const pharmacistCount =
+  userStats?.pharmacist ??
+  users.filter(
+    (user) => user.role === "pharmacist"
+  ).length;
 
-            if(editingUser){
 
-                await api.put(
-                    `/users/${editingUser.id}`,
-                    payload
-                );
+  const cashierCount =
+  userStats?.cashier ??
+  users.filter(
+    (user) => user.role === "cashier"
+  ).length;
 
-            }
 
-            else{
 
-                await api.post(
-                    "/users",
-                    payload
-                );
 
-            }
 
+  const getRoleBadge = (role) => {const { t } = useLanguage();
 
 
-            await fetchUsers();
+    const styles = {
 
-            await fetchUserStats();
+      admin:
+      "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
 
+      pharmacist:
+      "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
 
-            closeModal();
+      cashier:
+      "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
 
-
-        }
-
-
-        catch(error){
-
-
-            const messages =
-            error.response?.data?.errors;
-
-
-            setError(
-
-                messages
-                ?
-                Object.values(messages)
-                .flat()
-                .join(" ")
-                :
-                "Operation failed"
-
-            );
-
-
-        }
-
-
-        finally{
-
-
-            setSubmitting(false);
-
-
-        }
-
-
-    };
-
-
-
-
-
-
-    const handleApprove = async (user) => {
-        if (!window.confirm(`Approve ${user.name}?`)) return;
-        setProcessingAction(true);
-        try {
-            await api.post(`/users/${user.id}/approve`);
-            window.showToast && window.showToast('User approved successfully.', 'success');
-            await fetchUsers();
-            await fetchUserStats();
-        } catch (error) {
-            setError("Failed to approve user. Please try again.");
-        } finally {
-            setProcessingAction(false);
-        }
-    };
-
-    // Open reject modal (capture reason) for the selected pending user
-    const handleReject = (user) => {
-        setRejectTarget(user);
-        setRejectReason('');
-        setShowRejectModal(true);
-    };
-
-    const closeRejectModal = () => {
-        setShowRejectModal(false);
-        setRejectTarget(null);
-        setRejectReason('');
-    };
-
-    const submitReject = async () => {
-        if (!rejectTarget) return;
-        if (!window.confirm(`Reject ${rejectTarget.name}?`)) return;
-        setProcessingAction(true);
-        try {
-            await api.post(`/users/${rejectTarget.id}/reject`, { reason: rejectReason });
-            window.showToast && window.showToast('User registration rejected.', 'success');
-            closeRejectModal();
-            await fetchUsers();
-            await fetchUserStats();
-        } catch (error) {
-            setError('Failed to reject user. Please try again.');
-        } finally {
-            setProcessingAction(false);
-        }
-    };
-
-    const handleDelete=async(id)=>{
-
-
-        if(!window.confirm("Delete this user?"))
-            return;
-
-
-
-        try{
-
-
-            await api.delete(`/users/${id}`);
-
-
-            fetchUsers();
-
-            fetchUserStats();
-
-
-        }
-
-        catch(error){
-
-            setError("Failed to delete user");
-
-        }
-
-
-    };
-
-    const fetchUserStats = async () => {
-        try {
-            const r = await api.get('/users/stats');
-            setUserStats(r.data);
-        } catch (e) {
-            console.error(e);
-        }
     };
 
 
 
+    return (
 
-
-
-    const filteredUsers = users;
-
-
-
-
-
-    const approvedUsers = userStats?.approved ?? users.filter(user => user.status === "approved" || !user.status).length;
-    const totalUsers = userStats?.total ?? meta?.total ?? users.length;
-
-
-    const adminCount =
-    userStats?.admin ??
-    users.filter(
-        user=>user.role==="admin"
-    ).length;
-
-
-    const pharmacistCount =
-    userStats?.pharmacist ??
-    users.filter(
-        user=>user.role==="pharmacist"
-    ).length;
-
-
-    const cashierCount =
-    userStats?.cashier ??
-    users.filter(
-        user=>user.role==="cashier"
-    ).length;
-
-
-
-
-
-    const getRoleBadge=(role)=>{
-
-
-        const styles={
-
-            admin:
-            "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
-
-            pharmacist:
-            "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
-
-            cashier:
-            "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
-
-        };
-
-
-
-        return (
-
-            <span
-            className={`
+      <span
+        className={`
             px-3
             py-1
             rounded-full
             text-xs
             font-semibold
             ${styles[role]}
-            `}
-            >
+            `}>
+        
 
                 {role}
 
-            </span>
-
-        );
+            </span>);
 
 
+
+
+  };
+
+  const getStatusBadge = (status) => {const { t } = useLanguage();
+
+    if (!status) return null;
+
+    const styles = {
+      approved: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+      pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
     };
 
-    const getStatusBadge=(status)=>{
+    const labels = {
+      approved: "Approved",
+      pending: "Pending",
+      rejected: "Rejected"
+    };
 
-        if(!status) return null;
+    const icons = {
+      approved: <CheckCircle2 size={14} />,
+      pending: <Clock size={14} />,
+      rejected: <XCircle size={14} />
+    };
 
-        const styles={
-            approved: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-            pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-            rejected: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-        };
-
-        const labels={
-            approved: "Approved",
-            pending: "Pending",
-            rejected: "Rejected",
-        };
-
-        const icons={
-            approved: <CheckCircle2 size={14}/>,
-            pending: <Clock size={14}/>,
-            rejected: <XCircle size={14}/>,
-        };
-
-        return (
-            <span
-            className={`
+    return (
+      <span
+        className={`
             inline-flex
             items-center
             gap-1
@@ -543,39 +543,39 @@ const [form,setForm] = useState({
             text-xs
             font-semibold
             ${styles[status] || "bg-gray-100 text-gray-700"}
-            `}
-            >
+            `}>
+        
                 {icons[status]}
                 {labels[status] || status}
-            </span>
-        );
-
-    };
-// ================= MODAL FORM =================
+            </span>);
 
 
-if(initialLoading){
+  };
+  // ================= MODAL FORM =================
+
+
+  if (initialLoading) {
 
     return (
-        <LoadingSpinner text="Loading users..." />
-    );
-
-}
+      <LoadingSpinner text={t("Loading users...")} />);
 
 
+  }
 
-return (
 
-<div className="space-y-6">
+
+  return (
+
+    <div className="space-y-6">
 
 
 
 {/* ERROR MESSAGE */}
 
 {
-error &&
+      error &&
 
-<div className="
+      <div className="
 bg-red-50
 border
 border-red-200
@@ -584,11 +584,18 @@ p-4
 rounded-xl
 ">
 
+
+
+
+
+
+        
+
 {error}
 
 </div>
 
-}
+      }
 
 
 
@@ -609,6 +616,14 @@ md:items-center
 ">
 
 
+
+
+
+
+
+        
+
+
 <div>
 
 
@@ -617,11 +632,16 @@ text-3xl
 font-bold
 text-gray-800
 dark:text-white
-">
+">{t("User Management")}
 
-User Management
 
-</h1>
+
+
+
+
+
+
+          </h1>
 
 
 
@@ -629,11 +649,15 @@ User Management
 text-gray-500
 dark:text-gray-400
 mt-1
-">
+">{t("Manage pharmacy staff accounts and permissions")}
 
-Manage pharmacy staff accounts and permissions
 
-</p>
+
+
+
+
+
+          </p>
 
 
 </div>
@@ -643,9 +667,9 @@ Manage pharmacy staff accounts and permissions
 
 <button
 
-onClick={openCreate}
+          onClick={openCreate}
 
-className="
+          className="
 flex
 items-center
 gap-2
@@ -658,17 +682,30 @@ rounded-xl
 shadow-md
 hover:shadow-lg
 transition
-"
-
->
+">
 
 
-<Plus size={20}/>
-
-Add User
 
 
-</button>
+
+
+
+
+
+
+
+
+
+
+          
+
+
+<Plus size={20} />{t("Add User")}
+
+
+
+
+        </button>
 
 
 
@@ -698,6 +735,12 @@ gap-5
 
 
 
+        
+
+
+
+
+
 <div className="
 bg-white
 dark:bg-gray-800
@@ -709,19 +752,31 @@ dark:border-gray-700
 p-5
 ">
 
+
+
+
+
+
+
+
+          
+
 <div className="
 flex
 justify-between
 ">
 
 
+            
+
+
 <div>
 
-<p className="text-gray-500 dark:text-gray-400 text-sm">
+<p className="text-gray-500 dark:text-gray-400 text-sm">{t("Total Users")}
 
-Total Users
 
-</p>
+
+              </p>
 
 
 <h2 className="
@@ -731,6 +786,12 @@ text-blue-500
 dark:text-blue-400
 mt-2
 ">
+
+
+
+
+
+                
 
 {totalUsers}
 
@@ -740,12 +801,15 @@ mt-2
 
 
 <User
-className="
+              className="
 text-blue-500
 dark:text-blue-400
 "
-size={35}
-/>
+
+
+
+              size={35} />
+            
 
 
 </div>
@@ -772,16 +836,25 @@ p-5
 ">
 
 
+
+
+
+
+
+
+          
+
+
 <div className="flex justify-between">
 
 
 <div>
 
-<p className="text-gray-500 dark:text-gray-400 text-sm">
+<p className="text-gray-500 dark:text-gray-400 text-sm">{t("Admins")}
 
-Admins
 
-</p>
+
+              </p>
 
 
 <h2 className="
@@ -791,6 +864,12 @@ text-blue-500
 dark:text-blue-400
 mt-2
 ">
+
+
+
+
+
+                
 
 {adminCount}
 
@@ -800,9 +879,9 @@ mt-2
 
 
 <ShieldCheck
-className="text-blue-500 dark:text-blue-400"
-size={35}
-/>
+              className="text-blue-500 dark:text-blue-400"
+              size={35} />
+            
 
 
 </div>
@@ -830,17 +909,26 @@ p-5
 ">
 
 
+
+
+
+
+
+
+          
+
+
 <div className="flex justify-between">
 
 
 <div>
 
 
-<p className="text-gray-500 dark:text-gray-400 text-sm">
+<p className="text-gray-500 dark:text-gray-400 text-sm">{t("Pharmacists")}
 
-Pharmacists
 
-</p>
+
+              </p>
 
 
 
@@ -851,6 +939,12 @@ text-blue-500
 dark:text-blue-400
 mt-2
 ">
+
+
+
+
+
+                
 
 {pharmacistCount}
 
@@ -861,9 +955,9 @@ mt-2
 
 
 <Pill
-className="text-blue-500 dark:text-blue-400"
-size={35}
-/>
+              className="text-blue-500 dark:text-blue-400"
+              size={35} />
+            
 
 
 </div>
@@ -891,16 +985,25 @@ p-5
 ">
 
 
+
+
+
+
+
+
+          
+
+
 <div className="flex justify-between">
 
 
 <div>
 
-<p className="text-gray-500 dark:text-gray-400 text-sm">
+<p className="text-gray-500 dark:text-gray-400 text-sm">{t("Cashiers")}
 
-Cashiers
 
-</p>
+
+              </p>
 
 
 <h2 className="
@@ -910,6 +1013,12 @@ text-blue-500
 dark:text-blue-400
 mt-2
 ">
+
+
+
+
+
+                
 
 {cashierCount}
 
@@ -921,9 +1030,9 @@ mt-2
 
 
 <WalletCards
-className="text-blue-500 dark:text-blue-400"
-size={35}
-/>
+              className="text-blue-500 dark:text-blue-400"
+              size={35} />
+            
 
 
 </div>
@@ -962,39 +1071,60 @@ gap-4
 
 
 
+
+
+
+
+
+
+
+
+
+        
+
+
+
 <div className="
 relative
 flex-1
 ">
 
 
+          
+
+
 <Search
 
-className="
+            className="
 absolute
 left-3.5
 top-3.5
 text-gray-400
 "
-size={18}
 
-/>
+
+
+
+
+            size={18} />
+
+          
 
 
 
 <input
 
 
-value={searchTerm}
+            value={searchTerm}
 
 
-onChange={(e)=>setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
 
 
-placeholder="Search by name or email..."
+            placeholder={t("Search by name or email...")}
 
 
-className="
+            className="
 w-full
 pl-11
 pr-10
@@ -1012,19 +1142,37 @@ text-gray-900
 dark:text-white
 placeholder-gray-400
 dark:placeholder-gray-300
-"
+" />
 
-/>
 
-{searchTerm && (
-    <button
-        type="button"
-        onClick={() => setSearchTerm('')}
-        className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-    >
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          
+
+{searchTerm &&
+          <button
+            type="button"
+            onClick={() => setSearchTerm('')}
+            className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            
         <X size={18} />
     </button>
-)}
+          }
 
 </div>
 
@@ -1036,13 +1184,13 @@ dark:placeholder-gray-300
 <select
 
 
-value={roleFilter}
+          value={roleFilter}
 
 
-onChange={(e)=>setRoleFilter(e.target.value)}
+          onChange={(e) => setRoleFilter(e.target.value)}
 
 
-className="
+          className="
 border
 border-gray-200
 dark:border-gray-600
@@ -1056,29 +1204,43 @@ dark:text-white
 outline-none
 focus:ring-2
 focus:ring-blue-500
-"
+">
 
 
->
 
 
-<option value="all" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-All Roles
-</option>
 
-{(roles.length > 0 ? roles : DEFAULT_ROLES).map(role=>(
-<option key={role.slug} value={role.slug} className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{role.name}</option>
-))}
+
+
+
+
+
+
+
+
+
+
+
+          
+
+
+<option value="all" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("All Roles")}
+
+          </option>
+
+{(roles.length > 0 ? roles : DEFAULT_ROLES).map((role) =>
+          <option key={role.slug} value={role.slug} className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{role.name}</option>
+          )}
 
 </select>
 
 <select
 
-value={statusFilter}
+          value={statusFilter}
 
-onChange={(e)=>setStatusFilter(e.target.value)}
+          onChange={(e) => setStatusFilter(e.target.value)}
 
-className="
+          className="
 border
 border-gray-200
 dark:border-gray-600
@@ -1092,14 +1254,28 @@ dark:text-white
 outline-none
 focus:ring-2
 focus:ring-blue-500
-"
+">
 
->
 
-<option value="all" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">All Statuses</option>
-<option value="approved" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">Approved</option>
-<option value="pending" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">Pending Approval</option>
-<option value="rejected" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">Rejected</option>
+
+
+
+
+
+
+
+
+
+
+
+
+
+          
+
+<option value="all" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("All Statuses")}</option>
+<option value="approved" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("Approved")}</option>
+<option value="pending" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("Pending Approval")}</option>
+<option value="rejected" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("Rejected")}</option>
 
 </select>
 
@@ -1120,10 +1296,10 @@ focus:ring-blue-500
 
 
 {
-showModal &&
+      showModal &&
 
 
-<div className="
+      <div className="
 fixed
 inset-0
 bg-black
@@ -1134,6 +1310,16 @@ justify-center
 z-50
 px-4
 ">
+
+
+
+
+
+
+
+
+
+        
 
 
 <div className="
@@ -1153,12 +1339,28 @@ dark:border-gray-700
 
 
 
+
+
+
+
+
+          
+
+
+
+
+
 <div className="
 flex
 justify-between
 items-center
 mb-5
 ">
+
+
+
+
+            
 
 
 <h2 className="
@@ -1169,13 +1371,18 @@ dark:text-white
 ">
 
 
+
+
+              
+
+
 {
-editingUser
-?
-"Edit User"
-:
-"Add New User"
-}
+              editingUser ?
+
+              "Edit User" :
+
+              "Add New User"
+              }
 
 
 </h2>
@@ -1184,16 +1391,19 @@ editingUser
 
 <button
 
-onClick={closeModal}
+              onClick={closeModal}
 
-className="
+              className="
 text-gray-400
 hover:text-gray-600
-"
+">
 
->
 
-<X size={22}/>
+
+
+              
+
+<X size={22} />
 
 </button>
 
@@ -1209,18 +1419,23 @@ hover:text-gray-600
 
 <form
 
-onSubmit={handleSubmit}
+            onSubmit={handleSubmit}
 
-autoComplete="off"
+            autoComplete="off"
 
-className="
+            className="
 grid
 grid-cols-1
 md:grid-cols-2
 gap-5
-"
+">
 
->
+
+
+
+
+
+            
 
 
 
@@ -1230,11 +1445,11 @@ gap-5
 
 <div>
 
-<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Full Name")}
 
-Full Name
 
-</label>
+
+              </label>
 
 
 <div className="relative mt-1">
@@ -1242,34 +1457,39 @@ Full Name
 
 <User
 
-size={18}
+                  size={18}
 
-className="
+                  className="
 absolute
 left-3
 top-3
 text-gray-400
-"
+" />
 
-/>
+
+
+
+
+
+                
 
 
 <input
 
 
-name="name"
+                  name="name"
 
 
-value={form.name}
+                  value={form.name}
 
 
-onChange={handleChange}
+                  onChange={handleChange}
 
 
-required
+                  required
 
 
-className="
+                  className="
 w-full
 pl-10
 py-3
@@ -1289,9 +1509,26 @@ dark:placeholder-gray-300
 "
 
 
-placeholder="Full name"
 
-/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  placeholder={t("Full name")} />
+
+                
 
 
 
@@ -1308,11 +1545,11 @@ placeholder="Full name"
 
 <div>
 
-<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Email")}
 
-Email
 
-</label>
+
+              </label>
 
 
 
@@ -1321,40 +1558,45 @@ Email
 
 <Mail
 
-size={18}
+                  size={18}
 
-className="
+                  className="
 absolute
 left-3
 top-3
 text-gray-400
-"
+" />
 
-/>
+
+
+
+
+
+                
 
 
 <input
 
 
-type="email"
+                  type="email"
 
 
-name="email"
+                  name="email"
 
 
-value={form.email}
+                  value={form.email}
 
 
-onChange={handleChange}
+                  onChange={handleChange}
 
 
-autoComplete="off"
+                  autoComplete="off"
 
 
-required
+                  required
 
 
-className="
+                  className="
 w-full
 pl-10
 py-3
@@ -1374,9 +1616,26 @@ dark:placeholder-gray-300
 "
 
 
-placeholder="Email"
 
-/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  placeholder={t("Email")} />
+
+                
 
 
 
@@ -1395,27 +1654,27 @@ placeholder="Email"
 <div>
 
 
-<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Role")}
 
-Role
 
-</label>
+
+              </label>
 
 
 
 <select
 
 
-name="role"
+                name="role"
 
 
-value={form.role}
+                value={form.role}
 
 
-onChange={handleChange}
+                onChange={handleChange}
 
 
-className="
+                className="
 w-full
 mt-1
 py-3
@@ -1431,33 +1690,49 @@ dark:text-white
 outline-none
 focus:ring-2
 focus:ring-blue-500
-"
+">
 
 
->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
 
 
 {
-(roles.length > 0 ? roles : DEFAULT_ROLES).map(role=>(
+                (roles.length > 0 ? roles : DEFAULT_ROLES).map((role) =>
 
-<option
+                <option
 
-key={role.slug}
+                  key={role.slug}
 
-value={role.slug}
+                  value={role.slug}
 
-className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
 
->
+                  
 
 {role.name}
 
 </option>
 
 
-))
+                )
 
-}
+                }
 
 
 </select>
@@ -1467,19 +1742,19 @@ className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 
 
 <div className="mt-4">
-	<label className="text-sm font-medium">Branch</label>
+	<label className="text-sm font-medium">{t("Branch")}</label>
 	<select
-		name="branch_id"
-		value={form.branch_id}
-		onChange={handleChange}
-		className="w-full mt-1 py-3 px-4 border rounded-xl"
-	>
-		<option value="">Select Branch</option>
-{branches.map(branch=>
-		<option key={branch.id} value={branch.id}>
+                name="branch_id"
+                value={form.branch_id}
+                onChange={handleChange}
+                className="w-full mt-1 py-3 px-4 border rounded-xl">
+                
+		<option value="">{t("Select Branch")}</option>
+{branches.map((branch) =>
+                <option key={branch.id} value={branch.id}>
 			{branch.name}
 		</option>
-	)}
+                )}
 	</select>
 </div>
 
@@ -1488,9 +1763,9 @@ className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 <div>
 
 
-<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Password")}
 
-Password {editingUser && "(leave empty to keep current)"}
+                {editingUser && "(leave empty to keep current)"}
 
 </label>
 
@@ -1500,41 +1775,46 @@ Password {editingUser && "(leave empty to keep current)"}
 
 <Lock
 
-size={18}
+                  size={18}
 
-className="
+                  className="
 absolute
 left-3
 top-3
 text-gray-400
-"
+" />
 
-/>
+
+
+
+
+
+                
 
 
 
 <input
 
 
-type={showPassword ? "text" : "password"}
+                  type={showPassword ? "text" : "password"}
 
 
-name="password"
+                  name="password"
 
 
-value={form.password}
+                  value={form.password}
 
 
-onChange={handleChange}
+                  onChange={handleChange}
 
 
-autoComplete="new-password"
+                  autoComplete="new-password"
 
 
-minLength={8}
+                  minLength={8}
 
 
-className="
+                  className="
 w-full
 pl-10
 pr-12
@@ -1555,9 +1835,27 @@ dark:placeholder-gray-300
 "
 
 
-placeholder="Password"
 
-/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  placeholder={t("Password")} />
+
+                
 
 
 
@@ -1565,32 +1863,39 @@ placeholder="Password"
 <button
 
 
-type="button"
+                  type="button"
 
 
-onClick={()=>setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword(!showPassword)}
 
 
-className="
+                  className="
 absolute
 right-3
 top-3
 text-gray-500
 hover:text-gray-700
 dark:hover:text-gray-300
-"
+">
 
 
->
+
+
+
+
+
+
+
+                  
 
 
 {
-showPassword
-?
-<EyeOff size={18}/>
-:
-<Eye size={18}/>
-}
+                  showPassword ?
+
+                  <EyeOff size={18} /> :
+
+                  <Eye size={18} />
+                  }
 
 
 </button>
@@ -1612,11 +1917,11 @@ showPassword
 <div>
 
 
-<label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Confirm Password")}
 
-Confirm Password
 
-</label>
+
+              </label>
 
 
 
@@ -1625,16 +1930,21 @@ Confirm Password
 
 <Lock
 
-size={18}
+                  size={18}
 
-className="
+                  className="
 absolute
 left-3
 top-3
 text-gray-400
-"
+" />
 
-/>
+
+
+
+
+
+                
 
 
 
@@ -1642,22 +1952,22 @@ text-gray-400
 <input
 
 
-type={showConfirm ? "text" : "password"}
+                  type={showConfirm ? "text" : "password"}
 
 
-name="password_confirmation"
+                  name="password_confirmation"
 
 
-value={form.password_confirmation}
+                  value={form.password_confirmation}
 
 
-onChange={handleChange}
+                  onChange={handleChange}
 
 
-autoComplete="new-password"
+                  autoComplete="new-password"
 
 
-className="
+                  className="
 w-full
 pl-10
 pr-12
@@ -1678,9 +1988,27 @@ dark:placeholder-gray-300
 "
 
 
-placeholder="Confirm password"
 
-/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  placeholder={t("Confirm password")} />
+
+                
 
 
 
@@ -1688,32 +2016,39 @@ placeholder="Confirm password"
 <button
 
 
-type="button"
+                  type="button"
 
 
-onClick={()=>setShowConfirm(!showConfirm)}
+                  onClick={() => setShowConfirm(!showConfirm)}
 
 
-className="
+                  className="
 absolute
 right-3
 top-3
 text-gray-500
 hover:text-gray-700
 dark:hover:text-gray-300
-"
+">
 
 
->
+
+
+
+
+
+
+
+                  
 
 
 {
-showConfirm
-?
-<EyeOff size={18}/>
-:
-<Eye size={18}/>
-}
+                  showConfirm ?
+
+                  <EyeOff size={18} /> :
+
+                  <Eye size={18} />
+                  }
 
 
 </button>
@@ -1748,16 +2083,22 @@ mt-3
 ">
 
 
+
+
+
+              
+
+
 <button
 
 
-type="button"
+                type="button"
 
 
-onClick={closeModal}
+                onClick={closeModal}
 
 
-className="
+                className="
 px-5
 py-3
 border
@@ -1768,16 +2109,27 @@ text-gray-700
 dark:text-gray-300
 hover:bg-gray-50
 dark:hover:bg-gray-700
-"
+">{t("Cancel")}
 
 
->
 
 
-Cancel
 
 
-</button>
+
+
+
+
+
+
+
+
+
+
+
+
+
+              </button>
 
 
 
@@ -1786,10 +2138,10 @@ Cancel
 <button
 
 
-disabled={submitting}
+                disabled={submitting}
 
 
-className="
+                className="
 flex
 items-center
 gap-2
@@ -1800,45 +2152,56 @@ text-white
 rounded-xl
 hover:bg-blue-700
 disabled:opacity-50
-"
+">
 
 
->
+
+
+
+
+
+
+
+
+
+
+
+                
 
 
 {
-submitting
+                submitting ?
 
-?
 
-<>
+
+                <>
 
 <Loader2
-size={18}
-className="animate-spin"
-/>
+                    size={18}
+                    className="animate-spin" />
+                  
 
 Saving...
 
-</>
+</> :
 
-:
 
-<>
 
-<Save size={18}/>
+                <>
+
+<Save size={18} />
 
 {
-editingUser
-?
-"Update User"
-:
-"Create User"
-}
+                  editingUser ?
+
+                  "Update User" :
+
+                  "Create User"
+                  }
 
 </>
 
-}
+                }
 
 
 
@@ -1859,16 +2222,16 @@ editingUser
 </div>
 
 
-}
+      }
 
 
 
 {/* REJECT MODAL */}
 
 {
-showRejectModal &&
+      showRejectModal &&
 
-<div className="
+      <div className="
 fixed
 inset-0
 bg-black
@@ -1879,6 +2242,16 @@ justify-center
 z-50
 px-4
 ">
+
+
+
+
+
+
+
+
+
+        
 
 <div className="
 bg-white
@@ -1893,6 +2266,17 @@ border-gray-100
 dark:border-gray-700
 ">
 
+
+
+
+
+
+
+
+
+
+          
+
 <div className="
 flex
 justify-between
@@ -1900,41 +2284,46 @@ items-center
 mb-5
 ">
 
-<h2 className="text-xl font-bold text-gray-800 dark:text-white">
 
-Reject {rejectTarget?.name}
+
+
+            
+
+<h2 className="text-xl font-bold text-gray-800 dark:text-white">{t("Reject")}
+
+              {rejectTarget?.name}
 
 </h2>
 
 <button
 
-onClick={closeRejectModal}
+              onClick={closeRejectModal}
 
-className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
 
->
+              
 
-<X size={22}/>
+<X size={22} />
 
 </button>
 
 </div>
 
-<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("Reason (optional)")}
 
-Reason (optional)
 
-</label>
+
+          </label>
 
 <textarea
 
-value={rejectReason}
+            value={rejectReason}
 
-onChange={(e)=>setRejectReason(e.target.value)}
+            onChange={(e) => setRejectReason(e.target.value)}
 
-rows={3}
+            rows={3}
 
-className="
+            className="
 w-full
 mt-1
 p-3
@@ -1953,9 +2342,26 @@ placeholder-gray-400
 dark:placeholder-gray-300
 "
 
-placeholder="Let this applicant know why their registration was rejected..."
 
-/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            placeholder={t("Let this applicant know why their registration was rejected...")} />
+
+          
 
 <div className="
 flex
@@ -1964,13 +2370,18 @@ gap-3
 mt-5
 ">
 
+
+
+
+            
+
 <button
 
-type="button"
+              type="button"
 
-onClick={closeRejectModal}
+              onClick={closeRejectModal}
 
-className="
+              className="
 px-5
 py-3
 border
@@ -1981,23 +2392,34 @@ text-gray-700
 dark:text-gray-300
 hover:bg-gray-50
 dark:hover:bg-gray-700
-"
+">{t("Cancel")}
 
->
 
-Cancel
 
-</button>
+
+
+
+
+
+
+
+
+
+
+
+
+
+            </button>
 
 <button
 
-type="button"
+              type="button"
 
-disabled={processingAction}
+              disabled={processingAction}
 
-onClick={submitReject}
+              onClick={submitReject}
 
-className="
+              className="
 flex
 items-center
 gap-2
@@ -2008,25 +2430,36 @@ text-white
 rounded-xl
 hover:bg-red-700
 disabled:opacity-50
-"
+">
 
->
+
+
+
+
+
+
+
+
+
+
+
+              
 
 {
-processingAction
+              processingAction ?
 
-?
 
-<>
-<Loader2 size={18} className="animate-spin"/>
+
+              <>
+<Loader2 size={18} className="animate-spin" />
 Rejecting...
-</>
+</> :
 
-:
 
-"Reject"
 
-}
+              "Reject"
+
+              }
 
 </button>
 
@@ -2036,7 +2469,7 @@ Rejecting...
 
 </div>
 
-}
+      }
 
 
 
@@ -2056,6 +2489,15 @@ overflow-hidden
 ">
 
 
+
+
+
+
+
+
+        
+
+
 <table className="w-full">
 
 
@@ -2065,53 +2507,53 @@ overflow-hidden
 <tr>
 
 
-<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
-
-User
-
-</th>
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("User")}
 
 
-<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
 
-Email
-
-</th>
+              </th>
 
 
-<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
-
-Role
-
-</th>
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Email")}
 
 
-<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
 
-Branch
-
-</th>
+              </th>
 
 
-<th className="px-6 py-4 text-left text-sm">
-
-Status
-
-</th>
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Role")}
 
 
-<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">
 
-Created
-
-</th>
+              </th>
 
 
-<th className="px-6 py-4 text-right text-sm font-semibold text-gray-600 dark:text-gray-300">
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Branch")}
 
-Actions
 
-</th>
+
+              </th>
+
+
+<th className="px-6 py-4 text-left text-sm">{t("Status")}
+
+
+
+              </th>
+
+
+<th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Created")}
+
+
+
+              </th>
+
+
+<th className="px-6 py-4 text-right text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Actions")}
+
+
+
+              </th>
 
 
 </tr>
@@ -2130,24 +2572,28 @@ Actions
 
 {
 
-filteredUsers.length > 0
-
-?
-
-filteredUsers.map(user=>(
+            filteredUsers.length > 0 ?
 
 
-<tr
 
-key={user.id}
+            filteredUsers.map((user) =>
 
-className="
+
+            <tr
+
+              key={user.id}
+
+              className="
 hover:bg-gray-50
 dark:hover:bg-gray-700/50
 transition
-"
+">
 
->
+
+
+
+
+              
 
 
 <td className="px-6 py-4">
@@ -2158,6 +2604,10 @@ flex
 items-center
 gap-3
 ">
+
+
+
+                  
 
 
 <div className="
@@ -2173,9 +2623,19 @@ font-bold
 ">
 
 
+
+
+
+
+
+
+
+                    
+
+
 {
-user.name?.charAt(0)
-}
+                    user.name?.charAt(0)
+                    }
 
 
 </div>
@@ -2192,9 +2652,9 @@ user.name?.charAt(0)
 </p>
 
 
-<p className="text-xs text-gray-400 dark:text-gray-500">
+<p className="text-xs text-gray-400 dark:text-gray-500">{t("ID:")}
 
-ID: {user.id}
+                      {user.id}
 
 </p>
 
@@ -2256,22 +2716,22 @@ ID: {user.id}
     <div className="flex flex-col gap-1">
         <span>
             {
-            user.created_at
-            ?
-            new Date(user.created_at)
-            .toLocaleDateString()
-            :
-            "-"
-            }
+                    user.created_at ?
+
+                    new Date(user.created_at).
+                    toLocaleDateString() :
+
+                    "-"
+                    }
         </span>
         <span className="text-xs text-gray-400 dark:text-gray-500">
             {
-            user.created_at
-            ?
-            new Date(user.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            :
-            ""
-            }
+                    user.created_at ?
+
+                    new Date(user.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
+
+                    ""
+                    }
         </span>
     </div>
 </td>
@@ -2293,21 +2753,25 @@ gap-2
 ">
 
 
+
+                  
+
+
 {
 
-user.status === "pending"
+                  user.status === "pending" ?
 
-?
 
-<>
+
+                  <>
 
 <button
 
-onClick={()=>handleApprove(user)}
+                      onClick={() => handleApprove(user)}
 
-disabled={processingAction}
+                      disabled={processingAction}
 
-className="
+                      className="
 p-2
 text-green-600
 hover:bg-green-50
@@ -2315,21 +2779,27 @@ rounded-lg
 disabled:opacity-50
 "
 
-title="Approve"
 
->
 
-<Check size={18}/>
+
+
+
+
+                      title={t("Approve")}>
+
+                      
+
+<Check size={18} />
 
 </button>
 
 <button
 
-onClick={()=>handleReject(user)}
+                      onClick={() => handleReject(user)}
 
-disabled={processingAction}
+                      disabled={processingAction}
 
-className="
+                      className="
 p-2
 text-red-600
 hover:bg-red-50
@@ -2337,27 +2807,33 @@ rounded-lg
 disabled:opacity-50
 "
 
-title="Reject"
 
->
 
-<Ban size={18}/>
+
+
+
+
+                      title={t("Reject")}>
+
+                      
+
+<Ban size={18} />
 
 </button>
 
-</>
+</> :
 
-:
 
-<>
+
+                  <>
 
 <button
 
 
-onClick={()=>openEdit(user)}
+                      onClick={() => openEdit(user)}
 
 
-className="
+                      className="
 p-2
 text-blue-600
 hover:bg-blue-50
@@ -2365,13 +2841,18 @@ rounded-lg
 "
 
 
-title="Edit"
 
 
->
 
 
-<Edit size={18}/>
+
+                      title={t("Edit")}>
+
+
+                      
+
+
+<Edit size={18} />
 
 
 </button>
@@ -2381,16 +2862,16 @@ title="Edit"
 
 {
 
-user.id !== currentUser?.id &&
+                    user.id !== currentUser?.id &&
 
 
-<button
+                    <button
 
 
-onClick={()=>handleDelete(user.id)}
+                      onClick={() => handleDelete(user.id)}
 
 
-className="
+                      className="
 p-2
 text-red-600
 hover:bg-red-50
@@ -2398,23 +2879,28 @@ rounded-lg
 "
 
 
-title="Delete"
 
 
->
 
 
-<Trash2 size={18}/>
+
+                      title={t("Delete")}>
+
+
+                      
+
+
+<Trash2 size={18} />
 
 
 </button>
 
 
-}
+                    }
 
 </>
 
-}
+                  }
 
 
 
@@ -2430,41 +2916,45 @@ title="Delete"
 </tr>
 
 
-))
+            ) :
 
 
-:
 
 
-<tr>
+
+            <tr>
 
 
 <td
 
 
-colSpan="6"
+                colSpan="6"
 
 
-className="
+                className="
 text-center
 py-10
 text-gray-400
-"
+">{t("No users found")}
 
 
->
 
 
-No users found
 
 
-</td>
+
+
+
+
+
+
+              </td>
 
 
 </tr>
 
 
-}
+            }
 
 
 </tbody>
@@ -2479,10 +2969,10 @@ No users found
 <Pagination meta={meta} onPageChange={handlePageChange} />
 
 
-</div>
+</div>);
 
 
-);
+
 
 
 }

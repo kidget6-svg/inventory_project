@@ -1,70 +1,76 @@
-import React, { useState } from 'react';
+import { useLanguage } from "../context/LanguageContext";import React, { useState } from 'react';
 import {
-    CalendarX,
-    Package,
-    Pill,
-    Clock,
-} from 'lucide-react';
+  CalendarX,
+  Package,
+  Pill,
+  Clock } from
+'lucide-react';
 
 export default function ExpiryAlert({
-    expiringSoon,
-    loading = false,
-}) {
+  expiringSoon,
+  loading = false
+}) {const { t } = useLanguage();
 
-    const [activeTab, setActiveTab] = useState('30_days');
+  const [activeTab, setActiveTab] = useState('30_days');
 
-    const tabs = [
-        {
-            key: '30_days',
-            label: '30 Days',
-            color: 'text-sky-600',
-        },
-        {
-            key: '60_days',
-            label: '60 Days',
-            color: 'text-sky-500',
-        },
-        {
-            key: '90_days',
-            label: '90 Days',
-            color: 'text-sky-400',
-        },
-    ];
-
-
-    const activeData = expiringSoon?.[activeTab] || [];
+  const tabs = [
+  {
+    key: '30_days',
+    label: '30 Days',
+    color: 'text-sky-600'
+  },
+  {
+    key: '60_days',
+    label: '60 Days',
+    color: 'text-sky-500'
+  },
+  {
+    key: '90_days',
+    label: '90 Days',
+    color: 'text-sky-400'
+  }];
 
 
-    if (loading) {
-        return (
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
+
+  const activeData = expiringSoon?.[activeTab] || [];
+
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
                 <div className="animate-pulse space-y-4">
 
                     <div className="h-8 bg-gray-200 rounded"></div>
 
-                    {[1,2,3].map(i=>(
-                        <div
-                            key={i}
-                            className="h-20 bg-gray-200 rounded-xl"
-                        ></div>
-                    ))}
+                    {[1, 2, 3].map((i) =>
+          <div
+            key={i}
+            className="h-20 bg-gray-200 rounded-xl">
+          </div>
+          )}
 
                 </div>
-            </div>
-        );
-    }
+            </div>);
+
+  }
 
 
 
-    return (
+  return (
 
-        <div className="
+    <div className="
             bg-white
             rounded-2xl
             shadow-sm
             border border-gray-200
             overflow-hidden
         ">
+
+
+
+
+
+      
 
 
             {/* Header */}
@@ -79,6 +85,14 @@ export default function ExpiryAlert({
                 border-gray-200
             ">
 
+
+
+
+
+
+
+        
+
                 <div className="
                     h-12
                     w-12
@@ -88,10 +102,18 @@ export default function ExpiryAlert({
                     items-center
                     justify-center
                 ">
+
+
+
+
+
+
+
+          
                     <CalendarX
-                        size={24}
-                        className="text-sky-600"
-                    />
+            size={24}
+            className="text-sky-600" />
+          
                 </div>
 
 
@@ -101,17 +123,24 @@ export default function ExpiryAlert({
                         text-lg
                         font-bold
                         text-gray-800
-                    ">
-                        Expiry Management
-                    </h2>
+                    ">{t("Expiry Management")}
+
+
+
+
+
+          </h2>
 
 
                     <p className="
                         text-sm
                         text-gray-500
-                    ">
-                        Medicines approaching expiry date
-                    </p>
+                    ">{t("Medicines approaching expiry date")}
+
+
+
+
+          </p>
 
                 </div>
 
@@ -133,15 +162,21 @@ export default function ExpiryAlert({
                 ">
 
 
-                    {tabs.map(tab=>(
 
-                        <button
 
-                            key={tab.key}
 
-                            onClick={()=>setActiveTab(tab.key)}
+          
 
-                            className={`
+
+                    {tabs.map((tab) =>
+
+          <button
+
+            key={tab.key}
+
+            onClick={() => setActiveTab(tab.key)}
+
+            className={`
                                 flex-1
                                 py-2
                                 text-sm
@@ -150,21 +185,21 @@ export default function ExpiryAlert({
                                 transition-all
 
                                 ${
-                                    activeTab === tab.key
-                                    ?
-                                    `bg-white shadow text-sky-600`
-                                    :
-                                    `text-gray-500 hover:text-gray-700`
-                                }
+            activeTab === tab.key ?
 
-                            `}
-                        >
+            `bg-white shadow text-sky-600` :
+
+            `text-gray-500 hover:text-gray-700`}
+
+                            `
+            }>
+            
 
                             {tab.label}
 
                         </button>
 
-                    ))}
+          )}
 
 
                 </div>
@@ -176,55 +211,68 @@ export default function ExpiryAlert({
                 {/* Medicines */}
 
 
-                {!activeData.length ? (
+                {!activeData.length ?
 
-                    <div className="
+        <div className="
                         text-center
                         py-12
                     ">
 
+
+          
+
                         <Package
-                            size={45}
-                            className="
+            size={45}
+            className="
                                 mx-auto
                                 text-sky-300
                                 mb-3
-                            "
-                        />
+                            " />
+
+
+
+
+          
 
                         <h3 className="
                             font-semibold
                             text-gray-700
-                        ">
-                            No Expiring Medicines
-                        </h3>
+                        ">{t("No Expiring Medicines")}
+
+
+
+
+          </h3>
 
 
                         <p className="
                             text-sm
                             text-gray-500
-                        ">
-                            Inventory is safe for this period
-                        </p>
+                        ">{t("Inventory is safe for this period")}
 
 
-                    </div>
 
 
-                ) : (
+          </p>
 
 
-                    <div className="space-y-4">
+                    </div> :
 
 
-                    {activeData.map(medicine=>(
 
 
-                        <div
 
-                            key={medicine.id}
+        <div className="space-y-4">
 
-                            className="
+
+                    {activeData.map((medicine) =>
+
+
+          <div
+
+            key={medicine.id}
+
+            className="
                                 p-4
                                 rounded-2xl
                                 border
@@ -232,8 +280,16 @@ export default function ExpiryAlert({
                                 hover:border-sky-300
                                 hover:shadow-md
                                 transition-all
-                            "
-                        >
+                            ">
+
+
+
+
+
+
+
+
+            
 
 
 
@@ -245,10 +301,17 @@ export default function ExpiryAlert({
 
 
 
+              
+
+
+
                                 <div className="
                                     flex
                                     gap-3
                                 ">
+
+
+                
 
 
 
@@ -262,10 +325,18 @@ export default function ExpiryAlert({
                                         justify-center
                                     ">
 
+
+
+
+
+
+
+                  
+
                                         <Pill
-                                            size={22}
-                                            className="text-sky-600"
-                                        />
+                    size={22}
+                    className="text-sky-600" />
+                  
 
                                     </div>
 
@@ -277,6 +348,9 @@ export default function ExpiryAlert({
                                             font-bold
                                             text-gray-800
                                         ">
+
+
+                    
                                             {medicine.name}
                                         </h3>
 
@@ -284,9 +358,12 @@ export default function ExpiryAlert({
                                         <p className="
                                             text-sm
                                             text-gray-500
-                                        ">
-                                            Batch:
-                                            {' '}
+                                        ">{t("Batch:")}
+
+
+
+
+                    {' '}
                                             {medicine.batch_number || '---'}
                                         </p>
 
@@ -304,6 +381,8 @@ export default function ExpiryAlert({
                                     text-right
                                 ">
 
+                
+
 
                                     <span className="
                                         inline-flex
@@ -318,7 +397,18 @@ export default function ExpiryAlert({
                                         font-bold
                                     ">
 
-                                        <Clock size={13}/>
+
+
+
+
+
+
+
+
+
+                  
+
+                                        <Clock size={13} />
 
                                         {medicine.expiry_date}
 
@@ -336,13 +426,13 @@ export default function ExpiryAlert({
 
 
 
-                    ))}
+          )}
 
 
                     </div>
 
 
-                )}
+        }
 
 
 
@@ -350,8 +440,8 @@ export default function ExpiryAlert({
 
 
 
-        </div>
+        </div>);
 
-    );
+
 
 }

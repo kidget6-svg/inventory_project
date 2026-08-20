@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import {
     Package,
     Boxes,
@@ -51,6 +52,7 @@ export default function StatCard({
 }) {
     const Icon = iconMap[icon] || Package;
     const colors = colorClasses[color] || colorClasses.blue;
+    const { t } = useLanguage();
 
     return (
         <div
@@ -82,7 +84,7 @@ export default function StatCard({
                             </div>
                         )}
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 font-medium">
-                            {label}
+                            {t(label)}
                         </p>
                     </div>
 

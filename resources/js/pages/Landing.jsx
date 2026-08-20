@@ -1,15 +1,15 @@
-import React from 'react';
+import { useLanguage } from "../context/LanguageContext";import React from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, UserPlus } from 'lucide-react';
 
-export default function Landing() {
-    return (
-        <div className="min-h-screen relative overflow-hidden">
+export default function Landing() {const { t } = useLanguage();
+  return (
+    <div className="min-h-screen relative overflow-hidden">
             {/* Background */}
             <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: "url('/images/landing page.png')" }}
-            />
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url('/images/landing page.png')" }} />
+      
             <div className="absolute inset-0 bg-blue-100/70 backdrop-blur-[2px]" />
 
             <div className="relative z-10 flex flex-col min-h-screen">
@@ -20,37 +20,37 @@ export default function Landing() {
                     {/* Logo + Title */}
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-2xl bg-white shadow-2xl ring-2 ring-sky-400/70 transform hover:scale-105 transition-transform duration-200 flex items-center justify-center">
-                            <img src="/images/p1.png" alt="EthioPharmacy" className="w-14 h-14 object-contain" />
+                            <img src="/images/p1.png" alt={t("EthioPharmacy")} className="w-14 h-14 object-contain" />
                         </div>
 
                         <div>
-                            <h1 className="text-3xl font-bold text-blue-800">
-                               EthioPharmacy
-                            </h1>
+                            <h1 className="text-3xl font-bold text-blue-800">{t("EthioPharmacy")}
 
-                            <p className="text-sm text-gray-600">
-                                Smart Pharmacy Inventory System
-                            </p>
+              </h1>
+
+                            <p className="text-sm text-gray-600">{t("Smart Pharmacy Inventory System")}
+
+              </p>
                         </div>
                     </div>
 
                     {/* Buttons */}
                     <div className="flex items-center gap-3">
                         <Link
-                            to="/login"
-                            className="px-5 py-2.5 bg-white rounded-xl shadow text-blue-700 font-semibold flex items-center gap-2 hover:bg-blue-50"
-                        >
-                            <LogIn size={18} />
-                            Sign In
-                        </Link>
+              to="/login"
+              className="px-5 py-2.5 bg-white rounded-xl shadow text-blue-700 font-semibold flex items-center gap-2 hover:bg-blue-50">
+              
+                            <LogIn size={18} />{t("Sign In")}
+
+            </Link>
 
                         <Link
-                            to="/register"
-                            className="px-5 py-2.5 bg-blue-600 rounded-xl shadow text-white font-semibold flex items-center gap-2 hover:bg-blue-700"
-                        >
-                            <UserPlus size={18} />
-                            Register
-                        </Link>
+              to="/register"
+              className="px-5 py-2.5 bg-blue-600 rounded-xl shadow text-white font-semibold flex items-center gap-2 hover:bg-blue-700">
+              
+                            <UserPlus size={18} />{t("Register")}
+
+            </Link>
                     </div>
                 </nav>
 
@@ -58,12 +58,12 @@ export default function Landing() {
                 <div className="flex-1 flex items-center justify-center px-1">
                     <div className="text-center max-w-3xl">
 
-                        <h2 className="text-2xl lg:text-3xl font-bold text-blue-900 leading-tight">
-                            Manage Your Pharmacy
-                            <br />
-                            <span className="text-blue-600">
-                                with Confidence
-                            </span>
+                        <h2 className="text-2xl lg:text-3xl font-bold text-blue-900 leading-tight">{t("Manage Your Pharmacy")}
+
+              <br />
+                            <span className="text-blue-600">{t("with Confidence")}
+
+              </span>
                         </h2>
 
 
@@ -74,6 +74,6 @@ export default function Landing() {
                 </div>
 
             </div>
-        </div>
-    );
+        </div>);
+
 }

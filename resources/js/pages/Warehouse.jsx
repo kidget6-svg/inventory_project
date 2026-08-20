@@ -1,306 +1,306 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import Pagination from '../components/Pagination';
 import {
-    Warehouse, Package, Boxes, Layers, Truck, 
-    Plus, Search, Filter, Eye, Edit, Trash2, 
-    RefreshCw, Download, Printer, CheckCircle,
-    XCircle, Clock, AlertTriangle, Calendar,
-    Upload, ArrowUpRight, ArrowDownRight,
-    Building2, User, FileText, Barcode,
-    ChevronDown, ChevronRight, Loader2, X
-} from 'lucide-react';
+  Warehouse, Package, Boxes, Layers, Truck,
+  Plus, Search, Filter, Eye, Edit, Trash2,
+  RefreshCw, Download, Printer, CheckCircle,
+  XCircle, Clock, AlertTriangle, Calendar,
+  Upload, ArrowUpRight, ArrowDownRight,
+  Building2, User, FileText, Barcode,
+  ChevronDown, ChevronRight, Loader2, X } from
+'lucide-react';
 
 const tabs = [
-    { id: 'shelves', label: 'Shelves', icon: Layers },
-    { id: 'stock', label: 'Stock Inventory', icon: Boxes },
-    { id: 'receiving', label: 'Receiving History', icon: Upload },
-    { id: 'transfers', label: 'Transfer History', icon: Truck },
-];
+{ id: 'shelves', label: 'Shelves', icon: Layers },
+{ id: 'stock', label: 'Stock Inventory', icon: Boxes },
+{ id: 'receiving', label: 'Receiving History', icon: Upload },
+{ id: 'transfers', label: 'Transfer History', icon: Truck }];
 
-export default function WarehousePage() {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState('shelves');
-    const [stats, setStats] = useState(null);
-    const [shelves, setShelves] = useState([]);
-    const [stock, setStock] = useState([]);
-    const [receivingHistory, setReceivingHistory] = useState([]);
-    const [transferRequests, setTransferRequests] = useState([]);
-    const [purchaseOrders, setPurchaseOrders] = useState([]);
-    const [showReceivingModal, setShowReceivingModal] = useState(false);
-    const [showTransferModal, setShowTransferModal] = useState(false);
-    const [showShelfModal, setShowShelfModal] = useState(false);
-    const [shelfDetail, setShelfDetail] = useState(null);
-    const [shelfLoading, setShelfLoading] = useState(false);
-    const [showCompleteModal, setShowCompleteModal] = useState(false);
-    const [completingTransfer, setCompletingTransfer] = useState(null);
-    const [completeShelfId, setCompleteShelfId] = useState('');
-    const [destShelves, setDestShelves] = useState([]);
-    const [completeLoading, setCompleteLoading] = useState(false);
-    const [scanning, setScanning] = useState(false);
-    const videoRef = useRef(null);
-    const [selectedPO, setSelectedPO] = useState(null);
-    const [batchData, setBatchData] = useState({
-        batch_number: '',
-        barcode: '',
-        manufacturer: '',
-        expiry_date: '',
-        quantity: '',
-        shelf_id: '',
+
+export default function WarehousePage() {const { t } = useLanguage();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('shelves');
+  const [stats, setStats] = useState(null);
+  const [shelves, setShelves] = useState([]);
+  const [stock, setStock] = useState([]);
+  const [receivingHistory, setReceivingHistory] = useState([]);
+  const [transferRequests, setTransferRequests] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [showReceivingModal, setShowReceivingModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showShelfModal, setShowShelfModal] = useState(false);
+  const [shelfDetail, setShelfDetail] = useState(null);
+  const [shelfLoading, setShelfLoading] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [completingTransfer, setCompletingTransfer] = useState(null);
+  const [completeShelfId, setCompleteShelfId] = useState('');
+  const [destShelves, setDestShelves] = useState([]);
+  const [completeLoading, setCompleteLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const videoRef = useRef(null);
+  const [selectedPO, setSelectedPO] = useState(null);
+  const [batchData, setBatchData] = useState({
+    batch_number: '',
+    barcode: '',
+    manufacturer: '',
+    expiry_date: '',
+    quantity: '',
+    shelf_id: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [filters, setFilters] = useState({
+    search: '',
+    supplier_id: '',
+    date_from: '',
+    date_to: ''
+  });
+  const [branches, setBranches] = useState([]);
+  const [medicines, setMedicines] = useState([]);
+  const [transferForm, setTransferForm] = useState({
+    medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
+    expected_delivery: '', notes: ''
+  });
+
+  // Helper to safely extract array from API response
+  const asArray = (res) => {
+    const d = res.data;
+    if (Array.isArray(d)) return d;
+    if (d && Array.isArray(d.data)) return d.data;
+    return [];
+  };
+
+  // Load all warehouse data
+  const loadWarehouseData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [statsRes, shelvesRes, stockRes, receivingRes, transfersRes, poRes] = await Promise.all([
+      api.get('/warehouse/stats'),
+      api.get('/warehouse/shelves'),
+      api.get('/warehouse/stock', { params: filters }),
+      api.get('/warehouse/receiving-history', { params: filters }),
+      api.get('/warehouse/transfer-requests'),
+      api.get('/purchase-orders', { params: { status: ['approved', 'sent'] } })]
+      );
+
+      setStats(statsRes.data);
+      setShelves(asArray(shelvesRes));
+      setStock(asArray(stockRes));
+      setReceivingHistory(asArray(receivingRes));
+      setTransferRequests(asArray(transfersRes));
+      setPurchaseOrders(asArray(poRes));
+    } catch (err) {
+      setError(t("Failed to load warehouse data"));
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    loadWarehouseData();
+  }, [loadWarehouseData]);
+
+  // Handle receiving stock
+  const handleReceiveStock = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post('/warehouse/receive', {
+        purchase_order_id: selectedPO.id,
+        batch_number: batchData.batch_number,
+        barcode: batchData.barcode || undefined,
+        manufacturer: batchData.manufacturer || undefined,
+        expiry_date: batchData.expiry_date,
+        quantity: batchData.quantity,
+        shelf_id: batchData.shelf_id || undefined
+      });
+      window.showToast(t("Stock received successfully"), 'success');
+      setShowReceivingModal(false);
+      setSelectedPO(null);
+      setBatchData({ batch_number: '', barcode: '', manufacturer: '', expiry_date: '', quantity: '', shelf_id: '' });
+      loadWarehouseData();
+    } catch (err) {
+      const errs = err.response?.data?.errors;
+      const msg = err.response?.data?.message || (
+      errs ? Object.values(errs).flat().join(' ') : null) ||
+      'Failed to receive stock';
+      window.showToast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Open shelf detail modal showing all items on a shelf
+  const openShelfDetail = async (shelf) => {
+    setShowShelfModal(true);
+    setShelfLoading(true);
+    try {
+      const res = await api.get(`/warehouse/shelves/${shelf.id}/items`);
+      setShelfDetail(res.data);
+    } catch (err) {
+      window.showToast(t("Failed to load shelf items"), 'error');
+    } finally {
+      setShelfLoading(false);
+    }
+  };
+
+  const closeShelfDetail = () => {
+    setShowShelfModal(false);
+    setShelfDetail(null);
+  };
+
+  // Barcode scan for receiving stock
+  const startBarcodeScan = async () => {
+    if (!('BarcodeDetector' in window)) {
+      window.showToast(t("Barcode scanning is not supported in this browser."), 'error');
+      return;
+    }
+    setScanning(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      scanLoop();
+    } catch (err) {
+      window.showToast('Could not access camera: ' + err.message, 'error');
+      setScanning(false);
+    }
+  };
+
+  const scanLoop = useCallback(async () => {
+    if (!scanning) return;
+    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
+    try {
+      if (videoRef.current) {
+        const barcodes = await detector.detect(videoRef.current);
+        if (barcodes.length > 0) {
+          setBatchData((prev) => ({ ...prev, barcode: barcodes[0].rawValue }));
+          stopBarcodeScan();
+          window.showToast('Barcode scanned: ' + barcodes[0].rawValue, 'success');
+          return;
+        }
+      }
+      requestAnimationFrame(scanLoop);
+    } catch (err) {
+      requestAnimationFrame(scanLoop);
+    }
+  }, [scanning]);
+
+  const stopBarcodeScan = () => {
+    setScanning(false);
+    if (videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => stopBarcodeScan();
+  }, []);
+
+  // Handle transfer approval
+  const handleApproveTransfer = async (transferId) => {
+    if (!confirm(t("Approve this transfer request?"))) return;
+    try {
+      await api.post(`/warehouse/transfer/${transferId}/approve`);
+      window.showToast(t("Transfer approved successfully"), 'success');
+      loadWarehouseData();
+    } catch (err) {
+      window.showToast(t("Failed to approve transfer"), 'error');
+    }
+  };
+
+  // Handle transfer completion (requires a destination branch shelf)
+  const openCompleteModal = async (transfer) => {
+    setCompletingTransfer(transfer);
+    setCompleteShelfId('');
+    setCompleteLoading(false);
+    try {
+      const res = await api.get('/shelves', {
+        params: {
+          location_type: 'branch',
+          branch_id: transfer.to_branch_id,
+          product_type: 'medicine'
+        }
+      });
+      setDestShelves(asArray(res));
+    } catch (err) {
+      setDestShelves([]);
+    }
+    setShowCompleteModal(true);
+  };
+
+  const confirmCompleteTransfer = async () => {
+    if (!completingTransfer || !completeShelfId) {
+      window.showToast(t("Please select a destination shelf"), 'error');
+      return;
+    }
+    setCompleteLoading(true);
+    try {
+      await api.post(`/warehouse/transfer/${completingTransfer.id}/complete`, {
+        shelf_id: completeShelfId
+      });
+      window.showToast(t("Transfer completed successfully"), 'success');
+      setShowCompleteModal(false);
+      setCompletingTransfer(null);
+      loadWarehouseData();
+    } catch (err) {
+      const errs = err.response?.data?.errors;
+      const msg = err.response?.data?.message || (
+      errs ? Object.values(errs).flat().join(' ') : null) ||
+      'Failed to complete transfer';
+      window.showToast(msg, 'error');
+    } finally {
+      setCompleteLoading(false);
+    }
+  };
+
+  // Open new transfer request modal (loads branches + medicines)
+  const openTransferModal = async () => {
+    setTransferForm({
+      medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
+      expected_delivery: '', notes: ''
     });
-    const [submitting, setSubmitting] = useState(false);
-    const [filters, setFilters] = useState({
-        search: '',
-        supplier_id: '',
-        date_from: '',
-        date_to: '',
-    });
-    const [branches, setBranches] = useState([]);
-    const [medicines, setMedicines] = useState([]);
-    const [transferForm, setTransferForm] = useState({
-        medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
-        expected_delivery: '', notes: '',
-    });
+    try {
+      const [branchesRes, medsRes] = await Promise.all([
+      api.get('/branches'),
+      api.get('/medicines', { params: { per_page: 'all' } })]
+      );
+      setBranches(asArray(branchesRes));
+      setMedicines(asArray(medsRes));
+    } catch (err) {
+      console.error(err);
+    }
+    setShowTransferModal(true);
+  };
 
-    // Helper to safely extract array from API response
-    const asArray = (res) => {
-        const d = res.data;
-        if (Array.isArray(d)) return d;
-        if (d && Array.isArray(d.data)) return d.data;
-        return [];
-    };
+  // Create a new transfer request
+  const handleCreateTransfer = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post('/warehouse/transfers', transferForm);
+      window.showToast(t("Transfer request created successfully"), 'success');
+      setShowTransferModal(false);
+      loadWarehouseData();
+    } catch (err) {
+      const msgs = err.response?.data?.errors;
+      window.showToast(msgs ? Object.values(msgs).flat().join(' ') : 'Failed to create transfer request', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    // Load all warehouse data
-    const loadWarehouseData = useCallback(async () => {
-        setLoading(true);
-        setError('');
-        try {
-            const [statsRes, shelvesRes, stockRes, receivingRes, transfersRes, poRes] = await Promise.all([
-                api.get('/warehouse/stats'),
-                api.get('/warehouse/shelves'),
-                api.get('/warehouse/stock', { params: filters }),
-                api.get('/warehouse/receiving-history', { params: filters }),
-                api.get('/warehouse/transfer-requests'),
-                api.get('/purchase-orders', { params: { status: ['approved', 'sent'] } }),
-            ]);
-
-            setStats(statsRes.data);
-            setShelves(asArray(shelvesRes));
-            setStock(asArray(stockRes));
-            setReceivingHistory(asArray(receivingRes));
-            setTransferRequests(asArray(transfersRes));
-            setPurchaseOrders(asArray(poRes));
-        } catch (err) {
-            setError('Failed to load warehouse data');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    }, [filters]);
-
-    useEffect(() => {
-        loadWarehouseData();
-    }, [loadWarehouseData]);
-
-    // Handle receiving stock
-    const handleReceiveStock = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-        try {
-            await api.post('/warehouse/receive', {
-                purchase_order_id: selectedPO.id,
-                batch_number: batchData.batch_number,
-                barcode: batchData.barcode || undefined,
-                manufacturer: batchData.manufacturer || undefined,
-                expiry_date: batchData.expiry_date,
-                quantity: batchData.quantity,
-                shelf_id: batchData.shelf_id || undefined,
-            });
-            window.showToast('Stock received successfully', 'success');
-            setShowReceivingModal(false);
-            setSelectedPO(null);
-            setBatchData({ batch_number: '', barcode: '', manufacturer: '', expiry_date: '', quantity: '', shelf_id: '' });
-            loadWarehouseData();
-        } catch (err) {
-            const errs = err.response?.data?.errors;
-            const msg = err.response?.data?.message
-                || (errs ? Object.values(errs).flat().join(' ') : null)
-                || 'Failed to receive stock';
-            window.showToast(msg, 'error');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // Open shelf detail modal showing all items on a shelf
-    const openShelfDetail = async (shelf) => {
-        setShowShelfModal(true);
-        setShelfLoading(true);
-        try {
-            const res = await api.get(`/warehouse/shelves/${shelf.id}/items`);
-            setShelfDetail(res.data);
-        } catch (err) {
-            window.showToast('Failed to load shelf items', 'error');
-        } finally {
-            setShelfLoading(false);
-        }
-    };
-
-    const closeShelfDetail = () => {
-        setShowShelfModal(false);
-        setShelfDetail(null);
-    };
-
-    // Barcode scan for receiving stock
-    const startBarcodeScan = async () => {
-        if (!('BarcodeDetector' in window)) {
-            window.showToast('Barcode scanning is not supported in this browser.', 'error');
-            return;
-        }
-        setScanning(true);
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
-            }
-            scanLoop();
-        } catch (err) {
-            window.showToast('Could not access camera: ' + err.message, 'error');
-            setScanning(false);
-        }
-    };
-
-    const scanLoop = useCallback(async () => {
-        if (!scanning) return;
-        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
-        try {
-            if (videoRef.current) {
-                const barcodes = await detector.detect(videoRef.current);
-                if (barcodes.length > 0) {
-                    setBatchData(prev => ({ ...prev, barcode: barcodes[0].rawValue }));
-                    stopBarcodeScan();
-                    window.showToast('Barcode scanned: ' + barcodes[0].rawValue, 'success');
-                    return;
-                }
-            }
-            requestAnimationFrame(scanLoop);
-        } catch (err) {
-            requestAnimationFrame(scanLoop);
-        }
-    }, [scanning]);
-
-    const stopBarcodeScan = () => {
-        setScanning(false);
-        if (videoRef.current && videoRef.current.srcObject) {
-            videoRef.current.srcObject.getTracks().forEach(t => t.stop());
-            videoRef.current.srcObject = null;
-        }
-    };
-
-    useEffect(() => {
-        return () => stopBarcodeScan();
-    }, []);
-
-    // Handle transfer approval
-    const handleApproveTransfer = async (transferId) => {
-        if (!confirm('Approve this transfer request?')) return;
-        try {
-            await api.post(`/warehouse/transfer/${transferId}/approve`);
-            window.showToast('Transfer approved successfully', 'success');
-            loadWarehouseData();
-        } catch (err) {
-            window.showToast('Failed to approve transfer', 'error');
-        }
-    };
-
-    // Handle transfer completion (requires a destination branch shelf)
-    const openCompleteModal = async (transfer) => {
-        setCompletingTransfer(transfer);
-        setCompleteShelfId('');
-        setCompleteLoading(false);
-        try {
-            const res = await api.get('/shelves', {
-                params: {
-                    location_type: 'branch',
-                    branch_id: transfer.to_branch_id,
-                    product_type: 'medicine',
-                },
-            });
-            setDestShelves(asArray(res));
-        } catch (err) {
-            setDestShelves([]);
-        }
-        setShowCompleteModal(true);
-    };
-
-    const confirmCompleteTransfer = async () => {
-        if (!completingTransfer || !completeShelfId) {
-            window.showToast('Please select a destination shelf', 'error');
-            return;
-        }
-        setCompleteLoading(true);
-        try {
-            await api.post(`/warehouse/transfer/${completingTransfer.id}/complete`, {
-                shelf_id: completeShelfId,
-            });
-            window.showToast('Transfer completed successfully', 'success');
-            setShowCompleteModal(false);
-            setCompletingTransfer(null);
-            loadWarehouseData();
-        } catch (err) {
-            const errs = err.response?.data?.errors;
-            const msg = err.response?.data?.message
-                || (errs ? Object.values(errs).flat().join(' ') : null)
-                || 'Failed to complete transfer';
-            window.showToast(msg, 'error');
-        } finally {
-            setCompleteLoading(false);
-        }
-    };
-
-    // Open new transfer request modal (loads branches + medicines)
-    const openTransferModal = async () => {
-        setTransferForm({
-            medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
-            expected_delivery: '', notes: '',
-        });
-        try {
-            const [branchesRes, medsRes] = await Promise.all([
-                api.get('/branches'),
-                api.get('/medicines', { params: { per_page: 'all' } }),
-            ]);
-            setBranches(asArray(branchesRes));
-            setMedicines(asArray(medsRes));
-        } catch (err) {
-            console.error(err);
-        }
-        setShowTransferModal(true);
-    };
-
-    // Create a new transfer request
-    const handleCreateTransfer = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-        try {
-            await api.post('/warehouse/transfers', transferForm);
-            window.showToast('Transfer request created successfully', 'success');
-            setShowTransferModal(false);
-            loadWarehouseData();
-        } catch (err) {
-            const msgs = err.response?.data?.errors;
-            window.showToast(msgs ? Object.values(msgs).flat().join(' ') : 'Failed to create transfer request', 'error');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // Render summary cards
-    const renderStats = () => (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+  // Render summary cards
+  const renderStats = () =>
+  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
             <div className="card p-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-sky-100 rounded-lg">
@@ -308,7 +308,7 @@ export default function WarehousePage() {
                     </div>
                     <div>
                         <p className="text-2xl font-bold text-gray-800">{stats?.total_medicines || 0}</p>
-                        <p className="text-xs text-gray-500">Total Medicines</p>
+                        <p className="text-xs text-gray-500">{t("Total Medicines")}</p>
                     </div>
                 </div>
             </div>
@@ -319,7 +319,7 @@ export default function WarehousePage() {
                     </div>
                     <div>
                         <p className="text-2xl font-bold text-gray-800">{stats?.total_stock || 0}</p>
-                        <p className="text-xs text-gray-500">Total Stock Units</p>
+                        <p className="text-xs text-gray-500">{t("Total Stock Units")}</p>
                     </div>
                 </div>
             </div>
@@ -330,7 +330,7 @@ export default function WarehousePage() {
                     </div>
                     <div>
                         <p className="text-2xl font-bold text-gray-800">{stats?.total_shelves || 0}</p>
-                        <p className="text-xs text-gray-500">Total Shelves</p>
+                        <p className="text-xs text-gray-500">{t("Total Shelves")}</p>
                     </div>
                 </div>
             </div>
@@ -341,7 +341,7 @@ export default function WarehousePage() {
                     </div>
                     <div>
                         <p className="text-2xl font-bold text-yellow-600">{stats?.low_stock || 0}</p>
-                        <p className="text-xs text-gray-500">Low Stock</p>
+                        <p className="text-xs text-gray-500">{t("Low Stock")}</p>
                     </div>
                 </div>
             </div>
@@ -352,88 +352,88 @@ export default function WarehousePage() {
                     </div>
                     <div>
                         <p className="text-2xl font-bold text-orange-600">{stats?.pending_requests || 0}</p>
-                        <p className="text-xs text-gray-500">Pending Requests</p>
+                        <p className="text-xs text-gray-500">{t("Pending Requests")}</p>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        </div>;
 
-    // Render receiving section
-    const renderReceivingSection = () => (
-        <div className="card p-5 mb-6 border-2 border-dashed border-sky-200 bg-sky-50/30">
+
+  // Render receiving section
+  const renderReceivingSection = () =>
+  <div className="card p-5 mb-6 border-2 border-dashed border-sky-200 bg-sky-50/30">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <Upload size={16} className="text-sky-600" />
-                Receive Shipment
-            </h3>
+                <Upload size={16} className="text-sky-600" />{t("Receive Shipment")}
+
+    </h3>
             <div className="flex flex-wrap gap-3">
                 <select
-                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                    value={selectedPO?.id || ''}
-                    onChange={(e) => {
-                        const po = purchaseOrders.find(p => p.id === parseInt(e.target.value));
-                        setSelectedPO(po);
-                    }}
-                >
-                    <option value="">Select Purchase Order</option>
-                    {purchaseOrders.map(po => (
-                        <option key={po.id} value={po.id}>
-                            PO-{po.id} - {po.supplier?.name || 'Unknown'}
+        className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+        value={selectedPO?.id || ''}
+        onChange={(e) => {
+          const po = purchaseOrders.find((p) => p.id === parseInt(e.target.value));
+          setSelectedPO(po);
+        }}>
+        
+                    <option value="">{t("Select Purchase Order")}</option>
+                    {purchaseOrders.map((po) =>
+        <option key={po.id} value={po.id}>{t("PO-")}
+          {po.id} - {po.supplier?.name || 'Unknown'}
                         </option>
-                    ))}
+        )}
                 </select>
                 <button
-                    onClick={() => setShowReceivingModal(true)}
-                    disabled={!selectedPO}
-                    className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-semibold hover:bg-sky-700 disabled:opacity-50"
-                >
-                    Receive Stock
-                </button>
-            </div>
-        </div>
-    );
+        onClick={() => setShowReceivingModal(true)}
+        disabled={!selectedPO}
+        className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-semibold hover:bg-sky-700 disabled:opacity-50">{t("Receive Stock")}
 
-    // Render new transfer request section
-    const renderTransferSection = () => (
-        <div className="card p-5 mb-6 border-2 border-dashed border-purple-200 bg-purple-50/30">
+
+      </button>
+            </div>
+        </div>;
+
+
+  // Render new transfer request section
+  const renderTransferSection = () =>
+  <div className="card p-5 mb-6 border-2 border-dashed border-purple-200 bg-purple-50/30">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <Truck size={16} className="text-purple-600" />
-                New Transfer Request
-            </h3>
-            <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm text-gray-500 flex-1 min-w-[200px]">
-                    Request stock to be transferred to a branch. Track approval and delivery from the Transfer History tab.
-                </p>
-                <button
-                    onClick={openTransferModal}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 flex items-center gap-2"
-                >
-                    <Plus size={16} /> Create Transfer Request
-                </button>
-            </div>
-        </div>
-    );
+                <Truck size={16} className="text-purple-600" />{t("New Transfer Request")}
 
-    // Render shelves tab (Warehouse shelves ONLY)
-    const renderShelves = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {shelves.map(shelf => {
-                const capacity = shelf.capacity || 100;
-                const current = shelf.current_quantity ?? shelf.current_items ?? 0;
-                const utilization = shelf.utilization ?? Math.min(100, Math.round((current / capacity) * 100));
-                const remaining = shelf.remaining_capacity ?? Math.max(0, capacity - current);
-                const color = utilization >= 90 ? 'bg-red-500' :
-                             utilization >= 70 ? 'bg-amber-500' :
-                             utilization >= 50 ? 'bg-yellow-500' : 'bg-sky-500';
-                const statusLabel = shelf.occupancy_status_label
-                    || (utilization >= 100 ? 'Full' : utilization >= 90 ? 'Almost Full' : utilization >= 70 ? 'Filling' : utilization >= 1 ? 'Available' : 'Empty');
-                const productLabel = shelf.product_type === 'retail_otc' ? 'Retail & OTC' : 'Medicine';
-                return (
-                    <div
-                        key={shelf.id}
-                        onClick={() => openShelfDetail(shelf)}
-                        className="card p-5 hover:shadow-md transition-shadow cursor-pointer"
-                    >
+    </h3>
+            <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-gray-500 flex-1 min-w-[200px]">{t("Request stock to be transferred to a branch. Track approval and delivery from the Transfer History tab.")}
+
+      </p>
+                <button
+        onClick={openTransferModal}
+        className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 flex items-center gap-2">
+        
+                    <Plus size={16} />{t("Create Transfer Request")}
+      </button>
+            </div>
+        </div>;
+
+
+  // Render shelves tab (Warehouse shelves ONLY)
+  const renderShelves = () =>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {shelves.map((shelf) => {const { t } = useLanguage();
+      const capacity = shelf.capacity || 100;
+      const current = shelf.current_quantity ?? shelf.current_items ?? 0;
+      const utilization = shelf.utilization ?? Math.min(100, Math.round(current / capacity * 100));
+      const remaining = shelf.remaining_capacity ?? Math.max(0, capacity - current);
+      const color = utilization >= 90 ? 'bg-red-500' :
+      utilization >= 70 ? 'bg-amber-500' :
+      utilization >= 50 ? 'bg-yellow-500' : 'bg-sky-500';
+      const statusLabel = shelf.occupancy_status_label || (
+      utilization >= 100 ? 'Full' : utilization >= 90 ? 'Almost Full' : utilization >= 70 ? 'Filling' : utilization >= 1 ? 'Available' : 'Empty');
+      const productLabel = shelf.product_type === 'retail_otc' ? 'Retail & OTC' : 'Medicine';
+      return (
+        <div
+          key={shelf.id}
+          onClick={() => openShelfDetail(shelf)}
+          className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
+          
                         <div className="flex items-center gap-3 mb-3">
                             <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
                                 <Layers className="w-5 h-5 text-sky-600" />
@@ -443,15 +443,15 @@ export default function WarehousePage() {
                                 <p className="text-xs text-gray-500 truncate">{shelf.code || shelf.shelf_location}</p>
                             </div>
                             <span className={`ml-auto px-2 py-1 rounded-full text-xs font-semibold ${
-                                utilization >= 90 ? 'bg-red-100 text-red-700' :
-                                utilization >= 70 ? 'bg-amber-100 text-amber-700' :
-                                'bg-green-100 text-green-700'
-                            }`}>
-                                {utilization}% Used
-                            </span>
+            utilization >= 90 ? 'bg-red-100 text-red-700' :
+            utilization >= 70 ? 'bg-amber-100 text-amber-700' :
+            'bg-green-100 text-green-700'}`
+            }>
+                                {utilization}{t("% Used")}
+            </span>
                         </div>
                         <div className="flex flex-wrap gap-2 mb-3 text-[11px]">
-                            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Central Warehouse</span>
+                            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{t("Central Warehouse")}</span>
                             <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">{productLabel}</span>
                         </div>
                         <div>
@@ -460,54 +460,54 @@ export default function WarehousePage() {
                                     {current} / {capacity} items
                                 </span>
                                 <span className={`text-xs font-bold ${
-                                    utilization >= 90 ? 'text-red-600' :
-                                    utilization >= 70 ? 'text-amber-600' :
-                                    utilization >= 50 ? 'text-yellow-600' : 'text-sky-600'
-                                }`}>
+              utilization >= 90 ? 'text-red-600' :
+              utilization >= 70 ? 'text-amber-600' :
+              utilization >= 50 ? 'text-yellow-600' : 'text-sky-600'}`
+              }>
                                     {utilization}%
                                 </span>
                             </div>
                             <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                                 <div
-                                    className={`h-full rounded-full transition-all duration-500 ${color}`}
-                                    style={{ width: `${utilization}%` }}
-                                />
+                className={`h-full rounded-full transition-all duration-500 ${color}`}
+                style={{ width: `${utilization}%` }} />
+              
                             </div>
                             <p className="text-[11px] text-gray-500 mt-1.5">
-                                {remaining} Available · Status: {statusLabel}
+                                {remaining}{t("Available \xB7 Status:")}{statusLabel}
                             </p>
                         </div>
                         <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-xs">
                             <span className="text-gray-500 capitalize">{shelf.status || 'active'}</span>
-                            <button className="text-sky-600 hover:underline">View Items ({current})</button>
+                            <button className="text-sky-600 hover:underline">{t("View Items (")}{current})</button>
                         </div>
-                    </div>
-                );
-            })}
-            {shelves.length === 0 && (
-                <div className="col-span-full text-center py-8 text-gray-400">No warehouse shelves found</div>
-            )}
-        </div>
-    );
+                    </div>);
 
-    // Render stock inventory
-    const renderStock = () => (
-        <div className="card overflow-hidden">
+    })}
+            {shelves.length === 0 &&
+    <div className="col-span-full text-center py-8 text-gray-400">{t("No warehouse shelves found")}</div>
+    }
+        </div>;
+
+
+  // Render stock inventory
+  const renderStock = () =>
+  <div className="card overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Medicine</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Batch</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Shelf</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">Qty</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Expiry</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Medicine")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Batch")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Shelf")}</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">{t("Qty")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Expiry")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Status")}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {stock.map(item => (
-                            <tr key={item.id} className="hover:bg-gray-50/30">
+                        {stock.map((item) =>
+          <tr key={item.id} className="hover:bg-gray-50/30">
                                 <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.name}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{item.batch_number || '---'}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{item.shelf?.name || '---'}</td>
@@ -517,66 +517,66 @@ export default function WarehousePage() {
                                 </td>
                                 <td className="px-4 py-3">
                                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                        item.stock_status === 'in_stock' ? 'bg-green-100 text-green-700' :
-                                        item.stock_status === 'low_stock' ? 'bg-yellow-100 text-yellow-700' :
-                                        'bg-red-100 text-red-700'
-                                    }`}>
+              item.stock_status === 'in_stock' ? 'bg-green-100 text-green-700' :
+              item.stock_status === 'low_stock' ? 'bg-yellow-100 text-yellow-700' :
+              'bg-red-100 text-red-700'}`
+              }>
                                         {item.stock_status?.replace('_', ' ') || 'Active'}
                                     </span>
                                 </td>
                             </tr>
-                        ))}
+          )}
                     </tbody>
                 </table>
             </div>
-        </div>
-    );
+        </div>;
 
-    // Render receiving history
-    const renderReceivingHistory = () => (
-        <div className="card overflow-hidden">
+
+  // Render receiving history
+  const renderReceivingHistory = () =>
+  <div className="card overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Date</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">PO Number</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Supplier</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Medicine</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">Quantity</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Batch</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Date")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("PO Number")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Supplier")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Medicine")}</th>
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600">{t("Quantity")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Batch")}</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">{t("Status")}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {receivingHistory.map(record => (
-                            <tr key={record.id} className="hover:bg-gray-50/30">
+                        {receivingHistory.map((record) =>
+          <tr key={record.id} className="hover:bg-gray-50/30">
                                 <td className="px-4 py-3 text-sm text-gray-500">
                                     {new Date(record.created_at).toLocaleDateString()}
                                 </td>
-                                <td className="px-4 py-3 text-sm font-medium">PO-{record.purchase_order_id}</td>
+                                <td className="px-4 py-3 text-sm font-medium">{t("PO-")}{record.purchase_order_id}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{record.supplier?.name || '---'}</td>
                                 <td className="px-4 py-3 text-sm text-gray-800">{record.medicine?.name || '---'}</td>
                                 <td className="px-4 py-3 text-center text-sm font-semibold">{record.quantity}</td>
                                 <td className="px-4 py-3 text-sm text-gray-500">{record.batch_number || '---'}</td>
                                 <td className="px-4 py-3">
-                                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                                        Completed
-                                    </span>
+                                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">{t("Completed")}
+
+              </span>
                                 </td>
                             </tr>
-                        ))}
+          )}
                     </tbody>
                 </table>
             </div>
-        </div>
-    );
+        </div>;
 
-    // Render transfer requests
-    const renderTransfers = () => (
-        <div className="space-y-4">
-            {transferRequests.map(request => (
-                <div key={request.id} className="card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+  // Render transfer requests
+  const renderTransfers = () =>
+  <div className="space-y-4">
+            {transferRequests.map((request) =>
+    <div key={request.id} className="card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
                             <Truck className="w-6 h-6 text-purple-600" />
@@ -587,96 +587,96 @@ export default function WarehousePage() {
                             </h4>
                             <div className="flex flex-wrap gap-3 text-xs text-gray-500">
                                 <span className="flex items-center gap-1">
-                                    <Building2 size={12} /> From: {request.from_branch?.name || 'Warehouse'}
+                                    <Building2 size={12} />{t("From:")}{request.from_branch?.name || 'Warehouse'}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                    <Building2 size={12} /> To: {request.to_branch?.name || 'Branch'}
+                                    <Building2 size={12} />{t("To:")}{request.to_branch?.name || 'Branch'}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                    <Package size={12} /> Qty: {request.quantity}
+                                    <Package size={12} />{t("Qty:")}{request.quantity}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                    <User size={12} /> By: {request.requested_by?.name || 'Unknown'}
+                                    <User size={12} />{t("By:")}{request.requested_by?.name || 'Unknown'}
                                 </span>
                             </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            request.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                            request.status === 'approved' ? 'bg-blue-100 text-blue-700' :
-                            request.status === 'in_transit' ? 'bg-purple-100 text-purple-700' :
-                            'bg-green-100 text-green-700'
-                        }`}>
+        request.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+        request.status === 'approved' ? 'bg-blue-100 text-blue-700' :
+        request.status === 'in_transit' ? 'bg-purple-100 text-purple-700' :
+        'bg-green-100 text-green-700'}`
+        }>
                             {request.status?.replace('_', ' ') || 'Pending'}
                         </span>
-                        {request.status === 'pending' && (
-                            <button
-                                onClick={() => handleApproveTransfer(request.id)}
-                                className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs font-semibold hover:bg-sky-700"
-                            >
-                                Approve
-                            </button>
-                        )}
-                        {request.status === 'in_transit' && (
-                            <button
-                                onClick={() => openCompleteModal(request)}
-                                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700"
-                            >
-                                Complete
-                            </button>
-                        )}
+                        {request.status === 'pending' &&
+        <button
+          onClick={() => handleApproveTransfer(request.id)}
+          className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs font-semibold hover:bg-sky-700">{t("Approve")}
+
+
+        </button>
+        }
+                        {request.status === 'in_transit' &&
+        <button
+          onClick={() => openCompleteModal(request)}
+          className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700">{t("Complete")}
+
+
+        </button>
+        }
                     </div>
                 </div>
-            ))}
-            {transferRequests.length === 0 && (
-                <div className="text-center py-8 text-gray-400">
+    )}
+            {transferRequests.length === 0 &&
+    <div className="text-center py-8 text-gray-400">
                     <Truck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No transfer history yet</p>
+                    <p>{t("No transfer history yet")}</p>
                 </div>
-            )}
-        </div>
-    );
+    }
+        </div>;
 
-    // Render tab content
-    const renderTabContent = () => {
-        switch (activeTab) {
-            case 'shelves': return renderShelves();
-            case 'stock': return renderStock();
-            case 'receiving': return renderReceivingHistory();
-            case 'transfers': return renderTransfers();
-            default: return null;
-        }
-    };
 
-    if (loading) return <LoadingSpinner text="Loading warehouse data..." />;
+  // Render tab content
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'shelves':return renderShelves();
+      case 'stock':return renderStock();
+      case 'receiving':return renderReceivingHistory();
+      case 'transfers':return renderTransfers();
+      default:return null;
+    }
+  };
 
-    return (
-        <div className="space-y-6">
+  if (loading) return <LoadingSpinner text={t("Loading warehouse data...")} />;
+
+  return (
+    <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <Warehouse size={24} className="text-sky-600" />
-                        Warehouse
-                    </h2>
-                    <p className="text-sm text-gray-500 mt-1">Manage central inventory, receiving, and transfers</p>
+                        <Warehouse size={24} className="text-sky-600" />{t("Warehouse")}
+
+          </h2>
+                    <p className="text-sm text-gray-500 mt-1">{t("Manage central inventory, receiving, and transfers")}</p>
                 </div>
                 <div className="flex gap-2">
                     <button onClick={loadWarehouseData} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50">
                         <RefreshCw size={16} />
                     </button>
                     <button className="px-4 py-2 bg-sky-600 text-white rounded-xl text-sm font-semibold hover:bg-sky-700 flex items-center gap-2">
-                        <Download size={16} /> Export Report
-                    </button>
+                        <Download size={16} />{t("Export Report")}
+          </button>
                 </div>
             </div>
 
-            {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm">
+            {error &&
+      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm">
                     {error}
                 </div>
-            )}
+      }
 
             {/* Stats */}
             {stats && renderStats()}
@@ -690,24 +690,24 @@ export default function WarehousePage() {
             {/* Tabs */}
             <div className="border-b border-gray-200">
                 <nav className="flex overflow-x-auto gap-1">
-                    {tabs.map(tab => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-all ${
-                                    isActive
-                                        ? 'bg-sky-500 text-white'
-                                        : 'text-gray-600 hover:bg-gray-100'
-                                }`}
-                            >
+                    {tabs.map((tab) => {const { t } = useLanguage();
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-all ${
+                isActive ?
+                'bg-sky-500 text-white' :
+                'text-gray-600 hover:bg-gray-100'}`
+                }>
+                
                                 <Icon size={16} />
                                 {tab.label}
-                            </button>
-                        );
-                    })}
+                            </button>);
+
+          })}
                 </nav>
             </div>
 
@@ -716,38 +716,38 @@ export default function WarehousePage() {
 
             {/* Shelf Detail Modal */}
             <Modal
-                open={showShelfModal}
-                onClose={closeShelfDetail}
-                title={shelfDetail?.shelf?.name || 'Shelf Items'}
-                size="max-w-2xl"
-            >
-                {shelfLoading ? (
-                    <div className="py-10 text-center text-gray-400 text-sm">Loading shelf items...</div>
-                ) : shelfDetail ? (
-                    <div className="space-y-4">
+        open={showShelfModal}
+        onClose={closeShelfDetail}
+        title={shelfDetail?.shelf?.name || 'Shelf Items'}
+        size="max-w-2xl">
+        
+                {shelfLoading ?
+        <div className="py-10 text-center text-gray-400 text-sm">{t("Loading shelf items...")}</div> :
+        shelfDetail ?
+        <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-3 bg-gray-50 rounded-lg">
-                                <p className="text-xs text-gray-500">Location</p>
+                                <p className="text-xs text-gray-500">{t("Location")}</p>
                                 <p className="text-sm font-semibold text-gray-800">{shelfDetail.shelf?.shelf_location || '---'}</p>
                             </div>
                             <div className="p-3 bg-gray-50 rounded-lg">
-                                <p className="text-xs text-gray-500">Items on Shelf</p>
-                                <p className="text-sm font-semibold text-gray-800">{shelfDetail.item_count || 0} products · {shelfDetail.total_items || 0} units</p>
+                                <p className="text-xs text-gray-500">{t("Items on Shelf")}</p>
+                                <p className="text-sm font-semibold text-gray-800">{shelfDetail.item_count || 0}{t("products \xB7")}{shelfDetail.total_items || 0} units</p>
                             </div>
                         </div>
                         <div className="border border-gray-200 rounded-lg overflow-hidden">
                             <table className="w-full">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">Medicine</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">Generic</th>
-                                        <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">Qty</th>
-                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">Status</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">{t("Medicine")}</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">{t("Generic")}</th>
+                                        <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-600">{t("Qty")}</th>
+                                        <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600">{t("Status")}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {shelfDetail.items?.length > 0 ? shelfDetail.items.map(item => (
-                                        <tr key={item.id} className="hover:bg-gray-50/50">
+                                    {shelfDetail.items?.length > 0 ? shelfDetail.items.map((item) =>
+                <tr key={item.id} className="hover:bg-gray-50/50">
                                             <td className="px-4 py-2.5 text-sm font-medium text-gray-800">{item.name}</td>
                                             <td className="px-4 py-2.5 text-sm text-gray-500">{item.generic_name || '---'}</td>
                                             <td className="px-4 py-2.5 text-center text-sm font-semibold">{item.quantity}</td>
@@ -755,138 +755,138 @@ export default function WarehousePage() {
                                                 <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">{item.status || 'Active'}</span>
                                             </td>
                                         </tr>
-                                    )) : (
-                                        <tr><td colSpan="4" className="px-4 py-8 text-center text-gray-400">No medicines on this shelf</td></tr>
-                                    )}
+                ) :
+                <tr><td colSpan="4" className="px-4 py-8 text-center text-gray-400">{t("No medicines on this shelf")}</td></tr>
+                }
                                 </tbody>
                             </table>
                         </div>
                         <div className="flex justify-end pt-2">
                             <button type="button" onClick={closeShelfDetail} className="btn-secondary flex items-center gap-1.5">
-                                <X size={16} /> Close
-                            </button>
+                                <X size={16} />{t("Close")}
+            </button>
                         </div>
-                    </div>
-                ) : null}
+                    </div> :
+        null}
             </Modal>
 
             {/* Receiving Modal */}
             <Modal
-                open={showReceivingModal}
-                onClose={() => setShowReceivingModal(false)}
-                title="Receive Stock"
-                size="max-w-md"
-            >
+        open={showReceivingModal}
+        onClose={() => setShowReceivingModal(false)}
+        title={t("Receive Stock")}
+        size="max-w-md">
+        
                 <form onSubmit={handleReceiveStock} className="space-y-4">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Purchase Order</label>
-                        <p className="text-sm font-medium text-gray-800">PO-{selectedPO?.id} - {selectedPO?.supplier?.name}</p>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Purchase Order")}</label>
+                        <p className="text-sm font-medium text-gray-800">{t("PO-")}{selectedPO?.id} - {selectedPO?.supplier?.name}</p>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Batch Number *</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Batch Number *")}</label>
                         <input
-                            type="text"
-                            value={batchData.batch_number}
-                            onChange={(e) => setBatchData({ ...batchData, batch_number: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            required
-                        />
+              type="text"
+              value={batchData.batch_number}
+              onChange={(e) => setBatchData({ ...batchData, batch_number: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+              required />
+            
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Barcode</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Barcode")}</label>
                         <div className="flex gap-2">
                             <div className="relative flex-1">
                                 <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                                 <input
-                                    type="text"
-                                    value={batchData.barcode}
-                                    onChange={(e) => setBatchData({ ...batchData, barcode: e.target.value })}
-                                    placeholder="Enter or scan barcode"
-                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono"
-                                />
+                  type="text"
+                  value={batchData.barcode}
+                  onChange={(e) => setBatchData({ ...batchData, barcode: e.target.value })}
+                  placeholder={t("Enter or scan barcode")}
+                  className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none font-mono" />
+                
                             </div>
                             <button
-                                type="button"
-                                onClick={startBarcodeScan}
-                                disabled={scanning}
-                                className="px-3 py-2 bg-sky-500 text-white rounded-lg text-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5 disabled:opacity-60"
-                            >
+                type="button"
+                onClick={startBarcodeScan}
+                disabled={scanning}
+                className="px-3 py-2 bg-sky-500 text-white rounded-lg text-sm hover:bg-sky-600 transition-colors flex items-center gap-1.5 disabled:opacity-60">
+                
                                 {scanning ? <Loader2 size={16} className="animate-spin" /> : <Barcode size={16} />}
                                 {scanning ? 'Scanning...' : 'Scan'}
                             </button>
                         </div>
-                        {scanning && (
-                            <div className="mt-2 relative">
+                        {scanning &&
+            <div className="mt-2 relative">
                                 <video ref={videoRef} className="w-full max-w-xs rounded-lg border-2 border-sky-400" />
-                                <button type="button" onClick={stopBarcodeScan} className="mt-1 text-xs text-red-600 hover:underline">Cancel scan</button>
+                                <button type="button" onClick={stopBarcodeScan} className="mt-1 text-xs text-red-600 hover:underline">{t("Cancel scan")}</button>
                             </div>
-                        )}
+            }
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Manufacturer</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Manufacturer")}</label>
                         <input
-                            type="text"
-                            value={batchData.manufacturer}
-                            onChange={(e) => setBatchData({ ...batchData, manufacturer: e.target.value })}
-                            placeholder="e.g. GSK, Pfizer"
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                        />
+              type="text"
+              value={batchData.manufacturer}
+              onChange={(e) => setBatchData({ ...batchData, manufacturer: e.target.value })}
+              placeholder={t("e.g. GSK, Pfizer")}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+            
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Expiry Date *</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Expiry Date *")}</label>
                         <input
-                            type="date"
-                            value={batchData.expiry_date}
-                            onChange={(e) => setBatchData({ ...batchData, expiry_date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            required
-                        />
+              type="date"
+              value={batchData.expiry_date}
+              onChange={(e) => setBatchData({ ...batchData, expiry_date: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+              required />
+            
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Warehouse Shelf *</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Warehouse Shelf *")}</label>
                         <select
-                            value={batchData.shelf_id}
-                            onChange={(e) => setBatchData({ ...batchData, shelf_id: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            required
-                        >
-                            <option value="">Select Warehouse Shelf</option>
-                            {shelves.map(s => {
-                                const cap = s.capacity || 100;
-                                const cur = s.current_quantity ?? s.current_items ?? 0;
-                                const rem = s.remaining_capacity ?? Math.max(0, cap - cur);
-                                return (
-                                    <option key={s.id} value={s.id} disabled={rem <= 0}>
-                                        {s.name} ({s.code || s.shelf_location}) — {rem} spaces left
-                                    </option>
-                                );
-                            })}
+              value={batchData.shelf_id}
+              onChange={(e) => setBatchData({ ...batchData, shelf_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+              required>
+              
+                            <option value="">{t("Select Warehouse Shelf")}</option>
+                            {shelves.map((s) => {const { t } = useLanguage();
+                const cap = s.capacity || 100;
+                const cur = s.current_quantity ?? s.current_items ?? 0;
+                const rem = s.remaining_capacity ?? Math.max(0, cap - cur);
+                return (
+                  <option key={s.id} value={s.id} disabled={rem <= 0}>
+                                        {s.name} ({s.code || s.shelf_location}) — {rem}{t("spaces left")}
+                  </option>);
+
+              })}
                         </select>
-                        <p className="text-[11px] text-gray-400 mt-1">
-                            Received stock can only be placed on warehouse shelves.
-                        </p>
+                        <p className="text-[11px] text-gray-400 mt-1">{t("Received stock can only be placed on warehouse shelves.")}
+
+            </p>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity Received *</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Quantity Received *")}</label>
                         <input
-                            type="number"
-                            value={batchData.quantity}
-                            onChange={(e) => setBatchData({ ...batchData, quantity: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            min="1"
-                            required
-                        />
+              type="number"
+              value={batchData.quantity}
+              onChange={(e) => setBatchData({ ...batchData, quantity: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+              min="1"
+              required />
+            
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
-                        <button type="button" onClick={() => setShowReceivingModal(false)} className="btn-secondary">
-                            Cancel
-                        </button>
+                        <button type="button" onClick={() => setShowReceivingModal(false)} className="btn-secondary">{t("Cancel")}
+
+            </button>
                         <button
-                            type="submit"
-                            disabled={submitting}
-                            className="btn-primary flex items-center gap-2 disabled:opacity-60"
-                        >
-                            {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Receiving...</> : <><CheckCircle size={16} /> Confirm Receiving</>}
+              type="submit"
+              disabled={submitting}
+              className="btn-primary flex items-center gap-2 disabled:opacity-60">
+              
+                            {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Receiving...</> : <><CheckCircle size={16} />{t("Confirm Receiving")}</>}
                         </button>
                     </div>
                 </form>
@@ -894,91 +894,91 @@ export default function WarehousePage() {
 
             {/* New Transfer Request Modal */}
             <Modal
-                open={showTransferModal}
-                onClose={() => setShowTransferModal(false)}
-                title="New Transfer Request"
-                size="max-w-lg"
-            >
+        open={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        title={t("New Transfer Request")}
+        size="max-w-lg">
+        
                 <form onSubmit={handleCreateTransfer} className="space-y-4">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Medicine *</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Medicine *")}</label>
                         <select
-                            value={transferForm.medicine_id}
-                            onChange={(e) => setTransferForm({ ...transferForm, medicine_id: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            required
-                        >
-                            <option value="">Select Medicine</option>
-                            {medicines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              value={transferForm.medicine_id}
+              onChange={(e) => setTransferForm({ ...transferForm, medicine_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+              required>
+              
+                            <option value="">{t("Select Medicine")}</option>
+                            {medicines.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">To Branch *</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("To Branch *")}</label>
                         <select
-                            value={transferForm.to_branch_id}
-                            onChange={(e) => setTransferForm({ ...transferForm, to_branch_id: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            required
-                        >
-                            <option value="">Select Branch</option>
-                            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              value={transferForm.to_branch_id}
+              onChange={(e) => setTransferForm({ ...transferForm, to_branch_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+              required>
+              
+                            <option value="">{t("Select Branch")}</option>
+                            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Quantity *</label>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Quantity *")}</label>
                             <input
-                                type="number"
-                                value={transferForm.quantity}
-                                onChange={(e) => setTransferForm({ ...transferForm, quantity: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                                min="1"
-                                required
-                            />
+                type="number"
+                value={transferForm.quantity}
+                onChange={(e) => setTransferForm({ ...transferForm, quantity: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                min="1"
+                required />
+              
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Priority</label>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Priority")}</label>
                             <select
-                                value={transferForm.priority}
-                                onChange={(e) => setTransferForm({ ...transferForm, priority: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            >
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
+                value={transferForm.priority}
+                onChange={(e) => setTransferForm({ ...transferForm, priority: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
+                
+                                <option value="low">{t("Low")}</option>
+                                <option value="medium">{t("Medium")}</option>
+                                <option value="high">{t("High")}</option>
+                                <option value="urgent">{t("Urgent")}</option>
                             </select>
                         </div>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Expected Delivery</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Expected Delivery")}</label>
                         <input
-                            type="date"
-                            value={transferForm.expected_delivery}
-                            onChange={(e) => setTransferForm({ ...transferForm, expected_delivery: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                        />
+              type="date"
+              value={transferForm.expected_delivery}
+              onChange={(e) => setTransferForm({ ...transferForm, expected_delivery: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
+            
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Notes")}</label>
                         <textarea
-                            value={transferForm.notes}
-                            onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
-                            rows="2"
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                            placeholder="Optional notes"
-                        />
+              value={transferForm.notes}
+              onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
+              rows="2"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+              placeholder={t("Optional notes")} />
+            
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
-                        <button type="button" onClick={() => setShowTransferModal(false)} className="btn-secondary">
-                            Cancel
-                        </button>
+                        <button type="button" onClick={() => setShowTransferModal(false)} className="btn-secondary">{t("Cancel")}
+
+            </button>
                         <button
-                            type="submit"
-                            disabled={submitting}
-                            className="btn-primary flex items-center gap-2 disabled:opacity-60"
-                        >
-                            {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creating...</> : <><Plus size={16} /> Create Transfer Request</>}
+              type="submit"
+              disabled={submitting}
+              className="btn-primary flex items-center gap-2 disabled:opacity-60">
+              
+                            {submitting ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Creating...</> : <><Plus size={16} />{t("Create Transfer Request")}</>}
                         </button>
                     </div>
                 </form>
@@ -986,54 +986,54 @@ export default function WarehousePage() {
 
             {/* Complete Transfer — Destination Shelf Modal */}
             <Modal
-                open={showCompleteModal}
-                onClose={() => setShowCompleteModal(false)}
-                title="Complete Transfer — Select Destination Shelf"
-                size="max-w-lg"
-            >
+        open={showCompleteModal}
+        onClose={() => setShowCompleteModal(false)}
+        title={t("Complete Transfer \u2014 Select Destination Shelf")}
+        size="max-w-lg">
+        
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                        Transfer to <span className="font-semibold">{completingTransfer?.to_branch?.name || 'branch'}</span>.
-                        Choose a <span className="font-semibold">Medicine</span> shelf belonging to that branch. Capacity is enforced.
-                    </p>
+                    <p className="text-sm text-gray-600">{t("Transfer to")}
+            <span className="font-semibold">{completingTransfer?.to_branch?.name || 'branch'}</span>{t(".\n                        Choose a")}
+            <span className="font-semibold">{t("Medicine")}</span>{t("shelf belonging to that branch. Capacity is enforced.")}
+          </p>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Destination Shelf *</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Destination Shelf *")}</label>
                         <select
-                            value={completeShelfId}
-                            onChange={(e) => setCompleteShelfId(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-                        >
-                            <option value="">Select Branch Medicine Shelf</option>
-                            {destShelves.map(s => {
-                                const cap = s.capacity || 100;
-                                const cur = s.current_quantity ?? s.current_items ?? 0;
-                                const rem = s.remaining_capacity ?? Math.max(0, cap - cur);
-                                return (
-                                    <option key={s.id} value={s.id} disabled={rem <= 0}>
-                                        {s.name} ({s.code || s.shelf_location}) — {rem} spaces left
-                                    </option>
-                                );
-                            })}
+              value={completeShelfId}
+              onChange={(e) => setCompleteShelfId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none">
+              
+                            <option value="">{t("Select Branch Medicine Shelf")}</option>
+                            {destShelves.map((s) => {const { t } = useLanguage();
+                const cap = s.capacity || 100;
+                const cur = s.current_quantity ?? s.current_items ?? 0;
+                const rem = s.remaining_capacity ?? Math.max(0, cap - cur);
+                return (
+                  <option key={s.id} value={s.id} disabled={rem <= 0}>
+                                        {s.name} ({s.code || s.shelf_location}) — {rem}{t("spaces left")}
+                  </option>);
+
+              })}
                         </select>
-                        {destShelves.length === 0 && (
-                            <p className="text-[11px] text-gray-400 mt-1">No medicine shelves found for this branch.</p>
-                        )}
+                        {destShelves.length === 0 &&
+            <p className="text-[11px] text-gray-400 mt-1">{t("No medicine shelves found for this branch.")}</p>
+            }
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
-                        <button type="button" onClick={() => setShowCompleteModal(false)} className="btn-secondary">
-                            Cancel
-                        </button>
+                        <button type="button" onClick={() => setShowCompleteModal(false)} className="btn-secondary">{t("Cancel")}
+
+            </button>
                         <button
-                            type="button"
-                            onClick={confirmCompleteTransfer}
-                            disabled={completeLoading || !completeShelfId}
-                            className="btn-primary flex items-center gap-2 disabled:opacity-60"
-                        >
-                            {completeLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Completing...</> : <><CheckCircle size={16} /> Complete Transfer</>}
+              type="button"
+              onClick={confirmCompleteTransfer}
+              disabled={completeLoading || !completeShelfId}
+              className="btn-primary flex items-center gap-2 disabled:opacity-60">
+              
+                            {completeLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Completing...</> : <><CheckCircle size={16} />{t("Complete Transfer")}</>}
                         </button>
                     </div>
                 </div>
             </Modal>
-        </div>
-    );
+        </div>);
+
 }

@@ -14,108 +14,110 @@ import { Link } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
+import { useLanguage } from '../context/LanguageContext';
 import {
-    ShoppingCart,
-    Banknote,
-    Package,
-    Clock,
-    TrendingUp,
-    ArrowRight,
-} from 'lucide-react';
+  ShoppingCart,
+  Banknote,
+  Package,
+  Clock,
+  TrendingUp,
+  ArrowRight } from
+'lucide-react';
 
 export default function CashierDashboard() {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+  const { t } = useLanguage();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-    useEffect(() => {
-        api.get('/dashboard')
-            .then(r => {
-                setData(r.data);
-                setError('');
-            })
-            .catch(err => {
-                setError('Failed to load dashboard data');
-                console.error(err);
-            })
-            .finally(() => setLoading(false));
-    }, []);
+  useEffect(() => {
+    api.get('/dashboard').
+    then((r) => {
+      setData(r.data);
+      setError('');
+    }).
+    catch((err) => {
+      setError(t("Failed to load dashboard data"));
+      console.error(err);
+    }).
+    finally(() => setLoading(false));
+  }, []);
 
-    if (loading) return <LoadingSpinner text="Loading dashboard..." />;
+  if (loading) return <LoadingSpinner text={t("Loading dashboard...")} />;
 
-    if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
+  if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
 
-    const todaySalesCount = data.todaySalesCount ?? 0;
-    const todayRevenue = Number(data.todayRevenue ?? 0);
-    const totalMedicines = data.totalMedicines ?? 0;
+  const todaySalesCount = data.todaySalesCount ?? 0;
+  const todayRevenue = Number(data.todayRevenue ?? 0);
+  const totalMedicines = data.totalMedicines ?? 0;
 
-    const hourlyLabels = (data.todayHourlySales || []).map(h => h.label);
-    const hourlyValues = (data.todayHourlySales || []).map(h => Number(h.total));
-    const maxHourly = Math.max(...hourlyValues, 1);
+  const hourlyLabels = (data.todayHourlySales || []).map((h) => h.label);
+  const hourlyValues = (data.todayHourlySales || []).map((h) => Number(h.total));
+  const maxHourly = Math.max(...hourlyValues, 1);
 
-    const allRecentSales = data.recentSales || [];
-    const recentSales = allRecentSales.slice(0, 5);
+  const allRecentSales = data.recentSales || [];
+  const recentSales = allRecentSales.slice(0, 5);
 
-    return (
-        <div className="space-y-6">
+  return (
+    <div className="space-y-6">
             {/* ── Summary Cards ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 <StatCard
-                    value={todaySalesCount}
-                    label="Today's Sales"
-                    icon="shopping-cart"
-                    color="green"
-                />
+          value={todaySalesCount}
+          label={t("Today's Sales")}
+          icon="shopping-cart"
+          color="green" />
+        
                 <StatCard
-                    value={`$${todayRevenue.toFixed(2)}`}
-                    label="Today's Revenue"
-                    icon="banknote"
-                    color="blue"
-                />
+          value={`$${todayRevenue.toFixed(2)}`}
+          label={t("Today's Revenue")}
+          icon="banknote"
+          color="blue" />
+        
                 <StatCard
-                    value={totalMedicines}
-                    label="Total Medicines"
-                    icon="package"
-                    color="purple"
-                />
+          value={totalMedicines}
+          label={t("Total Medicines")}
+          icon="package"
+          color="purple" />
+        
             </div>
 
             {/* ── Mini Hourly Sales Chart ── */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
                 <h3 className="text-base font-semibold text-gray-700 dark:text-white mb-4 flex items-center gap-2">
                     <TrendingUp size={18} className="text-sky-500" />
-                    Today's Sales by Hour
+                    {t("Today's Sales by Hour")}
                 </h3>
 
-                {hourlyValues.every(v => v === 0) ? (
-                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
-                        No sales recorded for today yet.
-                    </p>
-                ) : (
-                    <div className="space-y-3">
-                        {hourlyLabels.map((label, idx) => {
-                            const value = hourlyValues[idx];
-                            const widthPct = (value / maxHourly) * 100;
-                            return (
-                                <div key={label} className="flex items-center gap-3">
+                {hourlyValues.every((v) => v === 0) ?
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
+                        {t("No sales recorded for today yet.")}
+                    </p> :
+
+        <div className="space-y-3">
+                        {hourlyLabels.map((label, idx) => {const { t } = useLanguage();
+            const value = hourlyValues[idx];
+            const widthPct = value / maxHourly * 100;
+            return (
+              <div key={label} className="flex items-center gap-3">
                                     <span className="text-xs text-gray-500 dark:text-gray-400 w-12">{label}</span>
                                     <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-lg h-6 overflow-hidden">
                                         <div
-                                            className="h-full bg-sky-500 rounded-lg transition-all duration-300 flex items-center justify-end"
-                                            style={{ width: `${widthPct}%` }}
-                                        >
-                                            {value > 0 && (
-                                                <span className="text-xs text-white font-medium pr-2">
+                    className="h-full bg-sky-500 rounded-lg transition-all duration-300 flex items-center justify-end"
+                    style={{ width: `${widthPct}%` }}>
+                    
+                                            {value > 0 &&
+                    <span className="text-xs text-white font-medium pr-2">
                                                     ${value.toFixed(2)}
                                                 </span>
-                                            )}
+                    }
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                </div>);
+
+          })}
                     </div>
-                )}
+        }
             </div>
 
             {/* ── Recent Sales ── */}
@@ -123,57 +125,57 @@ export default function CashierDashboard() {
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-semibold text-gray-700 dark:text-white flex items-center gap-2">
                         <Clock size={18} className="text-gray-500 dark:text-gray-400" />
-                        Recent Sales
-                        {allRecentSales.length > 0 && (
-                            <span className="text-xs font-normal text-gray-400 dark:text-gray-500">({allRecentSales.length})</span>
-                        )}
+                        {t("Recent Sales")}
+                        {allRecentSales.length > 0 &&
+            <span className="text-xs font-normal text-gray-400 dark:text-gray-500">({allRecentSales.length})</span>
+            }
                     </h3>
-                    {allRecentSales.length > 0 && (
-                        <Link
-                            to="/sales-history"
-                            className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1 transition-colors"
-                        >
-                            View All <ArrowRight size={12} />
+                    {allRecentSales.length > 0 &&
+          <Link
+            to="/sales-history"
+            className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1 transition-colors">
+            
+                            {t("View All")} <ArrowRight size={12} />
                         </Link>
-                    )}
+          }
                 </div>
 
-                {recentSales.length === 0 ? (
-                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
-                        No recent sales.
-                    </p>
-                ) : (
-                    <div className="overflow-x-auto">
+                {recentSales.length === 0 ?
+        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
+                        {t("No recent sales.")}
+                    </p> :
+
+        <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
                                 <tr>
                                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Receipt
+                                        {t("Receipt")}
                                     </th>
                                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Date &amp; Time
+                                        {t("Date & Time")}
                                     </th>
                                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Customer
+                                        {t("Customer")}
                                     </th>
                                     <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Total
+                                        {t("Total")}
                                     </th>
                                     <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Status
+                                        {t("Status")}
                                     </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                {recentSales.map(sale => (
-                                    <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                {recentSales.map((sale) =>
+              <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td className="px-4 py-2.5 whitespace-nowrap text-gray-800 dark:text-gray-200 font-medium">
                                             {sale.receipt_number || `#${sale.id}`}
                                         </td>
                                         <td className="px-4 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400">
-                                            {sale.sale_date
-                                                ? new Date(sale.sale_date).toLocaleString()
-                                                : '—'}
+                                            {sale.sale_date ?
+                  new Date(sale.sale_date).toLocaleString() :
+                  '—'}
                                         </td>
                                         <td className="px-4 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400">
                                             {sale.customer_name || 'Walk-in Customer'}
@@ -183,39 +185,39 @@ export default function CashierDashboard() {
                                         </td>
                                         <td className="px-4 py-2.5 whitespace-nowrap text-right">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                                sale.status === 'completed'
-                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                    : sale.status === 'pending_cashier'
-                                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                                            }`}>
-                                                {sale.status === 'completed'
-                                                    ? 'Completed'
-                                                    : sale.status === 'pending_cashier'
-                                                    ? 'Pending Cashier'
-                                                    : sale.status}
+                  sale.status === 'completed' ?
+                  'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                  sale.status === 'pending_cashier' ?
+                  'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                  'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`
+                  }>
+                                                {sale.status === 'completed' ?
+                    'Completed' :
+                    sale.status === 'pending_cashier' ?
+                    'Pending Cashier' :
+                    sale.status}
                                             </span>
                                         </td>
                                     </tr>
-                                ))}
+              )}
                             </tbody>
                         </table>
-                        {allRecentSales.length > 5 && (
-                            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                                <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    Showing 5 of {allRecentSales.length} sales
+                        {allRecentSales.length > 5 &&
+          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                <span className="text-xs text-gray-400 dark:text-gray-500">{t("Showing 5 of")}
+              {allRecentSales.length} sales
                                 </span>
                                 <Link
-                                    to="/sales-history"
-                                    className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1 transition-colors"
-                                >
-                                    View All <ArrowRight size={12} />
+              to="/sales-history"
+              className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1 transition-colors">{t("View All")}
+
+              <ArrowRight size={12} />
                                 </Link>
                             </div>
-                        )}
+          }
                     </div>
-                )}
+        }
             </div>
-        </div>
-    );
+        </div>);
+
 }

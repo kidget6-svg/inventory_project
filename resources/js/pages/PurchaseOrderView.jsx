@@ -1,262 +1,262 @@
-import React, { useState, useEffect } from 'react';
+import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Edit, Trash2, Calendar, Package, Tag, Send, RefreshCw, CheckCircle, XCircle, Download, FileText, Pill } from 'lucide-react';
 
-export default function PurchaseOrderView() {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const [order, setOrder] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+export default function PurchaseOrderView() {const { t } = useLanguage();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-    const loadOrder = () => {
-        api.get(`/purchase-orders/${id}`)
-            .then(r => setOrder(r.data))
-            .catch(() => setError('Unable to load purchase order details.'))
-            .finally(() => setLoading(false));
-    };
+  const loadOrder = () => {
+    api.get(`/purchase-orders/${id}`).
+    then((r) => setOrder(r.data)).
+    catch(() => setError(t("Unable to load purchase order details."))).
+    finally(() => setLoading(false));
+  };
 
-    useEffect(() => { loadOrder(); }, [id]);
+  useEffect(() => {loadOrder();}, [id]);
 
-    const handleAction = async (action, label) => {
-        try {
-            const res = await api.post(`/purchase-orders/${id}/${action}`);
-            window.showToast(res.data?.message || `${label} completed successfully`, 'success');
-            loadOrder();
-        } catch (err) {
-            window.showToast(err.response?.data?.message || `Failed to ${label.toLowerCase()}`, 'error');
-        }
-    };
-
-    const handleDelete = async () => {
-        if (!window.confirm('Delete this purchase order?')) return;
-        try {
-            await api.delete(`/purchase-orders/${id}`);
-            window.showToast('Purchase order deleted', 'success');
-            navigate('/purchase-orders');
-        } catch (err) {
-            window.showToast(err.response?.data?.message || 'Failed to delete order', 'error');
-        }
-    };
-
-    const handleDownloadPdf = async () => {
-        try {
-            const res = await api.get(`/purchase-orders/${id}/download`, { responseType: 'blob' });
-            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `purchase-order-${id}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            window.showToast(err.response?.data?.message || 'Failed to download PDF', 'error');
-        }
-    };
-
-    const statusBadge = (status) => {
-        const colors = {
-            draft: 'bg-gray-100 text-gray-700',
-            pending: 'bg-sky-100 text-sky-700',
-            sent: 'bg-purple-100 text-purple-700',
-            delivered: 'bg-amber-100 text-amber-700',
-            completed: 'bg-green-100 text-green-700',
-            cancelled: 'bg-red-100 text-red-700',
-        };
-        return `px-3 py-1 rounded-full text-xs font-semibold ${colors[status] || 'bg-gray-100 text-gray-600'}`;
-    };
-
-    if (loading) return <LoadingSpinner text="Loading purchase order..." />;
-
-    if (error) {
-        return (
-            <div className="min-h-[60vh] p-6">
-                <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-700">{error}</div>
-            </div>
-        );
+  const handleAction = async (action, label) => {
+    try {
+      const res = await api.post(`/purchase-orders/${id}/${action}`);
+      window.showToast(res.data?.message || `${label} completed successfully`, 'success');
+      loadOrder();
+    } catch (err) {
+      window.showToast(err.response?.data?.message || `Failed to ${label.toLowerCase()}`, 'error');
     }
+  };
 
-    if (!order) {
-        return <div className="min-h-[60vh] p-6">Purchase order not found.</div>;
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this purchase order?')) return;
+    try {
+      await api.delete(`/purchase-orders/${id}`);
+      window.showToast(t("Purchase order deleted"), 'success');
+      navigate('/purchase-orders');
+    } catch (err) {
+      window.showToast(err.response?.data?.message || 'Failed to delete order', 'error');
     }
+  };
 
-    const status = order.status?.toLowerCase();
+  const handleDownloadPdf = async () => {
+    try {
+      const res = await api.get(`/purchase-orders/${id}/download`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `purchase-order-${id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      window.showToast(err.response?.data?.message || 'Failed to download PDF', 'error');
+    }
+  };
 
+  const statusBadge = (status) => {
+    const colors = {
+      draft: 'bg-gray-100 text-gray-700',
+      pending: 'bg-sky-100 text-sky-700',
+      sent: 'bg-purple-100 text-purple-700',
+      delivered: 'bg-amber-100 text-amber-700',
+      completed: 'bg-green-100 text-green-700',
+      cancelled: 'bg-red-100 text-red-700'
+    };
+    return `px-3 py-1 rounded-full text-xs font-semibold ${colors[status] || 'bg-gray-100 text-gray-600'}`;
+  };
+
+  if (loading) return <LoadingSpinner text={t("Loading purchase order...")} />;
+
+  if (error) {
     return (
-        <div className="space-y-6">
+      <div className="min-h-[60vh] p-6">
+                <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-700">{error}</div>
+            </div>);
+
+  }
+
+  if (!order) {
+    return <div className="min-h-[60vh] p-6">{t("Purchase order not found.")}</div>;
+  }
+
+  const status = order.status?.toLowerCase();
+
+  return (
+    <div className="space-y-6">
             <div className="flex items-center gap-4">
                 <Link
-                    to="/purchase-orders"
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                    <ArrowLeft size={16} />
-                    Back to Purchase Orders
-                </Link>
-                <h1 className="text-2xl font-bold text-gray-800">Purchase Order {order.id}</h1>
+          to="/purchase-orders"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          
+                    <ArrowLeft size={16} />{t("Back to Purchase Orders")}
+
+        </Link>
+                <h1 className="text-2xl font-bold text-gray-800">{t("Purchase Order")}{order.id}</h1>
             </div>
 
             <div className="card p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Supplier</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">{t("Supplier")}</label>
                         <p className="text-sm font-medium text-gray-800">{order.supplier?.name || 'N/A'}</p>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Order Date</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">{t("Order Date")}</label>
                         <p className="text-sm text-gray-600 flex items-center gap-1">
                             <Calendar size={14} />
                             {order.order_date}
                         </p>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">{t("Status")}</label>
                         <span className={statusBadge(status)}>{order.status}</span>
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Total Items</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">{t("Total Items")}</label>
                         <p className="text-sm text-gray-600 flex items-center gap-1">
                             <Package size={14} />
                             {order.items?.length || 0}
                         </p>
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Order Items</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">{t("Order Items")}</label>
                         <div className="border border-gray-200 rounded-lg overflow-hidden">
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-sky-50">
                                         <th className="px-3 py-2 text-left text-xs font-semibold text-sky-700">#</th>
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-sky-700">Product</th>
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-sky-700">Type</th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-sky-700">Qty</th>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-sky-700">{t("Product")}</th>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-sky-700">{t("Type")}</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-sky-700">{t("Qty")}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {(order.items || []).map((oi, i) => {
-                                        const isRetail = oi.itemable_type?.includes('RetailProduct');
-                                        const name = oi.itemable?.name || oi.medicine?.name || 'N/A';
-                                        return (
-                                            <tr key={i} className="border-t border-gray-100">
+                                    {(order.items || []).map((oi, i) => {const { t } = useLanguage();
+                    const isRetail = oi.itemable_type?.includes('RetailProduct');
+                    const name = oi.itemable?.name || oi.medicine?.name || 'N/A';
+                    return (
+                      <tr key={i} className="border-t border-gray-100">
                                                 <td className="px-3 py-2 text-sm text-gray-500">{i + 1}</td>
                                                 <td className="px-3 py-2 text-sm font-medium text-gray-800 flex items-center gap-1">
                                                     {isRetail ? <Package size={14} className="text-amber-500" /> : <Pill size={14} className="text-sky-500" />}
                                                     {name}
                                                 </td>
                                                 <td className="px-3 py-2">
-                                                    <span className={isRetail
-                                                        ? "px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
-                                                        : "px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700"
-                                                    }>
+                                                    <span className={isRetail ?
+                          "px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700" :
+                          "px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700"
+                          }>
                                                         {isRetail ? 'Retail/OTC' : 'Medicine'}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-2 text-sm text-right text-gray-600">{oi.quantity}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {(order.items || []).length === 0 && (
-                                        <tr>
-                                            <td colSpan="4" className="px-3 py-4 text-center text-gray-400 text-sm">No items</td>
+                                            </tr>);
+
+                  })}
+                                    {(order.items || []).length === 0 &&
+                  <tr>
+                                            <td colSpan="4" className="px-3 py-4 text-center text-gray-400 text-sm">{t("No items")}</td>
                                         </tr>
-                                    )}
+                  }
                                 </tbody>
                             </table>
                         </div>
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Notes</label>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">{t("Notes")}</label>
                         <p className="text-sm text-gray-600">{order.notes || '---'}</p>
                     </div>
                 </div>
 
                 {/* Status-aware action buttons */}
                 <div className="flex flex-wrap justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-                    {status !== 'draft' && (
-                        <button
-                            onClick={handleDownloadPdf}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2"
-                        >
-                            <Download size={16} />
-                            Download PDF
-                        </button>
-                    )}
-                    {status === 'draft' && (
-                        <button
-                            onClick={() => handleAction('submit', 'Submit')}
-                            className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
-                        >
-                            <Send size={16} />
-                            Submit to Pending
-                        </button>
-                    )}
-                    {status === 'pending' && (
-                        <button
-                            onClick={() => handleAction('send', 'Send to Supplier')}
-                            className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
-                        >
-                            <Send size={16} />
-                            Send to Supplier
-                        </button>
-                    )}
-                    {status === 'sent' && (
-                        <>
+                    {status !== 'draft' &&
+          <button
+            onClick={handleDownloadPdf}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2">
+            
+                            <Download size={16} />{t("Download PDF")}
+
+          </button>
+          }
+                    {status === 'draft' &&
+          <button
+            onClick={() => handleAction('submit', 'Submit')}
+            className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2">
+            
+                            <Send size={16} />{t("Submit to Pending")}
+
+          </button>
+          }
+                    {status === 'pending' &&
+          <button
+            onClick={() => handleAction('send', 'Send to Supplier')}
+            className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2">
+            
+                            <Send size={16} />{t("Send to Supplier")}
+
+          </button>
+          }
+                    {status === 'sent' &&
+          <>
                             <button
-                                onClick={() => handleAction('deliver', 'Mark as Delivered')}
-                                className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 flex items-center gap-2"
-                            >
-                                <Package size={16} />
-                                Mark as Delivered
-                            </button>
+              onClick={() => handleAction('deliver', 'Mark as Delivered')}
+              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 flex items-center gap-2">
+              
+                                <Package size={16} />{t("Mark as Delivered")}
+
+            </button>
                             <button
-                                onClick={() => handleAction('resend', 'Resend to Supplier')}
-                                className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2"
-                            >
-                                <RefreshCw size={16} />
-                                Resend to Supplier
-                            </button>
+              onClick={() => handleAction('resend', 'Resend to Supplier')}
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 flex items-center gap-2">
+              
+                                <RefreshCw size={16} />{t("Resend to Supplier")}
+
+            </button>
                         </>
-                    )}
-                    {['delivered', 'approved'].includes(status) && (
-                        <button
-                            onClick={() => handleAction('complete', 'Complete Order')}
-                            className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 flex items-center gap-2"
-                        >
-                            <CheckCircle size={16} />
-                            Complete Order
-                        </button>
-                    )}
-                    {['draft', 'pending', 'sent', 'delivered'].includes(status) && (
-                        <button
-                            onClick={() => handleAction('cancel', 'Cancel')}
-                            className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
-                        >
-                            <XCircle size={16} />
-                            Cancel
-                        </button>
-                    )}
-                    {['draft', 'pending'].includes(status) && (
-                        <Link
-                            to={`/purchase-orders/${order.id}/edit`}
-                            className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2"
-                        >
-                            <Edit size={16} />
-                            Edit
-                        </Link>
-                    )}
-                    {status === 'draft' && (
-                        <button
-                            onClick={handleDelete}
-                            className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2"
-                        >
-                            <Trash2 size={16} />
-                            Delete
-                        </button>
-                    )}
+          }
+                    {['delivered', 'approved'].includes(status) &&
+          <button
+            onClick={() => handleAction('complete', 'Complete Order')}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 flex items-center gap-2">
+            
+                            <CheckCircle size={16} />{t("Complete Order")}
+
+          </button>
+          }
+                    {['draft', 'pending', 'sent', 'delivered'].includes(status) &&
+          <button
+            onClick={() => handleAction('cancel', 'Cancel')}
+            className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2">
+            
+                            <XCircle size={16} />{t("Cancel")}
+
+          </button>
+          }
+                    {['draft', 'pending'].includes(status) &&
+          <Link
+            to={`/purchase-orders/${order.id}/edit`}
+            className="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-semibold hover:bg-sky-600 flex items-center gap-2">
+            
+                            <Edit size={16} />{t("Edit")}
+
+          </Link>
+          }
+                    {status === 'draft' &&
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 flex items-center gap-2">
+            
+                            <Trash2 size={16} />{t("Delete")}
+
+          </button>
+          }
                 </div>
             </div>
-        </div>
-    );
+        </div>);
+
 }
