@@ -1,4 +1,3 @@
-// resources/js/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../axios';
 
@@ -11,7 +10,6 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         const token = localStorage.getItem('token') || localStorage.getItem('access_token');
         
-        // Skip calling /api/user if no token exists yet
         if (!token) {
             setUser(null);
             setLoading(false);
@@ -19,8 +17,11 @@ export function AuthProvider({ children }) {
         }
 
         api.get('/user')
-            .then(res => setUser(res.data))
-            .catch(() => {
+            .then(res => {
+                setUser(res.data);
+            })
+            .catch(err => {
+                console.error('Failed to fetch user:', err.response?.data || err.message);
                 localStorage.removeItem('token');
                 localStorage.removeItem('access_token');
                 setUser(null);
@@ -48,11 +49,7 @@ export function AuthProvider({ children }) {
 
     const register = async (data) => {
         try {
-            const config = data instanceof FormData 
-                ? { headers: { 'Content-Type': undefined } } 
-                : {};
-                
-            const response = await api.post('/register', data, config);
+            const response = await api.post('/register', data);
             return response.data;
         } catch (error) {
             console.error('Register error:', error.response?.data || error.message);
@@ -72,21 +69,28 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const getUserPermissions = () => Array.isArray(user?.permissions) ? user.permissions : [];
-
     const hasPermission = (permission) => {
-        if (!permission) return true;
-        return getUserPermissions().includes(permission);
+        if (!user) return false;
+        if (user.role === 'admin' || user.role === 'super_admin') return true;
+        return user.permissions?.includes(permission) || false;
     };
 
-    const hasAnyPermission = (permissions = []) => {
-        if (!Array.isArray(permissions) || permissions.length === 0) return true;
-        const userPermissions = getUserPermissions();
-        return permissions.some(p => userPermissions.includes(p));
+    const hasAnyPermission = (permissions) => {
+        if (!user) return false;
+        if (user.role === 'admin' || user.role === 'super_admin') return true;
+        return permissions?.some(p => user.permissions?.includes(p)) || false;
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, hasPermission, hasAnyPermission }}>
+        <AuthContext.Provider value={{ 
+            user, 
+            loading, 
+            login, 
+            register, 
+            logout,
+            hasPermission,
+            hasAnyPermission
+        }}>
             {children}
         </AuthContext.Provider>
     );

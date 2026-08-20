@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Batch;
 use App\Models\Category;
 use App\Models\Medicine;
+use App\Models\RetailProduct;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Shelf;
@@ -17,23 +19,68 @@ class ReportController extends Controller
     /**
      * Display general reports (inventory, sales, purchases, low stock, expiring).
      */
-    public function index()
+    public function index(Request $request)
     {
-        $medicines = Medicine::orderBy('name')->get();
-        $sales = Sale::orderBy('sale_date', 'desc')->get();
+        $user = $request->user();
+        $branchScope = $user->getBranchScope();
+
+        $medicineQuery = Medicine::orderBy('name');
+        $saleQuery = Sale::orderBy('sale_date');
+        $retailQuery = RetailProduct::orderBy('name');
+
+        // Branch scoping: pharmacists/cashiers see only their branch's data
+        if ($branchScope) {
+            $medicineQuery->where('branch_id', $branchScope);
+            $saleQuery->where('branch_id', $branchScope);
+        }
+
+        $medicines = $medicineQuery->get()->map(function($m) {
+            $m->product_type = 'medicine';
+            return $m;
+        });
+        $retailProducts = $retailQuery->get()->map(function($r) {
+            $r->product_type = 'retail';
+            $r->category = (object)['name' => $r->category ?? 'Retail/OTC'];
+            return $r;
+        });
+
+        $sales = $saleQuery->latest()->get();
         $purchases = PurchaseOrder::with('supplier')->orderBy('created_at', 'desc')->get();
 
-        $expiring = Medicine::whereNotNull('expiry_date')
-            ->whereBetween('expiry_date', [
-                \Carbon\Carbon::today(),
-                \Carbon\Carbon::today()->addDays(90)
-            ])
+        $expiringMed = Batch::whereNotNull('expiry_date')
+            ->with('medicine')
+            ->when($branchScope, fn($q) => $q->whereHas('medicine', fn($q2) => $q2->where('branch_id', $branchScope)))
             ->orderBy('expiry_date')
-            ->get();
+            ->get()->map(function($b) {
+                $b->product_type = 'medicine';
+                $b->name = $b->medicine->name ?? 'Unknown Medicine';
+                $b->sku = $b->batch_number;
+                return $b;
+            });
 
-        $lowStock = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+        $expiringRetail = RetailProduct::whereNotNull('expiry_date')
+            ->orderBy('expiry_date')
+            ->get()->map(function($r) {
+                $r->product_type = 'retail';
+                $r->category = (object)['name' => $r->category ?? 'Retail/OTC'];
+                return $r;
+            });
+
+        $lowStockMed = Medicine::whereColumn('quantity', '<=', 'reorder_level')
+            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
             ->orderBy('quantity')
-            ->get();
+            ->get()->map(function($m) {
+                $m->product_type = 'medicine';
+                return $m;
+            });
+
+        $lowStockRetail = RetailProduct::whereColumn('quantity', '<=', 'reorder_level')
+            ->orderBy('quantity')
+            ->get()->map(function($r) {
+                $r->product_type = 'retail';
+                $r->category = (object)['name' => $r->category ?? 'Retail/OTC'];
+                return $r;
+            });
 
         $inventoryChartData = Category::with('medicines')->get()->map(function ($category) {
             return [
@@ -45,10 +92,12 @@ class ReportController extends Controller
 
         return response()->json([
             'medicines' => $medicines,
+            'retail_products' => $retailProducts,
+            'inventory' => $medicines->concat($retailProducts)->values(),
             'sales' => $sales,
             'purchases' => $purchases,
-            'lowStock' => $lowStock,
-            'expiring' => $expiring,
+            'lowStock' => $lowStockMed->concat($lowStockRetail)->values(),
+            'expiring' => $expiringMed->concat($expiringRetail)->values(),
             'inventoryChartData' => $inventoryChartData,
         ]);
     }

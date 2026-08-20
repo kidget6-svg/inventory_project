@@ -49,6 +49,18 @@ class RolesAndPermissionsSeeder extends Seeder
         'stock-movements.create' => ['Inventory', 'Record a stock movement'],
         'stock-movements.delete' => ['Inventory', 'Delete a stock movement'],
 
+        // Page: Warehouse
+        'warehouse.view' => ['Warehouse', 'View warehouse page'],
+        'warehouse.receive' => ['Warehouse', 'Receive stock from suppliers'],
+        'warehouse.transfer' => ['Warehouse', 'Transfer stock to branches'],
+        'warehouse.manage' => ['Warehouse', 'Manage warehouse inventory'],
+
+        // Page: Branches
+        'branches.view' => ['Branches', 'View branches page'],
+        'branches.create' => ['Branches', 'Add a branch'],
+        'branches.edit' => ['Branches', 'Edit a branch'],
+        'branches.delete' => ['Branches', 'Delete a branch'],
+
         // Page: Low Stock
         'lowstock.view' => ['Low Stock', 'View low stock alerts'],
         'lowstock.order-now' => ['Low Stock', 'Order from alert (create purchase order)'],
@@ -152,6 +164,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales-history.print',
 
             'reports.view',
+
+            'warehouse.view',
+            'branches.view',
         ],
         'cashier' => [
             'dashboard.view',
@@ -175,6 +190,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales-history.download',
             'sales-history.print',
             'sales-history.export',
+
+            'branches.view',
         ],
     ];
 
@@ -215,6 +232,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 array_filter($permissionSlugs, fn ($s) => isset($permissionBySlug[$s])),
             ));
         }
+
+        // Admin role always holds every permission.
+        $roleBySlug['admin']->permissions()->sync(Permission::pluck('id')->all());
 
         // Backfill role_id for existing users based on their role slug.
         foreach (User::all(['id', 'role']) as $user) {

@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('purchase_orders', function (Blueprint $table) {
-            $table->string('manufacturing_company')->nullable()->after('supplier_id');
+            if (! Schema::hasColumn('purchase_orders', 'manufacturing_company')) {
+                $table->string('manufacturing_company')->nullable()->after('supplier_id');
+            }
         });
     }
 

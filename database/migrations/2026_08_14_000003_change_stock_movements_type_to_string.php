@@ -7,18 +7,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // SQLite stores all strings as TEXT and does not support
-        // ALTER TABLE ... MODIFY COLUMN. The type column is already
-        // a string in SQLite, so the change is a no-op for SQLite.
-        if (DB::getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE stock_movements MODIFY COLUMN type VARCHAR(50) DEFAULT 'in'");
-        }
+        DB::statement("ALTER TABLE stock_movements MODIFY COLUMN type VARCHAR(50) DEFAULT 'in'");
     }
 
     public function down(): void
     {
-        if (DB::getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE stock_movements MODIFY COLUMN type ENUM('in', 'out', 'adjustment', 'return', 'damaged') DEFAULT 'in'");
-        }
+        DB::statement("ALTER TABLE stock_movements MODIFY COLUMN type ENUM('in', 'out', 'adjustment', 'return', 'damaged') DEFAULT 'in'");
     }
 };

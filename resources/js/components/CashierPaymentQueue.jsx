@@ -62,7 +62,7 @@ const PAYMENT_LABELS = {
     other: 'Other',
 };
 
-export default function CashierPaymentQueue({ saleType }) {
+export default function CashierPaymentQueue({ saleType, showTypeTabs = false }) {
     const { hasPermission } = useAuth();
     const canComplete = hasPermission(saleType === 'prescription' ? 'prescription-checkout.complete' : 'retail-pos.checkout');
     const canViewReceipt = hasPermission('sales-history.receipt');
@@ -70,6 +70,7 @@ export default function CashierPaymentQueue({ saleType }) {
     const canPrintReceipt = hasPermission('sales-history.print');
     const [pendingSales, setPendingSales] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [typeTab, setTypeTab] = useState('all');
     const [processingId, setProcessingId] = useState(null);
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedSale, setSelectedSale] = useState(null);
@@ -86,11 +87,16 @@ export default function CashierPaymentQueue({ saleType }) {
 
     const navigate = useNavigate();
 
+    const payableOf = (sale) => parseFloat(sale?.net_amount ?? sale?.total_amount ?? 0);
+    const visibleSales = showTypeTabs && typeTab !== 'all'
+        ? pendingSales.filter((s) => typeTab === 'medicine' ? s.type === 'prescription' : s.type === 'retail')
+        : pendingSales;
+
     const fetchPendingSales = async () => {
         setLoading(true);
         try {
             const params = { status: 'pending_cashier' };
-            if (saleType) {
+            if (saleType && !showTypeTabs) {
                 params.type = saleType;
             }
             const res = await api.get('/sales', { params });
@@ -109,7 +115,7 @@ export default function CashierPaymentQueue({ saleType }) {
     const openPaymentModal = (sale) => {
         setSelectedSale(sale);
         setPaymentMethod('cash');
-        setAmountPaid(parseFloat(sale.total_amount).toFixed(2));
+        setAmountPaid(payableOf(sale).toFixed(2));
         setPaymentModalOpen(true);
         // Auto-populate Telebirr phone from the customer info attached to the sale
         setTelebirrPhone(sale.customer_phone || '');
@@ -157,7 +163,7 @@ export default function CashierPaymentQueue({ saleType }) {
     const handleCompleteSale = async () => {
         if (!selectedSale) return;
 
-        const total = parseFloat(selectedSale.total_amount);
+        const total = payableOf(selectedSale);
         const paid = parseFloat(amountPaid);
         const isCash = paymentMethod === 'cash';
 
@@ -246,7 +252,7 @@ export default function CashierPaymentQueue({ saleType }) {
     };
 
     const changeAmount = paymentMethod === 'cash'
-        ? Math.max(0, parseFloat(amountPaid) - parseFloat(selectedSale?.total_amount || 0))
+        ? Math.max(0, parseFloat(amountPaid) - payableOf(selectedSale || {}))
         : 0;
 
     // Determine if the Confirm Payment button should be disabled
@@ -283,8 +289,32 @@ export default function CashierPaymentQueue({ saleType }) {
                 </button>
             </div>
 
+            {/* Type Tabs (unified checkout) */}
+            {showTypeTabs && (
+                <div className="flex gap-2">
+                    {[
+                        { id: 'all', label: 'All' },
+                        { id: 'medicine', label: 'Medicine' },
+                        { id: 'retail', label: 'Retail & OTC' },
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setTypeTab(tab.id)}
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                                typeTab === tab.id
+                                    ? 'bg-sky-500 text-white shadow-sm'
+                                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* Queue Cards */}
-            {pendingSales.length === 0 ? (
+            {visibleSales.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10 text-center">
                     <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-700">{emptyTitle}</h3>
@@ -292,7 +322,7 @@ export default function CashierPaymentQueue({ saleType }) {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {pendingSales.map(sale => (
+                    {visibleSales.map(sale => (
                         <div
                             key={sale.id}
                             className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col"
@@ -308,10 +338,19 @@ export default function CashierPaymentQueue({ saleType }) {
                                             #{sale.id}
                                         </h4>
                                     </div>
-                                    <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-full text-xs font-semibold whitespace-nowrap">
-                                        <Clock size={12} className="inline mr-1" />
-                                        Pending Cashier
-                                    </span>
+                                    <div className="flex flex-col items-end gap-1.5">
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                                            sale.type === 'prescription'
+                                                ? 'bg-sky-50 text-sky-700 border border-sky-100'
+                                                : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                        }`}>
+                                            {sale.type === 'prescription' ? 'Medicine' : 'Retail & OTC'}
+                                        </span>
+                                        <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-full text-xs font-semibold whitespace-nowrap">
+                                            <Clock size={12} className="inline mr-1" />
+                                            Pending Cashier
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -340,22 +379,32 @@ export default function CashierPaymentQueue({ saleType }) {
                                     </div>
                                 </div>
 
-                                 {/* Customer TIN (if provided) */}
+                                 {/* Total */}
+                                 <div className="flex items-baseline justify-between pt-2">
+                                     <span className="text-xs font-medium text-gray-500">Total Amount</span>
+                                     <span className="text-2xl font-bold text-green-600">
+                                         ${payableOf(sale).toFixed(2)}
+                                     </span>
+                                 </div>
+                                 {sale.discount > 0 && (
+                                     <div className="flex justify-between text-xs text-gray-500">
+                                         <span>Discount ({sale.discount_type === 'percentage' ? `${sale.discount}%` : 'Fixed'})</span>
+                                         <span className="font-medium text-emerald-600">-${parseFloat(sale.discount).toFixed(2)}</span>
+                                     </div>
+                                 )}
                                  {sale.customer_tin && (
                                      <div className="flex justify-between items-center pt-1">
                                          <span className="text-xs font-medium text-gray-500">TIN</span>
                                          <span className="text-sm text-gray-700 font-medium">{sale.customer_tin}</span>
                                      </div>
                                  )}
-
-                                 {/* Total */}
-                                 <div className="flex items-baseline justify-between pt-2">
-                                     <span className="text-xs font-medium text-gray-500">Total Amount</span>
-                                     <span className="text-2xl font-bold text-green-600">
-                                         ${parseFloat(sale.total_amount).toFixed(2)}
-                                     </span>
-                                 </div>
-                              </div>
+                                 {sale.customer_name && (
+                                     <div className="flex justify-between text-xs text-gray-500">
+                                         <span>Customer</span>
+                                         <span className="font-medium text-gray-700">{sale.customer_name}</span>
+                                     </div>
+                                 )}
+                             </div>
 
                             {/* Card Footer */}
                             <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
@@ -393,8 +442,14 @@ export default function CashierPaymentQueue({ saleType }) {
                             </div>
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-xs text-gray-500">Total Amount</span>
-                                <span className="text-xl font-bold text-green-600">${parseFloat(selectedSale.total_amount).toFixed(2)}</span>
+                                <span className="text-xl font-bold text-green-600">${payableOf(selectedSale).toFixed(2)}</span>
                             </div>
+                            {selectedSale.discount > 0 && (
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs text-gray-500">Discount</span>
+                                    <span className="text-sm font-medium text-emerald-600">-${parseFloat(selectedSale.discount).toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-gray-500">Customer</span>
                                 <span className="text-sm text-gray-700">{selectedSale.customer_name || 'Walk-in Customer'}</span>
@@ -441,7 +496,7 @@ export default function CashierPaymentQueue({ saleType }) {
                                 </label>
                                 <input
                                     type="number"
-                                    min={parseFloat(selectedSale.total_amount).toFixed(2)}
+                                    min={payableOf(selectedSale).toFixed(2)}
                                     step="0.01"
                                     value={amountPaid}
                                     onChange={(e) => setAmountPaid(e.target.value)}
@@ -594,8 +649,14 @@ export default function CashierPaymentQueue({ saleType }) {
                             )}
                             <div className="flex justify-between">
                                 <span className="text-xs text-gray-500">Total Amount</span>
-                                <span className="text-sm font-medium text-gray-800">${parseFloat(completedSale.total_amount).toFixed(2)}</span>
+                                <span className="text-sm font-medium text-gray-800">${payableOf(completedSale).toFixed(2)}</span>
                             </div>
+                            {completedSale.discount > 0 && (
+                                <div className="flex justify-between">
+                                    <span className="text-xs text-gray-500">Discount</span>
+                                    <span className="text-sm font-medium text-emerald-600">-${parseFloat(completedSale.discount).toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between">
                                 <span className="text-xs text-gray-500">Payment Method</span>
                                 <span className="text-sm font-medium text-gray-800">{PAYMENT_LABELS[completedSale.payment_method] || completedSale.payment_method}</span>
