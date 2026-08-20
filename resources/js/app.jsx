@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { BranchProvider } from './context/BranchContext';
 import SidebarLayout from './components/SidebarLayout';
 import { ToastContainer } from './components/Toast';
@@ -190,14 +191,16 @@ function App() {
 function RootApp() {
     return (
         <ThemeProvider>
-            <AuthProvider>
-                <BranchProvider>
-                    <BrowserRouter>
-                        <App />
-                    </BrowserRouter>
-                    <ToastContainer />
-                </BranchProvider>
-            </AuthProvider>
+            <LanguageProvider>
+                <AuthProvider>
+                    <BranchProvider>
+                        <BrowserRouter>
+                            <App />
+                        </BrowserRouter>
+                        <ToastContainer />
+                    </BranchProvider>
+                </AuthProvider>
+            </LanguageProvider>
         </ThemeProvider>
     );
 }

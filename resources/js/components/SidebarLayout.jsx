@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useBranch } from '../context/BranchContext';
 import {
     LayoutDashboard, Pill, FolderTree, Truck, ShoppingCart, DollarSign,
@@ -82,6 +83,7 @@ const roleBadgeStyle = {
 export default function SidebarLayout({ children, pageTitle }) {
     const { user, logout, hasAnyPermission } = useAuth();
     const { theme, toggleTheme } = useTheme();
+    const { lang, toggleLanguage, t } = useLanguage();
     const { branches, selectedBranchId, selectedBranch, setSelectedBranchId } = useBranch();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -271,7 +273,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                                 <div key={`sec-${i}`} className="mx-3 mt-4 mb-1.5 border-t border-sky-200 dark:border-gray-700" />
                             ) : (
                                 <div key={`sec-${i}`} className="px-5 pt-4 pb-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-                                    {item.section}
+                                    {t(item.section)}
                                 </div>
                             )
                         ) : (
@@ -279,7 +281,7 @@ export default function SidebarLayout({ children, pageTitle }) {
                                 key={item.to}
                                 to={item.to}
                                 onClick={() => setSidebarOpen(false)}
-                                title={collapsed ? item.label : undefined}
+                                title={collapsed ? t(item.label) : undefined}
                                 className={({ isActive }) =>
                                     `flex items-center gap-3 mx-2 px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-150 ${collapsed ? 'md:justify-center md:px-0 md:mx-3' : ''
                                     } ${isActive
@@ -289,15 +291,15 @@ export default function SidebarLayout({ children, pageTitle }) {
                                 }
                             >
                                 <item.icon size={18} className="shrink-0" />
-                                {!collapsed && <span>{item.label}</span>}
+                                {!collapsed && <span>{t(item.label)}</span>}
                             </NavLink>
                         )
                     )}
                 </nav>
 
-                {/* Theme Toggle - Bottom of Sidebar */}
+                {/* Theme & Language Toggles - Bottom of Sidebar */}
                 {!collapsed && (
-                    <div className="p-4 border-t border-sky-200 dark:border-gray-700 flex justify-center">
+                    <div className="p-4 border-t border-sky-200 dark:border-gray-700 flex items-center justify-center gap-3">
                         <button
                             onClick={toggleTheme}
                             className="p-2.5 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-sky-100 dark:hover:bg-gray-700 transition-colors"
@@ -308,6 +310,14 @@ export default function SidebarLayout({ children, pageTitle }) {
                             ) : (
                                 <Moon size={20} className="text-sky-600" />
                             )}
+                        </button>
+                        <button
+                            onClick={toggleLanguage}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-sky-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors flex items-center gap-1.5"
+                            title="Switch Language (English / አማርኛ)"
+                        >
+                            <Globe size={16} className="text-sky-500" />
+                            <span>{lang === 'en' ? 'አማ' : 'EN'}</span>
                         </button>
                     </div>
                 )}
