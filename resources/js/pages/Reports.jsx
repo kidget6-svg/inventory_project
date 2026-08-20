@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
 import PieChart from '../components/PieChart';
+import Pagination from '../components/Pagination';
 import { Pill, ShoppingBag } from 'lucide-react';
 
 export default function Reports() {
@@ -10,6 +11,13 @@ export default function Reports() {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortKey, setSortKey] = useState('');
     const [sortDirection, setSortDirection] = useState('asc');
+
+    const ITEMS_PER_PAGE = 10;
+    const [inventoryPage, setInventoryPage] = useState(1);
+    const [salesPage, setSalesPage] = useState(1);
+    const [purchasesPage, setPurchasesPage] = useState(1);
+    const [lowStockPage, setLowStockPage] = useState(1);
+    const [expiringPage, setExpiringPage] = useState(1);
 
     useEffect(() => {
         api.get('/reports').then(r => {
@@ -26,7 +34,20 @@ export default function Reports() {
         setSearchTerm('');
         setSortKey('');
         setSortDirection('asc');
+        setInventoryPage(1);
+        setSalesPage(1);
+        setPurchasesPage(1);
+        setLowStockPage(1);
+        setExpiringPage(1);
     }, [activeTab]);
+
+    useEffect(() => {
+        setInventoryPage(1);
+        setSalesPage(1);
+        setPurchasesPage(1);
+        setLowStockPage(1);
+        setExpiringPage(1);
+    }, [searchTerm, sortKey, sortDirection, productTypeFilter]);
 
     const handleSort = (key) => {
         if (sortKey === key) {
@@ -102,6 +123,11 @@ export default function Reports() {
     const emptyRow = (colSpan, message) => (
         <tr><td colSpan={colSpan} className="px-4 py-8 text-center text-gray-400">{message}</td></tr>
     );
+
+    const getPageSlice = (arr, page) => {
+        const start = (page - 1) * ITEMS_PER_PAGE;
+        return arr.slice(start, start + ITEMS_PER_PAGE);
+    };
 
     const inventoryData = useMemo(
         () => filterAndSort(filterByType(data?.inventory || data?.medicines || []), ['name', 'batch_number', 'sku']),
@@ -231,7 +257,7 @@ export default function Reports() {
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>Expiry{sortIcon('expiry_date')}</th>
                             </tr></thead>
                             <tbody>
-                                {inventoryData.length > 0 ? inventoryData.map(item => (
+                                {getPageSlice(inventoryData, inventoryPage).length > 0 ? getPageSlice(inventoryData, inventoryPage).map(item => (
                                     <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
                                         <td className="px-4 py-3">
                                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -250,6 +276,15 @@ export default function Reports() {
                             </tbody>
                         </table>
                     </div>
+                    {inventoryData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={inventoryPage}
+                            totalPages={Math.max(1, Math.ceil(inventoryData.length / ITEMS_PER_PAGE))}
+                            totalItems={inventoryData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setInventoryPage}
+                        />
+                    )}
                 </div>
             )}
 
@@ -263,7 +298,7 @@ export default function Reports() {
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('total_amount')}>Amount{sortIcon('total_amount')}</th>
                         </tr></thead>
                         <tbody>
-                            {salesData.length > 0 ? salesData.map(s => (
+                            {getPageSlice(salesData, salesPage).length > 0 ? getPageSlice(salesData, salesPage).map(s => (
                                 <tr key={s.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                     <td className="px-4 py-3 text-sm">{s.id}</td>
                                     <td className="px-4 py-3 text-sm">{s.sale_date}</td>
@@ -272,6 +307,15 @@ export default function Reports() {
                             )) : emptyRow(3, 'No sales found')}
                         </tbody>
                     </table>
+                    {salesData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={salesPage}
+                            totalPages={Math.max(1, Math.ceil(salesData.length / ITEMS_PER_PAGE))}
+                            totalItems={salesData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setSalesPage}
+                        />
+                    )}
                 </div>
             )}
 
@@ -287,7 +331,7 @@ export default function Reports() {
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('total_amount')}>Amount{sortIcon('total_amount')}</th>
                         </tr></thead>
                         <tbody>
-                            {purchasesData.length > 0 ? purchasesData.map(p => (
+                            {getPageSlice(purchasesData, purchasesPage).length > 0 ? getPageSlice(purchasesData, purchasesPage).map(p => (
                                 <tr key={p.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                     <td className="px-4 py-3 text-sm">{p.id}</td>
                                     <td className="px-4 py-3 text-sm">{p.supplier?.name || '---'}</td>
@@ -298,6 +342,15 @@ export default function Reports() {
                             )) : emptyRow(5, 'No purchase orders found')}
                         </tbody>
                     </table>
+                    {purchasesData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={purchasesPage}
+                            totalPages={Math.max(1, Math.ceil(purchasesData.length / ITEMS_PER_PAGE))}
+                            totalItems={purchasesData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setPurchasesPage}
+                        />
+                    )}
                 </div>
             )}
 
@@ -312,7 +365,7 @@ export default function Reports() {
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('reorder_level')}>Reorder Level{sortIcon('reorder_level')}</th>
                         </tr></thead>
                         <tbody>
-                            {lowStockData.length > 0 ? lowStockData.map(item => (
+                            {getPageSlice(lowStockData, lowStockPage).length > 0 ? getPageSlice(lowStockData, lowStockPage).map(item => (
                                 <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
                                     <td className="px-4 py-3">
                                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -328,9 +381,17 @@ export default function Reports() {
                             )) : emptyRow(4, 'No low stock items')}
                         </tbody>
                     </table>
+                    {lowStockData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={lowStockPage}
+                            totalPages={Math.max(1, Math.ceil(lowStockData.length / ITEMS_PER_PAGE))}
+                            totalItems={lowStockData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setLowStockPage}
+                        />
+                    )}
                 </div>
             )}
-
             {activeTab === 'expiring' && (
                 <div className="card overflow-hidden">
                     <div className="px-5 py-3 border-b border-sky-100 flex items-center justify-between flex-wrap gap-2">
@@ -356,7 +417,7 @@ export default function Reports() {
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">Days Left</th>
                         </tr></thead>
                         <tbody>
-                            {expiringData.length > 0 ? expiringData.map(item => {
+                            {getPageSlice(expiringData, expiringPage).length > 0 ? getPageSlice(expiringData, expiringPage).map(item => {
                                 const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
                                 const expired = daysLeft < 0;
                                 const urgent = !expired && daysLeft <= 30;
@@ -389,6 +450,15 @@ export default function Reports() {
                             }) : emptyRow(6, 'No items with expiry dates')}
                         </tbody>
                     </table>
+                    {expiringData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={expiringPage}
+                            totalPages={Math.max(1, Math.ceil(expiringData.length / ITEMS_PER_PAGE))}
+                            totalItems={expiringData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setExpiringPage}
+                        />
+                    )}
                 </div>
             )}
         </div>

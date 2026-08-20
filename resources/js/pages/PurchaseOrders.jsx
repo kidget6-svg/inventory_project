@@ -534,8 +534,6 @@ export default function PurchaseOrders() {
                 </div>
             )}
 
-            <Pagination meta={meta} onPageChange={handlePageChange} />
-
             {loading ? (
                 <LoadingSpinner text="Loading purchase orders..." />
             ) : (
@@ -612,6 +610,8 @@ export default function PurchaseOrders() {
                     </div>
                 </div>
             )}
+
+            <Pagination meta={meta} onPageChange={handlePageChange} />
 
             {/* PDF Preview Modal */}
             <Modal

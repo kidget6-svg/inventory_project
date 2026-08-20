@@ -31,7 +31,7 @@ class CategoryController extends Controller
                 return response()->json($allCategories);
             }
 
-            $categories = $query->latest()->paginate($perPage ?? 15);
+            $categories = $query->latest()->paginate($perPage ?? 10);
 
             return response()->json([
                 'success' => true,

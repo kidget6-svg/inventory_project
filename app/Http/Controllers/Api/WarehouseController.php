@@ -104,7 +104,7 @@ public function stats(Request $request)
             });
         }
 
-        $stock = $query->paginate(20);
+        $stock = $query->paginate(10);
         return response()->json($stock);
     }
 
@@ -454,7 +454,7 @@ public function stats(Request $request)
 
         $history = $query->with(['medicine', 'user', 'itemable', 'supplier'])
             ->latest()
-            ->paginate(20);
+            ->paginate(10);
         return response()->json($history);
     }
 }

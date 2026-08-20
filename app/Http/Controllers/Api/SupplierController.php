@@ -27,7 +27,7 @@ class SupplierController extends Controller
             }
 
             // Paginated response
-            $suppliers = $query->latest()->paginate($perPage ?? 15);
+            $suppliers = $query->latest()->paginate($perPage ?? 10);
 
             return response()->json([
                 'data' => $suppliers->items(),

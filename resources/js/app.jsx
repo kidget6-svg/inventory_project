@@ -35,6 +35,7 @@ import ReceiptPage from './pages/ReceiptPage';
 import SalesHistory from './pages/SalesHistory';
 import Branches from './pages/Branches';
 import AuditLogs from './pages/AuditLogs';
+import Alerts from './pages/Alerts';
 
 function ProtectedRoute({ children, permissions, title }) {
     const { user, loading, hasAnyPermission } = useAuth();
@@ -183,6 +184,9 @@ function App() {
 
             <Route path="/reports" element={
                 <ProtectedRoute permissions={['reports.view']} title="System Reports"><Reports /></ProtectedRoute>
+            } />
+            <Route path="/alerts" element={
+                <ProtectedRoute permissions={['alerts.view']} title="Alerts"><Alerts /></ProtectedRoute>
             } />
 
             {/* Fallback Catch-all Route */}

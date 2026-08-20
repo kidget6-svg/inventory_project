@@ -17,7 +17,7 @@ class PurchaseOrderController extends Controller
 {
     public function index()
     {
-        $orders = PurchaseOrder::with('supplier')->latest()->paginate(5);
+        $orders = PurchaseOrder::with('supplier')->latest()->paginate(10);
         return response()->json($orders);
     }
 

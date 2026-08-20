@@ -67,7 +67,7 @@ class ShelfController extends Controller
                 return response()->json($allShelves);
             }
 
-            $shelves = $query->latest()->paginate($perPage ?? 15);
+            $shelves = $query->latest()->paginate($perPage ?? 10);
 
             return response()->json([
                 'success' => true,

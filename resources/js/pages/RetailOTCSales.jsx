@@ -44,7 +44,7 @@ export default function RetailOTCSales() {
     const [submitting, setSubmitting] = useState(false);
 
     // Pagination (client-side, operates on filtered results)
-    const ITEMS_PER_PAGE = 6;
+    const ITEMS_PER_PAGE = 10;
     const [currentPage, setCurrentPage] = useState(1);
 
     // Customer Information

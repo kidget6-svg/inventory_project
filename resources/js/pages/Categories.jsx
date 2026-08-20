@@ -79,7 +79,7 @@ export default function Categories() {
     const loadCategories = () => {
         setLoading(true);
         setError('');
-        api.get('/categories', { params: { page, search: searchTerm, per_page: 15 } })
+        api.get('/categories', { params: { page, search: searchTerm, per_page: 10 } })
             .then(r => { 
                 let data = [];
                 let metaData = null;
@@ -110,7 +110,7 @@ export default function Categories() {
         setLoading(true);
         setError('');
 
-        const branchParams = { location_type: 'branch', per_page: 15, search: searchTerm };
+        const branchParams = { location_type: 'branch', per_page: 10, search: searchTerm };
         if (selectedBranchId && selectedBranchId !== 'all') {
             branchParams.branch_id = selectedBranchId;
         }

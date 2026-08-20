@@ -64,6 +64,10 @@ export default function WarehousePage() {
         medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
         expected_delivery: '', notes: '',
     });
+    const [stockPage, setStockPage] = useState(1);
+    const [receivingPage, setReceivingPage] = useState(1);
+    const [stockMeta, setStockMeta] = useState(null);
+    const [receivingMeta, setReceivingMeta] = useState(null);
 
     // Helper to safely extract array from API response
     const asArray = (res) => {
@@ -78,19 +82,15 @@ export default function WarehousePage() {
         setLoading(true);
         setError('');
         try {
-            const [statsRes, shelvesRes, stockRes, receivingRes, transfersRes, poRes] = await Promise.all([
+            const [statsRes, shelvesRes, transfersRes, poRes] = await Promise.all([
                 api.get('/warehouse/stats'),
                 api.get('/warehouse/shelves'),
-                api.get('/warehouse/stock', { params: filters }),
-                api.get('/warehouse/receiving-history', { params: filters }),
-                api.get('/warehouse/transfer-requests'),
+                api.get('/transfer-requests'),
                 api.get('/purchase-orders', { params: { status: ['approved', 'sent'] } }),
             ]);
 
             setStats(statsRes.data);
             setShelves(asArray(shelvesRes));
-            setStock(asArray(stockRes));
-            setReceivingHistory(asArray(receivingRes));
             setTransferRequests(asArray(transfersRes));
             setPurchaseOrders(asArray(poRes));
         } catch (err) {
@@ -99,11 +99,35 @@ export default function WarehousePage() {
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, []);
+
+    const loadStock = async (page = 1) => {
+        try {
+            const res = await api.get('/warehouse/stock', { params: { ...filters, page } });
+            const d = res.data;
+            setStock(asArray(res));
+            setStockMeta(d && d.meta ? d.meta : null);
+        } catch (err) {
+            console.error('Failed to load stock:', err);
+        }
+    };
+
+    const loadReceivingHistory = async (page = 1) => {
+        try {
+            const res = await api.get('/warehouse/receiving-history', { params: { ...filters, page } });
+            const d = res.data;
+            setReceivingHistory(asArray(res));
+            setReceivingMeta(d && d.meta ? d.meta : null);
+        } catch (err) {
+            console.error('Failed to load receiving history:', err);
+        }
+    };
 
     useEffect(() => {
         loadWarehouseData();
-    }, [loadWarehouseData]);
+        loadStock(stockPage);
+        loadReceivingHistory(receivingPage);
+    }, [loadWarehouseData, filters, stockPage, receivingPage]);
 
     // Handle receiving stock
     const handleReceiveStock = async (e) => {
@@ -529,6 +553,11 @@ export default function WarehousePage() {
                     </tbody>
                 </table>
             </div>
+            {stockMeta && stockMeta.last_page > 1 && (
+                <div className="p-4 border-t border-gray-100">
+                    <Pagination meta={stockMeta} onPageChange={setStockPage} />
+                </div>
+            )}
         </div>
     );
 
@@ -569,6 +598,11 @@ export default function WarehousePage() {
                     </tbody>
                 </table>
             </div>
+            {receivingMeta && receivingMeta.last_page > 1 && (
+                <div className="p-4 border-t border-gray-100">
+                    <Pagination meta={receivingMeta} onPageChange={setReceivingPage} />
+                </div>
+            )}
         </div>
     );
 
