@@ -67,7 +67,7 @@ class SaleTest extends TestCase
                     ],
                 ],
                 'customer_name' => 'John Doe',
-                'customer_phone' => '0911234567',
+                'customer_phone' => '+251911234567',
                 'notes' => 'Take with food',
             ]);
 
@@ -78,7 +78,7 @@ class SaleTest extends TestCase
             'type' => 'prescription',
             'status' => 'pending_cashier',
             'customer_name' => 'John Doe',
-            'customer_phone' => '0911234567',
+            'customer_phone' => '+251911234567',
             'notes' => 'Take with food',
         ]);
     }
@@ -527,7 +527,7 @@ class SaleTest extends TestCase
                     ],
                 ],
                 'customer_name' => 'Admin Customer',
-                'customer_phone' => '0911234567',
+                'customer_phone' => '+251911234567',
             ]);
 
         $response->assertCreated()

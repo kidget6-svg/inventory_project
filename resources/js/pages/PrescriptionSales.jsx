@@ -319,7 +319,7 @@ export default function PrescriptionSales() {const { t } = useLanguage();
         titleColor="text-sky-600"
         fields={[
         { name: 'patientName', label: 'Patient Name', icon: User, placeholder: 'Enter patient name' },
-        { name: 'patientPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number' },
+        { name: 'patientPhone', label: 'Phone Number', icon: Phone, phone: true, placeholder: 'Enter phone number' },
         { name: 'patientEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' }]
         }
         values={{ patientName, patientPhone, patientEmail }}

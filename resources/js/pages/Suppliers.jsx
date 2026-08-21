@@ -1,6 +1,8 @@
 import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect } from 'react';
 import api from '../axios';
 import Modal from '../components/Modal';
+import PhoneInput from '../components/PhoneInput';
+import { normalizePhone } from '../utils/phone';
 import { Eye, Edit, Trash2, Search, X, Plus, Save, Calendar, Phone, Mail, MapPin, User } from 'lucide-react';
 import Pagination from '../components/Pagination';
 
@@ -69,7 +71,7 @@ export default function Suppliers() {const { t } = useLanguage();
     setForm({
       name: item.name,
       contact_person: item.contact_person || '',
-      phone: item.phone || '',
+      phone: normalizePhone(item.phone || ''),
       email: item.email || '',
       address: item.address || ''
     });
@@ -298,12 +300,19 @@ export default function Suppliers() {const { t } = useLanguage();
                         {fields.map(([name, label]) =>
           <div key={name} className={name === 'address' ? 'md:col-span-2' : ''}>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">{label}{name === 'name' && ' *'}</label>
-                                <input
-              name={name}
-              value={form[name]}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-              required={name === 'name'} />
+                                {name === 'phone' ?
+              <PhoneInput
+                name={name}
+                value={form[name]}
+                onChange={handleChange}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" /> :
+
+              <input
+                name={name}
+                value={form[name]}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                required={name === 'name'} />}
             
                             </div>
           )}

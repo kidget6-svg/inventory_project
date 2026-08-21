@@ -14,13 +14,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
+import PhoneInput from '../components/PhoneInput';
 import {
   Pill,
   ShoppingBag,
   Search,
   Send,
   User,
-  Phone,
   Mail,
   Trash2,
   Plus,
@@ -533,14 +533,13 @@ export default function Sales() {const { t } = useLanguage();
                       className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-gray-50 focus:bg-white transition-colors" />
                     
                                     </div>
-                                    <div className="relative">
-                                        <Phone size={13} className="absolute left-3 top-2 text-gray-400" />
-                                        <input
-                      type="tel"
+                                    <div>
+                                    <PhoneInput
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
+                      iconSize={13}
                       placeholder={t("Phone number")}
-                      className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-gray-50 focus:bg-white transition-colors" />
+                      className="px-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-gray-50 focus:bg-white transition-colors" />
                     
                                     </div>
                                     <div className="relative">
@@ -714,16 +713,12 @@ export default function Sales() {const { t } = useLanguage();
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("Phone Number")}</label>
-                                <div className="relative">
-                                    <Phone size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                    <input
-                  type="tel"
-                  value={patientPhone}
-                  onChange={(e) => setPatientPhone(e.target.value)}
-                  placeholder={t("Enter phone number")}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
-                
-                                </div>
+                                <PhoneInput
+              value={patientPhone}
+              onChange={(e) => setPatientPhone(e.target.value)}
+              iconSize={14}
+              placeholder={t("Enter phone number")}
+              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("Email Address")}</label>
@@ -756,16 +751,12 @@ export default function Sales() {const { t } = useLanguage();
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("Phone Number")}</label>
-                                <div className="relative">
-                                    <Phone size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                                    <input
-                  type="tel"
-                  value={patientPhone}
-                  onChange={(e) => setPatientPhone(e.target.value)}
-                  placeholder={t("Enter phone number")}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
-                
-                                </div>
+                                <PhoneInput
+              value={patientPhone}
+              onChange={(e) => setPatientPhone(e.target.value)}
+              iconSize={14}
+              placeholder={t("Enter phone number")}
+              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("Email Address")}</label>

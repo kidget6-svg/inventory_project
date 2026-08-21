@@ -67,7 +67,7 @@ class BranchController extends Controller
                 'name' => 'required|string|max:255',
                 'location' => 'required|string|max:255',
                 'manager_name' => 'nullable|string|max:255',
-                'phone' => 'nullable|string|max:50',
+                'phone' => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
                 'email' => 'nullable|email|max:255',
                 'status' => 'in:active,inactive',
             ]);
@@ -110,7 +110,7 @@ class BranchController extends Controller
                 'name' => 'required|string|max:255',
                 'location' => 'required|string|max:255',
                 'manager_name' => 'nullable|string|max:255',
-                'phone' => 'nullable|string|max:50',
+                'phone' => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
                 'email' => 'nullable|email|max:255',
                 'status' => 'in:active,inactive',
             ]);

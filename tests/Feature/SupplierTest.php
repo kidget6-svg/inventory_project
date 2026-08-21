@@ -34,7 +34,7 @@ class SupplierTest extends TestCase
         $response = $this->actingAs($user)->postJson('/suppliers', [
             'name' => 'PharmaCorp Ltd',
             'contact_person' => 'John Doe',
-            'phone' => '0712345678',
+            'phone' => '+251712345678',
             'email' => 'john@pharmacorp.com',
             'address' => '123 Nairobi Street',
         ]);
@@ -43,7 +43,7 @@ class SupplierTest extends TestCase
             ->assertJsonFragment([
                 'name' => 'PharmaCorp Ltd',
                 'contact_person' => 'John Doe',
-                'phone' => '0712345678',
+                'phone' => '+251712345678',
                 'email' => 'john@pharmacorp.com',
             ]);
 
@@ -70,13 +70,13 @@ class SupplierTest extends TestCase
         $user = $this->adminUser();
         $supplier = Supplier::factory()->create([
             'name' => 'Old Name',
-            'phone' => '0700000000',
+            'phone' => '+251700000000',
         ]);
 
         $response = $this->actingAs($user)->putJson("/suppliers/{$supplier->id}", [
             'name' => 'New Name',
             'contact_person' => 'Jane Smith',
-            'phone' => '0799999999',
+            'phone' => '+251799999999',
             'email' => 'jane@example.com',
             'address' => '456 Mombasa Road',
         ]);
@@ -84,13 +84,13 @@ class SupplierTest extends TestCase
         $response->assertOk()
             ->assertJsonFragment([
                 'name' => 'New Name',
-                'phone' => '0799999999',
+                'phone' => '+251799999999',
             ]);
 
         $this->assertDatabaseHas('suppliers', [
             'id' => $supplier->id,
             'name' => 'New Name',
-            'phone' => '0799999999',
+            'phone' => '+251799999999',
         ]);
     }
 

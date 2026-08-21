@@ -12,6 +12,7 @@ import { useLanguage } from "../../context/LanguageContext"; // resources/js/com
 
 import React from 'react';
 import Modal from '../Modal';
+import PhoneInput from '../PhoneInput';
 
 export default function PosInfoModal({
   open,
@@ -41,7 +42,16 @@ export default function PosInfoModal({
                             <label className="block text-xs font-medium text-gray-500 mb-1">
                                 {field.label}
                             </label>
-                            <div className="relative">
+                            {field.phone ?
+              <PhoneInput
+                value={value}
+                onValueChange={(v) => handleFieldChange(field.name, v)}
+                icon={Icon}
+                iconSize={14}
+                placeholder={field.placeholder || ''}
+                className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all duration-200 placeholder:text-gray-400" /> :
+
+              <div className="relative">
                                 {Icon &&
                 <span className="absolute left-3 top-2.5 text-gray-400">
                                         <Icon size={14} />
@@ -58,7 +68,7 @@ export default function PosInfoModal({
                   Icon ? 'pl-10' : 'pl-3'} pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all duration-200 placeholder:text-gray-400`
                   } />
                 
-                            </div>
+                            </div>}
                         </div>);
 
         })}

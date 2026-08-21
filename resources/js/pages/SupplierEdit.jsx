@@ -2,6 +2,8 @@ import { useLanguage } from "../context/LanguageContext";import React, { useStat
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PhoneInput from '../components/PhoneInput';
+import { normalizePhone } from '../utils/phone';
 import { ArrowLeft, Save, X } from 'lucide-react';
 
 const fields = [
@@ -31,7 +33,7 @@ export default function SupplierEdit() {const { t } = useLanguage();
     then((r) => setForm({
       name: r.data.name,
       contact_person: r.data.contact_person || '',
-      phone: r.data.phone || '',
+      phone: normalizePhone(r.data.phone || ''),
       email: r.data.email || '',
       address: r.data.address || ''
     })).
@@ -78,12 +80,19 @@ export default function SupplierEdit() {const { t } = useLanguage();
                     {fields.map(([name, label]) =>
           <div key={name} className={name === 'address' ? 'md:col-span-2' : ''}>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">{label}{name === 'name' && ' *'}</label>
-                            <input
-              name={name}
-              value={form[name]}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-              required={name === 'name'} />
+                            {name === 'phone' ?
+              <PhoneInput
+                name={name}
+                value={form[name]}
+                onChange={handleChange}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" /> :
+
+              <input
+                name={name}
+                value={form[name]}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                required={name === 'name'} />}
             
                         </div>
           )}

@@ -1,6 +1,7 @@
 import { useLanguage } from "../context/LanguageContext";import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../axios';
+import PhoneInput from '../components/PhoneInput';
 import { ArrowLeft, Save, X } from 'lucide-react';
 
 const fields = [
@@ -60,12 +61,19 @@ export default function SupplierCreate() {const { t } = useLanguage();
                     {fields.map(([name, label]) =>
           <div key={name} className={name === 'address' ? 'md:col-span-2' : ''}>
                             <label className="block text-xs font-semibold text-gray-600 mb-1">{label}{name === 'name' && ' *'}</label>
-                            <input
-              name={name}
-              value={form[name]}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-              required={name === 'name'} />
+                            {name === 'phone' ?
+              <PhoneInput
+                name={name}
+                value={form[name]}
+                onChange={handleChange}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" /> :
+
+              <input
+                name={name}
+                value={form[name]}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+                required={name === 'name'} />}
             
                         </div>
           )}

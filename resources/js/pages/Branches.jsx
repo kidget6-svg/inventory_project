@@ -2,6 +2,8 @@ import { useLanguage } from "../context/LanguageContext";import React, { useStat
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
+import PhoneInput from '../components/PhoneInput';
+import { normalizePhone } from '../utils/phone';
 import {
   Plus, Edit, Trash2, Eye, Search, Building2, RefreshCw,
   Save, X, AlertCircle, Phone, Mail, User, MapPin,
@@ -116,7 +118,7 @@ export default function Branches() {const { t } = useLanguage();
       name: branch.name,
       location: branch.location,
       manager_name: branch.manager_name || '',
-      phone: branch.phone || '',
+      phone: normalizePhone(branch.phone || ''),
       email: branch.email || '',
       status: branch.status || 'active'
     });
@@ -379,12 +381,12 @@ export default function Branches() {const { t } = useLanguage();
 
                     <div>
                         <label className="block text-xs font-semibold text-gray-600 mb-1">{t("Phone")}</label>
-                        <input
+                        <PhoneInput
               name="phone"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
-              placeholder={t("e.g. +251-911-123456")} />
+              className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
+              placeholder={t("Enter phone number")} />
             
                     </div>
 

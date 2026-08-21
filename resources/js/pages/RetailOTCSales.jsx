@@ -306,7 +306,7 @@ export default function RetailOTCSales() {const { t } = useLanguage();
         titleColor="text-emerald-600"
         fields={[
         { name: 'customerName', label: 'Customer Name', icon: User, placeholder: 'Enter customer name' },
-        { name: 'customerPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number' },
+        { name: 'customerPhone', label: 'Phone Number', icon: Phone, phone: true, placeholder: 'Enter phone number' },
         { name: 'customerEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
         { name: 'customerNotes', label: 'Customer Notes', icon: FileText, placeholder: 'Notes or additional info' }]
         }

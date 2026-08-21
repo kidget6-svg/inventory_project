@@ -116,6 +116,7 @@ class AuthController extends Controller
         'first_name' => 'required|string|max:255',
         'last_name' => 'required|string|max:255',
         'email' => 'required|string|email|max:255|unique:users',
+        'phone_number' => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
         'password' => 'required|string|min:8|confirmed',
         'role' => 'required|in:pharmacist,cashier',
     ]);
@@ -125,6 +126,7 @@ class AuthController extends Controller
         'first_name' => $request->first_name,
         'last_name' => $request->last_name,
         'email' => $request->email,
+        'phone_number' => $request->phone_number,
         'password' => Hash::make($request->password),
         'role' => $request->role,
         'status' => 'pending',

@@ -165,7 +165,7 @@ export default function SidebarLayout({ children, pageTitle }) {
 
                 <span className="inline-flex items-center gap-1 font-medium truncate">
                                             {getBranchIconElement(user?.branch?.location_type)}
-                                            {user?.branch?.name || 'Assigned Branch'}
+                                            {t(user?.branch?.name) || t('Assigned Branch')}
                                         </span>
                 }
                                 </div>
@@ -254,13 +254,13 @@ export default function SidebarLayout({ children, pageTitle }) {
                             {userInitial}
                         </div>
                         <div className="text-[10px] text-gray-600 dark:text-gray-400 mt-1 text-center font-medium truncate w-full px-2">
-                            {user?.name?.split(' ')[0] || 'User'}
+                            {t(user?.name?.split(' ')[0]) || t('User')}
                         </div>
                         <div className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider ${roleBadgeStyle[user?.role] || 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}>
-                            {user?.role || 'Guest'}
+                            {t(user?.role) || t('Guest')}
                         </div>
                         <div className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 truncate w-full px-2 text-center">
-                            {isAdmin ? t(selectedBranch.name) : user?.branch?.name || t('No Branch')}
+                            {isAdmin ? t(selectedBranch.name) : t(user?.branch?.name) || t('No Branch')}
                         </div>
                     </div>
         }
@@ -314,10 +314,10 @@ export default function SidebarLayout({ children, pageTitle }) {
                         <button
             onClick={toggleLanguage}
             className="px-3 py-1.5 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-sky-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors flex items-center gap-1.5"
-            title="Switch Language (English / አማርኛ)">
+            title={lang === 'en' ? "Switch to Amharic" : "ወደ እንግሊዝኛ ቀይር"}>
             
                             <Globe size={16} className="text-sky-500" />
-                            <span>{lang === 'en' ? 'አማ' : 'EN'}</span>
+                            <span>{lang === 'en' ? 'አማርኛ' : 'እንግሊዝኛ'}</span>
                         </button>
                     </div>
         }

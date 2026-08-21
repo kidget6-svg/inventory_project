@@ -52,7 +52,7 @@ class SupplierController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
             'email' => 'nullable|email',
             'address' => 'nullable|string',
         ]);
@@ -71,7 +71,7 @@ class SupplierController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
             'email' => 'nullable|email',
             'address' => 'nullable|string',
         ]);

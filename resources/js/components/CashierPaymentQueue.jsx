@@ -18,6 +18,7 @@ import api from '../axios';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 import Modal from './Modal';
+import PhoneInput from './PhoneInput';
 import {
   CheckCircle,
   Clock,
@@ -508,12 +509,11 @@ export default function CashierPaymentQueue({ saleType, showTypeTabs = false }) 
                                             <label className="block text-xs font-medium text-gray-500 mb-1">{t("Customer Phone Number")}
 
                 </label>
-                                            <input
-                  type="tel"
+                                            <PhoneInput
                   value={telebirrPhone}
                   onChange={(e) => setTelebirrPhone(e.target.value)}
                   placeholder={t("Enter customer phone number")}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
                 
                                         </div>
 

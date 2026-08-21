@@ -29,7 +29,7 @@ class SupplierController extends Controller
     {
         $request->validate([
             'name' => 'required',
-            'phone' => 'nullable',
+            'phone' => 'nullable|regex:/^\+251[0-9]{9,10}$/',
             'email' => 'nullable|email',
             'address' => 'nullable'
         ]);

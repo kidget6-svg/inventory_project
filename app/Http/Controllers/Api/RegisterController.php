@@ -34,7 +34,7 @@ class RegisterController extends Controller
             'first_name'               => 'required|string|max:255',
             'last_name'                => 'required|string|max:255',
             'email'                    => 'required|email|unique:users',
-            'phone_number'             => 'nullable|string|max:20',
+            'phone_number'             => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
             'password'                 => 'required|confirmed|min:8',
             'role'                     => 'required|in:pharmacist,cashier',
             'gender'                   => 'nullable|in:male,female',

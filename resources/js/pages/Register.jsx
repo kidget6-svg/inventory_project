@@ -2,7 +2,8 @@ import { useLanguage } from "../context/LanguageContext";import React, { useStat
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Stepper from '../components/Stepper';
-import { User, Mail, Lock, Eye, EyeOff, Loader2, Phone, Calendar, MapPin, Upload, UserCheck, FileText, GraduationCap, Briefcase, IdCard, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import PhoneInput from '../components/PhoneInput';
+import { User, Mail, Lock, Eye, EyeOff, Loader2, Calendar, MapPin, Upload, UserCheck, FileText, GraduationCap, Briefcase, IdCard, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Register() {const { t } = useLanguage();
   const { register } = useAuth();
@@ -131,10 +132,13 @@ export default function Register() {const { t } = useLanguage();
 
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("Phone Number")}</label>
-                <div className="relative">
-                    <Phone className="absolute left-3.5 top-3.5 text-gray-400" size={18} />
-                    <input type="tel" name="phone_number" value={form.phone_number} onChange={handleChange} placeholder="(555) 123-4567" className="input-field pl-11" />
-                </div>
+                <PhoneInput
+              name="phone_number"
+              value={form.phone_number}
+              onChange={handleChange}
+              iconSize={18}
+              placeholder={t("Enter phone number")}
+              className="px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 outline-none transition-all duration-200 placeholder:text-gray-400 dark:placeholder:text-gray-500" />
             </div>
 
             <div>
