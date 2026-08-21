@@ -317,7 +317,7 @@ export default function SidebarLayout({ children, pageTitle }) {
             title={lang === 'en' ? "Switch to Amharic" : "ወደ እንግሊዝኛ ቀይር"}>
             
                             <Globe size={16} className="text-sky-500" />
-                            <span>{lang === 'en' ? 'አማርኛ' : 'እንግሊዝኛ'}</span>
+                            <span>{lang === 'en' ? 'አማ' : 'EN'}</span>
                         </button>
                     </div>
         }
