@@ -56,7 +56,7 @@ class MedicineController extends Controller
             }
 
             // Paginated response
-            $medicines = $query->latest()->paginate($perPage ?? 15);
+            $medicines = $query->latest()->paginate($perPage ?? 10);
 
             return response()->json([
                 'data' => $medicines->items(),

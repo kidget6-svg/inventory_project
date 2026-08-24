@@ -37,7 +37,7 @@ class AuditLogController extends Controller
             });
         }
 
-        $logs = $query->latest()->paginate(20);
+        $logs = $query->latest()->paginate(10);
 
         return response()->json($logs);
     }

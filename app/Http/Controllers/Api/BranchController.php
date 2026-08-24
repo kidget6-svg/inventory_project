@@ -30,7 +30,7 @@ class BranchController extends Controller
                 });
             }
 
-            $perPage = $request->get('per_page', 15);
+            $perPage = $request->get('per_page', 10);
 
             if ($perPage === 'all' || (int)$perPage === -1 || (is_numeric($perPage) && (int)$perPage < 0)) {
                 $allBranches = $query->orderBy('name')->get();

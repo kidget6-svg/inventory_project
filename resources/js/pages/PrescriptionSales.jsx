@@ -46,13 +46,14 @@ export default function PrescriptionSales() {const { t } = useLanguage();
   const [submitting, setSubmitting] = useState(false);
 
   // Pagination (client-side, operates on filtered results)
-  const ITEMS_PER_PAGE = 6;
+  const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
 
   // Prescription / patient information
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
   const [patientEmail, setPatientEmail] = useState('');
+  const [patientTin, setPatientTin] = useState('');
 
   // Prescription & Patient Information modal (opened before sending to cashier queue)
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
@@ -172,7 +173,8 @@ export default function PrescriptionSales() {const { t } = useLanguage();
         // Prescription / patient information
         customer_name: patientName,
         customer_phone: patientPhone,
-        customer_email: patientEmail || null
+        customer_email: patientEmail || null,
+        customer_tin: patientTin || null
       });
 
       window.showToast(t("Order dispatched to Cashier queue!"), 'success');
@@ -180,6 +182,7 @@ export default function PrescriptionSales() {const { t } = useLanguage();
       setPatientName('');
       setPatientPhone('');
       setPatientEmail('');
+      setPatientTin('');
       setShowPrescriptionModal(false);
     } catch (err) {
       window.showToast(
@@ -312,26 +315,28 @@ export default function PrescriptionSales() {const { t } = useLanguage();
 
             {/* Prescription & Patient Information modal */}
             <PosInfoModal
-        open={showPrescriptionModal}
-        onClose={() => setShowPrescriptionModal(false)}
-        title={t("Prescription & Patient Information")}
-        titleIcon={Clipboard}
-        titleColor="text-sky-600"
-        fields={[
-        { name: 'patientName', label: 'Patient Name', icon: User, placeholder: 'Enter patient name' },
-        { name: 'patientPhone', label: 'Phone Number', icon: Phone, phone: true, placeholder: 'Enter phone number' },
-        { name: 'patientEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' }]
-        }
-        values={{ patientName, patientPhone, patientEmail }}
-        onChange={(key, value) => {
-          if (key === 'patientName') setPatientName(value);else
-          if (key === 'patientPhone') setPatientPhone(value);else
-          if (key === 'patientEmail') setPatientEmail(value);
-        }}
-        onConfirm={confirmSendToCashier}
-        confirmLabel="Confirm & Send to Cashier Queue"
-        submitting={submitting} />
-      
-        </div>);
-
+                open={showPrescriptionModal}
+                onClose={() => setShowPrescriptionModal(false)}
+                title={t("Prescription & Patient Information")}
+                titleIcon={Clipboard}
+                titleColor="text-sky-600"
+                 fields={[
+                      { name: 'patientName', label: 'Patient Name', icon: User, placeholder: 'Enter patient name' },
+                      { name: 'patientPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number', phoneValidation: true },
+                      { name: 'patientEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
+                      { name: 'patientTin', label: 'TIN Number', icon: FileText, placeholder: 'Enter TIN number', numberValidation: true },
+                  ]}
+                values={{ patientName, patientPhone, patientEmail, patientTin }}
+                onChange={(key, value) => {
+                    if (key === 'patientName') setPatientName(value);
+                    else if (key === 'patientPhone') setPatientPhone(value);
+                    else if (key === 'patientEmail') setPatientEmail(value);
+                    else if (key === 'patientTin') setPatientTin(value);
+                }}
+                onConfirm={confirmSendToCashier}
+                confirmLabel="Confirm & Send to Cashier Queue"
+                submitting={submitting}
+            />
+        </div>
+    );
 }

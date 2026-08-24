@@ -603,6 +603,8 @@ export default function PurchaseOrders() {const { t } = useLanguage();
                 </div>
       }
 
+            <Pagination meta={meta} onPageChange={handlePageChange} />
+
             {/* PDF Preview Modal */}
             <Modal
         open={showPdfPreview}

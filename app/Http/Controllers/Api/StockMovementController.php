@@ -59,7 +59,7 @@ class StockMovementController extends Controller
                 });
             }
 
-            $movements = $query->latest()->paginate(50);
+            $movements = $query->latest()->paginate(10);
 
             return response()->json([
                 'movements' => $movements,

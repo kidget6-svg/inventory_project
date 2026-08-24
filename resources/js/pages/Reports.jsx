@@ -1,6 +1,7 @@
 import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
 import PieChart from '../components/PieChart';
+import Pagination from '../components/Pagination';
 import { Pill, ShoppingBag } from 'lucide-react';
 
 export default function Reports() {const { t } = useLanguage();
@@ -11,31 +12,51 @@ export default function Reports() {const { t } = useLanguage();
   const [sortKey, setSortKey] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
 
-  useEffect(() => {
-    api.get('/reports').then((r) => {
-      const payload = r.data || {};
-      // normalize paginated sub-resources
-      if (payload.sales && payload.sales.data) payload.sales = payload.sales.data;
-      if (payload.purchases && payload.purchases.data) payload.purchases = payload.purchases.data;
-      setData(payload);
-    });
-  }, []);
+    const ITEMS_PER_PAGE = 10;
+    const [inventoryPage, setInventoryPage] = useState(1);
+    const [salesPage, setSalesPage] = useState(1);
+    const [purchasesPage, setPurchasesPage] = useState(1);
+    const [lowStockPage, setLowStockPage] = useState(1);
+    const [expiringPage, setExpiringPage] = useState(1);
 
-  // Reset search and sort when switching tabs
-  useEffect(() => {
-    setSearchTerm('');
-    setSortKey('');
-    setSortDirection('asc');
-  }, [activeTab]);
+    useEffect(() => {
+        api.get('/reports').then(r => {
+            const payload = r.data || {};
+            // normalize paginated sub-resources
+            if (payload.sales && payload.sales.data) payload.sales = payload.sales.data;
+            if (payload.purchases && payload.purchases.data) payload.purchases = payload.purchases.data;
+            setData(payload);
+        });
+    }, []);
 
-  const handleSort = (key) => {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDirection('asc');
-    }
-  };
+    // Reset search and sort when switching tabs
+    useEffect(() => {
+        setSearchTerm('');
+        setSortKey('');
+        setSortDirection('asc');
+        setInventoryPage(1);
+        setSalesPage(1);
+        setPurchasesPage(1);
+        setLowStockPage(1);
+        setExpiringPage(1);
+    }, [activeTab]);
+
+    useEffect(() => {
+        setInventoryPage(1);
+        setSalesPage(1);
+        setPurchasesPage(1);
+        setLowStockPage(1);
+        setExpiringPage(1);
+    }, [searchTerm, sortKey, sortDirection, productTypeFilter]);
+
+    const handleSort = (key) => {
+        if (sortKey === key) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortKey(key);
+            setSortDirection('asc');
+        }
+    };
 
   const sortIcon = (key) => {
     if (sortKey !== key) return ' ↕';
@@ -54,97 +75,103 @@ export default function Reports() {const { t } = useLanguage();
 
     let result = [...items];
 
-    // Filter by search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter((item) =>
-      searchFields.some((field) => {
-        const value = field.includes('.') ?
-        field.split('.').reduce((obj, key) => obj?.[key], item) :
-        item[field];
-        return value?.toString().toLowerCase().includes(term);
-      })
-      );
-    }
-
-    // Sort
-    if (sortKey) {
-      result.sort((a, b) => {
-        let aVal = sortKey.includes('.') ?
-        sortKey.split('.').reduce((obj, key) => obj?.[key], a) :
-        a[sortKey];
-        let bVal = sortKey.includes('.') ?
-        sortKey.split('.').reduce((obj, key) => obj?.[key], b) :
-        b[sortKey];
-
-        if (aVal === null || aVal === undefined) aVal = '';
-        if (bVal === null || bVal === undefined) bVal = '';
-
-        if (typeof aVal === 'string') {
-          return sortDirection === 'asc' ?
-          aVal.localeCompare(bVal) :
-          bVal.localeCompare(aVal);
+        // Filter by search term
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            result = result.filter(item =>
+                searchFields.some(field => {
+                    const value = field.includes('.')
+                        ? field.split('.').reduce((obj, key) => obj?.[key], item)
+                        : item[field];
+                    return value?.toString().toLowerCase().includes(term);
+                })
+            );
         }
-        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-      });
+
+        // Sort
+        if (sortKey) {
+            result.sort((a, b) => {
+                let aVal = sortKey.includes('.')
+                    ? sortKey.split('.').reduce((obj, key) => obj?.[key], a)
+                    : a[sortKey];
+                let bVal = sortKey.includes('.')
+                    ? sortKey.split('.').reduce((obj, key) => obj?.[key], b)
+                    : b[sortKey];
+
+                if (aVal === null || aVal === undefined) aVal = '';
+                if (bVal === null || bVal === undefined) bVal = '';
+
+                if (typeof aVal === 'string') {
+                    return sortDirection === 'asc'
+                        ? aVal.localeCompare(bVal)
+                        : bVal.localeCompare(aVal);
+                }
+                return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+            });
+        }
+
+        return result;
+    };
+
+    const statusBadge = (status) => {
+        const base = 'px-2 py-1 rounded-full text-xs font-semibold';
+        if (status === 'completed') return `${base} bg-sky-100 text-sky-700`;
+        if (status === 'cancelled') return `${base} bg-red-100 text-red-600`;
+        return `${base} bg-sky-100 text-sky-700`;
+    };
+
+    const emptyRow = (colSpan, message) => (
+        <tr><td colSpan={colSpan} className="px-4 py-8 text-center text-gray-400">{message}</td></tr>
+    );
+
+    const getPageSlice = (arr, page) => {
+        const start = (page - 1) * ITEMS_PER_PAGE;
+        return arr.slice(start, start + ITEMS_PER_PAGE);
+    };
+
+    const inventoryData = useMemo(
+        () => filterAndSort(filterByType(data?.inventory || data?.medicines || []), ['name', 'batch_number', 'sku']),
+        [data, searchTerm, sortKey, sortDirection, productTypeFilter]
+    );
+
+    // Derive labels/values for the Inventory by Category pie chart
+    const inventoryChartLabels = useMemo(
+        () => data?.inventoryChartData?.map(c => c.category) || [],
+        [data]
+    );
+    const inventoryChartValues = useMemo(
+        () => data?.inventoryChartData?.map(c => c.medicine_count) || [],
+        [data]
+    );
+
+    const salesData = useMemo(
+        () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
+
+    const purchasesData = useMemo(
+        () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
+        [data, searchTerm, sortKey, sortDirection]
+    );
+
+    const lowStockData = useMemo(
+        () => filterAndSort(filterByType(data?.lowStock || []), ['name', 'sku']),
+        [data, searchTerm, sortKey, sortDirection, productTypeFilter]
+    );
+
+    const expiringData = useMemo(
+        () => filterAndSort(filterByType(data?.expiring || []), ['name', 'batch_number', 'sku']),
+        [data, searchTerm, sortKey, sortDirection, productTypeFilter]
+    );
+
+    if (!data) {
+        return (
+            <div className="text-sky-500 p-6">
+                Loading reports...
+            </div>
+        );
     }
 
-    return result;
-  };
-
-  const statusBadge = (status) => {
-    const base = 'px-2 py-1 rounded-full text-xs font-semibold';
-    if (status === 'completed') return `${base} bg-sky-100 text-sky-700`;
-    if (status === 'cancelled') return `${base} bg-red-100 text-red-600`;
-    return `${base} bg-sky-100 text-sky-700`;
-  };
-
-  const emptyRow = (colSpan, message) =>
-  <tr><td colSpan={colSpan} className="px-4 py-8 text-center text-gray-400">{message}</td></tr>;
-
-
-  const inventoryData = useMemo(
-    () => filterAndSort(filterByType(data?.inventory || data?.medicines || []), ['name', 'batch_number', 'sku']),
-    [data, searchTerm, sortKey, sortDirection, productTypeFilter]
-  );
-
-  // Derive labels/values for the Inventory by Category pie chart
-  const inventoryChartLabels = useMemo(
-    () => data?.inventoryChartData?.map((c) => c.category) || [],
-    [data]
-  );
-  const inventoryChartValues = useMemo(
-    () => data?.inventoryChartData?.map((c) => c.medicine_count) || [],
-    [data]
-  );
-
-  const salesData = useMemo(
-    () => filterAndSort(data?.sales || [], ['id', 'sale_date']),
-    [data, searchTerm, sortKey, sortDirection]
-  );
-
-  const purchasesData = useMemo(
-    () => filterAndSort(data?.purchases || [], ['id', 'supplier.name', 'order_date', 'status']),
-    [data, searchTerm, sortKey, sortDirection]
-  );
-
-  const lowStockData = useMemo(
-    () => filterAndSort(filterByType(data?.lowStock || []), ['name', 'sku']),
-    [data, searchTerm, sortKey, sortDirection, productTypeFilter]
-  );
-
-  const expiringData = useMemo(
-    () => filterAndSort(filterByType(data?.expiring || []), ['name', 'batch_number', 'sku']),
-    [data, searchTerm, sortKey, sortDirection, productTypeFilter]
-  );
-
-  if (!data) {
-    return (
-      <div className="text-sky-500 p-6">{t("Loading reports...")}
-
-      </div>);
-
-  }
 
   const tabs = [
   { key: 'inventory', label: 'Inventory' },
@@ -206,7 +233,7 @@ export default function Reports() {const { t } = useLanguage();
         
             </div>
 
-            {activeTab === 'inventory' &&
+            {activeTab === 'inventory' && (
       <div className="space-y-6">
                     {inventoryChartLabels.length > 0 &&
         <div className="card">
@@ -231,8 +258,8 @@ export default function Reports() {const { t } = useLanguage();
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('expiry_date')}>{t("Expiry")}{sortIcon('expiry_date')}</th>
                             </tr></thead>
                             <tbody>
-                                {inventoryData.length > 0 ? inventoryData.map((item) =>
-              <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
+                                {getPageSlice(inventoryData, inventoryPage).length > 0 ? getPageSlice(inventoryData, inventoryPage).map(item =>
+                                    <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
                                         <td className="px-4 py-3">
                                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                   item.product_type === 'retail' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}`
@@ -250,10 +277,19 @@ export default function Reports() {const { t } = useLanguage();
                             </tbody>
                         </table>
                     </div>
+                    {inventoryData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={inventoryPage}
+                            totalPages={Math.max(1, Math.ceil(inventoryData.length / ITEMS_PER_PAGE))}
+                            totalItems={inventoryData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setInventoryPage}
+                        />
+                    )}
                 </div>
-      }
+        )}
 
-            {activeTab === 'sales' &&
+            {activeTab === 'sales' && (
       <div className="card overflow-hidden">
                     <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">{t("Sales Report (")}{salesData.length}{t("sales)")}</h3></div>
                     <table className="w-full">
@@ -263,8 +299,8 @@ export default function Reports() {const { t } = useLanguage();
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('total_amount')}>{t("Amount")}{sortIcon('total_amount')}</th>
                         </tr></thead>
                         <tbody>
-                            {salesData.length > 0 ? salesData.map((s) =>
-            <tr key={s.id} className="border-b border-gray-50 hover:bg-sky-50/30">
+                            {getPageSlice(salesData, salesPage).length > 0 ? getPageSlice(salesData, salesPage).map(s =>
+                                <tr key={s.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                     <td className="px-4 py-3 text-sm">{s.id}</td>
                                     <td className="px-4 py-3 text-sm">{s.sale_date}</td>
                                     <td className="px-4 py-3 text-sm font-semibold">${Number(s.total_amount).toFixed(2)}</td>
@@ -272,10 +308,19 @@ export default function Reports() {const { t } = useLanguage();
             ) : emptyRow(3, 'No sales found')}
                         </tbody>
                     </table>
+                    {salesData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={salesPage}
+                            totalPages={Math.max(1, Math.ceil(salesData.length / ITEMS_PER_PAGE))}
+                            totalItems={salesData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setSalesPage}
+                        />
+                    )}
                 </div>
-      }
+      )}
 
-            {activeTab === 'purchases' &&
+            {activeTab === 'purchases' && (
       <div className="card overflow-hidden">
                     <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">{t("Purchase Orders (")}{purchasesData.length})</h3></div>
                     <table className="w-full">
@@ -287,8 +332,8 @@ export default function Reports() {const { t } = useLanguage();
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('total_amount')}>{t("Amount")}{sortIcon('total_amount')}</th>
                         </tr></thead>
                         <tbody>
-                            {purchasesData.length > 0 ? purchasesData.map((p) =>
-            <tr key={p.id} className="border-b border-gray-50 hover:bg-sky-50/30">
+                            {getPageSlice(purchasesData, purchasesPage).length > 0 ? getPageSlice(purchasesData, purchasesPage).map(p =>
+                                <tr key={p.id} className="border-b border-gray-50 hover:bg-sky-50/30">
                                     <td className="px-4 py-3 text-sm">{p.id}</td>
                                     <td className="px-4 py-3 text-sm">{p.supplier?.name || '---'}</td>
                                     <td className="px-4 py-3 text-sm">{p.order_date}</td>
@@ -298,10 +343,19 @@ export default function Reports() {const { t } = useLanguage();
             ) : emptyRow(5, 'No purchase orders found')}
                         </tbody>
                     </table>
+                    {purchasesData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={purchasesPage}
+                            totalPages={Math.max(1, Math.ceil(purchasesData.length / ITEMS_PER_PAGE))}
+                            totalItems={purchasesData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setPurchasesPage}
+                        />
+                    )}
                 </div>
-      }
+      )}
 
-            {activeTab === 'lowStock' &&
+            {activeTab === 'lowStock' && (
       <div className="card overflow-hidden">
                     <div className="px-5 py-3 border-b border-sky-100"><h3 className="font-semibold text-gray-700">{t("Low Stock Report (")}{lowStockData.length})</h3></div>
                     <table className="w-full">
@@ -312,8 +366,8 @@ export default function Reports() {const { t } = useLanguage();
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700 cursor-pointer hover:bg-sky-100" onClick={() => handleSort('reorder_level')}>{t("Reorder Level")}{sortIcon('reorder_level')}</th>
                         </tr></thead>
                         <tbody>
-                            {lowStockData.length > 0 ? lowStockData.map((item) =>
-            <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
+                            {getPageSlice(lowStockData, lowStockPage).length > 0 ? getPageSlice(lowStockData, lowStockPage).map(item =>
+                                <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
                                     <td className="px-4 py-3">
                                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                 item.product_type === 'retail' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}`
@@ -328,11 +382,19 @@ export default function Reports() {const { t } = useLanguage();
             ) : emptyRow(4, 'No low stock items')}
                         </tbody>
                     </table>
+                    {lowStockData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={lowStockPage}
+                            totalPages={Math.max(1, Math.ceil(lowStockData.length / ITEMS_PER_PAGE))}
+                            totalItems={lowStockData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setLowStockPage}
+                        />
+                    )}
                 </div>
-      }
-
-            {activeTab === 'expiring' &&
-      <div className="card overflow-hidden">
+            )}
+            {activeTab === 'expiring' && (
+                <div className="card overflow-hidden">
                     <div className="px-5 py-3 border-b border-sky-100 flex items-center justify-between flex-wrap gap-2">
                         <h3 className="font-semibold text-gray-700">{t("Expiry Report \u2014 Expiring Soon (90 days) (")}{expiringData.length})</h3>
                         {expiringData.length > 0 &&
@@ -356,13 +418,13 @@ export default function Reports() {const { t } = useLanguage();
                             <th className="px-4 py-3 text-left text-xs font-semibold text-sky-700">{t("Days Left")}</th>
                         </tr></thead>
                         <tbody>
-                            {expiringData.length > 0 ? expiringData.map((item) => {const { t } = useLanguage();
-              const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
-              const expired = daysLeft < 0;
-              const urgent = !expired && daysLeft <= 30;
-              const soon = !expired && daysLeft <= 90;
-              return (
-                <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
+                            {getPageSlice(expiringData, expiringPage).length > 0 ? getPageSlice(expiringData, expiringPage).map(item => {
+                                const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
+                                const expired = daysLeft < 0;
+                                const urgent = !expired && daysLeft <= 30;
+                                const soon = !expired && daysLeft <= 90;
+                                return (
+                                    <tr key={`${item.product_type}-${item.id}`} className="border-b border-gray-50 hover:bg-sky-50/30">
                                         <td className="px-4 py-3">
                                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                     item.product_type === 'retail' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}`
@@ -389,8 +451,18 @@ export default function Reports() {const { t } = useLanguage();
             }) : emptyRow(6, 'No items with expiry dates')}
                         </tbody>
                     </table>
+                    {expiringData.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                            currentPage={expiringPage}
+                            totalPages={Math.max(1, Math.ceil(expiringData.length / ITEMS_PER_PAGE))}
+                            totalItems={expiringData.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setExpiringPage}
+                        />
+                    )}
                 </div>
-      }
-        </div>);
+      )}
+
+          </div>);
 
 }

@@ -4,11 +4,12 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import PhoneInput from '../components/PhoneInput';
 import { normalizePhone } from '../utils/phone';
+import Pagination from '../components/Pagination';
 import {
   Plus, Edit, Trash2, Eye, Search, Building2, RefreshCw,
   Save, X, AlertCircle, Phone, Mail, User, MapPin,
-  CheckCircle, XCircle, Clock } from
-'lucide-react';
+  CheckCircle, XCircle, Clock
+} from 'lucide-react';
 
 export default function Branches() {const { t } = useLanguage();
   const [branches, setBranches] = useState([]);
@@ -30,16 +31,19 @@ export default function Branches() {const { t } = useLanguage();
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState(null);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState(null);
 
   // Load branches
   const loadBranches = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get('/branches', { params: { search: searchTerm } });
+      const res = await api.get('/branches', { params: { page, search: searchTerm } });
       const d = res.data;
       const items = Array.isArray(d) ? d : d && Array.isArray(d.data) ? d.data : [];
       setBranches(items);
+      setMeta(d && d.meta ? d.meta : null);
     } catch (err) {
       setError(t("Failed to load branches"));
       console.error(err);
@@ -59,9 +63,13 @@ export default function Branches() {const { t } = useLanguage();
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [searchTerm]);
+
+  useEffect(() => {
     loadBranches();
     loadStats();
-  }, [searchTerm]);
+  }, [page, searchTerm]);
 
   // Handle form submit
   const handleSubmit = async (e) => {
@@ -326,6 +334,10 @@ export default function Branches() {const { t } = useLanguage();
                     </div>
         }
             </div>
+
+            {meta && meta.last_page > 1 && (
+                <Pagination meta={meta} onPageChange={(p) => setPage(p)} />
+            )}
 
             {/* ============================================================
            CREATE/EDIT MODAL

@@ -59,7 +59,7 @@ public function stats(Request $request)
 
         // Warehouse page shows ONLY warehouse shelves.
         $shelves = Shelf::where('location_type', Shelf::LOCATION_WAREHOUSE)
-            ->withCount(['medicines', 'retailProducts'])
+            ->withCount(['medicines'])
             ->get()
             ->map(function ($shelf) {
                 $capacity = $shelf->capacity ?? 100;
@@ -104,7 +104,7 @@ public function stats(Request $request)
             });
         }
 
-        $stock = $query->paginate(20);
+        $stock = $query->paginate(10);
         return response()->json($stock);
     }
 
@@ -454,7 +454,7 @@ public function stats(Request $request)
 
         $history = $query->with(['medicine', 'user', 'itemable', 'supplier'])
             ->latest()
-            ->paginate(20);
+            ->paginate(10);
         return response()->json($history);
     }
 }

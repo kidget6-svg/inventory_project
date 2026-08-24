@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../axios';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import Pagination from '../components/Pagination';
 import {
   Plus, Edit, Trash2, Package, Tag, ChevronLeft, ChevronRight,
   Search, Filter, X } from
@@ -19,14 +20,19 @@ export default function CategoryIndex() {const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [categoriesPage, setCategoriesPage] = useState(1);
+  const [shelvesPage, setShelvesPage] = useState(1);
+  const [categoriesMeta, setCategoriesMeta] = useState(null);
+  const [shelvesMeta, setShelvesMeta] = useState(null);
 
   const loadCategories = () => {
     setLoading(true);
     setError('');
-    api.get('/categories', { params: { search } }).
+    api.get('/categories', { params: { page: categoriesPage, search } }).
     then((r) => {
       const data = r.data;
-      setCategories(Array.isArray(data) ? data : data.data || []);
+      setCategories(Array.isArray(data) ? data : (data.data || []));
+      setCategoriesMeta(data && data.meta ? data.meta : null);
     }).
     catch(() => setError(t("Failed to load categories"))).
     finally(() => setLoading(false));
@@ -35,10 +41,11 @@ export default function CategoryIndex() {const { t } = useLanguage();
   const loadShelves = () => {
     setLoading(true);
     setError('');
-    api.get('/shelves', { params: { search } }).
+    api.get('/shelves', { params: { page: shelvesPage, search } }).
     then((r) => {
       const data = r.data;
-      setShelves(Array.isArray(data) ? data : []);
+      setShelves(Array.isArray(data) ? data : (data.data || []));
+      setShelvesMeta(data && data.meta ? data.meta : null);
     }).
     catch(() => setError(t("Failed to load shelves"))).
     finally(() => setLoading(false));
@@ -46,11 +53,21 @@ export default function CategoryIndex() {const { t } = useLanguage();
 
   useEffect(() => {
     if (tab === 'categories') {
+      setCategoriesPage(1);
+      loadCategories();
+    } else {
+      setShelvesPage(1);
+      loadShelves();
+    }
+  }, [tab, search]);
+
+  useEffect(() => {
+    if (tab === 'categories') {
       loadCategories();
     } else {
       loadShelves();
     }
-  }, [tab, search]);
+  }, [categoriesPage, shelvesPage, tab]);
 
   const handleDeleteCategory = async (id) => {
     if (!window.confirm('Delete this category?')) return;
@@ -129,7 +146,7 @@ export default function CategoryIndex() {const { t } = useLanguage();
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none" />
-        
+      
             </div>
 
             {error &&
@@ -194,7 +211,10 @@ export default function CategoryIndex() {const { t } = useLanguage();
                         </div>
         }
                 </div>
-      }
+                {categoriesMeta && categoriesMeta.last_page > 1 && (
+                    <Pagination meta={categoriesMeta} onPageChange={(p) => setCategoriesPage(p)} />
+                )}
+            }
 
             {/* Shelves Tab */}
             {tab === 'shelves' &&
@@ -239,7 +259,10 @@ export default function CategoryIndex() {const { t } = useLanguage();
                         </div>
         }
                 </div>
-      }
-        </div>);
-
+                {shelvesMeta && shelvesMeta.last_page > 1 && (
+                    <Pagination meta={shelvesMeta} onPageChange={(p) => setShelvesPage(p)} />
+                )}
+            }
+        </div>
+    );
 }

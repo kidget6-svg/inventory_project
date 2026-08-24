@@ -393,6 +393,12 @@ export default function CashierPaymentQueue({ saleType, showTypeTabs = false }) 
                                         <span className="font-medium text-emerald-600">-${parseFloat(sale.discount).toFixed(2)}</span>
                                     </div>
             }
+                                {sale.customer_tin && (
+                                    <div className="flex justify-between items-center pt-1">
+                                        <span className="text-xs font-medium text-gray-500">{t("TIN")}</span>
+                                        <span className="text-sm text-gray-700 font-medium">{sale.customer_tin}</span>
+                                    </div>
+                                )}
                                 {sale.customer_name &&
             <div className="flex justify-between text-xs text-gray-500">
                                         <span>{t("Customer")}</span>
@@ -449,6 +455,12 @@ export default function CashierPaymentQueue({ saleType, showTypeTabs = false }) 
                                 <span className="text-xs text-gray-500">{t("Customer")}</span>
                                 <span className="text-sm text-gray-700">{selectedSale.customer_name || 'Walk-in Customer'}</span>
                             </div>
+                            {selectedSale.customer_tin && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-500">TIN</span>
+                                    <span className="text-sm text-gray-700 font-medium">{selectedSale.customer_tin}</span>
+                                </div>
+                            )}
                         </div>
 
                         <div>
@@ -623,8 +635,14 @@ export default function CashierPaymentQueue({ saleType, showTypeTabs = false }) 
                                 <span className="text-xs text-gray-500">{t("Customer")}</span>
                                 <span className="text-sm font-medium text-gray-800">{completedSale.customer_name || 'Walk-in Customer'}</span>
                             </div>
+                            {completedSale.customer_tin && (
+                                <div className="flex justify-between">
+                                    <span className="text-xs text-gray-500">{t("TIN")}</span>
+                                    <span className="text-sm font-medium text-gray-800">{completedSale.customer_tin}</span>
+                                </div>
+                            )}
                             {completedSale.notes &&
-            <div className="flex justify-between">
+                                <div className="flex justify-between">
                                     <span className="text-xs text-gray-500">{t("Prescription Notes")}</span>
                                     <span className="text-sm font-medium text-gray-800">{completedSale.notes}</span>
                                 </div>
