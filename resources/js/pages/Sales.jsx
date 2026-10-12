@@ -12,6 +12,7 @@ import { useLanguage } from "../context/LanguageContext"; // resources/js/pages/
 
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../axios';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import PhoneInput from '../components/PhoneInput';
@@ -21,6 +22,7 @@ import {
   Search,
   Send,
   User,
+  Phone,
   Mail,
   Trash2,
   Plus,
@@ -39,26 +41,78 @@ import {
   Clock,
   ArrowRight,
   Sparkles,
-  Gift } from
-'lucide-react';
+  Gift,
+  Lock,
+  ChevronDown,
+  ChevronUp,
+  Info,
+} from 'lucide-react';
 
 const priceOf = (item) =>
 Number(item?.selling_price ?? item?.unit_price ?? item?.price ?? 0);
 
-export default function Sales() {const { t } = useLanguage();
-  const [medicines, setMedicines] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [catalogTab, setCatalogTab] = useState('medicine');
-  const [search, setSearch] = useState('');
+const imageOf = (item) => item?.image_url || item?.image || item?.photo_path || null;
 
-  // Order (cart)
-  const [cart, setCart] = useState([]);
+function StockBadge({ quantity }) {
+    if (quantity <= 0) {
+        return (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700">
+                Out of stock
+            </span>
+        );
+    }
+    if (quantity <= 10) {
+        return (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-700">
+                Low stock
+            </span>
+        );
+    }
+    return (
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700">
+            In stock
+        </span>
+    );
+}
 
-  // Select Customer
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
+function Thumb({ item, type, className, iconClassName }) {
+    const src = imageOf(item);
+    const Icon = type === 'medicine' ? Pill : ShoppingBag;
+    if (src) {
+        return <img src={src} alt={item?.name || 'product'} className={className} />;
+    }
+    return <Icon size={20} className={iconClassName} />;
+}
+
+export default function Sales() {
+    const { t } = useLanguage();
+    const { user, hasPermission } = useAuth();
+    const userRole = user?.role;
+    const isPharmacistOrAdmin =
+        userRole === 'admin' || userRole === 'pharmacist' || userRole === 'super_admin';
+
+    // Prescription medicines may only be added by pharmacists/admins, or
+    // cashiers explicitly granted the create-prescription-sales permission.
+    const canAddMedicine = isPharmacistOrAdmin || hasPermission('create-prescription-sales');
+
+    // Discounts require the apply-sales-discount permission.
+    const canApplyDiscount = hasPermission('apply-sales-discount');
+
+    const [medicines, setMedicines] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [catalogTab, setCatalogTab] = useState('medicine');
+    const [search, setSearch] = useState('');
+
+    // Order (cart)
+    const [cart, setCart] = useState([]);
+    const [expandedItemId, setExpandedItemId] = useState(null);
+
+    // Select Customer
+    const [showCustomerInfo, setShowCustomerInfo] = useState(false);
+    const [customerName, setCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [customerEmail, setCustomerEmail] = useState('');
 
   // Apply Discounts
   const [discountType, setDiscountType] = useState('percentage');
@@ -113,100 +167,115 @@ export default function Sales() {const { t } = useLanguage();
     );
   }, [activeCatalog, search]);
 
-  // ── Order helpers ────────────────────────────────────────────
-  const addToCart = (type, item, quantity) => {
-    if (quantity > item.quantity) {
-      return window.showToast(`Only ${item.quantity} in stock for ${item.name}`, 'error');
-    }
-    setCart((prev) => {
-      const existing = prev.find((x) => x.type === type && x.id === item.id);
-      if (existing) {
-        if (existing.quantity + quantity > item.quantity) {
-          window.showToast(`Stock limit reached (${item.quantity})`, 'error');
-          return prev;
+    // ── Order helpers ────────────────────────────────────────────
+    const addToCart = (type, item, quantity) => {
+        if (type === 'medicine' && !canAddMedicine) {
+            return window.showToast('Pharmacist permission required to add medicines', 'error');
         }
-        return prev.map((x) =>
-        x.type === type && x.id === item.id ?
-        { ...x, quantity: existing.quantity + quantity } :
-        x
+        if (quantity > item.quantity) {
+            return window.showToast(`Only ${item.quantity} in stock for ${item.name}`, 'error');
+        }
+        setCart((prev) => {
+            const existing = prev.find((x) => x.type === type && x.id === item.id);
+            if (existing) {
+                if (existing.quantity + quantity > item.quantity) {
+                    window.showToast(`Stock limit reached (${item.quantity})`, 'error');
+                    return prev;
+                }
+                return prev.map((x) =>
+                    x.type === type && x.id === item.id
+                        ? { ...x, quantity: existing.quantity + quantity }
+                        : x
+                );
+            }
+            return [...prev, {
+                type,
+                id: item.id,
+                name: item.name,
+                price: priceOf(item),
+                quantity,
+                stock: item.quantity,
+                generic_name: item.generic_name,
+                dosage: item.dosage,
+                sku: item.sku,
+                barcode: item.barcode,
+            }];
+        });
+    };
+
+    const incrementQty = (item) => {
+        setCart((prev) => prev.map((x) => {
+            if (x.type === item.type && x.id === item.id) {
+                if (x.quantity + 1 > x.stock) {
+                    window.showToast(`Stock limit reached (${x.stock})`, 'error');
+                    return x;
+                }
+                return { ...x, quantity: x.quantity + 1 };
+            }
+            return x;
+        }));
+    };
+
+    const decrementQty = (item) => {
+        setCart((prev) => prev.map((x) =>
+            x.type === item.type && x.id === item.id
+                ? { ...x, quantity: Math.max(1, x.quantity - 1) }
+                : x
+        ));
+    };
+
+    const removeFromCart = (item) =>
+        setCart((prev) => prev.filter((x) => !(x.type === item.type && x.id === item.id)));
+
+    const clearOrder = () => {
+        setCart([]);
+        setCustomerName('');
+        setCustomerPhone('');
+        setCustomerEmail('');
+        setDiscountType('percentage');
+        setDiscountValue('');
+        setExpandedItemId(null);
+    };
+
+    const toggleExpandItem = (itemKey) => {
+        setExpandedItemId((prev) => prev === itemKey ? null : itemKey);
+    };
+
+    // ── Totals & discount ────────────────────────────────────────
+    const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const discountAmount = Number(discountValue) > 0 && canApplyDiscount
+        ? discountType === 'percentage'
+            ? subtotal * (Math.min(100, Number(discountValue)) / 100)
+            : Math.min(subtotal, Number(discountValue))
+        : 0;
+    const total = Math.max(0, subtotal - discountAmount);
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+    // ── Add-item modal ───────────────────────────────────────────
+    const openAddModal = (type, itemId = null) => {
+        if (type === 'medicine' && !canAddMedicine) {
+            return window.showToast('Pharmacist permission required to add medicines', 'error');
+        }
+        setModalType(type);
+        setItemQuery('');
+        setSelectedId(itemId || null);
+        setQty('1');
+        setPatientName(customerName);
+        setPatientPhone(customerPhone);
+        setPatientEmail(customerEmail);
+        setShowModal(true);
+    };
+
+    const modalItems = modalType === 'medicine' ? medicines : products;
+    const filteredModalItems = modalItems.filter((i) => {
+        const q = itemQuery.toLowerCase();
+        return (
+            (i.name || '').toLowerCase().includes(q) ||
+            (i.generic_name || '').toLowerCase().includes(q) ||
+            (i.barcode || '').toLowerCase().includes(q) ||
+            (i.sku || '').toLowerCase().includes(q)
         );
-      }
-      return [...prev, {
-        type,
-        id: item.id,
-        name: item.name,
-        price: priceOf(item),
-        quantity,
-        stock: item.quantity
-      }];
     });
-  };
-
-  const incrementQty = (item) => {
-    setCart((prev) => prev.map((x) => {
-      if (x.type === item.type && x.id === item.id) {
-        if (x.quantity + 1 > x.stock) {
-          window.showToast(`Stock limit reached (${x.stock})`, 'error');
-          return x;
-        }
-        return { ...x, quantity: x.quantity + 1 };
-      }
-      return x;
-    }));
-  };
-
-  const decrementQty = (item) => {
-    setCart((prev) => prev.map((x) =>
-    x.type === item.type && x.id === item.id ?
-    { ...x, quantity: Math.max(1, x.quantity - 1) } :
-    x
-    ));
-  };
-
-  const removeFromCart = (item) =>
-  setCart((prev) => prev.filter((x) => !(x.type === item.type && x.id === item.id)));
-
-  const clearOrder = () => {
-    setCart([]);
-    setCustomerName('');
-    setCustomerPhone('');
-    setCustomerEmail('');
-    setDiscountType('percentage');
-    setDiscountValue('');
-  };
-
-  // ── Totals & discount ────────────────────────────────────────
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountAmount = Number(discountValue) > 0 ?
-  discountType === 'percentage' ?
-  subtotal * (Math.min(100, Number(discountValue)) / 100) :
-  Math.min(subtotal, Number(discountValue)) :
-  0;
-  const total = Math.max(0, subtotal - discountAmount);
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  // ── Add-item modal ───────────────────────────────────────────
-  const openAddModal = (type, itemId = null) => {
-    setModalType(type);
-    setItemQuery('');
-    setSelectedId(itemId || null);
-    setQty('1');
-    setPatientName(customerName);
-    setPatientPhone(customerPhone);
-    setPatientEmail(customerEmail);
-    setShowModal(true);
-  };
-
-  const modalItems = modalType === 'medicine' ? medicines : products;
-  const filteredModalItems = modalItems.filter((i) => {
-    const q = itemQuery.toLowerCase();
-    return (
-      (i.name || '').toLowerCase().includes(q) ||
-      (i.generic_name || '').toLowerCase().includes(q) ||
-      (i.barcode || '').toLowerCase().includes(q) ||
-      (i.sku || '').toLowerCase().includes(q));
-
-  });
 
   const handleAddToOrder = () => {
     if (!selectedId) {
@@ -230,29 +299,29 @@ export default function Sales() {const { t } = useLanguage();
     window.showToast(`${item.name} added to order`, 'success');
   };
 
-  // ── Send to Checkout ─────────────────────────────────────────
-  const handleSendToCheckout = async () => {
-    if (cart.length === 0) {
-      return window.showToast(t("Add at least one item to the order"), 'error');
-    }
-    setSubmitting(true);
-    try {
-      await api.post('/sales/dispatch', {
-        items: cart.map((i) => ({ type: i.type, id: i.id, quantity: i.quantity })),
-        customer_name: customerName.trim() || null,
-        customer_phone: customerPhone.trim() || null,
-        customer_email: customerEmail.trim() || null,
-        discount_type: Number(discountValue) > 0 ? discountType : null,
-        discount: Number(discountValue) > 0 ? Number(discountValue) : 0
-      });
-      window.showToast(t("Order sent to Checkout!"), 'success');
-      clearOrder();
-    } catch (err) {
-      window.showToast(err.response?.data?.message || 'Failed to send order', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    // ── Send to Checkout ─────────────────────────────────────────
+    const handleSendToCheckout = async () => {
+        if (cart.length === 0) {
+            return window.showToast(t("Add at least one item to the order"), 'error');
+        }
+        setSubmitting(true);
+        try {
+            await api.post('/sales/dispatch', {
+                items: cart.map((i) => ({ type: i.type, id: i.id, quantity: i.quantity })),
+                customer_name: customerName.trim() || null,
+                customer_phone: customerPhone.trim() || null,
+                customer_email: customerEmail.trim() || null,
+                discount_type: (Number(discountValue) > 0 && canApplyDiscount) ? discountType : null,
+                discount: (Number(discountValue) > 0 && canApplyDiscount) ? Number(discountValue) : 0,
+            });
+            window.showToast(t("Order sent to Checkout!"), 'success');
+            clearOrder();
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to send order', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
   if (loading) {
     return <LoadingSpinner text={t("Opening Point of Sale...")} />;
@@ -261,12 +330,12 @@ export default function Sales() {const { t } = useLanguage();
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-sky-50/30">
             {/* Main Layout */}
-            <div className="max-w-7xl mx-auto px-4 py-6 lg:px-6">
+            <div className="max-w-7xl mx-auto px-4 py-4 lg:px-6">
                 {/* Header */}
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 shadow-lg shadow-sky-500/20 flex items-center justify-center">
-                            <ShoppingCart size={28} className="text-white" />
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 shadow flex items-center justify-center">
+                            <ShoppingCart size={24} className="text-white" />
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-gray-800">{t("Point of Sale")}</h1>
@@ -276,12 +345,12 @@ export default function Sales() {const { t } = useLanguage();
               </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3 bg-white px-4 py-1.5 rounded-2xl shadow-sm border border-gray-100">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Users size={16} className="text-sky-500" />
                             <span className="font-medium">{t("Today")}</span>
                         </div>
-                        <div className="w-px h-6 bg-gray-200"></div>
+                        <div className="w-px h-5 bg-gray-200"></div>
                         <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
                             <span className="text-emerald-500">●</span>
                             {new Date().toLocaleDateString('en-US', {
@@ -294,31 +363,40 @@ export default function Sales() {const { t } = useLanguage();
                 </div>
 
                 {/* Two Column Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                     {/* ── Left: Catalog ── */}
                     <div className="lg:col-span-8 space-y-4">
                         {/* Quick Add Buttons */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <button
-                type="button"
-                onClick={() => {setCatalogTab('medicine');openAddModal('medicine');}}
-                className="group flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg shadow-sky-500/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200">
-                
+                                type="button"
+                                disabled={!canAddMedicine}
+                                onClick={() => { if (canAddMedicine) { setCatalogTab('medicine'); openAddModal('medicine'); } }}
+                                className={`group flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-lg shadow-sky-500/25 hover:shadow-xl transition-all duration-200 ${canAddMedicine ? 'hover:scale-[1.02]' : 'opacity-60 cursor-not-allowed'}`}
+                            >
                                 <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                     <Pill size={24} />
                                 </div>
                                 <div className="flex-1 text-left">
                                     <div className="font-bold text-lg">{t("Add Medicine")}</div>
-                                    <div className="text-sm text-sky-100">{t("Prescription medications")}</div>
+                                    <div className="text-sm text-sky-100">
+                                        {canAddMedicine ? t("Prescription medications") : 'Restricted'}
+                                    </div>
                                 </div>
-                                <Plus size={20} className="opacity-70 group-hover:rotate-90 transition-transform" />
+                                {!canAddMedicine ? (
+                                    <span className="flex items-center gap-1 text-[10px] font-semibold bg-white/25 px-2 py-1 rounded-full whitespace-nowrap">
+                                        <Lock size={12} /> Pharmacist Required
+                                    </span>
+                                ) : (
+                                    <Plus size={18} className="opacity-70 group-hover:rotate-90 transition-transform" />
+                                )}
                             </button>
 
                             <button
-                type="button"
-                onClick={() => {setCatalogTab('retail');openAddModal('retail');}}
-                className="group flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200">
-                
+                                type="button"
+                                onClick={() => { setCatalogTab('retail'); openAddModal('retail'); }}
+                                className="group flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200"
+                            >
                                 <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                     <ShoppingBag size={24} />
                                 </div>
@@ -326,18 +404,18 @@ export default function Sales() {const { t } = useLanguage();
                                     <div className="font-bold text-lg">{t("Retail & OTC")}</div>
                                     <div className="text-sm text-emerald-100">{t("OTC and retail products")}</div>
                                 </div>
-                                <Plus size={20} className="opacity-70 group-hover:rotate-90 transition-transform" />
+                                <Plus size={18} className="opacity-70 group-hover:rotate-90 transition-transform" />
                             </button>
                         </div>
 
                         {/* Catalog Controls */}
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+                                <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
                                     {[
                   { id: 'medicine', label: 'Medicine', icon: Pill },
                   { id: 'retail', label: 'Retail & OTC', icon: ShoppingBag }].
-                  map((tab) => {const { t } = useLanguage();
+                  map((tab) => {
                     const Icon = tab.icon;
                     return (
                       <button
@@ -356,7 +434,7 @@ export default function Sales() {const { t } = useLanguage();
                   })}
                                 </div>
                                 <div className="flex-1 relative">
-                                    <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+                                    <Search size={16} className="absolute left-3 top-2 text-gray-400" />
                                     <input
                     type="text"
                     placeholder={t("Search items by name, barcode...")}
@@ -365,8 +443,8 @@ export default function Sales() {const { t } = useLanguage();
                     className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
                   
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-400 whitespace-nowrap">
-                                    <Package size={16} />
+                                <div className="flex items-center gap-2 text-xs text-gray-400 whitespace-nowrap px-1">
+                                    <Package size={14} />
                                     <span>{filteredCatalog.length} items</span>
                                 </div>
                             </div>
@@ -377,7 +455,7 @@ export default function Sales() {const { t } = useLanguage();
                             {filteredCatalog.slice(0, 20).map((item) =>
               <div
                 key={item.id}
-                className="group bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-lg hover:border-sky-200 transition-all duration-200 cursor-pointer"
+                className={`group bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-lg hover:border-sky-200 transition-all duration-200 cursor-pointer ${catalogTab === 'medicine' && !canAddMedicine ? 'opacity-70' : ''}`}
                 onClick={() => openAddModal(catalogTab, item.id)}>
                 
                                     <div className="flex items-start justify-between mb-3">
@@ -387,27 +465,19 @@ export default function Sales() {const { t } = useLanguage();
                     <Pill size={20} className="text-sky-600" /> :
                     <ShoppingBag size={20} className="text-emerald-600" />}
                                         </div>
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${item.quantity > 10 ?
-                  'bg-emerald-50 text-emerald-700' :
-                  item.quantity > 0 ?
-                  'bg-amber-50 text-amber-700' :
-                  'bg-red-50 text-red-700'}`
-                  }>
-                                            {item.quantity > 0 ? `${item.quantity} in stock` : 'Out of stock'}
-                                        </span>
+                                        <StockBadge quantity={item.quantity} />
                                     </div>
-                                    <h4 className="font-semibold text-gray-800 text-sm leading-snug">
+                                    <h4 className="font-semibold text-gray-800 text-xs leading-snug line-clamp-2">
                                         {item.name}
                                     </h4>
-                                    {item.generic_name &&
-                <p className="text-xs text-gray-400 mt-0.5">{item.generic_name}</p>
-                }
+                                    {item.generic_name && (
+                    <p className="text-xs text-gray-400 mt-0.5">{item.generic_name}</p>
+                    )}
                                     <div className="mt-3 flex items-center justify-between">
                                         <span className="text-sm font-bold text-gray-900">
                                             ${Number(priceOf(item)).toFixed(2)}
                                         </span>
                                         <span className="text-xs text-sky-600 font-medium group-hover:underline">{t("Add +")}
-
                   </span>
                                     </div>
                                 </div>
@@ -415,19 +485,19 @@ export default function Sales() {const { t } = useLanguage();
                         </div>
                         {filteredCatalog.length > 20 &&
             <div className="text-center text-sm text-gray-400 py-2">{t("Showing 20 of")}
-              {filteredCatalog.length}{t("items \u2022 Refine search to see more")}
+              {filteredCatalog.length}{t("items • Refine search to see more")}
             </div>
             }
                     </div>
 
                     {/* ── Right: Order Summary ── */}
                     <div className="lg:col-span-4">
-                        <div className="sticky top-24 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+                        <div className="sticky top-20 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
                             {/* Header */}
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center">
-                                        <ClipboardList size={16} className="text-sky-600" />
+                                    <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center">
+                                        <ClipboardList size={14} className="text-gray-600" />
                                     </div>
                                     <h3 className="font-bold text-gray-800">{t("Current Order")}</h3>
                                     {totalItems > 0 &&
@@ -469,98 +539,144 @@ export default function Sales() {const { t } = useLanguage();
               }
 
                             {/* Cart Items */}
-                            {cart.length > 0 &&
-              <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
-                                    {cart.map((item) =>
-                <div key={`${item.type}-${item.id}`} className="group flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'medicine' ? 'bg-sky-100' : 'bg-emerald-100'}`
-                  }>
-                                                {item.type === 'medicine' ?
-                    <Pill size={14} className="text-sky-600" /> :
-                    <ShoppingBag size={14} className="text-emerald-600" />}
+                            {cart.length > 0 && (
+                                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
+                                    {cart.map((item) => {
+                                        const itemKey = `${item.type}-${item.id}`;
+                                        const isExpanded = expandedItemId === itemKey;
+                                        return (
+                                            <div key={itemKey} className="group border border-gray-100 rounded-xl overflow-hidden bg-white">
+                                                <div
+                                                    className={`flex items-center gap-2 p-2 cursor-pointer transition-colors ${isExpanded ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
+                                                    onClick={() => toggleExpandItem(itemKey)}
+                                                >
+                                                    <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${item.type === 'medicine' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                                                        {item.type === 'medicine'
+                                                            ? <Pill size={12} className="text-emerald-600" />
+                                                            : <ShoppingBag size={12} className="text-amber-600" />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-medium text-gray-800 truncate">{item.name}</p>
+                                                        <p className="text-[10px] text-gray-400">
+                                                            ${Number(item.price).toFixed(2)} × {item.quantity}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => decrementQty(item)}
+                                                            className="w-5 h-5 rounded bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+                                                        >
+                                                            <Minus size={10} />
+                                                        </button>
+                                                        <span className="w-5 text-center text-xs font-semibold text-gray-800">{item.quantity}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => incrementQty(item)}
+                                                            className="w-5 h-5 rounded bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+                                                        >
+                                                            <Plus size={10} />
+                                                        </button>
+                                                    </div>
+                                                    <span className="w-12 text-right text-xs font-bold text-gray-800">
+                                                        ${(item.price * item.quantity).toFixed(2)}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); removeFromCart(item); }}
+                                                        className="text-gray-300 hover:text-red-500 transition-colors ml-1"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+
+                                                {/* Expanded Details */}
+                                                {isExpanded && (
+                                                    <div className="px-3 pb-2 pt-1 bg-gray-50 border-t border-gray-100 text-[10px] text-gray-500 flex flex-col gap-1">
+                                                        {item.type === 'medicine' ? (
+                                                            <>
+                                                                {item.generic_name && <div><span className="font-semibold">Generic Name:</span> {item.generic_name}</div>}
+                                                                {item.dosage && <div><span className="font-semibold">Dosage:</span> {item.dosage}</div>}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {item.sku && <div><span className="font-semibold">SKU:</span> {item.sku}</div>}
+                                                                {item.barcode && <div><span className="font-semibold">Barcode:</span> {item.barcode}</div>}
+                                                            </>
+                                                        )}
+                                                        <div className="flex justify-between items-center mt-0.5">
+                                                            <span><span className="font-semibold">Stock Available:</span> {item.stock}</span>
+                                                            <span className="font-semibold text-gray-700">Line Total: ${(item.price * item.quantity).toFixed(2)}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
-                                                <p className="text-xs text-gray-400">
-                                                    ${Number(item.price).toFixed(2)} × {item.quantity}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <button
-                      type="button"
-                      onClick={() => decrementQty(item)}
-                      className="w-6 h-6 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors">
-                      
-                                                    <Minus size={12} />
-                                                </button>
-                                                <span className="w-7 text-center text-sm font-semibold text-gray-800">{item.quantity}</span>
-                                                <button
-                      type="button"
-                      onClick={() => incrementQty(item)}
-                      className="w-6 h-6 rounded-md bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors">
-                      
-                                                    <Plus size={12} />
-                                                </button>
-                                            </div>
-                                            <span className="w-16 text-right text-sm font-bold text-gray-800">
-                                                ${(item.price * item.quantity).toFixed(2)}
-                                            </span>
-                                            <button
-                    type="button"
-                    onClick={() => removeFromCart(item)}
-                    className="text-gray-300 hover:text-red-500 transition-colors ml-1">
-                    
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                )}
+                                        );
+                                    })}
                                 </div>
-              }
+                            )}
 
                             {/* Customer Info */}
                             <div className="pt-3 border-t border-gray-100">
-                                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                    <User size={12} />{t("Customer Details")}
-                </h4>
-                                <div className="space-y-1.5">
-                                    <div className="relative">
-                                        <User size={13} className="absolute left-3 top-2 text-gray-400" />
-                                        <input
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCustomerInfo(!showCustomerInfo)}
+                                    className="w-full flex items-center justify-between py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                                >
+                                    <span className="flex items-center gap-1.5">
+                                        <User size={12} /> {t("Customer Details")} (Optional)
+                                    </span>
+                                    {showCustomerInfo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                </button>
+
+                                {showCustomerInfo && (
+                                    <div className="space-y-1.5 mt-2">
+                                        <div className="relative">
+                                            <User size={13} className="absolute left-3 top-2 text-gray-400" />
+                                            <input
                       type="text"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder={t("Customer name")}
                       className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-gray-50 focus:bg-white transition-colors" />
                     
-                                    </div>
-                                    <div>
-                                    <PhoneInput
+                                        </div>
+                                        <div>
+                                        <PhoneInput
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       iconSize={13}
                       placeholder={t("Phone number")}
                       className="px-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-gray-50 focus:bg-white transition-colors" />
                     
-                                    </div>
-                                    <div className="relative">
-                                        <Mail size={13} className="absolute left-3 top-2 text-gray-400" />
-                                        <input
+                                        </div>
+                                        <div className="relative">
+                                            <Mail size={13} className="absolute left-3 top-2 text-gray-400" />
+                                            <input
                       type="email"
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       placeholder={t("Email address")}
                       className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-gray-50 focus:bg-white transition-colors" />
                     
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Discount */}
                             <div className="pt-3 border-t border-gray-100">
-                                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                    <Gift size={12} />{t("Apply Discount")}
-                </h4>
-                                <div className="flex gap-1.5 mb-2">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <Gift size={12} />{t("Apply Discount")}
+                    </h4>
+                                    {!canApplyDiscount && (
+                                        <span className="flex items-center gap-1 text-[9px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                                            <Lock size={8} /> Locked
+                                        </span>
+                                    )}
+                                </div>
+                                <div className={`flex gap-1.5 mb-2 ${!canApplyDiscount ? 'opacity-50 pointer-events-none' : ''}`}>
                                     {[
                   { id: 'percentage', label: '%' },
                   { id: 'fixed', label: '$' }].
@@ -568,6 +684,7 @@ export default function Sales() {const { t } = useLanguage();
                   <button
                     key={opt.id}
                     type="button"
+                    disabled={!canApplyDiscount}
                     onClick={() => setDiscountType(opt.id)}
                     className={`flex-1 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${discountType === opt.id ?
                     'bg-sky-500 text-white shadow-sm' :
@@ -578,21 +695,27 @@ export default function Sales() {const { t } = useLanguage();
                                         </button>
                   )}
                                 </div>
-                                <div className="relative">
-                                    <Percent size={13} className="absolute left-3 top-2 text-gray-400" />
+                                <div className={`relative ${!canApplyDiscount ? 'opacity-50' : ''}`}>
+                                    <Percent size={12} className="absolute left-2.5 top-1.5 text-gray-400" />
                                     <input
                     type="number"
                     min="0"
+                    disabled={!canApplyDiscount}
                     value={discountValue}
                     onChange={(e) => setDiscountValue(e.target.value)}
                     placeholder={discountType === 'percentage' ? 'Enter percentage' : 'Enter amount'}
-                    className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-gray-50 focus:bg-white transition-colors" />
+                    className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none bg-gray-50 focus:bg-white transition-colors disabled:cursor-not-allowed" />
                   
                                 </div>
+                                {!canApplyDiscount && (
+                                    <p className="text-[9px] text-amber-600 mt-1 flex items-center gap-1">
+                                        <Lock size={8} /> Requires <code className="font-semibold">apply-sales-discount</code> permission
+                                    </p>
+                                )}
                             </div>
 
                             {/* Totals */}
-                            <div className="pt-3 border-t border-gray-100 space-y-1.5 text-sm">
+                            <div className="pt-2 border-t border-gray-100 space-y-1 text-xs">
                                 <div className="flex justify-between text-gray-500">
                                     <span>{t("Subtotal")}</span>
                                     <span className="font-medium">${subtotal.toFixed(2)}</span>
@@ -678,15 +801,23 @@ export default function Sales() {const { t } = useLanguage();
                 'hover:bg-gray-50'}`
                 }>
                 
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="w-8 h-8 rounded-md bg-gray-100 overflow-hidden flex items-center justify-center shrink-0 float-left mr-2">
+                                            <Thumb
+                                                item={item}
+                                                type={modalType}
+                                                className="w-full h-full object-cover"
+                                                iconClassName={modalType === 'medicine' ? 'text-emerald-400' : 'text-amber-400'}
+                                            />
+                                        </div>
                                         <p className="font-medium text-gray-800 truncate">{item.name}</p>
                                         {item.generic_name &&
                   <p className="text-xs text-gray-400 truncate">{item.generic_name}</p>
                   }
                                     </div>
-                                    <div className="text-right shrink-0">
+                                    <div className="text-right shrink-0 pl-2">
                                         <p className="text-xs font-bold text-gray-700">${Number(priceOf(item)).toFixed(2)}</p>
-                                        <p className={`text-[10px] ${item.quantity <= 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                                        <p className={`text-[9px] ${item.quantity <= 0 ? 'text-red-500' : 'text-gray-400'}`}>
                                             {item.quantity <= 0 ? 'Out of stock' : `Stock: ${item.quantity}`}
                                         </p>
                                     </div>
@@ -695,7 +826,7 @@ export default function Sales() {const { t } = useLanguage();
                         </div>
                     </div>
 
-                    {/* Patient/Customer Info */}
+                    {/* Patient/Customer Info (for medicines) */}
                     {modalType === 'medicine' ?
           <>
                             <div>
@@ -788,7 +919,7 @@ export default function Sales() {const { t } = useLanguage();
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex gap-2 pt-2">
                         <button
               type="button"
               onClick={() => setShowModal(false)}
@@ -817,11 +948,11 @@ export default function Sales() {const { t } = useLanguage();
                     background: transparent;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #e2e8f0;
+                    background: #d1d5db; /* gray-300 */
                     border-radius: 10px;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #cbd5e1;
+                    background: #9ca3af; /* gray-400 */
                 }
             `}</style>
         </div>);

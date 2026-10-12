@@ -18,7 +18,11 @@ class Batch extends Model
 
     protected $fillable = [
         'medicine_id',
+
         'shelf_id',
+
+        'product_id',
+
         'batch_number',
         'barcode',
         'manufacturing_date',
@@ -32,6 +36,8 @@ class Batch extends Model
         'received_at',
         'status',
         'notes',
+        'unit_cost',
+        'selling_price',
     ];
 
     protected $casts = [
@@ -123,8 +129,8 @@ class Batch extends Model
     // Methods
     public function isAvailable()
     {
-        return $this->status === self::STATUS_AVAILABLE && 
-               $this->quantity > 0 && 
+        return $this->status === self::STATUS_AVAILABLE &&
+               $this->quantity > 0 &&
                $this->expiry_date > now();
     }
 

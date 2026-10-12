@@ -76,59 +76,46 @@ class MedicineController extends Controller
         }
     }
 
-    /**
-     * POST /api/medicines
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
-            'batch_number' => 'nullable|string|max:255',
             'category_id' => 'required|exists:categories,id',
-            'quantity' => 'required|integer|min:0',
-            'unit_price' => 'nullable|numeric|min:0',
-            'reorder_level' => 'required|integer|min:0',
-            'status' => 'in:active,inactive,expired,discontinued',
-            'description' => 'nullable|string',
             'dosage_form' => 'nullable|string|max:50',
             'strength' => 'nullable|string|max:50',
-            'unit' => 'nullable|string|20',
+            'unit' => 'nullable|string|max:20',
             'manufacturer' => 'nullable|string|max:255',
             'branch_id' => 'nullable|exists:branches,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
-        $validated = $this->handleImageUpload($validated, null);
+        $user = $request->user();
+        $branchScope = $user->getBranchScope($request);
+        
+        if ($branchScope) {
+            $validated['branch_id'] = $branchScope;
+        }
 
-        // New medicines start with zero stock; the initial quantity is recorded
-        // through the automatic stock movement created after creation.
-        $validated['quantity'] = 0;
-
-        // Assign the creating user's branch so branch-scoped users can see it,
-        // or respect the explicitly passed / active branch for admins.
-        if (empty($validated['branch_id'])) {
-            $userBranch = $request->user()->getBranchScope($request);
-            if ($userBranch) {
-                $validated['branch_id'] = $userBranch;
+        // Validate category belongs to branch
+        if (!empty($validated['branch_id'])) {
+            $category = \App\Models\Category::find($validated['category_id']);
+            if ($category && $category->branch_id && $category->branch_id != $validated['branch_id']) {
+                return response()->json(['message' => 'Invalid category for this branch.'], 422);
             }
         }
+
+        $validated = $this->handleImageUpload($request, $validated, null);
 
         $medicine = Medicine::create($validated);
         return response()->json($medicine->load(['category']), 201);
     }
 
-    /**
-     * GET /api/medicines/{medicine}
-     */
     public function show(Medicine $medicine)
     {
         return response()->json($medicine->load(['category']));
     }
 
-    /**
-     * GET /api/medicines/low-stock
-     */
     public function getLowStock(Request $request)
     {
         try {
@@ -163,80 +150,44 @@ class MedicineController extends Controller
         }
     }
 
-    /**
-     * PUT /api/medicines/{medicine}
-     */
     public function update(Request $request, Medicine $medicine)
     {
+        $user = $request->user();
+        $branchScope = $user->getBranchScope($request);
+
+        if ($branchScope && $medicine->branch_id && $medicine->branch_id != $branchScope) {
+            return response()->json(['message' => 'Unauthorized access to this medicine.'], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'generic_name' => 'nullable|string|max:255',
-            'batch_number' => 'nullable|string|max:255',
             'category_id' => 'required|exists:categories,id',
-            'quantity' => 'required|integer|min:0',
-            'unit_price' => 'nullable|numeric|min:0',
-            'reorder_level' => 'required|integer|min:0',
-            'status' => 'in:active,inactive,expired,discontinued',
-            'description' => 'nullable|string',
             'dosage_form' => 'nullable|string|max:50',
             'strength' => 'nullable|string|max:50',
-            'unit' => 'nullable|string|20',
+            'unit' => 'nullable|string|max:20',
             'manufacturer' => 'nullable|string|max:255',
             'branch_id' => 'nullable|exists:branches,id',
-            'shelf_id' => 'nullable|exists:shelves,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ]);
 
-        $oldShelfId = $medicine->shelf_id;
-        $oldQty = (int) $medicine->quantity;
-        $newShelfId = $validated['shelf_id'] ?? null;
-        $newQty = (int) $validated['quantity'];
+        if ($branchScope) {
+            unset($validated['branch_id']);
+            $currentBranchId = $branchScope;
+        } else {
+            $currentBranchId = $validated['branch_id'] ?? $medicine->branch_id;
+        }
 
-        // Enforce that a selected shelf belongs to the medicine's branch/location.
-        if ($newShelfId && $newShelfId != $oldShelfId) {
-            $shelf = Shelf::findOrFail($newShelfId);
-            $medicineBranch = $validated['branch_id'] ?? $medicine->branch_id;
-            if ($shelf->location_type === Shelf::LOCATION_BRANCH && (int) $shelf->branch_id !== (int) $medicineBranch) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Selected shelf does not belong to this medicine\'s branch.',
-                ], 422);
+        if ($currentBranchId) {
+            $category = \App\Models\Category::find($validated['category_id']);
+            if ($category && $category->branch_id && $category->branch_id != $currentBranchId) {
+                return response()->json(['message' => 'Invalid category for this branch.'], 422);
             }
         }
 
-        // Adjust shelf capacity using the difference, never old + new.
-        if ($newShelfId != $oldShelfId || $newQty != $oldQty) {
-            try {
-                if ($oldShelfId && $oldShelfId != $newShelfId) {
-                    $oldShelf = Shelf::find($oldShelfId);
-                    if ($oldShelf) {
-                        $oldShelf->removeStock($oldQty);
-                    }
-                }
-                if ($newShelfId) {
-                    $newShelf = Shelf::findOrFail($newShelfId);
-                    if ($newShelfId == $oldShelfId) {
-                        $delta = $newQty - $oldQty;
-                        if ($delta > 0) {
-                            $newShelf->addStock($delta);
-                        } elseif ($delta < 0) {
-                            $newShelf->removeStock(-$delta);
-                        }
-                    } else {
-                        $newShelf->addStock($newQty);
-                    }
-                }
-            } catch (ValidationException $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => collect($e->errors())->flatten()->first(),
-                    'errors' => $e->errors(),
-                ], 422);
-            }
-        }
-
-        $validated = $this->handleImageUpload($validated, $medicine);
+        $validated = $this->handleImageUpload($request, $validated, $medicine);
         $medicine->update($validated);
+        
         return response()->json($medicine->load(['category']));
     }
 
@@ -306,20 +257,32 @@ class MedicineController extends Controller
      * Store an uploaded medicine image on the public disk.
      * Deletes any previously stored image when updating.
      */
-    protected function handleImageUpload(array $validated, ?Medicine $medicine = null): array
+    /**
+     * Handle the medicine image for create/update requests.
+     * - New upload: stores it and removes the previous file (if any).
+     * - Explicit removal (_remove_image=1): deletes the previous file.
+     * - Otherwise: keeps the existing image untouched.
+     */
+    protected function handleImageUpload(Request $request, array $validated, ?Medicine $medicine = null): array
     {
-        $request = request();
+        if ($request->hasFile('image')) {
+            if ($medicine && $medicine->image && Storage::disk('public')->exists($medicine->image)) {
+                Storage::disk('public')->delete($medicine->image);
+            }
 
-        if (! $request->hasFile('image')) {
-            return $validated;
+            $path = $request->file('image')->store('medicine-images', 'public');
+
+            return array_merge($validated, ['image' => $path]);
         }
 
-        if ($medicine && $medicine->image && Storage::disk('public')->exists($medicine->image)) {
-            Storage::disk('public')->delete($medicine->image);
+        if ($request->boolean('_remove_image') && $medicine && $medicine->image) {
+            if (Storage::disk('public')->exists($medicine->image)) {
+                Storage::disk('public')->delete($medicine->image);
+            }
+
+            return array_merge($validated, ['image' => null]);
         }
 
-        $path = $request->file('image')->store('medicine-images', 'public');
-
-        return array_merge($validated, ['image' => $path]);
+        return $validated;
     }
 }

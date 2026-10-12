@@ -1,4 +1,5 @@
-import { useLanguage } from "../context/LanguageContext";import React, { useEffect, useState } from "react";
+import { useLanguage } from "../context/LanguageContext";
+import React, { useEffect, useState } from "react";
 import {
   User,
   Mail,
@@ -24,30 +25,31 @@ import {
 import api from "../axios";
 import Pagination from '../components/Pagination';
 import { useAuth } from '../context/AuthContext';
+import { useBranch } from '../context/BranchContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+
 const DEFAULT_ROLES = [
 { name: "Admin", slug: "admin" },
 { name: "Pharmacist", slug: "pharmacist" },
 { name: "Cashier", slug: "cashier" }];
 
 
-export default function Users() {const { t } = useLanguage();
+export default function Users() {
+  const { t } = useLanguage();
 
   const { user: currentUser } = useAuth();
-
+  // branchRefreshKey increments whenever the admin switches branches via
+  // the sidebar/header branch selector — used to trigger re-fetches.
+  const { branchRefreshKey } = useBranch();
 
   const [users, setUsers] = useState([]);
-
   const [initialLoading, setInitialLoading] = useState(true);
-
   const [error, setError] = useState("");
-
   const [meta, setMeta] = useState(null);
   const [page, setPage] = useState(1);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [search, setSearch] = useState("");
-
   const [roleFilter, setRoleFilter] = useState("all");
 
   // Status filter (All Statuses / Approved / Pending Approval / Rejected)
@@ -63,39 +65,22 @@ export default function Users() {const { t } = useLanguage();
   const [userStats, setUserStats] = useState(null);
 
   const [roles, setRoles] = useState([]);
-
   const [branches, setBranches] = useState([]);
 
-
   const [showModal, setShowModal] = useState(false);
-
   const [editingUser, setEditingUser] = useState(null);
-
-
   const [submitting, setSubmitting] = useState(false);
-
-
-
   const [showPassword, setShowPassword] = useState(false);
-
   const [showConfirm, setShowConfirm] = useState(false);
 
-
-
   const [form, setForm] = useState({
-
     name: "",
     email: "",
     password: "",
     password_confirmation: "",
     role: "cashier",
     branch_id: null
-
   });
-
-
-
-
 
   useEffect(() => {
     fetchUserStats();
@@ -114,10 +99,6 @@ export default function Users() {const { t } = useLanguage();
   }, []);
 
   const handlePageChange = (p) => setPage(p);
-
-
-
-
 
   const fetchUsers = async () => {
     try {
@@ -147,121 +128,57 @@ export default function Users() {const { t } = useLanguage();
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
-  useEffect(() => {setPage(1);}, [search, roleFilter, statusFilter]);
-  useEffect(() => {fetchUsers();}, [page, search, roleFilter, statusFilter]);
-
-
-
-
-
+  useEffect(() => { setPage(1); }, [search, roleFilter, statusFilter, branchRefreshKey]);
+  useEffect(() => { fetchUsers(); }, [page, search, roleFilter, statusFilter, branchRefreshKey]);
+  // Re-fetch stats whenever branch changes so the count cards stay in sync.
+  useEffect(() => { fetchUserStats(); }, [branchRefreshKey]);
 
   const handleChange = (e) => {
-
     setForm({
-
       ...form,
-
       [e.target.name]: e.target.value
-
     });
-
   };
 
-
-
-
-
-
   const resetForm = () => {
-
-
     setForm({
-
       name: "",
       email: "",
       password: "",
       password_confirmation: "",
       role: "cashier",
       branch_id: null
-
     });
-
-
     setEditingUser(null);
-
     setShowPassword(false);
-
     setShowConfirm(false);
-
   };
-
-
-
-
-
 
   const openCreate = () => {
-
     resetForm();
-
     setShowModal(true);
-
   };
-
-
-
-
-
 
   const openEdit = (user) => {
-
-
     setForm({
-
       name: user.name,
-
       email: user.email,
-
       password: "",
-
       password_confirmation: "",
-
       role: user.role,
       branch_id: user.branch_id || ""
-
     });
-
-
     setEditingUser(user);
-
     setShowModal(true);
-
-
   };
-
-
-
-
-
-
 
   const closeModal = () => {
-
     setShowModal(false);
-
     resetForm();
-
   };
 
-
-
-
-
-
   const handleSubmit = async (e) => {
-
     e.preventDefault();
-
     setSubmitting(true);
 
     const nameParts = (form.name || "").trim().split(/\s+/);
@@ -275,76 +192,26 @@ export default function Users() {const { t } = useLanguage();
     };
 
     try {
-
       if (editingUser) {
-
-        await api.put(
-          `/users/${editingUser.id}`,
-          payload
-        );
-
-      } else
-
-      {
-
-        await api.post(
-          "/users",
-          payload
-        );
-
+        await api.put(`/users/${editingUser.id}`, payload);
+      } else {
+        await api.post("/users", payload);
       }
 
-
-
       await fetchUsers();
-
       await fetchUserStats();
-
-
       closeModal();
-
-
-    }
-
-
-    catch (error) {
-
-
-      const messages =
-      error.response?.data?.errors;
-
-
+    } catch (error) {
+      const messages = error.response?.data?.errors;
       setError(
-
         messages ?
-
-        Object.values(messages).
-        flat().
-        join(" ") :
-
+        Object.values(messages).flat().join(" ") :
         "Operation failed"
-
       );
-
-
-    } finally
-
-
-    {
-
-
+    } finally {
       setSubmitting(false);
-
-
     }
-
-
   };
-
-
-
-
-
 
   const handleApprove = async (user) => {
     if (!window.confirm(`Approve ${user.name}?`)) return;
@@ -392,33 +259,15 @@ export default function Users() {const { t } = useLanguage();
   };
 
   const handleDelete = async (id) => {
-
-
-    if (!window.confirm("Delete this user?"))
-    return;
-
-
+    if (!window.confirm("Delete this user?")) return;
 
     try {
-
-
       await api.delete(`/users/${id}`);
-
-
       fetchUsers();
-
       fetchUserStats();
-
-
-    }
-
-    catch (error) {
-
+    } catch (error) {
       setError(t("Failed to delete user"));
-
     }
-
-
   };
 
   const fetchUserStats = async () => {
@@ -430,20 +279,10 @@ export default function Users() {const { t } = useLanguage();
     }
   };
 
-
-
-
-
-
   const filteredUsers = users;
-
-
-
-
 
   const approvedUsers = userStats?.approved ?? users.filter((user) => user.status === "approved" || !user.status).length;
   const totalUsers = userStats?.total ?? meta?.total ?? users.length;
-
 
   const adminCount =
   userStats?.admin ??
@@ -451,13 +290,11 @@ export default function Users() {const { t } = useLanguage();
     (user) => user.role === "admin"
   ).length;
 
-
   const pharmacistCount =
   userStats?.pharmacist ??
   users.filter(
     (user) => user.role === "pharmacist"
   ).length;
-
 
   const cashierCount =
   userStats?.cashier ??
@@ -465,30 +302,14 @@ export default function Users() {const { t } = useLanguage();
     (user) => user.role === "cashier"
   ).length;
 
-
-
-
-
-  const getRoleBadge = (role) => {const { t } = useLanguage();
-
-
+  const getRoleBadge = (role) => {
     const styles = {
-
-      admin:
-      "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
-
-      pharmacist:
-      "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
-
-      cashier:
-      "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
-
+      admin: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+      pharmacist: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+      cashier: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
     };
 
-
-
     return (
-
       <span
         className={`
             px-3
@@ -499,18 +320,13 @@ export default function Users() {const { t } = useLanguage();
             ${styles[role]}
             `}>
         
-
                 {role}
 
             </span>);
 
-
-
-
   };
 
-  const getStatusBadge = (status) => {const { t } = useLanguage();
-
+  const getStatusBadge = (status) => {
     if (!status) return null;
 
     const styles = {
@@ -549,26 +365,15 @@ export default function Users() {const { t } = useLanguage();
                 {labels[status] || status}
             </span>);
 
-
   };
-  // ================= MODAL FORM =================
-
 
   if (initialLoading) {
-
     return (
       <LoadingSpinner text={t("Loading users...")} />);
-
-
   }
 
-
-
   return (
-
     <div className="space-y-6">
-
-
 
 {/* ERROR MESSAGE */}
 
@@ -584,24 +389,11 @@ p-4
 rounded-xl
 ">
 
-
-
-
-
-
-        
-
 {error}
 
 </div>
 
       }
-
-
-
-
-
-
 
 {/* HEADER */}
 
@@ -615,17 +407,7 @@ items-start
 md:items-center
 ">
 
-
-
-
-
-
-
-        
-
-
 <div>
-
 
 <h1 className="
 text-3xl
@@ -634,16 +416,7 @@ text-gray-800
 dark:text-white
 ">{t("User Management")}
 
-
-
-
-
-
-
-
           </h1>
-
-
 
 <p className="
 text-gray-500
@@ -651,19 +424,9 @@ dark:text-gray-400
 mt-1
 ">{t("Manage pharmacy staff accounts and permissions")}
 
-
-
-
-
-
-
           </p>
 
-
 </div>
-
-
-
 
 <button
 
@@ -684,44 +447,13 @@ hover:shadow-lg
 transition
 ">
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-          
-
-
 <Plus size={20} />{t("Add User")}
-
-
-
 
         </button>
 
-
-
 </div>
 
-
-
-
-
-
-
-
-
 {/* STATISTICS CARDS */}
-
-
 
 <div className="
 grid
@@ -731,16 +463,6 @@ lg:grid-cols-4
 gap-5
 ">
 
-
-
-
-
-        
-
-
-
-
-
 <div className="
 bg-white
 dark:bg-gray-800
@@ -752,32 +474,16 @@ dark:border-gray-700
 p-5
 ">
 
-
-
-
-
-
-
-
-          
-
 <div className="
 flex
 justify-between
 ">
 
-
-            
-
-
 <div>
 
 <p className="text-gray-500 dark:text-gray-400 text-sm">{t("Total Users")}
 
-
-
               </p>
-
 
 <h2 className="
 text-3xl
@@ -786,12 +492,6 @@ text-blue-500
 dark:text-blue-400
 mt-2
 ">
-
-
-
-
-
-                
 
 {totalUsers}
 
@@ -799,30 +499,16 @@ mt-2
 
 </div>
 
-
 <User
               className="
 text-blue-500
 dark:text-blue-400
 "
-
-
-
               size={35} />
-            
-
 
 </div>
 
 </div>
-
-
-
-
-
-
-
-
 
 <div className="
 bg-white
@@ -835,27 +521,13 @@ dark:border-gray-700
 p-5
 ">
 
-
-
-
-
-
-
-
-          
-
-
 <div className="flex justify-between">
-
 
 <div>
 
 <p className="text-gray-500 dark:text-gray-400 text-sm">{t("Admins")}
 
-
-
               </p>
-
 
 <h2 className="
 text-3xl
@@ -864,12 +536,6 @@ text-blue-500
 dark:text-blue-400
 mt-2
 ">
-
-
-
-
-
-                
 
 {adminCount}
 
@@ -877,25 +543,13 @@ mt-2
 
 </div>
 
-
 <ShieldCheck
               className="text-blue-500 dark:text-blue-400"
               size={35} />
-            
-
 
 </div>
 
-
 </div>
-
-
-
-
-
-
-
-
 
 <div className="
 bg-white
@@ -908,29 +562,13 @@ dark:border-gray-700
 p-5
 ">
 
-
-
-
-
-
-
-
-          
-
-
 <div className="flex justify-between">
-
 
 <div>
 
-
 <p className="text-gray-500 dark:text-gray-400 text-sm">{t("Pharmacists")}
 
-
-
               </p>
-
-
 
 <h2 className="
 text-3xl
@@ -939,39 +577,20 @@ text-blue-500
 dark:text-blue-400
 mt-2
 ">
-
-
-
-
-
-                
 
 {pharmacistCount}
 
 </h2>
 
-
 </div>
-
 
 <Pill
               className="text-blue-500 dark:text-blue-400"
               size={35} />
-            
-
 
 </div>
 
-
 </div>
-
-
-
-
-
-
-
-
 
 <div className="
 bg-white
@@ -984,27 +603,13 @@ dark:border-gray-700
 p-5
 ">
 
-
-
-
-
-
-
-
-          
-
-
 <div className="flex justify-between">
-
 
 <div>
 
 <p className="text-gray-500 dark:text-gray-400 text-sm">{t("Cashiers")}
 
-
-
               </p>
-
 
 <h2 className="
 text-3xl
@@ -1014,45 +619,23 @@ dark:text-blue-400
 mt-2
 ">
 
-
-
-
-
-                
-
 {cashierCount}
 
 </h2>
 
-
 </div>
-
-
 
 <WalletCards
               className="text-blue-500 dark:text-blue-400"
               size={35} />
-            
-
 
 </div>
 
-
 </div>
 
-
 </div>
-
-
-
-
-
-
-
-
 
 {/* SEARCH AND FILTER */}
-
 
 <div className="
 bg-white
@@ -1069,29 +652,10 @@ md:flex-row
 gap-4
 ">
 
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
 <div className="
 relative
 flex-1
 ">
-
-
-          
-
 
 <Search
 
@@ -1101,29 +665,13 @@ left-3.5
 top-3.5
 text-gray-400
 "
-
-
-
-
-
             size={18} />
-
-          
-
-
 
 <input
 
-
             value={searchTerm}
-
-
             onChange={(e) => setSearchTerm(e.target.value)}
-
-
             placeholder={t("Search by name or email...")}
-
-
             className="
 w-full
 pl-11
@@ -1144,26 +692,6 @@ placeholder-gray-400
 dark:placeholder-gray-300
 " />
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          
-
 {searchTerm &&
           <button
             type="button"
@@ -1176,20 +704,9 @@ dark:placeholder-gray-300
 
 </div>
 
-
-
-
-
-
 <select
-
-
           value={roleFilter}
-
-
           onChange={(e) => setRoleFilter(e.target.value)}
-
-
           className="
 border
 border-gray-200
@@ -1205,24 +722,6 @@ outline-none
 focus:ring-2
 focus:ring-blue-500
 ">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          
-
 
 <option value="all" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("All Roles")}
 
@@ -1235,11 +734,8 @@ focus:ring-blue-500
 </select>
 
 <select
-
           value={statusFilter}
-
           onChange={(e) => setStatusFilter(e.target.value)}
-
           className="
 border
 border-gray-200
@@ -1256,22 +752,6 @@ focus:ring-2
 focus:ring-blue-500
 ">
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          
-
 <option value="all" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("All Statuses")}</option>
 <option value="approved" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("Approved")}</option>
 <option value="pending" className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">{t("Pending Approval")}</option>
@@ -1279,25 +759,12 @@ focus:ring-blue-500
 
 </select>
 
-
-
 </div>
-
-
-
-
-
-
-
-
 
 {/* ADD / EDIT MODAL */}
 
-
-
 {
       showModal &&
-
 
       <div className="
 fixed
@@ -1310,17 +777,6 @@ justify-center
 z-50
 px-4
 ">
-
-
-
-
-
-
-
-
-
-        
-
 
 <div className="
 bg-white
@@ -1335,33 +791,12 @@ border-gray-100
 dark:border-gray-700
 ">
 
-
-
-
-
-
-
-
-
-
-          
-
-
-
-
-
 <div className="
 flex
 justify-between
 items-center
 mb-5
 ">
-
-
-
-
-            
-
 
 <h2 className="
 text-xl
@@ -1370,59 +805,30 @@ text-gray-800
 dark:text-white
 ">
 
-
-
-
-              
-
-
 {
               editingUser ?
-
               "Edit User" :
-
               "Add New User"
               }
 
-
 </h2>
 
-
-
 <button
-
               onClick={closeModal}
-
               className="
 text-gray-400
 hover:text-gray-600
 ">
 
-
-
-
-              
-
 <X size={22} />
 
 </button>
 
-
 </div>
 
-
-
-
-
-
-
-
 <form
-
             onSubmit={handleSubmit}
-
             autoComplete="off"
-
             className="
 grid
 grid-cols-1
@@ -1430,35 +836,16 @@ md:grid-cols-2
 gap-5
 ">
 
-
-
-
-
-
-            
-
-
-
-
-
-
-
 <div>
 
 <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Full Name")}
 
-
-
               </label>
-
 
 <div className="relative mt-1">
 
-
 <User
-
                   size={18}
-
                   className="
 absolute
 left-3
@@ -1466,29 +853,11 @@ top-3
 text-gray-400
 " />
 
-
-
-
-
-
-                
-
-
 <input
-
-
                   name="name"
-
-
                   value={form.name}
-
-
                   onChange={handleChange}
-
-
                   required
-
-
                   className="
 w-full
 pl-10
@@ -1507,59 +876,22 @@ focus:ring-blue-500
 placeholder-gray-400
 dark:placeholder-gray-300
 "
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                   placeholder={t("Full name")} />
 
-                
-
-
-
 </div>
 
-
 </div>
-
-
-
-
-
-
 
 <div>
 
 <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Email")}
 
-
-
               </label>
-
-
 
 <div className="relative mt-1">
 
-
 <Mail
-
                   size={18}
-
                   className="
 absolute
 left-3
@@ -1567,35 +899,13 @@ top-3
 text-gray-400
 " />
 
-
-
-
-
-
-                
-
-
 <input
-
-
                   type="email"
-
-
                   name="email"
-
-
                   value={form.email}
-
-
                   onChange={handleChange}
-
-
                   autoComplete="off"
-
-
                   required
-
-
                   className="
 w-full
 pl-10
@@ -1614,66 +924,22 @@ focus:ring-blue-500
 placeholder-gray-400
 dark:placeholder-gray-300
 "
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                   placeholder={t("Email")} />
 
-                
-
-
-
 </div>
 
-
 </div>
-
-
-
-
-
-
-
 
 <div>
 
-
 <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Role")}
-
-
 
               </label>
 
-
-
 <select
-
-
                 name="role"
-
-
                 value={form.role}
-
-
                 onChange={handleChange}
-
-
                 className="
 w-full
 mt-1
@@ -1692,38 +958,13 @@ focus:ring-2
 focus:ring-blue-500
 ">
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                
-
-
 {
                 (roles.length > 0 ? roles : DEFAULT_ROLES).map((role) =>
 
                 <option
-
                   key={role.slug}
-
                   value={role.slug}
-
                   className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-
-                  
 
 {role.name}
 
@@ -1734,12 +975,9 @@ focus:ring-blue-500
 
                 }
 
-
 </select>
 
-
 </div>
-
 
 <div className="mt-4">
 	<label className="text-sm font-medium">{t("Branch")}</label>
@@ -1758,25 +996,17 @@ focus:ring-blue-500
 	</select>
 </div>
 
-
-
 <div>
 
-
 <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Password")}
-
                 {editingUser && "(leave empty to keep current)"}
 
 </label>
 
-
 <div className="relative mt-1">
 
-
 <Lock
-
                   size={18}
-
                   className="
 absolute
 left-3
@@ -1784,36 +1014,13 @@ top-3
 text-gray-400
 " />
 
-
-
-
-
-
-                
-
-
-
 <input
-
-
                   type={showPassword ? "text" : "password"}
-
-
                   name="password"
-
-
                   value={form.password}
-
-
                   onChange={handleChange}
-
-
                   autoComplete="new-password"
-
-
                   minLength={8}
-
-
                   className="
 w-full
 pl-10
@@ -1833,42 +1040,11 @@ focus:ring-blue-500
 placeholder-gray-400
 dark:placeholder-gray-300
 "
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                   placeholder={t("Password")} />
 
-                
-
-
-
-
 <button
-
-
                   type="button"
-
-
                   onClick={() => setShowPassword(!showPassword)}
-
-
                   className="
 absolute
 right-3
@@ -1877,61 +1053,29 @@ text-gray-500
 hover:text-gray-700
 dark:hover:text-gray-300
 ">
-
-
-
-
-
-
-
-
-
-                  
-
 
 {
                   showPassword ?
-
                   <EyeOff size={18} /> :
-
                   <Eye size={18} />
                   }
 
-
 </button>
 
-
-
 </div>
 
-
 </div>
-
-
-
-
-
-
-
 
 <div>
 
-
 <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("Confirm Password")}
-
-
 
               </label>
 
-
-
 <div className="relative mt-1">
 
-
 <Lock
-
                   size={18}
-
                   className="
 absolute
 left-3
@@ -1939,34 +1083,12 @@ top-3
 text-gray-400
 " />
 
-
-
-
-
-
-                
-
-
-
-
 <input
-
-
                   type={showConfirm ? "text" : "password"}
-
-
                   name="password_confirmation"
-
-
                   value={form.password_confirmation}
-
-
                   onChange={handleChange}
-
-
                   autoComplete="new-password"
-
-
                   className="
 w-full
 pl-10
@@ -1986,42 +1108,11 @@ focus:ring-blue-500
 placeholder-gray-400
 dark:placeholder-gray-300
 "
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                   placeholder={t("Confirm password")} />
 
-                
-
-
-
-
 <button
-
-
                   type="button"
-
-
                   onClick={() => setShowConfirm(!showConfirm)}
-
-
                   className="
 absolute
 right-3
@@ -2031,48 +1122,19 @@ hover:text-gray-700
 dark:hover:text-gray-300
 ">
 
-
-
-
-
-
-
-
-
-                  
-
-
 {
                   showConfirm ?
-
                   <EyeOff size={18} /> :
-
                   <Eye size={18} />
                   }
 
-
 </button>
 
-
-
-
 </div>
 
-
-
 </div>
-
-
-
-
-
-
-
-
-
 
 {/* BUTTONS */}
-
 
 <div className="
 md:col-span-2
@@ -2082,22 +1144,9 @@ gap-3
 mt-3
 ">
 
-
-
-
-
-              
-
-
 <button
-
-
                 type="button"
-
-
                 onClick={closeModal}
-
-
                 className="
 px-5
 py-3
@@ -2111,36 +1160,10 @@ hover:bg-gray-50
 dark:hover:bg-gray-700
 ">{t("Cancel")}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
               </button>
 
-
-
-
-
 <button
-
-
                 disabled={submitting}
-
-
                 className="
 flex
 items-center
@@ -2154,38 +1177,17 @@ hover:bg-blue-700
 disabled:opacity-50
 ">
 
-
-
-
-
-
-
-
-
-
-
-
-
-                
-
-
 {
                 submitting ?
 
-
-
                 <>
-
 <Loader2
                     size={18}
                     className="animate-spin" />
                   
-
 Saving...
 
 </> :
-
-
 
                 <>
 
@@ -2193,9 +1195,7 @@ Saving...
 
 {
                   editingUser ?
-
                   "Update User" :
-
                   "Create User"
                   }
 
@@ -2203,28 +1203,17 @@ Saving...
 
                 }
 
-
-
 </button>
 
-
 </div>
-
-
-
 
 </form>
 
-
 </div>
 
-
 </div>
-
 
       }
-
-
 
 {/* REJECT MODAL */}
 
@@ -2243,16 +1232,6 @@ z-50
 px-4
 ">
 
-
-
-
-
-
-
-
-
-        
-
 <div className="
 bg-white
 dark:bg-gray-800
@@ -2266,17 +1245,6 @@ border-gray-100
 dark:border-gray-700
 ">
 
-
-
-
-
-
-
-
-
-
-          
-
 <div className="
 flex
 justify-between
@@ -2284,24 +1252,13 @@ items-center
 mb-5
 ">
 
-
-
-
-            
-
 <h2 className="text-xl font-bold text-gray-800 dark:text-white">{t("Reject")}
-
               {rejectTarget?.name}
-
 </h2>
 
 <button
-
               onClick={closeRejectModal}
-
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-
-              
 
 <X size={22} />
 
@@ -2311,18 +1268,12 @@ mb-5
 
 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("Reason (optional)")}
 
-
-
           </label>
 
 <textarea
-
             value={rejectReason}
-
             onChange={(e) => setRejectReason(e.target.value)}
-
             rows={3}
-
             className="
 w-full
 mt-1
@@ -2341,28 +1292,9 @@ focus:ring-blue-500
 placeholder-gray-400
 dark:placeholder-gray-300
 "
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             placeholder={t("Let this applicant know why their registration was rejected...")} />
 
           
-
 <div className="
 flex
 justify-end
@@ -2370,17 +1302,9 @@ gap-3
 mt-5
 ">
 
-
-
-
-            
-
 <button
-
               type="button"
-
               onClick={closeRejectModal}
-
               className="
 px-5
 py-3
@@ -2394,31 +1318,12 @@ hover:bg-gray-50
 dark:hover:bg-gray-700
 ">{t("Cancel")}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             </button>
 
 <button
-
               type="button"
-
               disabled={processingAction}
-
               onClick={submitReject}
-
               className="
 flex
 items-center
@@ -2432,30 +1337,13 @@ hover:bg-red-700
 disabled:opacity-50
 ">
 
-
-
-
-
-
-
-
-
-
-
-
-              
-
 {
               processingAction ?
-
-
 
               <>
 <Loader2 size={18} className="animate-spin" />
 Rejecting...
 </> :
-
-
 
               "Reject"
 
@@ -2471,11 +1359,7 @@ Rejecting...
 
       }
 
-
-
 {/* USERS TABLE */}
-
-
 
 <div className="
 bg-white
@@ -2488,127 +1372,67 @@ dark:border-gray-700
 overflow-hidden
 ">
 
-
-
-
-
-
-
-
-        
-
-
 <table className="w-full">
-
 
 <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
 
-
 <tr>
-
 
 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("User")}
 
-
-
               </th>
-
 
 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Email")}
 
-
-
               </th>
-
 
 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Role")}
 
-
-
               </th>
-
 
 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Branch")}
 
-
-
               </th>
-
 
 <th className="px-6 py-4 text-left text-sm">{t("Status")}
 
-
-
               </th>
-
 
 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Created")}
 
-
-
               </th>
-
 
 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-600 dark:text-gray-300">{t("Actions")}
 
-
-
               </th>
-
 
 </tr>
 
-
 </thead>
 
-
-
-
-
-
-
 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-
 
 {
 
             filteredUsers.length > 0 ?
 
-
-
             filteredUsers.map((user) =>
 
-
             <tr
-
               key={user.id}
-
               className="
 hover:bg-gray-50
 dark:hover:bg-gray-700/50
 transition
 ">
 
-
-
-
-
-              
-
-
 <td className="px-6 py-4">
-
 
 <div className="
 flex
 items-center
 gap-3
 ">
-
-
-
-                  
-
 
 <div className="
 w-10
@@ -2622,28 +1446,13 @@ justify-center
 font-bold
 ">
 
-
-
-
-
-
-
-
-
-                    
-
-
 {
                     user.name?.charAt(0)
                     }
 
-
 </div>
 
-
-
 <div>
-
 
 <p className="font-semibold text-gray-900 dark:text-white">
 
@@ -2651,100 +1460,54 @@ font-bold
 
 </p>
 
-
 <p className="text-xs text-gray-400 dark:text-gray-500">{t("ID:")}
-
                       {user.id}
-
 </p>
 
-
 </div>
 
-
 </div>
-
 
 </td>
-
-
-
-
-
-
 
 <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
 
-
 {user.email}
-
 
 </td>
 
-
-
-
-
-
-
 <td className="px-6 py-4">
-
 
 {getRoleBadge(user.role)}
 
-
 </td>
-
-
 
 <td className="px-6 py-4">
 
-
 {getStatusBadge(user.status)}
 
-
 </td>
-
-
-
-
-
-
-
 
 <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
     <div className="flex flex-col gap-1">
         <span>
             {
                     user.created_at ?
-
-                    new Date(user.created_at).
-                    toLocaleDateString() :
-
+                    new Date(user.created_at).toLocaleDateString() :
                     "-"
                     }
         </span>
         <span className="text-xs text-gray-400 dark:text-gray-500">
             {
                     user.created_at ?
-
                     new Date(user.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) :
-
                     ""
                     }
         </span>
     </div>
 </td>
 
-
-
-
-
-
-
-
 <td className="px-6 py-4">
-
 
 <div className="
 flex
@@ -2752,25 +1515,15 @@ justify-end
 gap-2
 ">
 
-
-
-                  
-
-
 {
 
                   user.status === "pending" ?
 
-
-
                   <>
 
 <button
-
                       onClick={() => handleApprove(user)}
-
                       disabled={processingAction}
-
                       className="
 p-2
 text-green-600
@@ -2778,27 +1531,15 @@ hover:bg-green-50
 rounded-lg
 disabled:opacity-50
 "
-
-
-
-
-
-
-
                       title={t("Approve")}>
-
-                      
 
 <Check size={18} />
 
 </button>
 
 <button
-
                       onClick={() => handleReject(user)}
-
                       disabled={processingAction}
-
                       className="
 p-2
 text-red-600
@@ -2806,16 +1547,7 @@ hover:bg-red-50
 rounded-lg
 disabled:opacity-50
 "
-
-
-
-
-
-
-
                       title={t("Reject")}>
-
-                      
 
 <Ban size={18} />
 
@@ -2823,78 +1555,38 @@ disabled:opacity-50
 
 </> :
 
-
-
                   <>
 
 <button
-
-
                       onClick={() => openEdit(user)}
-
-
                       className="
 p-2
 text-blue-600
 hover:bg-blue-50
 rounded-lg
 "
-
-
-
-
-
-
-
                       title={t("Edit")}>
-
-
-                      
-
 
 <Edit size={18} />
 
-
 </button>
 
-
-
-
 {
-
                     user.id !== currentUser?.id &&
 
-
                     <button
-
-
                       onClick={() => handleDelete(user.id)}
-
-
                       className="
 p-2
 text-red-600
 hover:bg-red-50
 rounded-lg
 "
-
-
-
-
-
-
-
                       title={t("Delete")}>
-
-
-                      
-
 
 <Trash2 size={18} />
 
-
 </button>
-
 
                     }
 
@@ -2902,77 +1594,38 @@ rounded-lg
 
                   }
 
-
-
 </div>
-
 
 </td>
 
-
-
-
-
 </tr>
-
 
             ) :
 
-
-
-
-
             <tr>
 
-
 <td
-
-
                 colSpan="6"
-
-
                 className="
 text-center
 py-10
 text-gray-400
 ">{t("No users found")}
 
-
-
-
-
-
-
-
-
-
-
-
               </td>
-
 
 </tr>
 
-
             }
-
 
 </tbody>
 
-
 </table>
-
 
 </div>
 
-
 <Pagination meta={meta} onPageChange={handlePageChange} />
 
-
 </div>);
-
-
-
-
 
 }

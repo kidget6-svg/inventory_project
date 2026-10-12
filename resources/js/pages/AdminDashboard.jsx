@@ -1,4 +1,5 @@
-import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect } from 'react';
+import { useLanguage } from "../context/LanguageContext";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../axios';
 import { useBranch } from '../context/BranchContext';
@@ -7,6 +8,7 @@ import BarChart from '../components/BarChart';
 import PieChart from '../components/PieChart';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SidebarLayout from '../components/SidebarLayout';
+import { formatCompactCurrency } from '../utils/money';
 import { Clock, AlertTriangle, Calendar, ShoppingCart, Package, Pill, Activity, User, Building2, ArrowRight } from 'lucide-react';
 
 /**
@@ -15,6 +17,23 @@ import { Clock, AlertTriangle, Calendar, ShoppingCart, Package, Pill, Activity, 
  * categories change in the database.
  */
 const DASHBOARD_REFRESH_MS = 60 * 1000;
+
+/**
+ * Sales/Revenue chart period options sent to the API.
+ */
+const PERIOD_OPTIONS = [
+    { key: 'today', label: 'Today' },
+    { key: '7d', label: '7 Days' },
+    { key: '30d', label: '30 Days' },
+    { key: 'this_month', label: 'This Month' },
+];
+
+const PERIOD_TITLE = {
+    today: 'Today',
+    '7d': 'Last 7 Days',
+    '30d': 'Last 30 Days',
+    this_month: 'This Month',
+};
 
 // ── Date helpers ────────────────────────────────────────────────────────────
 
@@ -69,30 +88,45 @@ const expiryStatusBadge = (days) => {
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
-export default function AdminDashboard() {const { t } = useLanguage();
+export default function AdminDashboard() {
+  const { t } = useLanguage();
   const { branchRefreshKey, selectedBranch } = useBranch();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [period, setPeriod] = useState('7d');
   const [actionLoading, setActionLoading] = useState(null);
+  const requestId = useRef(0);
 
   // ── Helper: load the main dashboard payload from the Laravel API.
   //    Contains the inventory-by-category chart data, recent activities,
   //    low-stock / expired lists and the summary statistics.
-  const loadDashboard = async () => {
+  //    Branch is applied server-side via the X-Branch-Id header.
+  //    `silent` refreshes (auto-poll) keep the current data on screen;
+  //    explicit loads (period/branch change) clear stale data first.
+  const loadDashboard = useCallback(async (opts = {}) => {
+    const { silent = false } = opts;
+    const id = ++requestId.current;
+
+    if (!silent) {
+      setData(null);
+      setLoading(true);
+    }
+
     try {
-      const r = await api.get('/dashboard');
+      const r = await api.get('/dashboard', { params: { period } });
+      if (id !== requestId.current) return; // stale response
       setData(r.data);
       setError('');
     } catch (err) {
+      if (id !== requestId.current) return;
       setError(t("Failed to load dashboard data"));
       console.error(err);
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
-  };
+  }, [period]);
 
-  // ── Helper: load pending user registrations that need approval
   // ── Fetch once on mount and auto-refresh on an interval so the
   //    category chart automatically updates whenever medicines / categories
   //    change in the database. Cleanup prevents state updates after unmount. ──
@@ -100,22 +134,22 @@ export default function AdminDashboard() {const { t } = useLanguage();
     let active = true; // guard: skip state updates once unmounted
 
     const load = async () => {
-      await loadDashboard();
+      if (active) await loadDashboard();
     };
 
     load();
     const interval = setInterval(() => {
-      if (active) load();
+      if (active) loadDashboard({ silent: true });
     }, DASHBOARD_REFRESH_MS);
 
     return () => {
       active = false;
       clearInterval(interval);
     };
-  }, [branchRefreshKey]);
+  }, [period, branchRefreshKey, loadDashboard]);
 
 
-  const activityIcon = (name) => {const { t } = useLanguage();
+  const activityIcon = (name) => {
     const icons = { 'shopping-cart': ShoppingCart, package: Package, pill: Pill, activity: Activity };
     const Icon = icons[name] || Clock;
     return <Icon size={16} />;
@@ -177,29 +211,52 @@ export default function AdminDashboard() {const { t } = useLanguage();
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-6">
                 <StatCard value={data.totalUsers} label={t("Total Users")} icon="users" color="indigo" />
                 <StatCard value={data.totalProducts} label={t("Total Medicines")} icon="package" color="green" />
-                <StatCard value={`$${Number(data.totalRevenue || 0).toFixed(2)}`} label={t("Total Sales")} icon="banknote" color="purple" />
+                <StatCard value={formatCompactCurrency(data.totalRevenue)} label={t("Total Sales")} icon="banknote" color="purple" />
                 <StatCard value={data.lowStockCount} label={t("Low Stock Medicines")} icon="alert" color="red" />
                 <StatCard value={data.expiredCount} label={t("Expired Medicines")} icon="calendar" color="orange" />
             </div>
 
-            {/* ─────────────────────────────────────────────────────────────────────────
-           Charts: Sales & Revenue ─────────────────────────────────────────────
-        ───────────────────────────────────────────────────────────────────────── */}
+{/* ─────────────────────────────────────────────────────────────────────────
+                Charts: Sales & Revenue ─────────────────────────────────────
+            ───────────────────────────────────────────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h3 className="text-base font-semibold text-gray-700">
+                    {t("Sales & Revenue")}
+                </h3>
+                <div className="flex bg-gray-100 rounded-xl p-1 w-fit">
+                    {PERIOD_OPTIONS.map(p => (
+                        <button
+                            key={p.key}
+                            onClick={() => setPeriod(p.key)}
+                            className={`
+                                px-3 py-1.5 rounded-lg text-xs font-semibold
+                                transition-all duration-200
+                                ${period === p.key
+                                    ? 'bg-white text-blue-600 shadow'
+                                    : 'text-gray-500 hover:text-gray-700'}
+                            `}
+                        >
+                            {p.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                 <BarChart
-          title={t("Sales (Last 7 Days)")}
-          labels={data.salesChartData?.labels || []}
-          values={data.salesChartData?.counts || []}
-          color="green"
-          valueSuffix=" sales" />
-        
+                    title={`${t("Sales")} (${PERIOD_TITLE[period]})`}
+                    labels={data.salesChartData?.labels || []}
+                    values={data.salesChartData?.counts || []}
+                    color="green"
+                    valueSuffix=" sales"
+                />
                 <BarChart
-          title={t("Revenue (Last 7 Days)")}
-          labels={data.salesChartData?.labels || []}
-          values={data.salesChartData?.revenue || []}
-          color="blue"
-          currency={true} />
-        
+                    title={`${t("Revenue")} (${PERIOD_TITLE[period]})`}
+                    labels={data.salesChartData?.labels || []}
+                    values={data.salesChartData?.revenue || []}
+                    color="blue"
+                    currency={true}
+                />
             </div>
 
             {/* ─────────────────────────────────────────────────────────────────────────
@@ -368,7 +425,7 @@ export default function AdminDashboard() {const { t } = useLanguage();
                             <Calendar size={18} className="text-yellow-500" />{t("Expiring Within 90 Days")}
 
             <span className="ml-1 text-xs font-normal text-gray-400">
-                                ({data.expiringCount ?? expiringMedicines.length}{t("items)")}
+                                ({data.expiringCount ?? expiringMedicines.length}{t("items)")})
             </span>
                         </h3>
                         <Link
@@ -392,7 +449,7 @@ export default function AdminDashboard() {const { t } = useLanguage();
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {displayedExpiring.map((m) => {const { t } = useLanguage();
+                                {displayedExpiring.map((m) => {
                 const days = daysRemaining(m.expiry_date);
                 return (
                   <tr key={m.id} className="hover:bg-yellow-50 transition-colors">
@@ -414,7 +471,7 @@ export default function AdminDashboard() {const { t } = useLanguage();
 
                     {/* ── Mobile stacked rows (visible only on mobile) ── */}
                     <div className="sm:hidden space-y-2">
-                        {displayedExpiring.map((m) => {const { t } = useLanguage();
+                        {displayedExpiring.map((m) => {
             const days = daysRemaining(m.expiry_date);
             return (
               <div key={m.id} className="flex items-center justify-between p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-md gap-3">

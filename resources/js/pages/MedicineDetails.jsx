@@ -778,8 +778,8 @@ export default function Medicines() {const { t } = useLanguage();
                                     {item.name}
                                 </button>
                                 <span className="text-xs text-gray-400 ml-1">
-                                    ({item.searchCount || 1}{t("x)")}
-            </span>
+                                    ({item.searchCount || 1}{t("x)")
+            }</span>
                                 <button
               onClick={(e) => {
                 e.stopPropagation();

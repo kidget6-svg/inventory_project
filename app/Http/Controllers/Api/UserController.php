@@ -18,6 +18,16 @@ class UserController extends Controller
 {
     $query = User::query();
 
+    // Branch-aware filtering — same pattern used throughout the codebase.
+    // Non-admin users are automatically scoped to their own branch by the
+    // middleware; for admins we respect the X-Branch-Id header set by the
+    // branch switcher in the frontend.
+    $authUser = $request->user();
+    $branchScope = $authUser ? $authUser->getBranchScope($request) : null;
+    if ($branchScope) {
+        $query->where('branch_id', $branchScope);
+    }
+
     if ($search = $request->input('search')) {
         $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
@@ -44,16 +54,38 @@ class UserController extends Controller
      * User counts summary (admin only).
      */
     
-    public function stats()
+    public function stats(Request $request)
 {
+    $authUser = $request->user();
+    $branchScope = $authUser ? $authUser->getBranchScope($request) : null;
+
     return response()->json([
-        'total' => User::count(),
-        'pending' => User::where('status', User::STATUS_PENDING)->count(),
-        'approved' => User::where('status', User::STATUS_APPROVED)->count(),
-        'rejected' => User::where('status', User::STATUS_REJECTED)->count(),
-        'admins' => User::where('role', 'admin')->where('status', User::STATUS_APPROVED)->count(),
-        'pharmacists' => User::where('role', 'pharmacist')->where('status', User::STATUS_APPROVED)->count(),
-        'cashiers' => User::where('role', 'cashier')->where('status', User::STATUS_APPROVED)->count(),
+        'total'       => User::when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        'pending'     => User::where('status', User::STATUS_PENDING)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        'approved'    => User::where('status', User::STATUS_APPROVED)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        'rejected'    => User::where('status', User::STATUS_REJECTED)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        'admin'       => User::where('role', 'admin')
+                            ->where('status', User::STATUS_APPROVED)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        'pharmacist'  => User::where('role', 'pharmacist')
+                            ->where('status', User::STATUS_APPROVED)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        'cashier'     => User::where('role', 'cashier')
+                            ->where('status', User::STATUS_APPROVED)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        // Keep legacy keys that existing frontend code may read
+        'admins'      => User::where('role', 'admin')
+                            ->where('status', User::STATUS_APPROVED)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        'pharmacists' => User::where('role', 'pharmacist')
+                            ->where('status', User::STATUS_APPROVED)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
+        'cashiers'    => User::where('role', 'cashier')
+                            ->where('status', User::STATUS_APPROVED)
+                            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))->count(),
     ]);
 }
 

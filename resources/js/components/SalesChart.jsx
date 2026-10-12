@@ -1,12 +1,15 @@
-import { useLanguage } from "../context/LanguageContext";import React, { useState } from "react";
+import { useLanguage } from "../context/LanguageContext";
+import React, { useState } from "react";
 import { Line } from "react-chartjs-2";
 import "./chartRegistry";
 import { chartColors, baseChartOptions } from "./chartRegistry";
+import { formatCurrency, formatCompact } from "../utils/money";
 
 export default function SalesChart({
   data: analytics,
   loading = false
-}) {const { t } = useLanguage();
+}) {
+  const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState("daily");
 
@@ -97,13 +100,12 @@ export default function SalesChart({
         displayColors: false,
 
         callbacks: {
-
           title(items) {
             return items[0].label;
           },
 
           label(context) {
-            return "Sales : $" + Number(context.parsed.y).toFixed(2);
+            return "Sales : " + formatCurrency(context.parsed.y);
           }
         }
       }
@@ -122,7 +124,11 @@ export default function SalesChart({
           font: {
             size: 12,
             weight: "600"
-          }
+          },
+          maxRotation: 0,
+          minRotation: 0,
+          autoSkip: true,
+          autoSkipPadding: 12,
         }
       },
 
@@ -141,7 +147,7 @@ export default function SalesChart({
         ticks: {
           color: "#64748B",
 
-          callback: (value) => "$" + value
+          callback: (value) => formatCompact(value)
         }
       }
     }
@@ -151,9 +157,10 @@ export default function SalesChart({
     return (
       <div className="h-72 flex items-center justify-center">
 
-                <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
 
-            </div>);
+      </div>
+    );
 
   }
 
@@ -161,11 +168,11 @@ export default function SalesChart({
 
     <div>
 
-            {/* Tabs */}
+      {/* Tabs */}
 
-            <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
+      <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
 
-                {tabs.map((tab) =>
+        {tabs.map((tab) =>
 
         <button
 
@@ -174,28 +181,28 @@ export default function SalesChart({
           onClick={() => setActiveTab(tab.key)}
 
           className={`
-                            flex-1 py-2 rounded-lg
-                            font-semibold
-                            transition-all duration-300
-                            ${
+            flex-1 py-2 rounded-lg
+            font-semibold
+            transition-all duration-300
+            ${
           activeTab === tab.key ?
           "bg-white text-blue-600 shadow" :
           "text-gray-500 hover:text-gray-700"}
-                        `
+          `
           }>
           
 
-                        {tab.label}
+          {tab.label}
 
-                    </button>
+        </button>
 
         )}
 
-            </div>
+      </div>
 
-            <div className="h-80">
+      <div className="h-80">
 
-                {activeData.length ?
+        {activeData.length ?
 
         <Line
           data={chartData}
@@ -212,9 +219,10 @@ export default function SalesChart({
 
         }
 
-            </div>
+      </div>
 
-        </div>);
+    </div>
+  );
 
 
 

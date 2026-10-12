@@ -19,16 +19,47 @@ class DashboardController extends Controller
     public function index(\Illuminate\Http\Request $request)
     {
         $user = Auth::user();
+        $period = $this->resolvePeriod($request);
 
         if ($user->isAdmin()) {
-            return $this->adminDashboard($request);
+            return $this->adminDashboard($request, $period);
         }
 
         if ($user->isPharmacist()) {
-            return $this->pharmacistDashboard($request);
+            return $this->pharmacistDashboard($request, $period);
         }
 
         return $this->cashierDashboard($request);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shared helper: resolve the requested chart period
+    |--------------------------------------------------------------------------
+    */
+    private function resolvePeriod(\Illuminate\Http\Request $request): string
+    {
+        $allowed = ['today', '7d', '30d', 'this_month'];
+        $period = $request->get('period');
+
+        return in_array($period, $allowed, true) ? $period : '7d';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shared helper: inclusive start/end range for a chart period
+    |--------------------------------------------------------------------------
+    */
+    private function salesPeriodRange(string $period): array
+    {
+        $today = Carbon::today();
+
+        return match ($period) {
+            'today'      => [$today->copy()->startOfDay(), $today->copy()->endOfDay()],
+            '30d'        => [$today->copy()->subDays(29)->startOfDay(), $today->copy()->endOfDay()],
+            'this_month' => [$today->copy()->startOfMonth(), $today->copy()->endOfDay()],
+            default      => [$today->copy()->subDays(6)->startOfDay(), $today->copy()->endOfDay()],
+        };
     }
 
     /*
@@ -132,33 +163,45 @@ class DashboardController extends Controller
     | Shared helper: sales analytics (daily / weekly / monthly)
     |--------------------------------------------------------------------------
     */
-    private function salesAnalytics(?int $branchScope = null): array
+    private function salesAnalytics(?int $branchScope = null, string $period = '7d'): array
     {
-        // Daily – last 7 days
-        $daily = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today(null)->subDays($i);
-            $dailyQuery = Sale::whereDate('sale_date', '=', $date)
-                ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
+        // Daily – one aggregated query covering the whole period (avoids N+1
+        // per-day queries). Days without sales are zero-filled so the chart
+        // always shows a complete, aligned time series.
+        [$rangeStart, $rangeEnd] = $this->salesPeriodRange($period);
 
+        $rows = Sale::whereBetween('sale_date', [$rangeStart, $rangeEnd])
+            ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope))
+            ->selectRaw('DATE(sale_date) as day, COUNT(*) as cnt, COALESCE(SUM(total_amount), 0) as total')
+            ->groupBy('day')
+            ->get()
+            ->keyBy('day');
+
+        $daily = [];
+        $cursor = $rangeStart->copy();
+        while ($cursor->lte($rangeEnd)) {
+            $key = $cursor->format('Y-m-d');
+            $row = $rows->get($key);
             $daily[] = [
-                'label' => $date->format('D'),
-                'date'  => $date->format('Y-m-d'),
-                'total' => (float) (clone $dailyQuery)->sum('total_amount'),
-                'count' => (clone $dailyQuery)->count(),
+                'label' => $cursor->format('M d'),
+                'date'  => $key,
+                'total' => (float) ($row->total ?? 0),
+                'count' => (int) ($row->cnt ?? 0),
             ];
+            $cursor->addDay();
         }
 
-        // Weekly – last 4 weeks
+        // Weekly – last 4 weeks (labels shortened to the week start so the
+        // axis ticks stay compact and never overlap)
         $weekly = [];
         for ($i = 3; $i >= 0; $i--) {
             $start = Carbon::today(null)->subWeeks($i)->startOfWeek();
             $end   = Carbon::today(null)->subWeeks($i)->endOfWeek();
-            $weeklyQuery = Sale::whereBetween('sale_date', [$start, $end], 'and')
+            $weeklyQuery = Sale::whereBetween('sale_date', [$start, $end])
                 ->when($branchScope, fn($q) => $q->where('branch_id', $branchScope));
 
             $weekly[] = [
-                'label' => $start->format('M d') . ' – ' . $end->format('M d'),
+                'label' => $start->format('M d'),
                 'total' => (float) (clone $weeklyQuery)->sum('total_amount'),
                 'count' => (clone $weeklyQuery)->count(),
             ];
@@ -237,33 +280,37 @@ class DashboardController extends Controller
             ];
         }
 
-        // Recent purchase orders
-        foreach (PurchaseOrder::with('supplier')->latest()->take($limit)->get() as $po) {
-            $activityAt = $po->completed_at
-                ?? $po->sent_at
-                ?? $po->updated_at
-                ?? $po->created_at
-                ?? Carbon::now();
+        // Recent purchase orders – warehouse-level records with no branch
+        // linkage. Only shown when viewing all branches; when a specific
+        // branch is selected they must not leak into that branch's activity.
+        if (! $branchScope) {
+            foreach (PurchaseOrder::with('supplier')->latest()->take($limit)->get() as $po) {
+                $activityAt = $po->completed_at
+                    ?? $po->sent_at
+                    ?? $po->updated_at
+                    ?? $po->created_at
+                    ?? Carbon::now();
 
-            $action = match ($po->status) {
-                'draft'      => "Created Purchase Order #{$po->id}",
-                'pending'    => "Submitted Purchase Order #{$po->id}",
-                'sent'       => "Sent Purchase Order #{$po->id} to supplier",
-                'delivered'  => "Purchase Order #{$po->id} marked as delivered",
-                'completed'  => "Completed Purchase Order #{$po->id}",
-                'cancelled'  => "Cancelled Purchase Order #{$po->id}",
-                default      => "Updated Purchase Order #{$po->id}",
-            };
+                $action = match ($po->status) {
+                    'draft'      => "Created Purchase Order #{$po->id}",
+                    'pending'    => "Submitted Purchase Order #{$po->id}",
+                    'sent'       => "Sent Purchase Order #{$po->id} to supplier",
+                    'delivered'  => "Purchase Order #{$po->id} marked as delivered",
+                    'completed'  => "Completed Purchase Order #{$po->id}",
+                    'cancelled'  => "Cancelled Purchase Order #{$po->id}",
+                    default      => "Updated Purchase Order #{$po->id}",
+                };
 
-            $activities[] = [
-                'id'        => 'po_' . $po->id,
-                'user'      => 'System',
-                'action'    => $action,
-                'icon'      => 'package',
-                'date'      => $activityAt->format('Y-m-d'),
-                'time'      => $activityAt->format('H:i'),
-                'timestamp' => $activityAt->timestamp,
-            ];
+                $activities[] = [
+                    'id'        => 'po_' . $po->id,
+                    'user'      => 'System',
+                    'action'    => $action,
+                    'icon'      => 'package',
+                    'date'      => $activityAt->format('Y-m-d'),
+                    'time'      => $activityAt->format('H:i'),
+                    'timestamp' => $activityAt->timestamp,
+                ];
+            }
         }
 
         // Recent stock movements
@@ -302,7 +349,7 @@ class DashboardController extends Controller
     | Admin dashboard – full data set
     |--------------------------------------------------------------------------
     */
-    private function adminDashboard(\Illuminate\Http\Request $request)
+    private function adminDashboard(\Illuminate\Http\Request $request, string $period = '7d')
     {
         $user = Auth::user();
         $branchScope = $user ? $user->getBranchScope($request) : null;
@@ -328,7 +375,7 @@ class DashboardController extends Controller
         $todaySalesCount      = (clone $todaySalesQuery)->count();
         $todayRevenue         = (clone $todaySalesQuery)->sum('total_amount');
 
-        $salesAnalytics       = $this->salesAnalytics($branchScope);
+        $salesAnalytics       = $this->salesAnalytics($branchScope, $period);
         $purchaseVsSales      = $this->purchaseVsSales($branchScope);
         $inventoryStatus      = $this->inventoryStatus($branchScope);
         $poStats              = $this->purchaseOrderStats();
@@ -339,8 +386,10 @@ class DashboardController extends Controller
 
         $salesChartData = [
             'labels'  => array_column($salesAnalytics['daily'], 'label'),
+            'dates'   => array_column($salesAnalytics['daily'], 'date'),
             'counts'  => array_column($salesAnalytics['daily'], 'count'),
             'revenue' => array_column($salesAnalytics['daily'], 'total'),
+            'period'  => $period,
         ];
 
         $inventoryChartData = Category::with(['medicines' => function($q) use ($branchScope) {
@@ -351,7 +400,9 @@ class DashboardController extends Controller
                 'total_stock'    => (int) $category->medicines->sum('quantity'),
                 'medicine_count' => $category->medicines->count(),
             ];
-        })->values();
+        // Only include categories that actually have medicines in the selected
+        // branch/scope — zero-count categories produce confusing empty pie slices.
+        })->filter(fn($c) => $c['medicine_count'] > 0)->values();
 
         return response()->json([
             // ---- Summary cards ----
@@ -407,7 +458,7 @@ class DashboardController extends Controller
     | Pharmacist dashboard – inventory & expiry focus
     |--------------------------------------------------------------------------
     */
-    private function pharmacistDashboard(\Illuminate\Http\Request $request)
+    private function pharmacistDashboard(\Illuminate\Http\Request $request, string $period = '7d')
     {
         $user = Auth::user();
         $branchScope = $user ? $user->getBranchScope($request) : null;
@@ -425,7 +476,7 @@ class DashboardController extends Controller
         $expiring60           = $this->expiringMedicines(60, $branchScope);
         $expiring90           = $this->expiringMedicines(90, $branchScope);
 
-        $salesAnalytics       = $this->salesAnalytics($branchScope);
+        $salesAnalytics       = $this->salesAnalytics($branchScope, $period);
         $inventoryStatus      = $this->inventoryStatus($branchScope);
         $activities           = $this->recentActivities(4, $branchScope);
 

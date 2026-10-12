@@ -35,6 +35,10 @@ class Medicine extends Model
 
     protected $with = [];
 
+    protected $appends = [
+        'image_url',
+    ];
+
     protected $casts = [
     ];
 

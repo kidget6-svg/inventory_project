@@ -9,9 +9,14 @@ use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Apply the shared index/export filters to a query builder.
+     */
+    protected function applyFilters($query, Request $request)
     {
-        $query = AuditLog::with('user');
+        if ($request->filled('branch_id') && $request->branch_id !== 'all') {
+            $query->whereHas('user', fn ($q) => $q->where('branch_id', $request->branch_id));
+        }
 
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
@@ -31,24 +36,49 @@ class AuditLogController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('table_name', 'like', "%{$search}%")
-                  ->orWhere('record_id', 'like', "%{$search}%")
-                  ->orWhere('ip_address', 'like', "%{$search}%");
+                    $q->where('table_name', 'like', "%{$search}%")
+                        ->orWhere('record_id', 'like', "%{$search}%")
+                        ->orWhere('ip_address', 'like', "%{$search}%")
+                        ->orWhere('action', 'like', "%{$search}%")
+                        ->orWhere('module', 'like', "%{$search}%")
+                        ->orWhereRaw('CAST(before_values AS CHAR) LIKE ?', ["%{$search}%"])
+                        ->orWhereRaw('CAST(after_values AS CHAR) LIKE ?', ["%{$search}%"])
+                        ->orWhereHas('user', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhereHas('branch', fn ($q3) => $q3->where('name', 'like', "%{$search}%"));
+                    });
             });
         }
 
-        $logs = $query->latest()->paginate(20);
+        return $query;
+    }
+
+    public function index(Request $request)
+    {
+        $query = AuditLog::with('user.branch');
+
+        $this->applyFilters($query, $request);
+
+        $sort = $request->get('sort', 'newest');
+        $query->orderBy('created_at', $sort === 'oldest' ? 'asc' : 'desc');
+
+        $logs = $query->paginate($request->get('per_page', 20));
 
         return response()->json($logs);
     }
 
-    public function stats()
+    public function stats(Request $request)
     {
+        $base = AuditLog::query();
+        $this->applyFilters($base, $request);
+
         return response()->json([
-            'total' => AuditLog::count(),
-            'today' => AuditLog::whereDate('created_at', today())->count(),
-            'active_users' => AuditLog::distinct('user_id')->count(),
-            'modules_used' => AuditLog::distinct('module')->count(),
+            'total' => (clone $base)->count(),
+            'today' => (clone $base)->whereDate('created_at', today())->count(),
+            'created' => (clone $base)->where('action', 'create')->count(),
+            'updated' => (clone $base)->where('action', 'update')->count(),
+            'deleted' => (clone $base)->where('action', 'delete')->count(),
         ]);
     }
 
@@ -60,7 +90,46 @@ class AuditLogController extends Controller
 
     public function export(Request $request)
     {
-        // Implementation for export
-        // Similar to other export methods
+        $format = $request->get('format', 'csv');
+        $query = AuditLog::with('user.branch');
+        $this->applyFilters($query, $request);
+        $query->orderBy('created_at', 'desc');
+
+        $logs = $query->get();
+
+        if ($format === 'json') {
+            return response()->json($logs);
+        }
+
+        $columns = [
+            'id', 'created_at', 'user', 'email', 'branch',
+            'action', 'module', 'table_name', 'record_id', 'ip_address',
+        ];
+
+        $callback = function () use ($logs, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            foreach ($logs as $log) {
+                fputcsv($file, [
+                    $log->id,
+                    $log->created_at,
+                    $log->user?->name,
+                    $log->user?->email,
+                    $log->user?->branch?->name,
+                    $log->action,
+                    $log->module,
+                    $log->table_name,
+                    $log->record_id,
+                    $log->ip_address,
+                ]);
+            }
+            fclose($file);
+        };
+
+        $filename = 'audit-logs-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

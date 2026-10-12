@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Medicine;
 use App\Models\RetailProduct;
+use App\Models\Shelf;
 use App\Models\StockMovement;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -79,16 +81,20 @@ class StockMovementController extends Controller
     public function store(Request $request)
     {
         try {
-            // Validate the request
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+
             $validated = $request->validate([
                 'type' => 'required|in:in,out,adjustment,return,transfer,damaged,expired,lost,correction,self,warehouse',
                 'reference' => 'nullable|string|max:255',
                 'notes' => 'nullable|string',
-                'source_type' => 'nullable|string|in:branch,warehouse',
+                'source_type' => 'nullable|string|in:branch,warehouse,supplier',
                 'source_id' => 'nullable|integer',
+                'supplier_id' => 'nullable|integer|exists:suppliers,id',
                 'destination_type' => 'nullable|string|in:branch,warehouse',
                 'destination_id' => 'nullable|integer',
                 'branch_id' => 'nullable|integer',
+                'shelf_id' => 'nullable|integer|exists:shelves,id',
                 'status' => 'nullable|string|in:pending,approved,completed,cancelled',
                 'items' => 'nullable|array|min:1',
                 'items.*.type' => 'required_with:items|in:medicine,retail',
@@ -99,6 +105,36 @@ class StockMovementController extends Controller
                 'retail_product_id' => 'nullable|exists:retail_products,id',
                 'quantity' => 'nullable|integer|min:1',
             ]);
+
+            if ($validated['source_type'] === 'supplier') {
+                $validated['source_id'] = $validated['supplier_id'];
+            }
+
+            if ($validated['destination_type'] === 'branch' && $validated['destination_id']) {
+                if ($user->role !== 'admin' && $branchScope && (int) $validated['destination_id'] !== (int) $branchScope) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You are not authorized to receive stock into the selected branch.',
+                    ], 403);
+                }
+            }
+
+            $shelf = null;
+            if ($validated['shelf_id']) {
+                $shelf = Shelf::findOrFail($validated['shelf_id']);
+                if ($shelf->location_type !== Shelf::LOCATION_BRANCH) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Selected shelf is not a branch shelf.',
+                    ], 422);
+                }
+                if ($shelf->branch_id && $validated['destination_id'] && (int) $shelf->branch_id !== (int) $validated['destination_id']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Selected shelf does not belong to the destination branch.',
+                    ], 422);
+                }
+            }
 
             $items = [];
             if (!empty($validated['items']) && is_array($validated['items'])) {
@@ -119,7 +155,7 @@ class StockMovementController extends Controller
                 ]);
             }
 
-            $response = DB::transaction(function () use ($validated, $items, $request) {
+            $response = DB::transaction(function () use ($validated, $items, $request, $shelf) {
                 $movements = [];
                 $updatedProducts = [];
 
@@ -153,7 +189,6 @@ class StockMovementController extends Controller
                         $newQuantity -= $quantity;
                     }
 
-                    // Create the movement
                     $movement = StockMovement::create([
                         'medicine_id' => $isRetail ? null : $product->id,
                         'itemable_type' => $isRetail ? RetailProduct::class : Medicine::class,
@@ -170,17 +205,21 @@ class StockMovementController extends Controller
                         'source_id' => $validated['source_id'] ?? null,
                         'destination_type' => $validated['destination_type'] ?? null,
                         'destination_id' => $validated['destination_id'] ?? null,
-                        'branch_id' => $validated['branch_id'] ?? null,
+                        'branch_id' => $validated['destination_type'] === 'branch' ? ($validated['destination_id'] ?? null) : ($validated['branch_id'] ?? null),
+                        'shelf_id' => $shelf ? $shelf->id : ($validated['shelf_id'] ?? null),
                         'status' => $validated['status'] ?? 'completed',
                         'ip_address' => $request->ip(),
                         'device_info' => $request->userAgent(),
                     ]);
 
-                    // Update product quantity
+                    if ($shelf && $validated['destination_type'] === 'branch' && !$isRetail) {
+                        $product->update(['shelf_id' => $shelf->id]);
+                    }
+
                     $product->update(['quantity' => $newQuantity]);
                     $updatedProducts[] = $product;
 
-                    $movements[] = $movement->load('medicine', 'itemable', 'user');
+                    $movements[] = $movement->load('medicine', 'itemable', 'user', 'shelf');
                 }
 
                 return [

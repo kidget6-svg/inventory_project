@@ -1,5 +1,7 @@
-import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect } from 'react';
+import { useLanguage } from "../context/LanguageContext";
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../axios';
+import { useBranch } from '../context/BranchContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
 import ChartCard from '../components/ChartCard';
@@ -10,23 +12,34 @@ import LowStockAlert from '../components/LowStockAlert';
 import ExpiryAlert from '../components/ExpiryAlert';
 import QuickActions from '../components/QuickActions';
 
-export default function PharmacistDashboard() {const { t } = useLanguage();
+export default function PharmacistDashboard() {
+  const { t } = useLanguage();
+  const { branchRefreshKey } = useBranch();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const requestId = useRef(0);
 
   useEffect(() => {
-    api.get('/dashboard').
-    then((r) => {
-      setData(r.data);
-      setError('');
-    }).
-    catch((err) => {
-      setError(t("Failed to load dashboard data"));
-      console.error(err);
-    }).
-    finally(() => setLoading(false));
-  }, []);
+    const id = ++requestId.current;
+    setData(null);
+    setLoading(true);
+
+    api.get('/dashboard')
+      .then((r) => {
+        if (id !== requestId.current) return;
+        setData(r.data);
+        setError('');
+      })
+      .catch((err) => {
+        if (id !== requestId.current) return;
+        setError(t("Failed to load dashboard data"));
+        console.error(err);
+      })
+      .finally(() => {
+        if (id === requestId.current) setLoading(false);
+      });
+  }, [branchRefreshKey]);
 
   if (loading) return <LoadingSpinner text={t("Loading dashboard...")} />;
 

@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
+
 use App\Models\Shelf;
 use App\Models\Medicine;
+
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -16,7 +18,14 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         try {
+            $user = $request->user();
+            $branchScope = $user ? $user->getBranchScope($request) : null;
+
             $query = Category::withCount('medicines');
+
+            if ($branchScope) {
+                $query->where('branch_id', $branchScope);
+            }
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -25,6 +34,10 @@ class CategoryController extends Controller
                       ->orWhere('description', 'like', "%{$search}%")
                       ->orWhere('shelf_location', 'like', "%{$search}%");
                 });
+            }
+
+            if ($request->filled('type')) {
+                $query->where('type', $request->type);
             }
 
             $perPage = $request->get('per_page');
@@ -57,6 +70,7 @@ class CategoryController extends Controller
     public function store(StoreCategoryRequest $request)
     {
         try {
+
             if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
                 return response()->json(['message' => 'Only admin and pharmacists can create categories.'], 403);
             }
@@ -82,6 +96,26 @@ class CategoryController extends Controller
                 }
             }
 
+
+            $user = $request->user();
+            if (!in_array($user->role, ['admin', 'pharmacist'])) {
+                return response()->json(['message' => 'Only admin and pharmacists can create categories.'], 403);
+            }
+
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'shelf_location' => 'nullable|string|max:255',
+                'type' => 'nullable|string|max:50',
+                'branch_id' => 'nullable|exists:branches,id',
+            ]);
+
+            $branchScope = $user->getBranchScope($request);
+            if ($branchScope) {
+                $validated['branch_id'] = $branchScope;
+            }
+
+
             $category = Category::create($validated);
 
             return response()->json([
@@ -103,14 +137,20 @@ class CategoryController extends Controller
         }
     }
 
-    public function show(Category $category)
+    public function show(Request $request, Category $category)
     {
+        $branchScope = $request->user()->getBranchScope($request);
+        if ($branchScope && $category->branch_id && $category->branch_id !== $branchScope) {
+            return response()->json(['message' => 'Unauthorized access to this category.'], 403);
+        }
+
         return response()->json($category->loadCount('medicines'));
     }
 
     public function update(UpdateCategoryRequest $request, Category $category)
     {
         try {
+
             if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
                 return response()->json(['message' => 'Only admin and pharmacists can update categories.'], 403);
             }
@@ -136,6 +176,30 @@ class CategoryController extends Controller
                 }
             }
 
+
+            $user = $request->user();
+            if (!in_array($user->role, ['admin', 'pharmacist'])) {
+                return response()->json(['message' => 'Only admin and pharmacists can update categories.'], 403);
+            }
+
+            $branchScope = $user->getBranchScope($request);
+            if ($branchScope && $category->branch_id && $category->branch_id !== $branchScope) {
+                return response()->json(['message' => 'Unauthorized access to update this category.'], 403);
+            }
+
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'shelf_location' => 'nullable|string|max:255',
+                'type' => 'nullable|string|max:50',
+                'branch_id' => 'nullable|exists:branches,id',
+            ]);
+
+            if ($branchScope) {
+                unset($validated['branch_id']);
+            }
+
+
             $category->update($validated);
 
             return response()->json([
@@ -160,9 +224,22 @@ class CategoryController extends Controller
     public function destroy(Request $request, Category $category)
     {
         try {
+
             if (!in_array($request->user()->role, ['admin', 'pharmacist'])) {
                 return response()->json(['message' => 'Only admin and pharmacists can delete categories.'], 403);
             }
+
+
+            $user = $request->user();
+            if (!in_array($user->role, ['admin', 'pharmacist'])) {
+                return response()->json(['message' => 'Only admin and pharmacists can delete categories.'], 403);
+            }
+
+            $branchScope = $user->getBranchScope($request);
+            if ($branchScope && $category->branch_id && $category->branch_id !== $branchScope) {
+                return response()->json(['message' => 'Unauthorized access to delete this category.'], 403);
+            }
+
 
             if ($category->medicines()->count() > 0) {
                 return response()->json([

@@ -1,4 +1,5 @@
-import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect, useRef } from 'react';
+import { useLanguage } from "../context/LanguageContext";
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../axios';
 import { useAuth } from '../context/AuthContext';
@@ -27,11 +28,14 @@ const dosageFormOptions = [
 
 
 const unitOptions = [
-'Tablet(s)', 'Capsule(s)', 'mL', 'mg', 'mcg', 'g', 'mg/mL', 'mg/5mL', '%',
-'Pill(s)', 'Drops', 'Puffs', 'IU', 'Unit(s)', 'Sachet(s)', 'Vial(s)'];
+  'Tablet(s)', 'Capsule(s)', 'mL', 'mg', 'mcg', 'g', 'mg/mL', 'mg/5mL', '%',
+  'Pill(s)', 'Drops', 'Puffs', 'IU', 'Unit(s)', 'Sachet(s)', 'Vial(s)', 'Vial', 'Bottle',
+  'Tube', 'Ampoule', 'Box', 'Strip', 'Pack',
+];
 
 
-export default function Medicines() {const { t } = useLanguage();
+export default function Medicines() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const { branchRefreshKey } = useBranch();
   const navigate = useNavigate();
@@ -56,6 +60,8 @@ export default function Medicines() {const { t } = useLanguage();
   const [imageFile, setImageFile] = useState(null);
   const [dosageOther, setDosageOther] = useState(false);
   const [unitOther, setUnitOther] = useState(false);
+  const [editQuantity, setEditQuantity] = useState(0);
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   const [form, setForm] = useState({
     name: '', generic_name: '', batch_number: '', category_id: '',
@@ -151,6 +157,8 @@ export default function Medicines() {const { t } = useLanguage();
     setImageFile(null);
     setDosageOther(false);
     setUnitOther(false);
+    setEditQuantity(0);
+    setImageRemoved(false);
   };
 
   const openCreate = () => {
@@ -168,13 +176,15 @@ export default function Medicines() {const { t } = useLanguage();
       branch_id: m.branch_id || '',
       dosage_form: m.dosage_form || '',
       strength: m.strength || '',
-      unit: m.unit || ''
+      unit: m.unit || '',
     });
     setEditId(m.id);
     setShowModal(true);
     setError('');
     setImagePreview(m.image_url || null);
     setImageFile(null);
+    setEditQuantity(m.quantity || 0);
+    setImageRemoved(false);
     setDosageOther(!!m.dosage_form && !dosageFormOptions.includes(m.dosage_form));
     setUnitOther(!!m.unit && !unitOptions.includes(m.unit));
   };
@@ -203,6 +213,7 @@ export default function Medicines() {const { t } = useLanguage();
   const removeImage = () => {
     setImagePreview(null);
     setImageFile(null);
+    setImageRemoved(true);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -218,10 +229,15 @@ export default function Medicines() {const { t } = useLanguage();
         formData.append(key, form[key]);
       }
     });
-    formData.append('quantity', 0);
+
+    // New medicines start with zero stock; on edit keep the existing quantity.
+    formData.append('quantity', editId ? editQuantity : 0);
 
     if (imageFile) {
       formData.append('image', imageFile);
+    } else if (editId && imageRemoved) {
+      // Explicitly remove the existing image on update.
+      formData.append('_remove_image', '1');
     }
 
     try {
@@ -272,7 +288,7 @@ export default function Medicines() {const { t } = useLanguage();
     }
   };
 
-  const getStatusBadge = (status) => {const { t } = useLanguage();
+  const getStatusBadge = (status) => {
     const config = {
       active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' },
       inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' },
@@ -285,7 +301,7 @@ export default function Medicines() {const { t } = useLanguage();
 
   const isFiltered = filters.search || filters.category_id || filters.status;
 
-  const renderFormFields = () => {const { t } = useLanguage();
+  const renderFormFields = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -406,12 +422,12 @@ export default function Medicines() {const { t } = useLanguage();
                         </div>
                         <div className="flex-1">
                             <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
-                onChange={handleImageChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
-              
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml,image/webp"
+                                onChange={handleImageChange}
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                            />
                             <p className="text-xs text-gray-400 mt-1">{t("JPG, PNG, GIF up to 2MB")}</p>
                         </div>
                     </div>

@@ -1,4 +1,5 @@
-import { useLanguage } from "../context/LanguageContext";import React from 'react';
+import { useLanguage } from "../context/LanguageContext";
+import React from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Pie } from 'react-chartjs-2';
 import { ChartJS } from './chartRegistry';
@@ -46,6 +47,10 @@ const centerTextPlugin = {
       (sum, v) => sum + Number(v), 0
     );
 
+    // Nothing meaningful to show when there is no inventory for the
+    // selected branch/period — avoid the misleading "0 Total Medicines".
+    if (total <= 0) return;
+
     const centerX = (chartArea.left + chartArea.right) / 2;
     const centerY = (chartArea.top + chartArea.bottom) / 2;
 
@@ -80,7 +85,8 @@ ChartJS.register(centerTextPlugin);
  *  - Category details are revealed only on hover via tooltips.
  *  - No legend, no percentage labels on slices, no text lists.
  */
-export default function PieChart({ labels = [], values = [] }) {const { t } = useLanguage();
+export default function PieChart({ labels = [], values = [] }) {
+  const { t } = useLanguage();
   // Assign a colour to every category — prefer the explicit semantic
   // mapping; fall back to the palette cycling for unknown categories.
   const bgColors = labels.map((label, i) =>
@@ -92,17 +98,39 @@ export default function PieChart({ labels = [], values = [] }) {const { t } = us
 
   const total = values.reduce((sum, v) => sum + Number(v), 0);
 
+  // ── Empty state ──────────────────────────────────────────────────────────
+  // When there genuinely are no medicines for the selected branch / period,
+  // render a clean placeholder instead of a confusingly blank doughnut ring.
+  if (total === 0 || labels.length === 0) {
+    return (
+      <div className="bg-white rounded-[16px] shadow p-6 flex flex-col items-center h-full">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">
+          Inventory by Category
+        </h3>
+        <div className="flex flex-col items-center justify-center flex-1 min-h-[200px] text-gray-400 gap-3">
+          <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="38" stroke="#e5e7eb" strokeWidth="14" fill="none" />
+          </svg>
+          <p className="text-sm font-semibold text-gray-400">No Medicine Data</p>
+          <p className="text-xs text-gray-300 text-center max-w-[160px]">
+            No medicines found for the selected branch
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const chartData = {
     labels,
     datasets: [
-    {
-      data: values.map((v) => Number(v)),
-      backgroundColor: bgColors,
-      borderColor: borderColors,
-      borderWidth: 1,
-      hoverOffset: 10
-    }]
-
+      {
+        data: values.map(v => Number(v)),
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: 1,
+        hoverOffset: 10,
+      },
+    ],
   };
 
   const options = {
@@ -142,14 +170,12 @@ export default function PieChart({ labels = [], values = [] }) {const { t } = us
 
   return (
     <div className="card p-6 flex flex-col items-center h-full">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t("Inventory by Category")}
-
-      </h3>
-            <div className="relative w-full flex-1 min-h-[200px] flex items-center justify-center">
-                <Doughnut data={chartData} options={options} />
-            </div>
-        </div>);
-
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">{t("Inventory by Category")}</h3>
+      <div className="relative w-full flex-1 min-h-[200px] flex items-center justify-center">
+        <Doughnut data={chartData} options={options} />
+      </div>
+    </div>
+  );
 }
 
 /**

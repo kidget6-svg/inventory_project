@@ -1,6 +1,8 @@
-import { useLanguage } from "../context/LanguageContext";import React from 'react';
+import { useLanguage } from "../context/LanguageContext";
+import React from 'react';
 import { Bar } from 'react-chartjs-2';
 import { baseChartOptions } from './chartRegistry';
+import { formatCurrency, formatCompact } from '../utils/money';
 /**
  * Modern BarChart — uses Chart.js (via react-chartjs-2) for a clean,
  * professional look with rounded bars, smooth animations, and minimal
@@ -18,7 +20,8 @@ export default function BarChart({
   valuePrefix = '',
   valueSuffix = '',
   currency = false
-}) {const { t } = useLanguage();
+}) {
+  const { t } = useLanguage();
   /* Map the semantic `color` prop to a Chart.js hex colour. */
   const colorMap = {
     sky: '#3b82f6',
@@ -33,35 +36,40 @@ export default function BarChart({
   };
   const barColor = colorMap[color] || colorMap.blue;
 
-  /* Format a single bar value for the tooltip / y-axis. */
+  /* Format a single bar value for the tooltip. */
   const formatValue = (val) => {
-    if (currency) return `$${Number(val).toFixed(2)}`;
-    return `${valuePrefix}${Number(val)}${valueSuffix}`;
+    if (currency) return formatCurrency(val);
+    return `${valuePrefix}${Number(val).toLocaleString()}${valueSuffix}`;
   };
 
   const chartData = {
     labels,
     datasets: [
-    {
-      label: title,
-      data: values.map((v) => Number(v)),
-      backgroundColor: barColor,
-      borderColor: barColor,
-      borderRadius: 6,
-      borderWidth: 0,
-      barThickness: 24,
-      maxBarThickness: 34
-    }]
-
+      {
+        label: title,
+        data: values.map(v => Number(v)),
+        backgroundColor: barColor,
+        borderColor: barColor,
+        borderRadius: 6,
+        borderWidth: 0,
+        barThickness: 24,
+        maxBarThickness: 34,
+        barPercentage: 0.65,
+        categoryPercentage: 0.7,
+      },
+    ],
   };
 
   const options = {
     ...baseChartOptions,
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: { top: 12, right: 4, left: 4 },
+    },
     animation: {
       duration: 900,
-      easing: 'easeOutQuart'
+      easing: 'easeOutQuart',
     },
     plugins: {
       legend: {
@@ -84,52 +92,60 @@ export default function BarChart({
     scales: {
       x: {
         grid: { display: false },
-        ticks: { font: { size: 11 }, color: '#9ca3af' },
-        border: { display: false }
-      },
-      y: {
-        grid: {
-          color: 'rgba(226, 232, 240, 0.6)',
-          drawBorder: false
-        },
+        border: { display: false },
+        offset: true,
         ticks: {
           font: { size: 11 },
           color: '#9ca3af',
-          callback: (val) => {
-            if (currency) return `$${val}`;
-            return val;
-          }
+          maxRotation: 0,
+          minRotation: 0,
+          autoSkip: true,
+          autoSkipPadding: 10,
+          maxTicksLimit: labels.length > 14 ? 14 : labels.length,
         },
-        border: { display: false }
-      }
-    }
+      },
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(226, 232, 240, 0.6)',
+          drawBorder: false,
+        },
+        border: { display: false },
+        ticks: {
+          font: { size: 11 },
+          color: '#9ca3af',
+          maxTicksLimit: 7,
+          callback: (val) => (currency ? formatCompact(val) : val),
+        },
+      },
+    },
   };
 
   return (
     <div className="card p-5 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-white">
-                    {title}
-                </h3>
-            </div>
-            <div className="flex-1 h-[230px]">
-                {labels.length > 0 ?
-        <Bar data={chartData} options={options} /> :
-
-        <div className="h-full flex items-center justify-center text-gray-400 text-sm">{t("No data available")}
-
-        </div>
-        }
-            </div>
-        </div>);
-
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-white">
+          {title}
+        </h3>
+      </div>
+      <div className="flex-1 min-h-[260px] h-[260px] sm:h-[320px]">
+        {labels.length > 0 ? (
+          <Bar data={chartData} options={options} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+            {t("No data available")}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 /* Small helper: convert "#2563eb" → "37,99,235" for rgba() usage. */
 function hexToRgb(hex) {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.substring(0, 2), 16);
-  const g = parseInt(h.substring(2, 2 + h.length - 4), 16) || parseInt(h.substring(2, 4), 16);
-  const b = parseInt(h.substring(h.length > 4 ? 4 : 2), 16);
-  return `${r}, ${g}, ${b}`;
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 2 + h.length - 4), 16) || parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(h.length > 4 ? 4 : 2), 16);
+    return `${r}, ${g}, ${b}`;
 }

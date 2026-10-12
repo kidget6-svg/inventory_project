@@ -9,12 +9,14 @@
 // and a list of recent sales — all sourced from the existing
 // /dashboard API endpoint (DashboardController::cashierDashboard).
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../axios';
+import { useBranch } from '../context/BranchContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
 import { useLanguage } from '../context/LanguageContext';
+import { formatCurrency, formatCompactCurrency } from '../utils/money';
 import {
   ShoppingCart,
   Banknote,
@@ -26,22 +28,32 @@ import {
 
 export default function CashierDashboard() {
   const { t } = useLanguage();
+  const { branchRefreshKey } = useBranch();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const requestId = useRef(0);
 
   useEffect(() => {
-    api.get('/dashboard').
-    then((r) => {
-      setData(r.data);
-      setError('');
-    }).
-    catch((err) => {
-      setError(t("Failed to load dashboard data"));
-      console.error(err);
-    }).
-    finally(() => setLoading(false));
-  }, []);
+    const id = ++requestId.current;
+    setData(null);
+    setLoading(true);
+
+    api.get('/dashboard')
+      .then(r => {
+        if (id !== requestId.current) return;
+        setData(r.data);
+        setError('');
+      })
+      .catch(err => {
+        if (id !== requestId.current) return;
+        setError(t("Failed to load dashboard data"));
+        console.error(err);
+      })
+      .finally(() => {
+        if (id === requestId.current) setLoading(false);
+      });
+  }, [branchRefreshKey]);
 
   if (loading) return <LoadingSpinner text={t("Loading dashboard...")} />;
 
@@ -69,11 +81,11 @@ export default function CashierDashboard() {
           color="green" />
         
                 <StatCard
-          value={`$${todayRevenue.toFixed(2)}`}
-          label={t("Today's Revenue")}
-          icon="banknote"
-          color="blue" />
-        
+                    value={formatCompactCurrency(todayRevenue)}
+                    label={t("Today's Revenue")}
+                    icon="banknote"
+                    color="blue"
+                />
                 <StatCard
           value={totalMedicines}
           label={t("Total Medicines")}
@@ -95,7 +107,7 @@ export default function CashierDashboard() {
                     </p> :
 
         <div className="space-y-3">
-                        {hourlyLabels.map((label, idx) => {const { t } = useLanguage();
+                        {hourlyLabels.map((label, idx) => {
             const value = hourlyValues[idx];
             const widthPct = value / maxHourly * 100;
             return (
@@ -103,14 +115,14 @@ export default function CashierDashboard() {
                                     <span className="text-xs text-gray-500 dark:text-gray-400 w-12">{label}</span>
                                     <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-lg h-6 overflow-hidden">
                                         <div
-                    className="h-full bg-sky-500 rounded-lg transition-all duration-300 flex items-center justify-end"
-                    style={{ width: `${widthPct}%` }}>
-                    
-                                            {value > 0 &&
-                    <span className="text-xs text-white font-medium pr-2">
-                                                    ${value.toFixed(2)}
+                                            className="h-full bg-sky-500 rounded-lg transition-all duration-300 flex items-center justify-end"
+                                            style={{ width: `${widthPct}%` }}
+                                        >
+                                            {value > 0 && (
+                                                <span className="text-xs text-white font-medium pr-2">
+                                                    {formatCompactCurrency(value)}
                                                 </span>
-                    }
+                                            )}
                                         </div>
                                     </div>
                                 </div>);
@@ -181,7 +193,7 @@ export default function CashierDashboard() {
                                             {sale.customer_name || 'Walk-in Customer'}
                                         </td>
                                         <td className="px-4 py-2.5 whitespace-nowrap text-right text-gray-700 dark:text-gray-300 font-medium">
-                                            ${Number(sale.total_amount || 0).toFixed(2)}
+                                            {formatCurrency(sale.total_amount)}
                                         </td>
                                         <td className="px-4 py-2.5 whitespace-nowrap text-right">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
