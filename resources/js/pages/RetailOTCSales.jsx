@@ -7,7 +7,7 @@ import { useLanguage } from "../context/LanguageContext"; // resources/js/pages/
 // products, quantity controls (+/-), remove-item, total price,
 // Clear Draft, and Send to Cashier Queue.
 //
-// The pharmacist can enter Customer Information (customer name, phone, email, notes)
+// The pharmacist can enter Customer Information (customer name, phone, email, TIN)
 // before dispatching the order to the Cashier Payment Queue.
 //
 // All shared UI is provided by the reusable components in
@@ -43,15 +43,15 @@ export default function RetailOTCSales() {const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Pagination (client-side, operates on filtered results)
-  const ITEMS_PER_PAGE = 6;
-  const [currentPage, setCurrentPage] = useState(1);
+    // Pagination (client-side, operates on filtered results)
+    const ITEMS_PER_PAGE = 10;
+    const [currentPage, setCurrentPage] = useState(1);
 
-  // Customer Information
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerNotes, setCustomerNotes] = useState('');
+    // Customer Information
+    const [customerName, setCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [customerEmail, setCustomerEmail] = useState('');
+    const [customerTin, setCustomerTin] = useState('');
 
   // Customer Information modal (opened before sending to cashier queue)
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -75,9 +75,126 @@ export default function RetailOTCSales() {const { t } = useLanguage();
   // ── Cart helpers ────────────────────────────────────────────
   const priceOf = (p) => Number(p.price ?? 0);
 
-  const addToCart = (product) => {
-    if (product.quantity <= 0) {
-      return window.showToast(t("Out of stock"), 'error');
+    const addToCart = (product) => {
+        if (product.quantity <= 0) {
+            return window.showToast('Out of stock', 'error');
+        }
+
+        setCart(prev => {
+            const existing = prev.find(item => item.id === product.id);
+            if (existing) {
+                if (existing.cartQty + 1 > product.quantity) {
+                    window.showToast(`Stock limit reached (${product.quantity})`, 'error');
+                    return prev;
+                }
+                return prev.map(item =>
+                    item.id === product.id
+                        ? { ...item, cartQty: item.cartQty + 1 }
+                        : item
+                );
+            }
+            return [...prev, { ...product, cartQty: 1 }];
+        });
+    };
+
+    const incrementQty = (item, maxStock) => {
+        setCart(prev => prev.map(i => {
+            if (i.id === item.id) {
+                if (i.cartQty + 1 > maxStock) {
+                    window.showToast(`Stock limit reached (${maxStock})`, 'error');
+                    return i;
+                }
+                return { ...i, cartQty: i.cartQty + 1 };
+            }
+            return i;
+        }));
+    };
+
+    const decrementQty = (item) => {
+        setCart(prev => prev.map(i =>
+            i.id === item.id
+                ? { ...i, cartQty: Math.max(1, i.cartQty - 1) }
+                : i
+        ));
+    };
+
+    const removeFromCart = (item) =>
+        setCart(prev => prev.filter(i => i.id !== item.id));
+
+    const clearDraft = () => setCart([]);
+
+    const totalCalculated = cart.reduce(
+        (sum, item) => sum + (priceOf(item) * (item.cartQty || 0)),
+        0
+    );
+
+    const totalItems = cart.reduce(
+        (sum, item) => sum + (item.cartQty || 0),
+        0
+    );
+
+    // ── Submit ────────────────────────────────────────────────────
+    // Opening the "Send to Cashier Queue" button first opens the
+    // Customer Information modal.  The actual API call happens only
+    // after the user confirms the information in the modal.
+    const handleSendToCashier = () => {
+        if (cart.length === 0) {
+            return window.showToast('Cart is empty', 'error');
+        }
+        if (cart.some(i => i.cartQty <= 0)) {
+            return window.showToast('All items must have quantity > 0', 'error');
+        }
+
+        setShowCustomerModal(true);
+    };
+
+    const confirmSendToCashier = async () => {
+        setSubmitting(true);
+        try {
+            await api.post('/sales/retail-draft', {
+                items: cart.map(item => ({
+                    id: item.id,
+                    cartQty: item.cartQty,
+                })),
+                customer_name: customerName || null,
+                customer_phone: customerPhone || null,
+                customer_email: customerEmail || null,
+                customer_tin: customerTin || null,
+            });
+            window.showToast('Order dispatched to Cashier queue!', 'success');
+            setCart([]);
+            setCustomerName('');
+            setCustomerPhone('');
+            setCustomerEmail('');
+            setCustomerTin('');
+            setShowCustomerModal(false);
+        } catch (err) {
+            window.showToast(
+                err.response?.data?.message || 'Failed to send order',
+                'error'
+            );
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // ── Search filter ────────────────────────────────────────────
+    const filtered = products.filter(p => {
+        const q = search.toLowerCase();
+        return (
+            p.name?.toLowerCase().includes(q) ||
+            p.sku?.toLowerCase().includes(q) ||
+            p.category?.toLowerCase().includes(q)
+        );
+    });
+
+    // ── Pagination ───────────────────────────────────────────────
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedItems = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+    if (loading) {
+        return <LoadingSpinner text="Opening retail terminal..." />;
     }
 
     setCart((prev) => {
@@ -299,28 +416,28 @@ export default function RetailOTCSales() {const { t } = useLanguage();
 
             {/* Customer Information modal */}
             <PosInfoModal
-        open={showCustomerModal}
-        onClose={() => setShowCustomerModal(false)}
-        title={t("Customer Information")}
-        titleIcon={User}
-        titleColor="text-emerald-600"
-        fields={[
-        { name: 'customerName', label: 'Customer Name', icon: User, placeholder: 'Enter customer name' },
-        { name: 'customerPhone', label: 'Phone Number', icon: Phone, phone: true, placeholder: 'Enter phone number' },
-        { name: 'customerEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
-        { name: 'customerNotes', label: 'Customer Notes', icon: FileText, placeholder: 'Notes or additional info' }]
-        }
-        values={{ customerName, customerPhone, customerEmail, customerNotes }}
-        onChange={(key, value) => {
-          if (key === 'customerName') setCustomerName(value);else
-          if (key === 'customerPhone') setCustomerPhone(value);else
-          if (key === 'customerEmail') setCustomerEmail(value);else
-          if (key === 'customerNotes') setCustomerNotes(value);
-        }}
-        onConfirm={confirmSendToCashier}
-        confirmLabel="Confirm & Send to Cashier Queue"
-        submitting={submitting} />
-      
-        </div>);
-
+                open={showCustomerModal}
+                onClose={() => setShowCustomerModal(false)}
+                title="Customer Information"
+                titleIcon={User}
+                titleColor="text-emerald-600"
+                fields={[
+                    { name: 'customerName', label: 'Customer Name', icon: User, placeholder: 'Enter customer name' },
+                    { name: 'customerPhone', label: 'Phone Number', icon: Phone, placeholder: 'Enter phone number', phoneValidation: true },
+                    { name: 'customerEmail', label: 'Email Address', icon: Mail, type: 'email', placeholder: 'Enter email address' },
+                    { name: 'customerTin', label: 'TIN Number', icon: FileText, placeholder: 'Enter TIN number', numberValidation: true },
+                ]}
+                values={{ customerName, customerPhone, customerEmail, customerTin }}
+                onChange={(key, value) => {
+                    if (key === 'customerName') setCustomerName(value);
+                    else if (key === 'customerPhone') setCustomerPhone(value);
+                    else if (key === 'customerEmail') setCustomerEmail(value);
+                    else if (key === 'customerTin') setCustomerTin(value);
+                }}
+                onConfirm={confirmSendToCashier}
+                confirmLabel="Confirm & Send to Cashier Queue"
+                submitting={submitting}
+            />
+        </div>
+    );
 }

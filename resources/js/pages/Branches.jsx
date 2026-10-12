@@ -2,13 +2,12 @@ import { useLanguage } from "../context/LanguageContext";import React, { useStat
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
-import PhoneInput from '../components/PhoneInput';
-import { normalizePhone } from '../utils/phone';
-import {
-  Plus, Edit, Trash2, Eye, Search, Building2, RefreshCw,
-  Save, X, AlertCircle, Phone, Mail, User, MapPin,
-  CheckCircle, XCircle, Clock } from
-'lucide-react';
+import Pagination from '../components/Pagination';
+import { 
+    Plus, Edit, Trash2, Eye, Search, Building2, RefreshCw,
+    Save, X, AlertCircle, Phone, Mail, User, MapPin,
+    CheckCircle, XCircle, Clock
+} from 'lucide-react';
 
 export default function Branches() {const { t } = useLanguage();
   const [branches, setBranches] = useState([]);
@@ -122,27 +121,129 @@ export default function Branches() {const { t } = useLanguage();
       email: branch.email || '',
       status: branch.status || 'active'
     });
-    setError('');
-    setShowModal(true);
-  };
+    const [submitting, setSubmitting] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [stats, setStats] = useState(null);
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState(null);
 
-  // Open view modal
-  const openView = (branch) => {
-    setViewingBranch(branch);
-    setShowViewModal(true);
-  };
-
-  // Get status badge
-  const getStatusBadge = (status) => {const { t } = useLanguage();
-    const config = {
-      active: { bg: 'bg-green-100 text-green-700', icon: CheckCircle, label: 'Active' },
-      inactive: { bg: 'bg-gray-100 text-gray-700', icon: XCircle, label: 'Inactive' },
-      pending: { bg: 'bg-yellow-100 text-yellow-700', icon: Clock, label: 'Pending' }
+    // Load branches
+    const loadBranches = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const res = await api.get('/branches', { params: { page, search: searchTerm } });
+            const d = res.data;
+            const items = Array.isArray(d) ? d : (d && Array.isArray(d.data) ? d.data : []);
+            setBranches(items);
+            setMeta(d && d.meta ? d.meta : null);
+        } catch (err) {
+            setError('Failed to load branches');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
-    const cfg = config[status] || config.active;
-    const Icon = cfg.icon;
-    return (
-      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg}`}>
+
+    // Load branch stats
+    const loadStats = async () => {
+        try {
+            const res = await api.get('/branches/stats');
+            setStats(res.data);
+        } catch (err) {
+            console.error('Failed to load branch stats', err);
+        }
+    };
+
+    useEffect(() => {
+        setPage(1);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        loadBranches();
+        loadStats();
+    }, [page, searchTerm]);
+
+    // Handle form submit
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setError('');
+        try {
+            if (modalMode === 'create') {
+                await api.post('/branches', form);
+                window.showToast('Branch created successfully', 'success');
+            } else {
+                await api.put(`/branches/${selectedBranch.id}`, form);
+                window.showToast('Branch updated successfully', 'success');
+            }
+            setShowModal(false);
+            loadBranches();
+            loadStats();
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Error saving branch';
+            setError(msg);
+            window.showToast(msg, 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // Handle delete
+    const handleDelete = async (id) => {
+        if (!confirm('Delete this branch? This action cannot be undone.')) return;
+        try {
+            await api.delete(`/branches/${id}`);
+            window.showToast('Branch deleted successfully', 'success');
+            loadBranches();
+            loadStats();
+        } catch (err) {
+            window.showToast('Failed to delete branch', 'error');
+        }
+    };
+
+    // Open create modal
+    const openCreate = () => {
+        setModalMode('create');
+        setSelectedBranch(null);
+        setForm({ name: '', location: '', manager_name: '', phone: '', email: '', status: 'active' });
+        setError('');
+        setShowModal(true);
+    };
+
+    // Open edit modal
+    const openEdit = (branch) => {
+        setModalMode('edit');
+        setSelectedBranch(branch);
+        setForm({
+            name: branch.name,
+            location: branch.location,
+            manager_name: branch.manager_name || '',
+            phone: branch.phone || '',
+            email: branch.email || '',
+            status: branch.status || 'active'
+        });
+        setError('');
+        setShowModal(true);
+    };
+
+    // Open view modal
+    const openView = (branch) => {
+        setViewingBranch(branch);
+        setShowViewModal(true);
+    };
+
+    // Get status badge
+    const getStatusBadge = (status) => {
+        const config = {
+            active: { bg: 'bg-green-100 text-green-700', icon: CheckCircle, label: 'Active' },
+            inactive: { bg: 'bg-gray-100 text-gray-700', icon: XCircle, label: 'Inactive' },
+            pending: { bg: 'bg-yellow-100 text-yellow-700', icon: Clock, label: 'Pending' },
+        };
+        const cfg = config[status] || config.active;
+        const Icon = cfg.icon;
+        return (
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg}`}>
                 <Icon size={12} />
                 {cfg.label}
             </span>);
@@ -326,6 +427,10 @@ export default function Branches() {const { t } = useLanguage();
                     </div>
         }
             </div>
+
+            {meta && meta.last_page > 1 && (
+                <Pagination meta={meta} onPageChange={(p) => setPage(p)} />
+            )}
 
             {/* ============================================================
            CREATE/EDIT MODAL

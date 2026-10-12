@@ -17,35 +17,32 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
 import PhoneInput from '../components/PhoneInput';
 import {
-  Pill,
-  ShoppingBag,
-  Search,
-  Send,
-  User,
-  Phone,
-  Mail,
-  Trash2,
-  Plus,
-  Minus,
-  Percent,
-  Tag,
-  ClipboardList,
-  CheckCircle,
-  Package,
-  FileText,
-  AlertCircle,
-  ShoppingCart,
-  Users,
-  CreditCard,
-  Printer,
-  Clock,
-  ArrowRight,
-  Sparkles,
-  Gift,
-  Lock,
-  ChevronDown,
-  ChevronUp,
-  Info,
+    Pill,
+    ShoppingBag,
+    Search,
+    Send,
+    User,
+    Phone,
+    Mail,
+    Trash2,
+    Plus,
+    Minus,
+    Percent,
+    Tag,
+    ClipboardList,
+    CheckCircle,
+    Package,
+    FileText,
+    AlertCircle,
+    ShoppingCart,
+    Users,
+    CreditCard,
+    Printer,
+    Clock,
+    ArrowRight,
+    Sparkles,
+    Gift,
+    Hash,
 } from 'lucide-react';
 
 const priceOf = (item) =>
@@ -113,46 +110,53 @@ export default function Sales() {
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
+    const [customerTin, setCustomerTin] = useState('');
 
   // Apply Discounts
   const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState('');
 
-  // Add-item modal
-  const [modalType, setModalType] = useState('medicine');
-  const [showModal, setShowModal] = useState(false);
-  const [itemQuery, setItemQuery] = useState('');
-  const [selectedId, setSelectedId] = useState(null);
-  const [qty, setQty] = useState('1');
-  const [patientName, setPatientName] = useState('');
-  const [patientPhone, setPatientPhone] = useState('');
-  const [patientEmail, setPatientEmail] = useState('');
+    // Add-item modal
+    const [modalType, setModalType] = useState('medicine');
+    const [showModal, setShowModal] = useState(false);
+    const [itemQuery, setItemQuery] = useState('');
+    const [selectedId, setSelectedId] = useState(null);
+    const [qty, setQty] = useState('1');
+    const [patientName, setPatientName] = useState('');
+    const [patientPhone, setPatientPhone] = useState('');
+    const [patientEmail, setPatientEmail] = useState('');
+    const [patientTin, setPatientTin] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
 
-  // ── Data loading ─────────────────────────────────────────────
-  useEffect(() => {
-    Promise.all([
-    api.get('/medicines', { params: { per_page: 100 } }),
-    api.get('/retail-products', { params: { per_page: 100 } })]
-    ).
-    then(([medRes, prodRes]) => {
-      const medList = Array.isArray(medRes.data?.data) ?
-      medRes.data.data :
-      Array.isArray(medRes.data?.medicines?.data) ?
-      medRes.data.medicines.data :
-      Array.isArray(medRes.data) ?
-      medRes.data :
-      [];
-      setMedicines(medList);
-      setProducts(prodRes.data?.data || prodRes.data || []);
-    }).
-    catch((err) => {
-      console.error('Failed to load POS catalog:', err);
-      window.showToast(t("Failed to load products"), 'error');
-    }).
-    finally(() => setLoading(false));
-  }, []);
+    // ── Modal validation state ───────────────────────────────────
+    const [nameError, setNameError] = useState('');
+    const [phoneError, setPhoneError] = useState('');
+    const [tinError, setTinError] = useState('');
+
+    // ── Data loading ─────────────────────────────────────────────
+    useEffect(() => {
+        Promise.all([
+            api.get('/medicines', { params: { per_page: 100 } }),
+            api.get('/retail-products', { params: { per_page: 100 } }),
+        ])
+            .then(([medRes, prodRes]) => {
+                const medList = Array.isArray(medRes.data?.data)
+                    ? medRes.data.data
+                    : Array.isArray(medRes.data?.medicines?.data)
+                        ? medRes.data.medicines.data
+                        : Array.isArray(medRes.data)
+                            ? medRes.data
+                            : [];
+                setMedicines(medList);
+                setProducts(prodRes.data?.data || prodRes.data || []);
+            })
+            .catch((err) => {
+                console.error('Failed to load POS catalog:', err);
+                window.showToast('Failed to load products', 'error');
+            })
+            .finally(() => setLoading(false));
+    }, []);
 
   // ── Catalog filtering ────────────────────────────────────────
   const activeCatalog = catalogTab === 'medicine' ? medicines : products;
@@ -232,6 +236,7 @@ export default function Sales() {
         setCustomerName('');
         setCustomerPhone('');
         setCustomerEmail('');
+        setCustomerTin('');
         setDiscountType('percentage');
         setDiscountValue('');
         setExpandedItemId(null);
@@ -263,7 +268,42 @@ export default function Sales() {
         setPatientName(customerName);
         setPatientPhone(customerPhone);
         setPatientEmail(customerEmail);
+        setPatientTin(customerTin);
+        setNameError('');
+        setPhoneError('');
+        setTinError('');
         setShowModal(true);
+    };
+
+    const validateModalForm = () => {
+        let valid = true;
+
+        if (!patientName.trim()) {
+            setNameError('Patient/Customer name is required');
+            valid = false;
+        } else {
+            setNameError('');
+        }
+
+        const phone = patientPhone.trim();
+        if (!phone) {
+            setPhoneError('Phone number is required');
+            valid = false;
+        } else if (!/^(\+2519\d{8}|\+2517\d{8}|09\d{8}|07\d{8})$/.test(phone)) {
+            setPhoneError('Enter a valid Ethiopian phone number (09XXXXXXXX or +2519XXXXXXXX)');
+            valid = false;
+        } else {
+            setPhoneError('');
+        }
+
+        if (patientTin.trim() && !/^\d+$/.test(patientTin.trim())) {
+            setTinError('TIN number must contain digits only');
+            valid = false;
+        } else {
+            setTinError('');
+        }
+
+        return valid;
     };
 
     const modalItems = modalType === 'medicine' ? medicines : products;
@@ -277,27 +317,33 @@ export default function Sales() {
         );
     });
 
-  const handleAddToOrder = () => {
-    if (!selectedId) {
-      return window.showToast(t("Select an item from the list"), 'error');
-    }
-    const quantity = parseInt(qty, 10);
-    if (!quantity || quantity < 1) {
-      return window.showToast(t("Enter a valid quantity"), 'error');
-    }
-    const item = modalItems.find((i) => i.id === selectedId);
-    if (!item) return;
-    if (quantity > item.quantity) {
-      return window.showToast(`Only ${item.quantity} in stock for ${item.name}`, 'error');
-    }
+    const handleAddToOrder = () => {
+        if (!selectedId) {
+            return window.showToast('Select an item from the list', 'error');
+        }
+        const quantity = parseInt(qty, 10);
+        if (!quantity || quantity < 1) {
+            return window.showToast('Enter a valid quantity', 'error');
+        }
 
-    addToCart(modalType, item, quantity);
-    setCustomerName(patientName);
-    setCustomerPhone(patientPhone);
-    setCustomerEmail(patientEmail);
-    setShowModal(false);
-    window.showToast(`${item.name} added to order`, 'success');
-  };
+        if (!validateModalForm()) {
+            return;
+        }
+
+        const item = modalItems.find((i) => i.id === selectedId);
+        if (!item) return;
+        if (quantity > item.quantity) {
+            return window.showToast(`Only ${item.quantity} in stock for ${item.name}`, 'error');
+        }
+
+        addToCart(modalType, item, quantity);
+        setCustomerName(patientName);
+        setCustomerPhone(patientPhone);
+        setCustomerEmail(patientEmail);
+        setCustomerTin(patientTin);
+        setShowModal(false);
+        window.showToast(`${item.name} added to order`, 'success');
+    };
 
     // ── Send to Checkout ─────────────────────────────────────────
     const handleSendToCheckout = async () => {
@@ -311,8 +357,9 @@ export default function Sales() {
                 customer_name: customerName.trim() || null,
                 customer_phone: customerPhone.trim() || null,
                 customer_email: customerEmail.trim() || null,
-                discount_type: (Number(discountValue) > 0 && canApplyDiscount) ? discountType : null,
-                discount: (Number(discountValue) > 0 && canApplyDiscount) ? Number(discountValue) : 0,
+                customer_tin: customerTin.trim() || null,
+                discount_type: Number(discountValue) > 0 ? discountType : null,
+                discount: Number(discountValue) > 0 ? Number(discountValue) : 0,
             });
             window.showToast(t("Order sent to Checkout!"), 'success');
             clearOrder();
@@ -459,11 +506,17 @@ export default function Sales() {
                 onClick={() => openAddModal(catalogTab, item.id)}>
                 
                                     <div className="flex items-start justify-between mb-3">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${catalogTab === 'medicine' ? 'bg-sky-50' : 'bg-emerald-50'}`
-                  }>
-                                            {catalogTab === 'medicine' ?
-                    <Pill size={20} className="text-sky-600" /> :
-                    <ShoppingBag size={20} className="text-emerald-600" />}
+                                        <div className={`w-10 h-10 rounded-xl overflow-hidden shrink-0 ${catalogTab === 'medicine' ? 'bg-sky-50' : 'bg-emerald-50'
+                                            }`}>
+                                            {item.image_url ? (
+                                                <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    {catalogTab === 'medicine'
+                                                        ? <Pill size={20} className="text-sky-600" />
+                                                        : <ShoppingBag size={20} className="text-emerald-600" />}
+                                                </div>
+                                            )}
                                         </div>
                                         <StockBadge quantity={item.quantity} />
                                     </div>
@@ -834,22 +887,38 @@ export default function Sales() {
                                 <div className="relative">
                                     <User size={14} className="absolute left-3 top-2.5 text-gray-400" />
                                     <input
-                  type="text"
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
-                  placeholder={t("Enter patient name")}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
-                
+                                        type="text"
+                                        value={patientName}
+                                        onChange={(e) => setPatientName(e.target.value)}
+                                        placeholder="Enter patient name"
+                                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none ${nameError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                                    />
                                 </div>
+                                {nameError && (
+                                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                        <AlertCircle size={12} />
+                                        {nameError}
+                                    </p>
+                                )}
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">{t("Phone Number")}</label>
-                                <PhoneInput
-              value={patientPhone}
-              onChange={(e) => setPatientPhone(e.target.value)}
-              iconSize={14}
-              placeholder={t("Enter phone number")}
-              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Phone Number</label>
+                                <div className="relative">
+                                    <Phone size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                    <input
+                                        type="tel"
+                                        value={patientPhone}
+                                        onChange={(e) => setPatientPhone(e.target.value)}
+                                        placeholder="Enter phone number"
+                                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none ${phoneError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                                    />
+                                </div>
+                                {phoneError && (
+                                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                        <AlertCircle size={12} />
+                                        {phoneError}
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("Email Address")}</label>
@@ -864,30 +933,65 @@ export default function Sales() {
                 
                                 </div>
                             </div>
-                        </> :
-
-          <>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">TIN Number</label>
+                                <div className="relative">
+                                    <Hash size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={patientTin}
+                                        onChange={(e) => setPatientTin(e.target.value)}
+                                        placeholder="Enter TIN number"
+                                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none ${tinError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                                    />
+                                </div>
+                                {tinError && (
+                                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                        <AlertCircle size={12} />
+                                        {tinError}
+                                    </p>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <>
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("Customer Name")}</label>
                                 <div className="relative">
                                     <User size={14} className="absolute left-3 top-2.5 text-gray-400" />
                                     <input
-                  type="text"
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
-                  placeholder={t("Enter customer name")}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
-                
+                                        type="text"
+                                        value={patientName}
+                                        onChange={(e) => setPatientName(e.target.value)}
+                                        placeholder="Enter customer name"
+                                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none ${nameError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                                    />
                                 </div>
+                                {nameError && (
+                                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                        <AlertCircle size={12} />
+                                        {nameError}
+                                    </p>
+                                )}
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">{t("Phone Number")}</label>
-                                <PhoneInput
-              value={patientPhone}
-              onChange={(e) => setPatientPhone(e.target.value)}
-              iconSize={14}
-              placeholder={t("Enter phone number")}
-              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Phone Number</label>
+                                <div className="relative">
+                                    <Phone size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                    <input
+                                        type="tel"
+                                        value={patientPhone}
+                                        onChange={(e) => setPatientPhone(e.target.value)}
+                                        placeholder="Enter phone number"
+                                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none ${phoneError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                                    />
+                                </div>
+                                {phoneError && (
+                                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                        <AlertCircle size={12} />
+                                        {phoneError}
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">{t("Email Address")}</label>
@@ -901,6 +1005,25 @@ export default function Sales() {
                   className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none" />
                 
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">TIN Number</label>
+                                <div className="relative">
+                                    <Hash size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={patientTin}
+                                        onChange={(e) => setPatientTin(e.target.value)}
+                                        placeholder="Enter TIN number"
+                                        className={`w-full pl-9 pr-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none ${tinError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                                    />
+                                </div>
+                                {tinError && (
+                                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                        <AlertCircle size={12} />
+                                        {tinError}
+                                    </p>
+                                )}
                             </div>
                         </>
           }

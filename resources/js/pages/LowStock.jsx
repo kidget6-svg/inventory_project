@@ -598,8 +598,8 @@ export default function LowStock() {const { t } = useLanguage();
                         </tbody>
                     </table>
                 </div>
-                {meta && <Pagination meta={meta} onPageChange={setPage} />}
             </div>
+            {meta && <Pagination meta={meta} onPageChange={setPage} />}
 
             {/* ============================================================
            DETAIL MODAL

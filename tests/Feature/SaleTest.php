@@ -84,6 +84,300 @@ class SaleTest extends TestCase
     }
 
     /** @test */
+    public function it_saves_customer_tin_when_creating_prescription_sale()
+    {
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/prescription', [
+                'items' => [
+                    [
+                        'medicine_id' => $this->medicine->id,
+                        'quantity' => 2,
+                    ],
+                ],
+                'customer_name' => 'John Doe',
+                'customer_phone' => '0911234567',
+                'customer_tin' => '1234567890',
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonStructure(['message', 'sale']);
+
+        $this->assertDatabaseHas('sales', [
+            'type' => 'prescription',
+            'status' => 'pending_cashier',
+            'customer_tin' => '1234567890',
+        ]);
+    }
+
+    /** @test */
+    public function it_saves_customer_tin_when_creating_retail_draft()
+    {
+        $product = RetailProduct::factory()->create([
+            'price' => 50.00,
+            'quantity' => 10,
+        ]);
+
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/retail-draft', [
+                'items' => [
+                    [
+                        'id' => $product->id,
+                        'cartQty' => 2,
+                    ],
+                ],
+                'customer_name' => 'Jane Doe',
+                'customer_phone' => '0911234567',
+                'customer_tin' => '9876543210',
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonStructure(['message', 'sale']);
+
+        $this->assertDatabaseHas('sales', [
+            'type' => 'retail',
+            'status' => 'pending_cashier',
+            'customer_tin' => '9876543210',
+        ]);
+    }
+
+    /** @test */
+    public function it_rejects_retail_draft_with_invalid_phone_number()
+    {
+        $product = RetailProduct::factory()->create([
+            'price' => 50.00,
+            'quantity' => 10,
+        ]);
+
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/retail-draft', [
+                'items' => [
+                    [
+                        'id' => $product->id,
+                        'cartQty' => 2,
+                    ],
+                ],
+                'customer_name' => 'Jane Doe',
+                'customer_phone' => '0911abc4567',
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_rejects_retail_draft_with_wrong_format_phone()
+    {
+        $product = RetailProduct::factory()->create([
+            'price' => 50.00,
+            'quantity' => 10,
+        ]);
+
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/retail-draft', [
+                'items' => [
+                    [
+                        'id' => $product->id,
+                        'cartQty' => 2,
+                    ],
+                ],
+                'customer_name' => 'Jane Doe',
+                'customer_phone' => '1234567890',
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_accepts_retail_draft_with_international_phone_format()
+    {
+        $product = RetailProduct::factory()->create([
+            'price' => 50.00,
+            'quantity' => 10,
+        ]);
+
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/retail-draft', [
+                'items' => [
+                    [
+                        'id' => $product->id,
+                        'cartQty' => 2,
+                    ],
+                ],
+                'customer_name' => 'Jane Doe',
+                'customer_phone' => '+251912345678',
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonStructure(['message', 'sale']);
+
+        $this->assertDatabaseHas('sales', [
+            'type' => 'retail',
+            'status' => 'pending_cashier',
+            'customer_phone' => '+251912345678',
+        ]);
+    }
+
+    /** @test */
+    public function it_rejects_retail_draft_with_invalid_tin()
+    {
+        $product = RetailProduct::factory()->create([
+            'price' => 50.00,
+            'quantity' => 10,
+        ]);
+
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/retail-draft', [
+                'items' => [
+                    [
+                        'id' => $product->id,
+                        'cartQty' => 2,
+                    ],
+                ],
+                'customer_name' => 'Jane Doe',
+                'customer_phone' => '0911234567',
+                'customer_tin' => 'ABC123',
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_accepts_retail_draft_with_empty_tin()
+    {
+        $product = RetailProduct::factory()->create([
+            'price' => 50.00,
+            'quantity' => 10,
+        ]);
+
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/retail-draft', [
+                'items' => [
+                    [
+                        'id' => $product->id,
+                        'cartQty' => 2,
+                    ],
+                ],
+                'customer_name' => 'Jane Doe',
+                'customer_phone' => '0911234567',
+                'customer_tin' => null,
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonStructure(['message', 'sale']);
+
+        $this->assertDatabaseHas('sales', [
+            'type' => 'retail',
+            'status' => 'pending_cashier',
+            'customer_tin' => null,
+        ]);
+    }
+
+    /** @test */
+    public function it_rejects_prescription_sale_with_invalid_tin()
+    {
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/prescription', [
+                'items' => [
+                    [
+                        'medicine_id' => $this->medicine->id,
+                        'quantity' => 2,
+                    ],
+                ],
+                'customer_name' => 'John Doe',
+                'customer_phone' => '0911234567',
+                'customer_tin' => 'ABC123',
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_accepts_prescription_sale_with_empty_tin()
+    {
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/prescription', [
+                'items' => [
+                    [
+                        'medicine_id' => $this->medicine->id,
+                        'quantity' => 2,
+                    ],
+                ],
+                'customer_name' => 'John Doe',
+                'customer_phone' => '0911234567',
+                'customer_tin' => null,
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonStructure(['message', 'sale']);
+
+        $this->assertDatabaseHas('sales', [
+            'type' => 'prescription',
+            'status' => 'pending_cashier',
+            'customer_tin' => null,
+        ]);
+    }
+
+    /** @test */
+    public function it_rejects_prescription_sale_with_invalid_phone_number()
+    {
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/prescription', [
+                'items' => [
+                    [
+                        'medicine_id' => $this->medicine->id,
+                        'quantity' => 2,
+                    ],
+                ],
+                'customer_name' => 'John Doe',
+                'customer_phone' => '0911abc4567',
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_rejects_prescription_sale_with_wrong_format_phone()
+    {
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/prescription', [
+                'items' => [
+                    [
+                        'medicine_id' => $this->medicine->id,
+                        'quantity' => 2,
+                    ],
+                ],
+                'customer_name' => 'John Doe',
+                'customer_phone' => '1234567890',
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function it_accepts_prescription_sale_with_international_phone_format()
+    {
+        $response = $this->actingAs($this->pharmacist)
+            ->postJson('/api/sales/prescription', [
+                'items' => [
+                    [
+                        'medicine_id' => $this->medicine->id,
+                        'quantity' => 2,
+                    ],
+                ],
+                'customer_name' => 'John Doe',
+                'customer_phone' => '+251912345678',
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonStructure(['message', 'sale']);
+
+        $this->assertDatabaseHas('sales', [
+            'type' => 'prescription',
+            'status' => 'pending_cashier',
+            'customer_phone' => '+251912345678',
+        ]);
+    }
+
+    /** @test */
     public function it_can_complete_sale_with_payment_method()
     {
         $sale = Sale::factory()->create([
@@ -113,6 +407,57 @@ class SaleTest extends TestCase
         ]);
 
         $this->assertNotEmpty($sale->fresh()->receipt_number);
+    }
+
+    /** @test */
+    public function it_allows_admin_to_complete_prescription_sale()
+    {
+        $sale = Sale::factory()->create([
+            'status' => 'pending_cashier',
+            'total_amount' => 100.00,
+            'user_id' => $this->pharmacist->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->patchJson("/api/sales/{$sale->id}/status", [
+                'status' => 'completed',
+                'payment_method' => 'cash',
+                'amount_paid' => 100.00,
+                'change_amount' => 0,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonStructure(['message', 'sale']);
+
+        $this->assertDatabaseHas('sales', [
+            'id' => $sale->id,
+            'status' => 'completed',
+            'payment_method' => 'cash',
+            'amount_paid' => 100.00,
+            'payment_status' => 'paid',
+        ]);
+
+        $this->assertNotEmpty($sale->fresh()->receipt_number);
+    }
+
+    /** @test */
+    public function it_prevents_pharmacist_from_completing_prescription_sale()
+    {
+        $sale = Sale::factory()->create([
+            'status' => 'pending_cashier',
+            'total_amount' => 100.00,
+            'user_id' => $this->pharmacist->id,
+        ]);
+
+        $response = $this->actingAs($this->pharmacist)
+            ->patchJson("/api/sales/{$sale->id}/status", [
+                'status' => 'completed',
+                'payment_method' => 'cash',
+                'amount_paid' => 100.00,
+                'change_amount' => 0,
+            ]);
+
+        $response->assertForbidden();
     }
 
     /** @test */

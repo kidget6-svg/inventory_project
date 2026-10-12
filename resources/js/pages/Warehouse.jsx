@@ -268,18 +268,10 @@ export default function WarehousePage() {const { t } = useLanguage();
       medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
       expected_delivery: '', notes: ''
     });
-    try {
-      const [branchesRes, medsRes] = await Promise.all([
-      api.get('/branches'),
-      api.get('/medicines', { params: { per_page: 'all' } })]
-      );
-      setBranches(asArray(branchesRes));
-      setMedicines(asArray(medsRes));
-    } catch (err) {
-      console.error(err);
-    }
-    setShowTransferModal(true);
-  };
+    const [stockPage, setStockPage] = useState(1);
+    const [receivingPage, setReceivingPage] = useState(1);
+    const [stockMeta, setStockMeta] = useState(null);
+    const [receivingMeta, setReceivingMeta] = useState(null);
 
   // Create a new transfer request
   const handleCreateTransfer = async (e) => {
@@ -298,9 +290,254 @@ export default function WarehousePage() {const { t } = useLanguage();
     }
   };
 
-  // Render summary cards
-  const renderStats = () =>
-  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+    // Load all warehouse data
+    const loadWarehouseData = useCallback(async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const [statsRes, shelvesRes, transfersRes, poRes] = await Promise.all([
+                api.get('/warehouse/stats'),
+                api.get('/warehouse/shelves'),
+                api.get('/transfer-requests'),
+                api.get('/purchase-orders', { params: { status: ['approved', 'sent'] } }),
+            ]);
+
+            setStats(statsRes.data);
+            setShelves(asArray(shelvesRes));
+            setTransferRequests(asArray(transfersRes));
+            setPurchaseOrders(asArray(poRes));
+        } catch (err) {
+            setError('Failed to load warehouse data');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const loadStock = async (page = 1) => {
+        try {
+            const res = await api.get('/warehouse/stock', { params: { ...filters, page } });
+            const d = res.data;
+            setStock(asArray(res));
+            setStockMeta(d && d.meta ? d.meta : null);
+        } catch (err) {
+            console.error('Failed to load stock:', err);
+        }
+    };
+
+    const loadReceivingHistory = async (page = 1) => {
+        try {
+            const res = await api.get('/warehouse/receiving-history', { params: { ...filters, page } });
+            const d = res.data;
+            setReceivingHistory(asArray(res));
+            setReceivingMeta(d && d.meta ? d.meta : null);
+        } catch (err) {
+            console.error('Failed to load receiving history:', err);
+        }
+    };
+
+    useEffect(() => {
+        loadWarehouseData();
+        loadStock(stockPage);
+        loadReceivingHistory(receivingPage);
+    }, [loadWarehouseData, filters, stockPage, receivingPage]);
+
+    // Handle receiving stock
+    const handleReceiveStock = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await api.post('/warehouse/receive', {
+                purchase_order_id: selectedPO.id,
+                batch_number: batchData.batch_number,
+                barcode: batchData.barcode || undefined,
+                manufacturer: batchData.manufacturer || undefined,
+                expiry_date: batchData.expiry_date,
+                quantity: batchData.quantity,
+                shelf_id: batchData.shelf_id || undefined,
+            });
+            window.showToast('Stock received successfully', 'success');
+            setShowReceivingModal(false);
+            setSelectedPO(null);
+            setBatchData({ batch_number: '', barcode: '', manufacturer: '', expiry_date: '', quantity: '', shelf_id: '' });
+            loadWarehouseData();
+        } catch (err) {
+            const errs = err.response?.data?.errors;
+            const msg = err.response?.data?.message
+                || (errs ? Object.values(errs).flat().join(' ') : null)
+                || 'Failed to receive stock';
+            window.showToast(msg, 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // Open shelf detail modal showing all items on a shelf
+    const openShelfDetail = async (shelf) => {
+        setShowShelfModal(true);
+        setShelfLoading(true);
+        try {
+            const res = await api.get(`/warehouse/shelves/${shelf.id}/items`);
+            setShelfDetail(res.data);
+        } catch (err) {
+            window.showToast('Failed to load shelf items', 'error');
+        } finally {
+            setShelfLoading(false);
+        }
+    };
+
+    const closeShelfDetail = () => {
+        setShowShelfModal(false);
+        setShelfDetail(null);
+    };
+
+    // Barcode scan for receiving stock
+    const startBarcodeScan = async () => {
+        if (!('BarcodeDetector' in window)) {
+            window.showToast('Barcode scanning is not supported in this browser.', 'error');
+            return;
+        }
+        setScanning(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+            }
+            scanLoop();
+        } catch (err) {
+            window.showToast('Could not access camera: ' + err.message, 'error');
+            setScanning(false);
+        }
+    };
+
+    const scanLoop = useCallback(async () => {
+        if (!scanning) return;
+        const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
+        try {
+            if (videoRef.current) {
+                const barcodes = await detector.detect(videoRef.current);
+                if (barcodes.length > 0) {
+                    setBatchData(prev => ({ ...prev, barcode: barcodes[0].rawValue }));
+                    stopBarcodeScan();
+                    window.showToast('Barcode scanned: ' + barcodes[0].rawValue, 'success');
+                    return;
+                }
+            }
+            requestAnimationFrame(scanLoop);
+        } catch (err) {
+            requestAnimationFrame(scanLoop);
+        }
+    }, [scanning]);
+
+    const stopBarcodeScan = () => {
+        setScanning(false);
+        if (videoRef.current && videoRef.current.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+            videoRef.current.srcObject = null;
+        }
+    };
+
+    useEffect(() => {
+        return () => stopBarcodeScan();
+    }, []);
+
+    // Handle transfer approval
+    const handleApproveTransfer = async (transferId) => {
+        if (!confirm('Approve this transfer request?')) return;
+        try {
+            await api.post(`/warehouse/transfer/${transferId}/approve`);
+            window.showToast('Transfer approved successfully', 'success');
+            loadWarehouseData();
+        } catch (err) {
+            window.showToast('Failed to approve transfer', 'error');
+        }
+    };
+
+    // Handle transfer completion (requires a destination branch shelf)
+    const openCompleteModal = async (transfer) => {
+        setCompletingTransfer(transfer);
+        setCompleteShelfId('');
+        setCompleteLoading(false);
+        try {
+            const res = await api.get('/shelves', {
+                params: {
+                    location_type: 'branch',
+                    branch_id: transfer.to_branch_id,
+                    product_type: 'medicine',
+                },
+            });
+            setDestShelves(asArray(res));
+        } catch (err) {
+            setDestShelves([]);
+        }
+        setShowCompleteModal(true);
+    };
+
+    const confirmCompleteTransfer = async () => {
+        if (!completingTransfer || !completeShelfId) {
+            window.showToast('Please select a destination shelf', 'error');
+            return;
+        }
+        setCompleteLoading(true);
+        try {
+            await api.post(`/warehouse/transfer/${completingTransfer.id}/complete`, {
+                shelf_id: completeShelfId,
+            });
+            window.showToast('Transfer completed successfully', 'success');
+            setShowCompleteModal(false);
+            setCompletingTransfer(null);
+            loadWarehouseData();
+        } catch (err) {
+            const errs = err.response?.data?.errors;
+            const msg = err.response?.data?.message
+                || (errs ? Object.values(errs).flat().join(' ') : null)
+                || 'Failed to complete transfer';
+            window.showToast(msg, 'error');
+        } finally {
+            setCompleteLoading(false);
+        }
+    };
+
+    // Open new transfer request modal (loads branches + medicines)
+    const openTransferModal = async () => {
+        setTransferForm({
+            medicine_id: '', to_branch_id: '', quantity: '', priority: 'medium',
+            expected_delivery: '', notes: '',
+        });
+        try {
+            const [branchesRes, medsRes] = await Promise.all([
+                api.get('/branches'),
+                api.get('/medicines', { params: { per_page: 'all' } }),
+            ]);
+            setBranches(asArray(branchesRes));
+            setMedicines(asArray(medsRes));
+        } catch (err) {
+            console.error(err);
+        }
+        setShowTransferModal(true);
+    };
+
+    // Create a new transfer request
+    const handleCreateTransfer = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await api.post('/warehouse/transfers', transferForm);
+            window.showToast('Transfer request created successfully', 'success');
+            setShowTransferModal(false);
+            loadWarehouseData();
+        } catch (err) {
+            const msgs = err.response?.data?.errors;
+            window.showToast(msgs ? Object.values(msgs).flat().join(' ') : 'Failed to create transfer request', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // Render summary cards
+    const renderStats = () => (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
             <div className="card p-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-sky-100 rounded-lg">
@@ -529,7 +766,13 @@ export default function WarehousePage() {const { t } = useLanguage();
                     </tbody>
                 </table>
             </div>
-        </div>;
+            {stockMeta && stockMeta.last_page > 1 && (
+                <div className="p-4 border-t border-gray-100">
+                    <Pagination meta={stockMeta} onPageChange={setStockPage} />
+                </div>
+            )}
+        </div>
+    );
 
 
   // Render receiving history
@@ -569,7 +812,13 @@ export default function WarehousePage() {const { t } = useLanguage();
                     </tbody>
                 </table>
             </div>
-        </div>;
+            {receivingMeta && receivingMeta.last_page > 1 && (
+                <div className="p-4 border-t border-gray-100">
+                    <Pagination meta={receivingMeta} onPageChange={setReceivingPage} />
+                </div>
+            )}
+        </div>
+    );
 
 
   // Render transfer requests

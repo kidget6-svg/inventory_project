@@ -51,19 +51,7 @@ class AuditLogController extends Controller
             });
         }
 
-        return $query;
-    }
-
-    public function index(Request $request)
-    {
-        $query = AuditLog::with('user.branch');
-
-        $this->applyFilters($query, $request);
-
-        $sort = $request->get('sort', 'newest');
-        $query->orderBy('created_at', $sort === 'oldest' ? 'asc' : 'desc');
-
-        $logs = $query->paginate($request->get('per_page', 20));
+        $logs = $query->latest()->paginate(10);
 
         return response()->json($logs);
     }

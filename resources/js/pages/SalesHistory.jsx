@@ -3,7 +3,8 @@ import api from '../axios';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
-import { Search, Filter, Calendar, Download, Printer, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import Pagination from '../components/Pagination';
+import { Search, Filter, Calendar, Download, Printer, Eye } from 'lucide-react';
 
 const PAYMENT_LABELS = {
   cash: 'Cash',
@@ -40,18 +41,20 @@ export default function SalesHistory() {const { t } = useLanguage();
   const canDownload = hasPermission('sales-history.download');
   const canPrint = hasPermission('sales-history.print');
 
-  const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    date: '',
-    cashier: '',
-    payment_method: '',
-    status: ''
-  });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [cashiers, setCashiers] = useState([]);
+    const [sales, setSales] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filters, setFilters] = useState({
+        date: '',
+        cashier: '',
+        payment_method: '',
+        status: '',
+    });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [perPage, setPerPage] = useState(10);
+    const [cashiers, setCashiers] = useState([]);
 
   // Detail Modal state
   const [selectedSale, setSelectedSale] = useState(null);
@@ -69,17 +72,19 @@ export default function SalesHistory() {const { t } = useLanguage();
       if (filters.status) params.append('status', filters.status);
       params.append('page', page);
 
-      const res = await api.get(`/sales/history?${params.toString()}`);
-      const data = res.data;
-      setSales(data.data || []);
-      setLastPage(data.last_page || 1);
-      setCurrentPage(data.current_page || page);
-    } catch (err) {
-      window.showToast(t("Failed to load sales history"), 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+            const res = await api.get(`/sales/history?${params.toString()}`);
+            const data = res.data;
+            setSales(data.data || []);
+            setLastPage(data.last_page || 1);
+            setCurrentPage(data.current_page || page);
+            setTotal(data.total || 0);
+            setPerPage(data.per_page || 10);
+        } catch (err) {
+            window.showToast('Failed to load sales history', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
   const fetchCashiers = async () => {
     try {
@@ -389,29 +394,15 @@ export default function SalesHistory() {const { t } = useLanguage();
                 </div>
 
                 {/* Pagination */}
-                {lastPage > 1 &&
-        <div className="flex justify-between items-center px-4 py-3 border-t border-gray-200">
-                        <div className="text-sm text-gray-500">{t("Page")}
-            {currentPage} of {lastPage}
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-              onClick={() => fetchSales(currentPage - 1)}
-              disabled={currentPage <= 1}
-              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50">
-              
-                                <ChevronLeft size={16} />
-                            </button>
-                            <button
-              onClick={() => fetchSales(currentPage + 1)}
-              disabled={currentPage >= lastPage}
-              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50">
-              
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
-                    </div>
-        }
+                {lastPage > 1 && (
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={lastPage}
+                        totalItems={total}
+                        itemsPerPage={perPage}
+                        onPageChange={fetchSales}
+                    />
+                )}
             </div>
 
             {/* Sale Details Modal */}

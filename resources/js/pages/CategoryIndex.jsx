@@ -1,54 +1,93 @@
-import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../axios';
-import { useAuth } from '../context/AuthContext';
-import LoadingSpinner from '../components/LoadingSpinner';
-import {
-  Plus, Edit, Trash2, Package, Tag, ChevronLeft, ChevronRight,
-  Search, Filter, X } from
-'lucide-react';
+ import React, { useState, useEffect } from 'react';
+ import { useNavigate } from 'react-router-dom';
+ import api from '../axios';
+ import { useAuth } from '../context/AuthContext';
+ import LoadingSpinner from '../components/LoadingSpinner';
+ import Pagination from '../components/Pagination';
+ import {
+     Plus, Edit, Trash2, Package, Tag, ChevronLeft, ChevronRight,
+     Search, Filter, X
+ } from 'lucide-react';
+ 
+ export default function CategoryIndex() {
+     const { user } = useAuth();
+     const navigate = useNavigate();
+     const isAdmin = user?.role === 'admin';
+     const [tab, setTab] = useState('categories');
+ 
+     const [categories, setCategories] = useState([]);
+     const [shelves, setShelves] = useState([]);
+     const [loading, setLoading] = useState(true);
+     const [error, setError] = useState('');
+     const [search, setSearch] = useState('');
+     const [categoriesPage, setCategoriesPage] = useState(1);
+     const [shelvesPage, setShelvesPage] = useState(1);
+     const [categoriesMeta, setCategoriesMeta] = useState(null);
+     const [shelvesMeta, setShelvesMeta] = useState(null);
 
-export default function CategoryIndex() {const { t } = useLanguage();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const isAdmin = user?.role === 'admin';
-  const [tab, setTab] = useState('categories');
+    const loadCategories = () => {
+        setLoading(true);
+        setError('');
+        api.get('/categories', { params: { page: categoriesPage, search } })
+            .then(r => {
+                const data = r.data;
+                setCategories(Array.isArray(data) ? data : (data.data || []));
+                setCategoriesMeta(data && data.meta ? data.meta : null);
+            })
+            .catch(() => setError('Failed to load categories'))
+            .finally(() => setLoading(false));
+    };
 
-  const [categories, setCategories] = useState([]);
-  const [shelves, setShelves] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
+    const loadShelves = () => {
+        setLoading(true);
+        setError('');
+        api.get('/shelves', { params: { page: shelvesPage, search } })
+            .then(r => {
+                const data = r.data;
+                setShelves(Array.isArray(data) ? data : (data.data || []));
+                setShelvesMeta(data && data.meta ? data.meta : null);
+            })
+            .catch(() => setError('Failed to load shelves'))
+            .finally(() => setLoading(false));
+    };
 
-  const loadCategories = () => {
-    setLoading(true);
-    setError('');
-    api.get('/categories', { params: { search } }).
-    then((r) => {
-      const data = r.data;
-      setCategories(Array.isArray(data) ? data : data.data || []);
-    }).
-    catch(() => setError(t("Failed to load categories"))).
-    finally(() => setLoading(false));
-  };
+    useEffect(() => {
+        if (tab === 'categories') {
+            setCategoriesPage(1);
+            loadCategories();
+        } else {
+            setShelvesPage(1);
+            loadShelves();
+        }
+    }, [tab, search]);
 
-  const loadShelves = () => {
-    setLoading(true);
-    setError('');
-    api.get('/shelves', { params: { search } }).
-    then((r) => {
-      const data = r.data;
-      setShelves(Array.isArray(data) ? data : []);
-    }).
-    catch(() => setError(t("Failed to load shelves"))).
-    finally(() => setLoading(false));
-  };
+    useEffect(() => {
+        if (tab === 'categories') {
+            loadCategories();
+        } else {
+            loadShelves();
+        }
+    }, [categoriesPage, shelvesPage, tab]);
 
-  useEffect(() => {
-    if (tab === 'categories') {
-      loadCategories();
-    } else {
-      loadShelves();
+    const handleDeleteCategory = async (id) => {
+        if (!window.confirm('Delete this category?')) return;
+        try {
+            await api.delete(`/categories/${id}`);
+            window.showToast('Category deleted successfully', 'success');
+            loadCategories();
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to delete category', 'error');
+        }
+    };
+
+    const getProgressColor = (percent) => {
+        if (percent >= 90) return 'bg-red-500';
+        if (percent >= 70) return 'bg-amber-500';
+        return 'bg-sky-500';
+    };
+
+    if (loading && categories.length === 0 && shelves.length === 0) {
+        return <LoadingSpinner text="Loading..." />;
     }
   }, [tab, search]);
 
@@ -194,7 +233,10 @@ export default function CategoryIndex() {const { t } = useLanguage();
                         </div>
         }
                 </div>
-      }
+                {categoriesMeta && categoriesMeta.last_page > 1 && (
+                    <Pagination meta={categoriesMeta} onPageChange={(p) => setCategoriesPage(p)} />
+                )}
+            )}
 
             {/* Shelves Tab */}
             {tab === 'shelves' &&
@@ -239,7 +281,10 @@ export default function CategoryIndex() {const { t } = useLanguage();
                         </div>
         }
                 </div>
-      }
-        </div>);
-
+                {shelvesMeta && shelvesMeta.last_page > 1 && (
+                    <Pagination meta={shelvesMeta} onPageChange={(p) => setShelvesPage(p)} />
+                )}
+            )}
+        </div>
+    );
 }

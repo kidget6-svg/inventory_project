@@ -13,15 +13,16 @@ import Pagination from '../components/Pagination';
  * Reusable icon button used in the table action column.
  * Every icon has a tooltip (title attribute) and supports a disabled state.
  */
-const ActionIcon = ({ icon: Icon, tooltip, color = "sky", onClick, disabled = false }) => {const { t } = useLanguage();
-  const colorClasses = {
-    sky: "text-sky-600 hover:bg-sky-50",
-    green: "text-green-600 hover:bg-green-50",
-    red: "text-red-600 hover:bg-red-50",
-    purple: "text-purple-600 hover:bg-purple-50",
-    amber: "text-amber-600 hover:bg-amber-50",
-    gray: "text-gray-500 hover:bg-gray-100"
-  };
+const ActionIcon = ({ icon: Icon, tooltip, color = "sky", onClick, disabled = false }) => {
+    const colorClasses = {
+        blue: "text-blue-600 hover:bg-blue-50",
+        sky: "text-sky-600 hover:bg-sky-50",
+        green: "text-green-600 hover:bg-green-50",
+        red: "text-red-600 hover:bg-red-50",
+        purple: "text-purple-600 hover:bg-purple-50",
+        amber: "text-amber-600 hover:bg-amber-50",
+        gray: "text-gray-500 hover:bg-gray-100",
+    };
 
   return (
     <button
@@ -400,28 +401,16 @@ export default function PurchaseOrders() {const { t } = useLanguage();
     setPdfPreviewData(null);
   };
 
-  const loadFormOptions = async () => {
-    setFormLoading(true);
-    try {
-      await Promise.all([
-      api.get('/suppliers').then((r) => setSuppliers(r.data?.data || r.data)),
-      api.get('/medicines?per_page=all').then((r) => {
-        const list = Array.isArray(r.data?.data) ? r.data.data :
-        Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
-        Array.isArray(r.data) ? r.data : [];
-        setMedicines(list);
-      }),
-      api.get('/retail-products?per_page=1000').then((r) => {
-        const list = Array.isArray(r.data?.data) ? r.data.data :
-        Array.isArray(r.data?.retailProducts?.data) ? r.data.retailProducts.data :
-        Array.isArray(r.data) ? r.data : [];
-        setRetailProducts(list);
-      })]
-      );
-    } finally {
-      setFormLoading(false);
-    }
-  };
+    const addItem = (type, product) => {
+        if (isItemAdded(type, product.id)) return;
+        setItems(prev => [...prev, {
+            type,
+            id: product.id,
+            name: product.name,
+            quantity: 1,
+            manufacturer: product.manufacturer || '',
+        }]);
+    };
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -506,8 +495,292 @@ export default function PurchaseOrders() {const { t } = useLanguage();
 
   const isViewMode = modalMode === 'view';
 
-  return (
-    <div className="space-y-6">
+    const getActions = (order) => {
+        const status = order.status?.toLowerCase();
+        const actions = [];
+
+        actions.push({ icon: Eye, tooltip: 'View Details', color: 'blue', onClick: () => openView(order) });
+
+        const pdfAvailable = ['approved', 'completed'].includes(status);
+        if (pdfAvailable) {
+            actions.push({ icon: FileText, tooltip: 'Generate PDF', color: 'purple', onClick: () => handlePreviewPdf(order) });
+        }
+
+        switch (status) {
+            case 'draft':
+                actions.push({ icon: Edit, tooltip: 'Edit', color: 'blue', onClick: () => openEdit(order) });
+                actions.push({ icon: Trash2, tooltip: 'Delete', color: 'red', onClick: () => handleDelete(order.id) });
+                actions.push({ icon: Upload, tooltip: 'Submit to Pending', color: 'purple', onClick: () => handleWorkflowAction(order, 'submit', 'Submit') });
+                actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
+                break;
+
+            case 'pending':
+                actions.push({ icon: CheckCircle, tooltip: 'Approve', color: 'green', onClick: () => handleWorkflowAction(order, 'approve', 'Approve') });
+                actions.push({ icon: XCircle, tooltip: 'Reject', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Reject') });
+                break;
+
+            case 'sent':
+                actions.push({ icon: Package, tooltip: 'Mark as Delivered', color: 'amber', onClick: () => handleWorkflowAction(order, 'deliver', 'Mark as Delivered') });
+                actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
+                break;
+
+            case 'delivered':
+                actions.push({ icon: ClipboardCheck, tooltip: 'Mark Complete', color: 'green', onClick: () => handleWorkflowAction(order, 'complete', 'Mark Complete') });
+                actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
+                break;
+
+            case 'approved':
+                actions.push({
+                    icon: sendingOrderId === order.id ? Loader2 : Send,
+                    tooltip: 'Send PDF/Email to Supplier',
+                    color: 'sky',
+                    onClick: () => handleSendPdf(order),
+                    disabled: sendingOrderId === order.id,
+                });
+                actions.push({ icon: XCircle, tooltip: 'Cancel', color: 'red', onClick: () => handleWorkflowAction(order, 'cancel', 'Cancel') });
+                break;
+
+            case 'completed':
+                break;
+
+            case 'cancelled':
+                actions.push({ icon: RotateCcw, tooltip: 'Restore', color: 'purple', onClick: () => handleWorkflowAction(order, 'reopen', 'Restore') });
+                break;
+
+            default:
+                break;
+        }
+
+        return actions;
+    };
+
+    // ------------------------------------------------------------------
+    // Status badge
+    // ------------------------------------------------------------------
+
+    const statusBadge = (status) => {
+        const colors = {
+            draft: 'bg-gray-100 text-gray-700',
+            pending: 'bg-sky-100 text-sky-700',
+            sent: 'bg-purple-100 text-purple-700',
+            delivered: 'bg-amber-100 text-amber-700',
+            approved: 'bg-green-100 text-green-700',
+            completed: 'bg-green-100 text-green-700',
+            cancelled: 'bg-red-100 text-red-700',
+        };
+        const labels = {
+            draft: 'Draft',
+            pending: 'Pending',
+            sent: 'Sent',
+            delivered: 'Delivered',
+            approved: 'Approved',
+            completed: 'Completed',
+            cancelled: 'Cancelled',
+        };
+        const s = status?.toLowerCase();
+        return `px-3 py-1 rounded-full text-xs font-semibold ${colors[s] || 'bg-gray-100 text-gray-600'}`;
+    };
+
+    const statusLabel = (status) => {
+        const labels = {
+            draft: 'Draft',
+            pending: 'Pending',
+            sent: 'Sent',
+            delivered: 'Delivered',
+            approved: 'Approved',
+            completed: 'Completed',
+            cancelled: 'Cancelled',
+        };
+        const s = status?.toLowerCase();
+        return labels[s] || status;
+    };
+
+    const formatDate = (date) => {
+        if (!date) return '—';
+        const parsed = new Date(date);
+        if (Number.isNaN(parsed.getTime())) return date;
+        return parsed.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+    };
+
+    // ------------------------------------------------------------------
+    // Modal helpers
+    // ------------------------------------------------------------------
+
+    const openCreate = () => {
+        setModalMode('create');
+        setModalItem(null);
+        setForm({ supplier_id: '' });
+        setItems([]);
+        setActiveTab('medicine');
+        setMedSearch('');
+        setRetailSearch('');
+        setError('');
+        setShowModal(true);
+        loadFormOptions();
+    };
+
+    const openEdit = (item) => {
+        setModalMode('edit');
+        setModalItem(item);
+        setItems([]);
+        setError('');
+        setShowModal(true);
+        loadFormOptions().then(() => {
+            api.get(`/purchase-orders/${item.id}`).then(r => {
+                const data = r.data;
+                setForm({ supplier_id: data.supplier_id || '' });
+                const loadedItems = (data.items || []).map(oi => {
+                    const isRetail = oi.itemable_type?.includes('RetailProduct');
+                    return {
+                        type: isRetail ? 'retail' : 'medicine',
+                        id: oi.itemable_id || oi.medicine_id,
+                        name: oi.itemable?.name || oi.medicine?.name || 'Unknown',
+                        quantity: oi.quantity || 1,
+                    };
+                });
+                setItems(loadedItems);
+            });
+        });
+    };
+
+    const openView = (item) => {
+        setModalMode('view');
+        setModalItem(item);
+        setShowModal(true);
+        api.get(`/purchase-orders/${item.id}`).then(r => {
+            setModalItem(r.data);
+        }).catch(() => { });
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setModalItem(null);
+        setForm({ supplier_id: '' });
+        setItems([]);
+        setError('');
+    };
+
+    const closePdfPreview = () => {
+        if (pdfPreviewData?.pdfUrl) {
+            URL.revokeObjectURL(pdfPreviewData.pdfUrl);
+        }
+        setShowPdfPreview(false);
+        setPdfPreviewData(null);
+    };
+
+    const loadFormOptions = async () => {
+        setFormLoading(true);
+        try {
+            await Promise.all([
+                api.get('/suppliers').then(r => setSuppliers(r.data?.data || r.data)),
+                api.get('/medicines?per_page=all').then(r => {
+                    const list = Array.isArray(r.data?.data) ? r.data.data :
+                        Array.isArray(r.data?.medicines?.data) ? r.data.medicines.data :
+                            Array.isArray(r.data) ? r.data : [];
+                    setMedicines(list);
+                }),
+                api.get('/retail-products?per_page=1000').then(r => {
+                    const list = Array.isArray(r.data?.data) ? r.data.data :
+                        Array.isArray(r.data?.retailProducts?.data) ? r.data.retailProducts.data :
+                            Array.isArray(r.data) ? r.data : [];
+                    setRetailProducts(list);
+                }),
+            ]);
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (items.length === 0) {
+            setError('Please add at least one product to the order.');
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const payload = {
+                supplier_id: form.supplier_id,
+                items: items.map(i => ({
+                    medicine_id: i.type === 'medicine' ? i.id : null,
+                    retail_product_id: i.type === 'retail' ? i.id : null,
+                    quantity: parseInt(i.quantity) || 1,
+                    manufacturer: i.manufacturer || null,
+                })),
+            };
+            if (modalMode === 'create') {
+                await api.post('/purchase-orders', payload);
+                window.showToast('Purchase order created successfully', 'success');
+                if (page !== 1) {
+                    setPage(1);
+                } else {
+                    load(1);
+                }
+            } else {
+                await api.put(`/purchase-orders/${modalItem.id}`, payload);
+                window.showToast('Purchase order updated successfully', 'success');
+                load();
+            }
+            setShowModal(false);
+        } catch (err) {
+            const msgs = err.response?.data?.errors;
+            setError(msgs ? Object.values(msgs).flat().join(' ') : (err.response?.data?.message || 'Error saving order'));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleAction = async (action, label) => {
+        try {
+            const res = await api.post(`/purchase-orders/${modalItem.id}/${action}`);
+            window.showToast(res.data?.message || `${label} completed successfully`, 'success');
+            setShowModal(false);
+            load();
+        } catch (err) {
+            const message = err.response?.data?.message || `Failed to ${label.toLowerCase()}`;
+            window.showToast(message, 'error');
+        }
+    };
+
+    const handleViewDelete = async () => {
+        if (!window.confirm('Delete this purchase order?')) return;
+        try {
+            await api.delete(`/purchase-orders/${modalItem.id}`);
+            window.showToast('Purchase order deleted', 'success');
+            setShowModal(false);
+            load();
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to delete order', 'error');
+        }
+    };
+
+    const handleModalDownloadPdf = async () => {
+        try {
+            const res = await api.get(`/purchase-orders/${modalItem.id}/download`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `purchase-order-${modalItem.id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            window.showToast(err.response?.data?.message || 'Failed to download PDF', 'error');
+        }
+    };
+
+    const isViewMode = modalMode === 'view';
+
+    return (
+        <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-700">{t("All Purchase Orders (")}
           {meta?.total ?? orders.length})
@@ -524,12 +797,10 @@ export default function PurchaseOrders() {const { t } = useLanguage();
                 </div>
       }
 
-            <Pagination meta={meta} onPageChange={handlePageChange} />
-
-            {loading ?
-      <LoadingSpinner text={t("Loading purchase orders...")} /> :
-
-      <div className="card overflow-hidden">
+            {loading ? (
+                <LoadingSpinner text="Loading purchase orders..." />
+            ) : (
+                <div className="card overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
@@ -602,6 +873,8 @@ export default function PurchaseOrders() {const { t } = useLanguage();
                     </div>
                 </div>
       }
+
+            <Pagination meta={meta} onPageChange={handlePageChange} />
 
             {/* PDF Preview Modal */}
             <Modal
@@ -996,12 +1269,13 @@ export default function PurchaseOrders() {const { t } = useLanguage();
             <div className="border border-gray-200 rounded-lg overflow-hidden">
                                     <table className="w-full">
                                         <thead>
-                                            <tr className="bg-gray-50">
-                                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">{t("Product")}</th>
-                                                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 w-24">{t("Type")}</th>
-                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-24">{t("Qty")}</th>
-                                                <th className="px-4 py-2 w-12"></th>
-                                            </tr>
+                                        <tr className="bg-gray-50">
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Product</th>
+                                            <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 w-24">Type</th>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Manufacturer</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 w-24">Qty</th>
+                                            <th className="px-4 py-2 w-12"></th>
+                                        </tr>
                                         </thead>
                                         <tbody>
                                             {items.map((it, i) =>
@@ -1018,17 +1292,26 @@ export default function PurchaseOrders() {const { t } = useLanguage();
                       "px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
                       }>
                                                             {it.type === 'medicine' ? 'Medicine' : 'OTC'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-2">
-                                                        <input
-                        type="number"
-                        value={it.quantity}
-                        onChange={(e) => updateItem(i, 'quantity', e.target.value)}
-                        className="w-20 px-2 py-1 text-sm text-right border border-gray-200 rounded focus:border-sky-400 outline-none"
-                        min="1" />
-                      
-                                                    </td>
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-2">
+                                                    <input
+                                                        type="text"
+                                                        value={it.manufacturer || ''}
+                                                        onChange={(e) => updateItem(i, 'manufacturer', e.target.value)}
+                                                        className="w-40 px-2 py-1 text-sm border border-gray-200 rounded focus:border-sky-400 outline-none"
+                                                        placeholder="e.g. GSK, Pfizer"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-2">
+                                                    <input
+                                                        type="number"
+                                                        value={it.quantity}
+                                                        onChange={(e) => updateItem(i, 'quantity', e.target.value)}
+                                                        className="w-20 px-2 py-1 text-sm text-right border border-gray-200 rounded focus:border-sky-400 outline-none"
+                                                        min="1"
+                                                    />
+                                                </td>
                                                     <td className="px-4 py-2 text-center">
                                                         <button
                         type="button"
@@ -1044,7 +1327,7 @@ export default function PurchaseOrders() {const { t } = useLanguage();
                                         </tbody>
                                         <tfoot>
                                             <tr className="border-t-2 border-gray-200 bg-gray-50">
-                                                <td colSpan="2" className="px-4 py-2 text-right text-xs font-bold text-gray-700">{t("Total Items:")}</td>
+                                                <td colSpan="3" className="px-4 py-2 text-right text-xs font-bold text-gray-700">Total Items:</td>
                                                 <td className="px-4 py-2 text-right text-sm font-bold text-gray-900">{items.length}</td>
                                                 <td></td>
                                             </tr>

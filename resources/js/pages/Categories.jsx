@@ -59,22 +59,35 @@ export default function Categories() {const { t } = useLanguage();
   const [selectedShelfDetail, setSelectedShelfDetail] = useState(null);
   const [shelfDetailLoading, setShelfDetailLoading] = useState(false);
 
-  // Load all shelves for dropdown
-  const loadAllShelves = async () => {
-    try {
-      const response = await api.get('/shelves', { params: { per_page: -1 } });
-      let data = [];
-      if (Array.isArray(response.data)) {
-        data = response.data;
-      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        data = response.data.data;
-      }
-      setAllShelves(data);
-    } catch (err) {
-      console.error('Failed to load shelves for dropdown:', err);
-      setAllShelves([]);
-    }
-  };
+    const loadCategories = () => {
+        setLoading(true);
+        setError('');
+        api.get('/categories', { params: { page, search: searchTerm, per_page: 10 } })
+            .then(r => { 
+                let data = [];
+                let metaData = null;
+                
+                if (Array.isArray(r.data)) {
+                    data = r.data;
+                } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
+                    data = r.data.data;
+                    metaData = r.data.meta || r.data;
+                } else if (r.data && r.data.categories && Array.isArray(r.data.categories)) {
+                    data = r.data.categories;
+                    metaData = r.data;
+                } else {
+                    console.warn('Unexpected categories response:', r.data);
+                }
+                setCategories(data);
+                setMeta(metaData);
+            })
+            .catch(err => { 
+                console.error(err); 
+                setError('Failed to load categories');
+                setCategories([]);
+            })
+            .finally(() => setLoading(false));
+    };
 
   const loadCategories = () => {
     setLoading(true);
@@ -84,27 +97,10 @@ export default function Categories() {const { t } = useLanguage();
       let data = [];
       let metaData = null;
 
-      if (Array.isArray(r.data)) {
-        data = r.data;
-      } else if (r.data && r.data.data && Array.isArray(r.data.data)) {
-        data = r.data.data;
-        metaData = r.data.meta || r.data;
-      } else if (r.data && r.data.categories && Array.isArray(r.data.categories)) {
-        data = r.data.categories;
-        metaData = r.data;
-      } else {
-        console.warn('Unexpected categories response:', r.data);
-      }
-      setCategories(data);
-      setMeta(metaData);
-    }).
-    catch((err) => {
-      console.error(err);
-      setError(t("Failed to load categories"));
-      setCategories([]);
-    }).
-    finally(() => setLoading(false));
-  };
+        const branchParams = { location_type: 'branch', per_page: 10, search: searchTerm };
+        if (selectedBranchId && selectedBranchId !== 'all') {
+            branchParams.branch_id = selectedBranchId;
+        }
 
   const loadShelves = () => {
     setLoading(true);

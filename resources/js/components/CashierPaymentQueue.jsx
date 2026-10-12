@@ -380,26 +380,32 @@ export default function CashierPaymentQueue({ saleType, showTypeTabs = false }) 
                                     </div>
                                 </div>
 
-                                {/* Total */}
-                                <div className="flex items-baseline justify-between pt-2">
-                                    <span className="text-xs font-medium text-gray-500">{t("Total Amount")}</span>
-                                    <span className="text-2xl font-bold text-green-600">
-                                        ${payableOf(sale).toFixed(2)}
-                                    </span>
-                                </div>
-                                {sale.discount > 0 &&
-            <div className="flex justify-between text-xs text-gray-500">
-                                        <span>{t("Discount (")}{sale.discount_type === 'percentage' ? `${sale.discount}%` : 'Fixed'})</span>
-                                        <span className="font-medium text-emerald-600">-${parseFloat(sale.discount).toFixed(2)}</span>
-                                    </div>
-            }
-                                {sale.customer_name &&
-            <div className="flex justify-between text-xs text-gray-500">
-                                        <span>{t("Customer")}</span>
-                                        <span className="font-medium text-gray-700">{sale.customer_name}</span>
-                                    </div>
-            }
-                            </div>
+                                 {/* Total */}
+                                 <div className="flex items-baseline justify-between pt-2">
+                                     <span className="text-xs font-medium text-gray-500">Total Amount</span>
+                                     <span className="text-2xl font-bold text-green-600">
+                                         ${payableOf(sale).toFixed(2)}
+                                     </span>
+                                 </div>
+                                 {sale.discount > 0 && (
+                                     <div className="flex justify-between text-xs text-gray-500">
+                                         <span>Discount ({sale.discount_type === 'percentage' ? `${sale.discount}%` : 'Fixed'})</span>
+                                         <span className="font-medium text-emerald-600">-${parseFloat(sale.discount).toFixed(2)}</span>
+                                     </div>
+                                 )}
+                                 {sale.customer_tin && (
+                                     <div className="flex justify-between items-center pt-1">
+                                         <span className="text-xs font-medium text-gray-500">TIN</span>
+                                         <span className="text-sm text-gray-700 font-medium">{sale.customer_tin}</span>
+                                     </div>
+                                 )}
+                                 {sale.customer_name && (
+                                     <div className="flex justify-between text-xs text-gray-500">
+                                         <span>Customer</span>
+                                         <span className="font-medium text-gray-700">{sale.customer_name}</span>
+                                     </div>
+                                 )}
+                             </div>
 
                             {/* Card Footer */}
                             <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
@@ -449,6 +455,12 @@ export default function CashierPaymentQueue({ saleType, showTypeTabs = false }) 
                                 <span className="text-xs text-gray-500">{t("Customer")}</span>
                                 <span className="text-sm text-gray-700">{selectedSale.customer_name || 'Walk-in Customer'}</span>
                             </div>
+                            {selectedSale.customer_tin && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-500">TIN</span>
+                                    <span className="text-sm text-gray-700 font-medium">{selectedSale.customer_tin}</span>
+                                </div>
+                            )}
                         </div>
 
                         <div>
@@ -623,9 +635,15 @@ export default function CashierPaymentQueue({ saleType, showTypeTabs = false }) 
                                 <span className="text-xs text-gray-500">{t("Customer")}</span>
                                 <span className="text-sm font-medium text-gray-800">{completedSale.customer_name || 'Walk-in Customer'}</span>
                             </div>
-                            {completedSale.notes &&
-            <div className="flex justify-between">
-                                    <span className="text-xs text-gray-500">{t("Prescription Notes")}</span>
+                            {completedSale.customer_tin && (
+                                <div className="flex justify-between">
+                                    <span className="text-xs text-gray-500">TIN</span>
+                                    <span className="text-sm font-medium text-gray-800">{completedSale.customer_tin}</span>
+                                </div>
+                            )}
+                            {completedSale.notes && (
+                                <div className="flex justify-between">
+                                    <span className="text-xs text-gray-500">Prescription Notes</span>
                                     <span className="text-sm font-medium text-gray-800">{completedSale.notes}</span>
                                 </div>
             }

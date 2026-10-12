@@ -113,8 +113,8 @@ function App() {
             <Route path="/branches" element={
                 <ProtectedRoute title="Branch Management"><Branches /></ProtectedRoute>
             } />
-            <Route path="/alerts" element={
-                <ProtectedRoute permissions={['alerts.view']} title="Alerts"><Alerts /></ProtectedRoute>
+            <Route path="/audit-logs" element={
+                <ProtectedRoute permissions={['audit.view']} title="Audit Logs"><AuditLogs /></ProtectedRoute>
             } />
 
             {/* Account pages */}
@@ -188,6 +188,9 @@ function App() {
 
             <Route path="/reports" element={
                 <ProtectedRoute permissions={['reports.view']} title="System Reports"><Reports /></ProtectedRoute>
+            } />
+            <Route path="/alerts" element={
+                <ProtectedRoute permissions={['alerts.view']} title="Alerts"><Alerts /></ProtectedRoute>
             } />
 
             {/* Fallback Catch-all Route */}

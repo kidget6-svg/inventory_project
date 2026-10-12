@@ -1,4 +1,4 @@
-<?php
+    <?php
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
@@ -239,8 +239,8 @@ Route::middleware(['auth', 'approved'])->group(function () {
         Route::post('/sales/retail', [SaleController::class, 'storeRetail']);
     });
 
-    // Prescription Checkout / Status Update — Cashier only
-    Route::middleware('permission:prescription_sales.checkout')->group(function () {
+    // Sales routes — Complete Payment (Cashier & Admin)
+    Route::middleware('role:admin,cashier')->group(function () {
         Route::patch('/sales/{id}/status', [SaleController::class, 'updateStatus']);
     });
 });
