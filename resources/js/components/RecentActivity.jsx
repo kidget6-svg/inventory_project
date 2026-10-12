@@ -1,40 +1,40 @@
-import React from 'react';
+import { useLanguage } from "../context/LanguageContext";import React from 'react';
 import {
-    ShoppingCart,
-    Package,
-    Pill,
-    Activity,
-    Clock,
-    User,
-} from 'lucide-react';
+  ShoppingCart,
+  Package,
+  Pill,
+  Activity,
+  Clock,
+  User } from
+'lucide-react';
 
 const iconMap = {
-    'shopping-cart': ShoppingCart,
-    package: Package,
-    pill: Pill,
-    activity: Activity,
+  'shopping-cart': ShoppingCart,
+  package: Package,
+  pill: Pill,
+  activity: Activity
 };
 
 const iconColors = {
-    'shopping-cart': 'bg-sky-100 text-sky-600',
-    package: 'bg-sky-100 text-sky-600',
-    pill: 'bg-sky-100 text-sky-600',
-    activity: 'bg-sky-100 text-sky-600',
+  'shopping-cart': 'bg-sky-100 text-sky-600',
+  package: 'bg-sky-100 text-sky-600',
+  pill: 'bg-sky-100 text-sky-600',
+  activity: 'bg-sky-100 text-sky-600'
 };
 
 export default function RecentActivity({
-    activities,
-    loading = false,
-}) {
-    if (loading) {
-        return (
-            <div className="space-y-4">
+  activities,
+  loading = false
+}) {const { t } = useLanguage();
+  if (loading) {
+    return (
+      <div className="space-y-4">
 
-                {[...Array(6)].map((_, i) => (
+                {[...Array(6)].map((_, i) =>
 
-                    <div
-                        key={i}
-                        className="
+        <div
+          key={i}
+          className="
                             flex items-center
                             gap-4
                             p-4
@@ -43,8 +43,17 @@ export default function RecentActivity({
                             border-gray-100
                             bg-white
                             animate-pulse
-                        "
-                    >
+                        ">
+
+
+
+
+
+
+
+
+
+          
 
                         <div className="h-12 w-12 rounded-2xl bg-gray-200"></div>
 
@@ -58,50 +67,50 @@ export default function RecentActivity({
 
                     </div>
 
-                ))}
+        )}
 
-            </div>
-        );
-    }
+            </div>);
 
-    if (!activities || activities.length === 0) {
-        return (
-            <div className="py-12 text-center">
+  }
+
+  if (!activities || activities.length === 0) {
+    return (
+      <div className="py-12 text-center">
 
                 <Clock
-                    size={42}
-                    className="mx-auto text-gray-300 mb-3"
-                />
+          size={42}
+          className="mx-auto text-gray-300 mb-3" />
+        
 
-                <h3 className="text-lg font-semibold text-gray-500">
-                    No Recent Activity
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-500">{t("No Recent Activity")}
 
-                <p className="text-sm text-gray-400 mt-1">
-                    New activity will appear here.
-                </p>
+        </h3>
 
-            </div>
-        );
-    }
+                <p className="text-sm text-gray-400 mt-1">{t("New activity will appear here.")}
 
-    return (
-        <div className="space-y-3">
+        </p>
 
-            {activities.map((activity) => {
+            </div>);
 
-                const Icon =
-                    iconMap[activity.icon] || Activity;
+  }
 
-                const color =
-                    iconColors[activity.icon] ||
-                    'bg-sky-100 text-sky-600';
+  return (
+    <div className="space-y-3">
 
-                return (
+            {activities.map((activity) => {const { t } = useLanguage();
 
-                    <div
-                        key={activity.id}
-                        className="
+        const Icon =
+        iconMap[activity.icon] || Activity;
+
+        const color =
+        iconColors[activity.icon] ||
+        'bg-sky-100 text-sky-600';
+
+        return (
+
+          <div
+            key={activity.id}
+            className="
                             flex
                             items-center
                             justify-between
@@ -117,15 +126,31 @@ export default function RecentActivity({
                             hover:shadow-md
                             hover:border-sky-200
                             group
-                        "
-                    >
+                        ">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
 
                         {/* LEFT SIDE */}
 
                         <div className="flex items-center gap-4">
 
                             <div
-                                className={`
+                className={`
                                     h-12
                                     w-12
                                     rounded-2xl
@@ -136,8 +161,8 @@ export default function RecentActivity({
                                     duration-300
                                     group-hover:scale-110
                                     ${color}
-                                `}
-                            >
+                                `}>
+                
 
                                 <Icon size={22} />
 
@@ -176,7 +201,7 @@ export default function RecentActivity({
                         <div className="text-right">
 
                             <span
-                                className="
+                className="
                                     inline-flex
                                     items-center
                                     gap-1
@@ -187,8 +212,19 @@ export default function RecentActivity({
                                     text-sky-600
                                     text-xs
                                     font-semibold
-                                "
-                            >
+                                ">
+
+
+
+
+
+
+
+
+
+
+
+                
 
                                 <Clock size={12} />
 
@@ -198,12 +234,12 @@ export default function RecentActivity({
 
                         </div>
 
-                    </div>
+                    </div>);
 
-                );
 
-            })}
 
-        </div>
-    );
+      })}
+
+        </div>);
+
 }

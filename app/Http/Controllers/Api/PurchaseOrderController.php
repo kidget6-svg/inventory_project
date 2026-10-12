@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StorePurchaseOrderRequest;
-use App\Http\Requests\UpdatePurchaseOrderRequest;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Medicine;
@@ -23,9 +21,24 @@ class PurchaseOrderController extends Controller
         return response()->json($orders);
     }
 
-    public function store(StorePurchaseOrderRequest $request)
+    public function store(Request $request)
     {
-        $validated = $request->validated();
+        $validated = $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id',
+            // Multi-item format (preferred)
+            'items' => 'nullable|array|min:1',
+            'items.*.medicine_id' => 'nullable|exists:medicines,id',
+            'items.*.retail_product_id' => 'nullable|exists:retail_products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'nullable|numeric|min:0',
+            'items.*.manufacturer' => 'nullable|string|max:255',
+            // Legacy single-item format (backward compat)
+            'medicine_name' => 'nullable|string|max:255',
+            'medicine_id' => 'nullable|exists:medicines,id',
+            'retail_product_id' => 'nullable|exists:retail_products,id',
+            'quantity' => 'nullable|integer|min:1',
+            'unit_price' => 'nullable|numeric|min:0',
+        ]);
 
         // Build items array from either format
         $items = $this->buildItemsArray($validated);
@@ -54,13 +67,13 @@ class PurchaseOrderController extends Controller
                     'itemable_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
+                    'manufacturer' => $item['manufacturer'] ?? null,
                     'subtotal' => $subtotal,
                 ];
             }
 
             $order = PurchaseOrder::create([
                 'supplier_id' => $validated['supplier_id'],
-                'manufacturing_company' => $validated['manufacturing_company'] ?? null,
                 'order_date' => now()->toDateString(),
                 'status' => 'draft',
                 'total_amount' => $totalAmount,
@@ -88,7 +101,7 @@ class PurchaseOrderController extends Controller
         return response()->json($purchaseOrder->load('supplier', 'items.medicine', 'items.itemable'));
     }
 
-    public function update(UpdatePurchaseOrderRequest $request, PurchaseOrder $purchaseOrder)
+    public function update(Request $request, PurchaseOrder $purchaseOrder)
     {
         // Only allow editing when status is draft, pending, or approved
         if (! $purchaseOrder->canEdit()) {
@@ -97,7 +110,21 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
-        $validated = $request->validated();
+        $validated = $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id',
+            'items' => 'nullable|array|min:1',
+            'items.*.medicine_id' => 'nullable|exists:medicines,id',
+            'items.*.retail_product_id' => 'nullable|exists:retail_products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'nullable|numeric|min:0',
+            'items.*.manufacturer' => 'nullable|string|max:255',
+            // Legacy single-item (backward compat)
+            'medicine_name' => 'nullable|string|max:255',
+            'medicine_id' => 'nullable|exists:medicines,id',
+            'retail_product_id' => 'nullable|exists:retail_products,id',
+            'quantity' => 'nullable|integer|min:1',
+            'unit_price' => 'nullable|numeric|min:0',
+        ]);
 
         $items = $this->buildItemsArray($validated);
 
@@ -125,13 +152,13 @@ class PurchaseOrderController extends Controller
                     'itemable_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
+                    'manufacturer' => $item['manufacturer'] ?? null,
                     'subtotal' => $subtotal,
                 ];
             }
 
             $purchaseOrder->update([
                 'supplier_id' => $validated['supplier_id'],
-                'manufacturing_company' => $validated['manufacturing_company'] ?? null,
                 'total_amount' => $totalAmount,
             ]);
 
@@ -492,43 +519,4 @@ class PurchaseOrderController extends Controller
 
         return response()->json($purchaseOrder->fresh()->load('supplier', 'items.medicine', 'items.itemable'));
     }
-    /**
-     * Purchasing history - completed/delivered purchase orders.
-     */
-    public function history(Request $request)
-    {
-        $query = PurchaseOrder::with('supplier');
-
-        if ($request->filled('status')) {
-            $statuses = is_array($request->input('status'))
-                ? $request->input('status')
-                : [$request->input('status')];
-            $query->whereIn('status', $statuses);
-        }
-
-        if (! $request->filled('status')) {
-            $query->whereIn('status', ['completed', 'delivered']);
-        }
-
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->input('date_from'));
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->input('date_to'));
-        }
-
-        if ($request->filled('supplier_id')) {
-            $query->where('supplier_id', $request->input('supplier_id'));
-        }
-
-        if ($request->filled('medicine_id')) {
-            $query->whereHas('items', function ($q) use ($request) {
-                $q->where('medicine_id', $request->input('medicine_id'));
-            });
-        }
-
-        return response()->json($query->latest()->paginate(15));
-    }
-
 }

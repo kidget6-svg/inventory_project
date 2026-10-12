@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -12,24 +13,9 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    // Role Constants
-    public const ROLE_ADMIN = 'admin';
-    public const ROLE_PHARMACIST = 'pharmacist';
-    public const ROLE_CASHIER = 'cashier';
-    public const ROLE_PURCHASING_STAFF = 'purchasing_staff';
-
-    // Status Constants
     public const STATUS_PENDING = 'pending';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
-
-    // All system roles
-    public const ROLES = [
-        self::ROLE_ADMIN,
-        self::ROLE_PHARMACIST,
-        self::ROLE_CASHIER,
-        self::ROLE_PURCHASING_STAFF,
-    ];
 
     protected $fillable = [
         'name',
@@ -40,6 +26,12 @@ class User extends Authenticatable
         'password',
         'role',
         'status',
+        'branch_id',
+        'phone_number',
+        'gender',
+        'date_of_birth',
+        'address',
+        'profile_photo',
         'license_number',
         'license_expiry_date',
         'professional_registration_number',
@@ -80,16 +72,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if the user's view should be scoped to their branch.
-     * Admins and purchasing staff see all branches;
-     * pharmacists and cashiers see only their own branch.
-     */
-    public function shouldScopeToBranch(): bool
-    {
-        return !in_array($this->role, [self::ROLE_ADMIN, self::ROLE_PURCHASING_STAFF]);
-    }
-
-    /**
      * Check if the user account is pending.
      */
     public function isPending(): bool
@@ -107,26 +89,27 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === self::ROLE_ADMIN;
+//         User::create([
+//     'name' => 'Admin',
+//     'email' => 'admin@pharmacy.com',
+//     'password' => Hash::make('password'),
+//     'role' => 'admin',
+// ]);
+        return $this->role === 'admin';
     }
 
     public function isPharmacist(): bool
     {
-        return $this->role === self::ROLE_PHARMACIST;
+        return $this->role === 'pharmacist';
     }
 
     public function isCashier(): bool
     {
-        return $this->role === self::ROLE_CASHIER;
-    }
-
-    public function isPurchasingStaff(): bool
-    {
-        return $this->role === self::ROLE_PURCHASING_STAFF;
+        return $this->role === 'cashier';
     }
 
     /**
-     * The role row this user belongs to.
+     * The role row this user belongs to (for permission lookups).
      */
     public function role(): BelongsTo
     {
@@ -134,20 +117,74 @@ class User extends Authenticatable
     }
 
     /**
-     * Get all permissions for the user's role.
+     * The branch this user is assigned to.
      */
-    public function getAllPermissions(): array
+    public function branch(): BelongsTo
     {
-        return $this->permissions();
+        return $this->belongsTo(Branch::class, 'branch_id');
     }
 
     /**
-     * Get the user's resolved permission slugs.
+     * The permissions granted to the user's role.
+     */
+    public function rolePermissions(): BelongsToMany
+    {
+        return $this->role()->with('permissions');
+    }
+
+    /**
+     * Check whether the user should be scoped to a specific branch.
+     * Pharmacists and cashiers see only their assigned branch.
+     * Admins can optionally scope to a specific branch via X-Branch-Id header or branch_id query.
+     */
+    public function shouldScopeToBranch(?\Illuminate\Http\Request $request = null): bool
+    {
+        if (in_array($this->role, ['pharmacist', 'cashier']) && !empty($this->branch_id)) {
+            return true;
+        }
+
+        return $this->getActiveBranchId($request) !== null;
+    }
+
+    /**
+     * Get the active branch_id (from user assigned branch for staff, or X-Branch-Id header / param for admin).
+     */
+    public function getActiveBranchId(?\Illuminate\Http\Request $request = null): ?int
+    {
+        if (in_array($this->role, ['pharmacist', 'cashier']) && !empty($this->branch_id)) {
+            return (int) $this->branch_id;
+        }
+
+        $req = $request ?: request();
+        if ($req) {
+            $headerVal = $req->header('X-Branch-Id');
+            if ($headerVal && $headerVal !== 'all' && is_numeric($headerVal)) {
+                return (int) $headerVal;
+            }
+            $queryVal = $req->get('branch_id');
+            if ($queryVal && $queryVal !== 'all' && is_numeric($queryVal)) {
+                return (int) $queryVal;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the branch_id this user is scoped to (null = all branches).
+     */
+    public function getBranchScope(?\Illuminate\Http\Request $request = null): ?int
+    {
+        return $this->getActiveBranchId($request);
+    }
+
+    /**
+     * Flat list of permission slugs the user currently holds.
+     * Admins automatically hold every permission in the system.
      */
     public function permissions(): array
     {
-        // Admin has every permission.
-        if ($this->role === self::ROLE_ADMIN) {
+        if ($this->role === 'admin') {
             return Permission::pluck('slug')->all();
         }
 
@@ -159,15 +196,11 @@ class User extends Authenticatable
             return $role->permissions()->pluck('permissions.slug')->all();
         }
 
-        // Fallback to config-based permissions.
-        return config(
-            'permissions.permissions.' . $this->role,
-            []
-        );
+        return [];
     }
 
     /**
-     * Get permissions for API responses.
+     * Get the resolved permission slugs for API responses.
      */
     public function getPermissionsAttribute(): array
     {
@@ -175,27 +208,15 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if the user has a specific permission.
+     * Check whether the user holds a specific permission.
      */
     public function hasPermission(string $permission): bool
     {
-        // Admin automatically has every permission.
-        if ($this->role === self::ROLE_ADMIN) {
-            return true;
-        }
-
-        $permissions = $this->permissions();
-
-        // Wildcard permission.
-        if (in_array('*', $permissions, true)) {
-            return true;
-        }
-
-        return in_array($permission, $permissions, true);
+        return in_array($permission, $this->permissions(), true);
     }
 
     /**
-     * Check whether the user has ANY of the given permissions.
+     * Check whether the user holds any of the given permissions.
      */
     public function hasAnyPermission(array $permissions): bool
     {
@@ -206,19 +227,5 @@ class User extends Authenticatable
         }
 
         return false;
-    }
-
-    /**
-     * Check whether the user has ALL of the given permissions.
-     */
-    public function hasAllPermissions(array $permissions): bool
-    {
-        foreach ($permissions as $permission) {
-            if (! $this->hasPermission($permission)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

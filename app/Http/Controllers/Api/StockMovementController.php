@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreStockMovementRequest;
 use App\Models\Medicine;
 use App\Models\RetailProduct;
 use App\Models\StockMovement;
@@ -77,10 +76,29 @@ class StockMovementController extends Controller
         }
     }
 
-    public function store(StoreStockMovementRequest $request)
+    public function store(Request $request)
     {
         try {
-            $validated = $request->validated();
+            // Validate the request
+            $validated = $request->validate([
+                'type' => 'required|in:in,out,adjustment,return,transfer,damaged,expired,lost,correction,self,warehouse',
+                'reference' => 'nullable|string|max:255',
+                'notes' => 'nullable|string',
+                'source_type' => 'nullable|string|in:branch,warehouse',
+                'source_id' => 'nullable|integer',
+                'destination_type' => 'nullable|string|in:branch,warehouse',
+                'destination_id' => 'nullable|integer',
+                'branch_id' => 'nullable|integer',
+                'status' => 'nullable|string|in:pending,approved,completed,cancelled',
+                'items' => 'nullable|array|min:1',
+                'items.*.type' => 'required_with:items|in:medicine,retail',
+                'items.*.id' => 'required_with:items|integer|min:1',
+                'items.*.quantity' => 'required_with:items|integer|min:1',
+                'items.*.manufacturer' => 'nullable|string|max:255',
+                'medicine_id' => 'nullable|exists:medicines,id',
+                'retail_product_id' => 'nullable|exists:retail_products,id',
+                'quantity' => 'nullable|integer|min:1',
+            ]);
 
             $items = [];
             if (!empty($validated['items']) && is_array($validated['items'])) {
@@ -147,6 +165,7 @@ class StockMovementController extends Controller
                         'after_quantity' => $newQuantity,
                         'reference' => $validated['reference'] ?? null,
                         'notes' => $validated['notes'] ?? null,
+                        'manufacturer' => $item['manufacturer'] ?? null,
                         'source_type' => $validated['source_type'] ?? null,
                         'source_id' => $validated['source_id'] ?? null,
                         'destination_type' => $validated['destination_type'] ?? null,

@@ -1,75 +1,75 @@
-import React from 'react';
+import { useLanguage } from "../context/LanguageContext";import React from 'react';
 import {
-    ClipboardList,
-    Clock,
-    CheckCircle,
-    Truck,
-    Package,
-    XCircle,
-} from 'lucide-react';
+  ClipboardList,
+  Clock,
+  CheckCircle,
+  Truck,
+  Package,
+  XCircle } from
+'lucide-react';
 
 
 const statusConfig = {
 
-    pending:{
-        label:"Pending",
-        icon:Clock,
-        bg:"bg-sky-50",
-        text:"text-sky-600",
-        border:"border-sky-400"
-    },
+  pending: {
+    label: "Pending",
+    icon: Clock,
+    bg: "bg-sky-50",
+    text: "text-sky-600",
+    border: "border-sky-400"
+  },
 
 
-    approved:{
-        label:"Approved",
-        icon:CheckCircle,
-        bg:"bg-sky-50",
-        text:"text-sky-600",
-        border:"border-sky-400"
-    },
+  approved: {
+    label: "Approved",
+    icon: CheckCircle,
+    bg: "bg-sky-50",
+    text: "text-sky-600",
+    border: "border-sky-400"
+  },
 
 
-    processing:{
-        label:"Processing",
-        icon:Truck,
-        bg:"bg-sky-50",
-        text:"text-sky-600",
-        border:"border-sky-400"
-    },
+  processing: {
+    label: "Processing",
+    icon: Truck,
+    bg: "bg-sky-50",
+    text: "text-sky-600",
+    border: "border-sky-400"
+  },
 
 
-    completed:{
-        label:"Completed",
-        icon:Package,
-        bg:"bg-sky-50",
-        text:"text-sky-600",
-        border:"border-sky-400"
-    },
+  completed: {
+    label: "Completed",
+    icon: Package,
+    bg: "bg-sky-50",
+    text: "text-sky-600",
+    border: "border-sky-400"
+  },
 
 
-    cancelled:{
-        label:"Cancelled",
-        icon:XCircle,
-        bg:"bg-red-50",
-        text:"text-red-600",
-        border:"border-red-400"
-    }
+  cancelled: {
+    label: "Cancelled",
+    icon: XCircle,
+    bg: "bg-red-50",
+    text: "text-red-600",
+    border: "border-red-400"
+  }
 
 };
 
 
 
 export default function PurchaseOrderStats({
-    stats,
-    loading=false
-}){
+  stats,
+  loading = false
+}) {const { t } = useLanguage();
 
 
-    if(loading){
+  if (loading) {
 
-        return(
+    return (
 
-            <div className="
+      <div className="
                 bg-white
                 rounded-2xl
                 shadow-sm
@@ -78,19 +78,26 @@ export default function PurchaseOrderStats({
                 p-6
             ">
 
+
+
+
+
+
+        
+
                 Loading...
 
-            </div>
-
-        )
-
-    }
+            </div>);
 
 
 
-    return(
+  }
 
-        <div className="
+
+
+  return (
+
+    <div className="
             bg-white
             rounded-2xl
             shadow-sm
@@ -98,6 +105,13 @@ export default function PurchaseOrderStats({
             border-gray-200
             overflow-hidden
         ">
+
+
+
+
+
+
+      
 
 
             {/* Header */}
@@ -113,6 +127,14 @@ export default function PurchaseOrderStats({
             ">
 
 
+
+
+
+
+
+        
+
+
                 <div className="
                     w-10
                     h-10
@@ -123,10 +145,18 @@ export default function PurchaseOrderStats({
                     justify-center
                 ">
 
+
+
+
+
+
+
+          
+
                     <ClipboardList
-                        size={22}
-                        className="text-sky-600"
-                    />
+            size={22}
+            className="text-sky-600" />
+          
 
                 </div>
 
@@ -138,17 +168,24 @@ export default function PurchaseOrderStats({
                         text-lg
                         font-bold
                         text-gray-800
-                    ">
-                        Purchase Orders
-                    </h3>
+                    ">{t("Purchase Orders")}
+
+
+
+
+
+          </h3>
 
 
                     <p className="
                         text-sm
                         text-gray-500
-                    ">
-                        Order status overview
-                    </p>
+                    ">{t("Order status overview")}
+
+
+
+
+          </p>
 
                 </div>
 
@@ -169,22 +206,28 @@ export default function PurchaseOrderStats({
             ">
 
 
+
+
+
+        
+
+
                 {
-                    Object.entries(statusConfig)
-                    .map(([key,item])=>{
+        Object.entries(statusConfig).
+        map(([key, item]) => {const { t } = useLanguage();
 
 
-                        const Icon=item.icon;
+          const Icon = item.icon;
 
-                        const count=stats?.[key] || 0;
+          const count = stats?.[key] || 0;
 
 
 
-                        return(
+          return (
 
-                            <div
-                                key={key}
-                                className={`
+            <div
+              key={key}
+              className={`
                                     ${item.bg}
                                     ${item.border}
                                     border-l-4
@@ -194,8 +237,8 @@ export default function PurchaseOrderStats({
                                     duration-300
                                     hover:-translate-y-1
                                     hover:shadow-md
-                                `}
-                            >
+                                `}>
+              
 
 
                                 <div className="
@@ -205,6 +248,10 @@ export default function PurchaseOrderStats({
                                 ">
 
 
+
+                
+
+
                                     <div>
 
                                         <p className="
@@ -212,6 +259,10 @@ export default function PurchaseOrderStats({
                                             font-extrabold
                                             text-gray-800
                                         ">
+
+
+
+                    
                                             {count}
                                         </p>
 
@@ -222,6 +273,11 @@ export default function PurchaseOrderStats({
                                             text-gray-600
                                             mt-1
                                         ">
+
+
+
+
+                    
                                             {item.label}
                                         </p>
 
@@ -236,10 +292,14 @@ export default function PurchaseOrderStats({
                                         p-2
                                     ">
 
+
+
+                  
+
                                         <Icon
-                                            size={20}
-                                            className={item.text}
-                                        />
+                    size={20}
+                    className={item.text} />
+                  
 
                                     </div>
 
@@ -249,19 +309,19 @@ export default function PurchaseOrderStats({
 
 
 
-                            </div>
+                            </div>);
 
-                        )
 
-                    })
-                }
+
+        })
+        }
 
 
             </div>
 
 
-        </div>
+        </div>);
 
-    )
+
 
 }

@@ -20,7 +20,7 @@ class PurchaseOrderWorkflowTest extends TestCase
             'name' => 'Test Supplier',
             'contact_person' => 'Jane',
             'email' => 'supplier@example.com',
-            'phone' => '0712345678',
+            'phone' => '+251712345678',
             'address' => 'Nairobi',
         ]);
 
@@ -92,7 +92,7 @@ class PurchaseOrderWorkflowTest extends TestCase
             'name' => 'Test Supplier',
             'contact_person' => 'Jane',
             'email' => 'supplier@example.com',
-            'phone' => '0712345678',
+            'phone' => '+251712345678',
             'address' => 'Nairobi',
         ]);
 
@@ -162,7 +162,7 @@ class PurchaseOrderWorkflowTest extends TestCase
             'name' => 'Test Supplier',
             'contact_person' => 'Jane',
             'email' => 'supplier@example.com',
-            'phone' => '0712345678',
+            'phone' => '+251712345678',
             'address' => 'Nairobi',
         ]);
 

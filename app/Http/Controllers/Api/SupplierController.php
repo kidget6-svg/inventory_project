@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreSupplierRequest;
-use App\Http\Requests\UpdateSupplierRequest;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 
@@ -17,45 +15,50 @@ class SupplierController extends Controller
 
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+                $query->where('name', 'like', "%{$search}%");
             }
 
             $perPage = $request->get('per_page');
-
+            
+            // If requesting all records
             if ($perPage === 'all' || $perPage == -1) {
                 $allSuppliers = $query->latest()->get();
-                return response()->json($allSuppliers);
+                return response()->json($allSuppliers); // Return direct array
             }
 
+            // Paginated response
             $suppliers = $query->latest()->paginate($perPage ?? 15);
 
             return response()->json([
                 'data' => $suppliers->items(),
                 'meta' => [
                     'current_page' => $suppliers->currentPage(),
-                    'last_page'    => $suppliers->lastPage(),
-                    'per_page'     => $suppliers->perPage(),
-                    'total'        => $suppliers->total(),
-                ],
+                    'last_page' => $suppliers->lastPage(),
+                    'per_page' => $suppliers->perPage(),
+                    'total' => $suppliers->total(),
+                ]
             ]);
+
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Query Error: ' . $e->getMessage(),
+                'message' => 'Query Error: ' . $e->getMessage()
             ], 500);
         }
     }
 
-    public function store(StoreSupplierRequest $request)
+    public function store(Request $request)
     {
-        $supplier = Supplier::create($request->validated());
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+        ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Supplier created successfully',
-            'data'    => $supplier,
-        ], 201);
+        $supplier = Supplier::create($validated);
+        return response()->json($supplier, 201);
     }
 
     public function show(Supplier $supplier)
@@ -63,24 +66,23 @@ class SupplierController extends Controller
         return response()->json($supplier);
     }
 
-    public function update(UpdateSupplierRequest $request, Supplier $supplier)
+    public function update(Request $request, Supplier $supplier)
     {
-        $supplier->update($request->validated());
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Supplier updated successfully',
-            'data'    => $supplier,
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
         ]);
+
+        $supplier->update($validated);
+        return response()->json($supplier);
     }
 
     public function destroy(Supplier $supplier)
     {
         $supplier->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Supplier deleted successfully',
-        ]);
+        return response()->json(['message' => 'Supplier deleted']);
     }
 }

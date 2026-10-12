@@ -1,80 +1,80 @@
-import React from 'react';
+import { useLanguage } from "../context/LanguageContext";import React from 'react';
 import { Bar } from 'react-chartjs-2';
 import './chartRegistry';
 import { chartColors, baseChartOptions } from './chartRegistry';
 
-export default function PurchaseVsSalesChart({ data, loading = false }) {
+export default function PurchaseVsSalesChart({ data, loading = false }) {const { t } = useLanguage();
 
-    const purchases = Number(data?.totalPurchases || 0);
-    const sales = Number(data?.totalSales || 0);
+  const purchases = Number(data?.totalPurchases || 0);
+  const sales = Number(data?.totalSales || 0);
 
-    const chartData = {
-        labels: ['Purchases', 'Sales'],
-        datasets: [
-            {
-                label: 'Amount',
-                data: [purchases, sales],
+  const chartData = {
+    labels: ['Purchases', 'Sales'],
+    datasets: [
+    {
+      label: 'Amount',
+      data: [purchases, sales],
 
-                backgroundColor: [
-                    'rgba(59,130,246,0.85)',
-                    'rgba(59,130,246,0.85)'
-                ],
-
-                borderRadius: 12,
-                barThickness: 55,
-            }
-        ]
-    };
+      backgroundColor: [
+      'rgba(59,130,246,0.85)',
+      'rgba(59,130,246,0.85)'],
 
 
-    const options = {
-        ...baseChartOptions,
+      borderRadius: 12,
+      barThickness: 55
+    }]
 
-        plugins:{
-            legend:{
-                display:false
-            },
-
-            tooltip:{
-                callbacks:{
-                    label:(ctx)=>{
-                        return `$${ctx.raw.toFixed(2)}`;
-                    }
-                }
-            }
-        },
+  };
 
 
-        scales:{
-            y:{
-                beginAtZero:true,
+  const options = {
+    ...baseChartOptions,
 
-                ticks:{
-                    callback:(value)=>`$${value}`
-                }
-            }
+    plugins: {
+      legend: {
+        display: false
+      },
+
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            return `$${ctx.raw.toFixed(2)}`;
+          }
         }
-    };
+      }
+    },
 
 
-    if(loading){
-        return(
-            <div className="h-72 flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-sky-100 border-t-sky-500 rounded-full animate-spin"/>
-            </div>
-        );
+    scales: {
+      y: {
+        beginAtZero: true,
+
+        ticks: {
+          callback: (value) => `$${value}`
+        }
+      }
     }
+  };
 
 
-    return(
+  if (loading) {
+    return (
+      <div className="h-72 flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-sky-100 border-t-sky-500 rounded-full animate-spin" />
+            </div>);
 
-        <div>
+  }
+
+
+  return (
+
+    <div>
 
             <div className="h-72">
-                <Bar 
-                    data={chartData}
-                    options={options}
-                />
+                <Bar
+          data={chartData}
+          options={options} />
+        
             </div>
 
 
@@ -87,6 +87,12 @@ export default function PurchaseVsSalesChart({ data, loading = false }) {
             ">
 
 
+
+
+
+        
+
+
                 <div className="
                     bg-sky-50
                     rounded-xl
@@ -94,13 +100,18 @@ export default function PurchaseVsSalesChart({ data, loading = false }) {
                     text-center
                 ">
 
+
+
+
+          
+
                     <p className="text-sky-600 font-bold text-2xl">
                         ${purchases.toFixed(2)}
                     </p>
 
-                    <p className="text-sm text-gray-500">
-                        Purchases
-                    </p>
+                    <p className="text-sm text-gray-500">{t("Purchases")}
+
+          </p>
 
                 </div>
 
@@ -113,20 +124,25 @@ export default function PurchaseVsSalesChart({ data, loading = false }) {
                     text-center
                 ">
 
+
+
+
+          
+
                     <p className="text-sky-600 font-bold text-2xl">
                         ${sales.toFixed(2)}
                     </p>
 
-                    <p className="text-sm text-gray-500">
-                        Sales
-                    </p>
+                    <p className="text-sm text-gray-500">{t("Sales")}
+
+          </p>
 
                 </div>
 
 
             </div>
 
-        </div>
+        </div>);
 
-    );
+
 }

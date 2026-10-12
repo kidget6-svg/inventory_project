@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import {
     Package,
     Boxes,
@@ -51,13 +52,14 @@ export default function StatCard({
 }) {
     const Icon = iconMap[icon] || Package;
     const colors = colorClasses[color] || colorClasses.blue;
+    const { t } = useLanguage();
 
     return (
         <div
             className={`
                 relative overflow-hidden rounded-[16px]
-                border border-gray-200
-                bg-white
+                border border-gray-200 dark:border-gray-700
+                bg-white dark:bg-gray-800
                 shadow-sm
                 hover:shadow-xl
                 hover:-translate-y-1
@@ -77,12 +79,12 @@ export default function StatCard({
                         {loading ? (
                             <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
                         ) : (
-                            <div className="text-4xl font-extrabold text-gray-800">
+                            <div className="text-4xl font-extrabold text-gray-800 dark:text-white">
                                 {value}
                             </div>
                         )}
-                        <p className="mt-1 text-sm text-gray-500 font-medium">
-                            {label}
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 font-medium">
+                            {t(label)}
                         </p>
                     </div>
 
@@ -121,7 +123,7 @@ export default function StatCard({
                 )}
 
                 {subValue && (
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
                         {subValue}
                     </p>
                 )}
@@ -135,8 +137,8 @@ export default function StatCard({
                     top-0 right-0
                     w-24 h-24
                     rounded-full
-                    bg-white
-                    opacity-50
+                    bg-sky-400 dark:bg-sky-600
+                    opacity-20 dark:opacity-10
                     blur-2xl
                     translate-x-8
                     -translate-y-8

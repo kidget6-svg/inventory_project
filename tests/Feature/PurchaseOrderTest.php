@@ -584,13 +584,17 @@ class PurchaseOrderTest extends TestCase
             ]);
     }
 
-    public function test_can_complete_an_approved_purchase_order_and_stock_increases()
+    public function test_sending_pdf_email_to_approved_order_completes_it_and_stock_increases()
     {
+        Mail::fake();
+
         $user = $this->adminUser();
         $medicine = $this->createMedicine(100);
         $order = $this->createOrderWithItem($medicine, 25, 'approved');
 
-        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/complete");
+        // After approval, sending the PDF/Email should automatically
+        // complete the order (stock added, status -> completed).
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/send-email");
 
         $response->assertOk()
             ->assertJsonFragment([
@@ -618,6 +622,44 @@ class PurchaseOrderTest extends TestCase
         // Verify completed_at was recorded
         $order->refresh();
         $this->assertNotNull($order->completed_at);
+
+        // Verify the email was sent to the supplier
+        Mail::assertSent(PurchaseOrderMail::class, function ($mail) use ($order) {
+            return $mail->hasTo($order->supplier->email)
+                && $mail->purchaseOrder->is($order);
+        });
+    }
+
+    public function test_sending_pdf_email_failure_keeps_order_approved()
+    {
+        $user = $this->adminUser();
+        $medicine = $this->createMedicine(100);
+        $order = $this->createOrderWithItem($medicine, 25, 'approved');
+
+        // Remove the supplier's email to simulate a sending failure.
+        // The controller validates the email before attempting to send,
+        // so this returns a 422 and the order must remain "approved".
+        $order->supplier->update(['email' => null]);
+
+        $response = $this->actingAs($user)->postJson("/purchase-orders/{$order->id}/send-email");
+
+        $response->assertStatus(422)
+            ->assertJsonFragment([
+                'message' => 'Supplier does not have an email address',
+            ]);
+
+        // Verify the order is still approved (not completed)
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $order->id,
+            'status' => 'approved',
+        ]);
+
+        // Verify stock was NOT increased
+        $medicine->refresh();
+        $this->assertEquals(100, $medicine->quantity);
+
+        // Verify no stock movement was created
+        $this->assertEquals(0, StockMovement::where('reference', 'PO-' . $order->id)->count());
     }
 
     // ------------------------------------------------------------------

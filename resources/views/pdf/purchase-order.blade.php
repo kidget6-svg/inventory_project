@@ -105,8 +105,10 @@
                     <td>{{ $adminName }}</td>
                 </tr>
                 <tr>
+                    <td class="label">Manufacturer:</td>
+                    <td>{{ $purchaseOrder->manufacturing_company ?? 'N/A' }}</td>
                     <td class="label">Sent At:</td>
-                    <td colspan="3">{{ $purchaseOrder->sentAtDisplay() }}</td>
+                    <td>{{ $purchaseOrder->sentAtDisplay() }}</td>
                 </tr>
             </table>
         </div>

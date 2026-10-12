@@ -3,141 +3,134 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreRoleRequest;
-use App\Http\Requests\UpdateRoleRequest;
 use App\Models\Permission;
 use App\Models\Role;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class RoleController extends Controller
 {
     /**
-     * List all roles (with their permissions), all permissions
-     * (with groups), and the unique group names.
-     *
-     * GET /api/roles
+     * List all roles with their permission slugs, plus the permission catalog.
      */
-    public function index(): JsonResponse
+    public function index()
     {
-        $roles = Role::with('permissions')
-            ->orderBy('id')
-            ->get()
-            ->map(function (Role $role) {
-                return [
-                    'id'         => $role->id,
-                    'name'       => $role->name,
-                    'slug'       => $role->slug,
-                    'description'=> $role->description,
-                    'is_system'  => (bool) $role->is_system,
-                    'permissions'=> $role->permissions->pluck('slug')->all(),
-                ];
-            });
+        $roles = Role::with('permissions')->orderBy('is_system', 'desc')->orderBy('name')->get()->map(fn ($role) => [
+            'id' => $role->id,
+            'name' => $role->name,
+            'slug' => $role->slug,
+            'description' => $role->description,
+            'is_system' => $role->is_system,
+            'permissions' => $role->slug === 'admin' ? Permission::pluck('slug')->all() : $role->permissions->pluck('slug')->all(),
+        ]);
 
-        $permissions = Permission::orderBy('group')
-            ->orderBy('name')
-            ->get()
-            ->map(function (Permission $perm) {
-                return [
-                    'id'    => $perm->id,
-                    'slug'  => $perm->slug,
-                    'name'  => $perm->name,
-                    'group' => $perm->group,
-                ];
-            });
-
-        $groups = Permission::whereNotNull('group')
-            ->pluck('group')
-            ->unique()
-            ->values()
-            ->all();
+        $permissions = Permission::orderBy('group')->orderBy('name')->get();
 
         return response()->json([
-            'roles'       => $roles,
+            'roles' => $roles,
             'permissions' => $permissions,
-            'groups'      => $groups,
+            'groups' => $permissions->pluck('group')->unique()->values()->all(),
         ]);
     }
 
     /**
-     * Store a new (custom) role with the selected permissions.
-     *
-     * POST /api/roles
+     * Create a new role with its permissions.
      */
-    public function store(StoreRoleRequest $request): JsonResponse
+    public function store(Request $request)
     {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'permissions' => 'array',
+            'permissions.*' => 'exists:permissions,slug',
+        ]);
+
         $role = Role::create([
-            'name'        => $request->name,
-            'slug'        => Str::slug($request->name),
+            'name' => $request->name,
+            'slug' => $this->uniqueSlug($request->name),
             'description' => $request->description,
-            'is_system'   => false,
+            'is_system' => false,
         ]);
 
-        $this->syncPermissions($role, $request->input('permissions', []));
+        $role->permissions()->sync($this->permissionIds($request->input('permissions', [])));
 
-        return response()->json($role->load('permissions'), 201);
+        return response()->json([
+            'message' => 'Role created successfully.',
+            'role' => $this->rolePayload($role),
+        ], 201);
     }
 
     /**
-     * Display a single role with its permissions.
-     *
-     * GET /api/roles/{role}
+     * Update a role's details and permissions.
      */
-    public function show(Role $role): JsonResponse
+    public function update(Request $request, Role $role)
     {
-        return response()->json($role->load('permissions'));
-    }
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'permissions' => 'array',
+            'permissions.*' => 'exists:permissions,slug',
+        ]);
 
-    /**
-     * Update an existing role.
-     *
-     * PUT /api/roles/{role}
-     */
-    public function update(UpdateRoleRequest $request, Role $role): JsonResponse
-    {
         $role->update([
-            'name'        => $request->name ?? $role->name,
-            'description' => $request->description ?? $role->description,
+            'name' => $request->name,
+            'description' => $request->description,
         ]);
 
-        if ($request->has('permissions')) {
-            $this->syncPermissions($role, $request->input('permissions'));
+        $slugs = $request->input('permissions', []);
+
+        if ($role->slug === 'admin') {
+            $role->permissions()->sync(Permission::pluck('id')->all());
+        } else {
+            $role->permissions()->sync($this->permissionIds($slugs));
         }
 
-        return response()->json($role->load('permissions'));
+        return response()->json([
+            'message' => 'Role updated successfully.',
+            'role' => $this->rolePayload($role->fresh('permissions')),
+        ]);
     }
 
     /**
-     * Delete a non-system role.
-     *
-     * DELETE /api/roles/{role}
+     * Delete a custom role (system roles cannot be removed).
      */
-    public function destroy(Role $role): JsonResponse
+    public function destroy(Role $role)
     {
         if ($role->is_system) {
-            return response()->json([
-                'message' => 'System roles cannot be deleted.',
-            ], 403);
+            return response()->json(['message' => 'System roles cannot be deleted.'], 403);
         }
 
-        $role->permissions()->detach();
         $role->delete();
 
-        return response()->json([
-            'message' => 'Role deleted successfully.',
-        ]);
+        return response()->json(['message' => 'Role deleted successfully.']);
     }
 
-    /**
-     * Sync the given permission slugs for the role, ignoring
-     * any slugs that don't exist in the permissions table.
-     */
-    protected function syncPermissions(Role $role, array $permissionSlugs): void
+    protected function permissionIds(array $slugs): array
     {
-        $permissionIds = Permission::whereIn('slug', $permissionSlugs)
-            ->pluck('id')
-            ->all();
+        return Permission::whereIn('slug', $slugs)->pluck('id')->all();
+    }
 
-        $role->permissions()->sync($permissionIds);
+    protected function uniqueSlug(string $name): string
+    {
+        $base = Str::slug($name);
+        $slug = $base;
+        $i = 2;
+        while (Role::where('slug', $slug)->exists()) {
+            $slug = $base . '-' . $i++;
+        }
+        return $slug;
+    }
+
+    protected function rolePayload(Role $role): array
+    {
+        return [
+            'id' => $role->id,
+            'name' => $role->name,
+            'slug' => $role->slug,
+            'description' => $role->description,
+            'is_system' => $role->is_system,
+            'permissions' => $role->slug === 'admin' ? Permission::pluck('slug')->all() : $role->permissions->pluck('slug')->all(),
+        ];
     }
 }

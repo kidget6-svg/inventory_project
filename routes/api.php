@@ -29,6 +29,8 @@ Route::get('/csrf-token', function () {
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
+Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 
 /*
 |--------------------------------------------------------------------------
@@ -65,6 +67,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
         // Shelves Read
         Route::get('/shelves', [ShelfController::class, 'index']);
+        Route::get('/shelves/{id}/items', [ShelfController::class, 'items']);
         Route::get('/shelves/{shelf}', [ShelfController::class, 'show']);
 
         // Suppliers Read
@@ -81,6 +84,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
         Route::get('/warehouse/stock', [WarehouseController::class, 'stock']);
         Route::get('/warehouse/receiving-history', [WarehouseController::class, 'receivingHistory']);
         Route::get('/warehouse/transfer-requests', [WarehouseController::class, 'transferRequests']);
+        Route::get('/warehouse/shelves/{id}/items', [WarehouseController::class, 'shelfItems']);
 
         // Branches Read
         Route::get('/branches', [BranchController::class, 'index']);
@@ -126,6 +130,7 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
 
         // Warehouse Write
         Route::post('/warehouse/receive', [WarehouseController::class, 'receive']);
+        Route::post('/warehouse/transfers', [WarehouseController::class, 'store']);
         Route::post('/warehouse/transfer/{id}/approve', [WarehouseController::class, 'approveTransfer']);
         Route::post('/warehouse/transfer/{id}/complete', [WarehouseController::class, 'completeTransfer']);
     });
@@ -211,6 +216,13 @@ Route::middleware(['auth:sanctum', 'approved'])->group(function () {
     Route::middleware('role:pharmacist')->group(function () {
         Route::post('/sales/prescription', [SaleController::class, 'storePrescription']);
         Route::post('/sales/retail-draft', [SaleController::class, 'storeRetailDraft']);
+    });
+
+    // --------------------------------------------------------------------
+    // Unified POS Dispatch (Pharmacist + Cashier) — sends order to checkout
+    // --------------------------------------------------------------------
+    Route::middleware('role:pharmacist,cashier')->group(function () {
+        Route::post('/sales/dispatch', [SaleController::class, 'storeDispatch']);
     });
 
     // --------------------------------------------------------------------

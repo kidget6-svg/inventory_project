@@ -36,6 +36,7 @@ class StockMovement extends Model
         'quantity',
         'before_quantity',
         'after_quantity',
+        'manufacturer',
         'user_id',
         'source_type',
         'source_id',
@@ -91,6 +92,11 @@ class StockMovement extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class, 'source_id');
     }
 
     public function approvedBy()

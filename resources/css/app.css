@@ -4,10 +4,14 @@
 
 @layer base {
     body {
-        @apply font-sans antialiased text-gray-800;
+        @apply font-sans antialiased text-gray-800 dark:text-gray-200;
         background: #f8fafc;
         margin: 0;
         padding: 0;
+    }
+
+    .dark body {
+        background: #111827;
     }
 }
 
@@ -29,19 +33,19 @@
        colored top border, hover lift (translateY + shadow).
     ────────────────────────────────────────────────────────── */
     .card {
-        @apply bg-white rounded-[16px] shadow-sm border border-gray-200 transition-all duration-300 hover:shadow-md hover:-translate-y-1;
+        @apply bg-white dark:bg-gray-800 rounded-[16px] shadow-sm border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-md hover:-translate-y-1;
     }
 
     .card-header {
-        @apply text-base font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-200;
+        @apply text-base font-semibold text-gray-800 dark:text-white mb-4 pb-3 border-b border-gray-200 dark:border-gray-700;
     }
 
     .input-field {
-        @apply w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all duration-200 placeholder:text-gray-400;
+        @apply w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 outline-none transition-all duration-200 placeholder:text-gray-400 dark:placeholder:text-gray-500;
     }
 
     .select-field {
-        @apply input-field appearance-none bg-white;
+        @apply input-field appearance-none bg-white dark:bg-gray-700;
     }
 
     .badge {
@@ -114,12 +118,12 @@
 
     /* POS page header */
     .pos-page-header {
-        @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-gray-200;
+        @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-gray-200 dark:border-gray-700;
     }
 
     /* POS search input */
     .pos-search-input {
-        @apply w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all duration-200 placeholder:text-gray-400;
+        @apply w-full pl-10 pr-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all duration-200 placeholder:text-gray-400 dark:placeholder:text-gray-500;
     }
 
     /* POS product grid */
@@ -129,7 +133,7 @@
 
     /* POS product card */
     .pos-card {
-        @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full transition-all duration-200 hover:shadow-md;
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full transition-all duration-200 hover:shadow-md;
     }
 
     /* POS card badge */
@@ -159,17 +163,17 @@
 
     /* POS cart panel */
     .pos-cart-panel {
-        @apply bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden;
+        @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden;
     }
 
     /* POS cart header */
     .pos-cart-header {
-        @apply border-b px-5 py-4 flex items-center justify-between;
+        @apply border-b border-gray-200 dark:border-gray-700 px-5 py-4 flex items-center justify-between;
     }
 
     /* POS prescription info section */
     .pos-prescription-info {
-        @apply border border-gray-200;
+        @apply border border-gray-200 dark:border-gray-700;
     }
 
     /* POS pagination controls */
@@ -181,3 +185,105 @@
         @apply flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200;
     }
 }
+
+/* Custom Overrides to force white background and dark text on Login & Registration input fields */
+.registration-form-container input[type="text"],
+.registration-form-container input[type="email"],
+.registration-form-container input[type="tel"],
+.registration-form-container input[type="date"],
+.registration-form-container input[type="number"],
+.registration-form-container input[type="password"],
+.registration-form-container select,
+.registration-form-container textarea {
+    background-color: #ffffff !important;
+    color: #111827 !important; /* text-gray-900 */
+}
+
+.login-form-container input[type="text"],
+.login-form-container input[type="email"],
+.login-form-container input[type="password"] {
+    background-color: #ffffff !important;
+    color: #111827 !important; /* text-gray-900 */
+}
+
+/* ─────────────────────────────────────────────────────────
+   Dark Mode Global Overrides (No White Backgrounds & Clear Text)
+────────────────────────────────────────────────────────── */
+.dark,
+.dark body {
+    background-color: #111827 !important;
+    color: #f3f4f6 !important;
+}
+
+.dark main {
+    background-color: #111827 !important;
+}
+
+.dark .card,
+.dark .pos-cart-panel,
+.dark .pos-card,
+.dark .bg-white,
+.dark [class*="bg-white"],
+.dark .bg-gray-50,
+.dark .bg-sky-50,
+.dark .bg-blue-50,
+.dark .bg-slate-50,
+.dark [class*="bg-gradient-to-br"] {
+    background-color: #1f2937 !important;
+    background-image: none !important;
+    color: #f3f4f6 !important;
+    border-color: #374151 !important;
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: #ffffff !important;
+}
+
+.dark p, .dark span:not([class*="text-"]), .dark label, .dark div {
+    color: inherit;
+}
+
+.dark p, .dark label, .dark span:not([class*="text-"]):not(.text-emerald-500):not(.text-sky-500):not(.text-green-500):not(.text-amber-500):not(.text-red-500):not(.text-blue-500) {
+    color: #d1d5db !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+    border-color: #4b5563 !important;
+}
+
+.dark table {
+    color: #f3f4f6 !important;
+    background-color: #1f2937 !important;
+}
+
+.dark tr {
+    background-color: transparent !important;
+}
+
+.dark tr:hover {
+    background-color: #374151 !important;
+}
+
+.dark th {
+    background-color: #111827 !important;
+    color: #9ca3af !important;
+    border-color: #374151 !important;
+}
+
+.dark td {
+    border-color: #374151 !important;
+    color: #d1d5db !important;
+}
+
+.dark .dropdown-menu,
+.dark .modal-content,
+.dark .card-body {
+    background-color: #1f2937 !important;
+    color: #f3f4f6 !important;
+    border-color: #374151 !important;
+}
+

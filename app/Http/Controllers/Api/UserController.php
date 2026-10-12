@@ -3,98 +3,145 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreUserRequest;
-use App\Http\Requests\UpdateUserRequest;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    /**
+     * Display a listing of all users (admin only).
+     */
     public function index(Request $request)
-    {
-        $query = User::query();
+{
+    $query = User::query();
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        if ($role = $request->input('role')) {
-            if ($role !== 'all') {
-                $query->where('role', $role);
-            }
-        }
-
-        $status = $request->input('status', 'all');
-        if ($status && $status !== 'all') {
-            $query->where('status', $status);
-        }
-
-        $users = $query->with('branch')->orderBy('created_at', 'desc')->paginate(10);
-
-        return response()->json($users);
+    if ($search = $request->input('search')) {
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('email', 'like', "%{$search}%");
+        });
     }
 
+    if ($role = $request->input('role')) {
+        if ($role !== 'all') {
+            $query->where('role', $role);
+        }
+    }
+
+    $status = $request->input('status', 'all');
+    if ($status && $status !== 'all') {
+        $query->where('status', $status);
+    }
+
+    $users = $query->with('branch')->orderBy('created_at', 'desc')->paginate(10);
+
+    return response()->json($users);
+}
+    /**
+     * User counts summary (admin only).
+     */
+    
     public function stats()
-    {
-        return response()->json([
-            'total'       => User::count(),
-            'pending'     => User::where('status', User::STATUS_PENDING)->count(),
-            'approved'    => User::where('status', User::STATUS_APPROVED)->count(),
-            'rejected'    => User::where('status', User::STATUS_REJECTED)->count(),
-            'admins'      => User::where('role', 'admin')->where('status', User::STATUS_APPROVED)->count(),
-            'pharmacists' => User::where('role', 'pharmacist')->where('status', User::STATUS_APPROVED)->count(),
-            'cashiers'    => User::where('role', 'cashier')->where('status', User::STATUS_APPROVED)->count(),
-        ]);
-    }
+{
+    return response()->json([
+        'total' => User::count(),
+        'pending' => User::where('status', User::STATUS_PENDING)->count(),
+        'approved' => User::where('status', User::STATUS_APPROVED)->count(),
+        'rejected' => User::where('status', User::STATUS_REJECTED)->count(),
+        'admins' => User::where('role', 'admin')->where('status', User::STATUS_APPROVED)->count(),
+        'pharmacists' => User::where('role', 'pharmacist')->where('status', User::STATUS_APPROVED)->count(),
+        'cashiers' => User::where('role', 'cashier')->where('status', User::STATUS_APPROVED)->count(),
+    ]);
+}
 
-    public function store(StoreUserRequest $request)
+    /**
+     * Store a newly created user (admin only).
+     * Users created by an admin are approved immediately.
+     */
+    public function store(Request $request)
     {
-        $validated = $request->validated();
+        if ((!$request->filled('first_name') || !$request->filled('last_name')) && $request->filled('name')) {
+            $parts = explode(' ', trim($request->input('name')), 2);
+            $request->merge([
+                'first_name' => $request->input('first_name') ?: ($parts[0] ?? $request->input('name')),
+                'last_name'  => $request->input('last_name')  ?: ($parts[1] ?? $parts[0] ?? $request->input('name')),
+            ]);
+        }
+
+        $request->validate([
+            'first_name'                        => 'required|string|max:255',
+            'last_name'                         => 'required|string|max:255',
+            'email'                             => 'required|email|unique:users,email',
+            'phone_number'                      => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
+            'password'                          => 'required|confirmed|min:8',
+            'role'                              => ['required', Rule::exists('roles', 'slug')],
+            'branch_id'                         => ['nullable', 'exists:branches,id'],
+            'gender'                            => 'nullable|in:male,female,other',
+            'date_of_birth'                     => 'nullable|date',
+            'address'                           => 'nullable|string',
+            'profile_photo'                     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'license_number'                    => 'nullable|string|max:255',
+            'license_expiry_date'               => 'nullable|date',
+            'professional_registration_number' => 'nullable|string|max:255',
+            'university'                        => 'nullable|string|max:255',
+            'degree'                            => 'nullable|string|max:255',
+            'years_of_experience'               => 'nullable|integer|min:0',
+            'national_id'                       => 'nullable|string|max:255',
+            'pharmacy_license'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'degree_certificate'                => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'qualification'                     => 'nullable|string|max:255',
+            'license_document'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'qualification_document'            => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        ], [
+            'date_of_birth.before_or_equal' => 'You must be at least 20 years old.',
+            'gender.in' => 'Gender must be male or female.',
+        ]);
 
         $data = [
-            'name'          => $validated['first_name'] . ' ' . $validated['last_name'],
-            'first_name'    => $validated['first_name'],
-            'last_name'     => $validated['last_name'],
-            'email'         => $validated['email'],
-            'phone_number'  => $validated['phone_number'] ?? null,
-            'password'      => Hash::make($validated['password']),
-            'role'          => $validated['role'],
-            'role_id'       => Role::where('slug', $validated['role'])->value('id'),
-            'branch_id'     => in_array($validated['role'] ?? null, ['pharmacist', 'cashier']) ? $validated['branch_id'] ?? null : null,
+            'name'          => $request->first_name . ' ' . $request->last_name,
+            'first_name'    => $request->first_name,
+            'last_name'     => $request->last_name,
+            'email'         => $request->email,
+            'phone_number'  => $request->phone_number,
+            'password'      => Hash::make($request->password),
+            'role'          => $request->role,
+            'role_id'       => Role::where('slug', $request->role)->value('id'),
+            'branch_id'     => in_array($request->role, ['pharmacist', 'cashier']) ? $request->branch_id : null,
             'status'        => User::STATUS_APPROVED,
-            'gender'        => $validated['gender'] ?? null,
-            'date_of_birth' => $validated['date_of_birth'] ?? null,
-            'address'       => $validated['address'] ?? null,
+            'gender'        => $request->gender,
+            'date_of_birth' => $request->date_of_birth,
+            'address'       => $request->address,
         ];
 
-        if (isset($validated['profile_photo']) && $request->hasFile('profile_photo')) {
+        if ($request->hasFile('profile_photo')) {
             $data['profile_photo'] = $request->file('profile_photo')->store('profile-photos', 'public');
         }
 
-        if ($validated['role'] === 'pharmacist') {
-            $data['license_number'] = $validated['license_number'] ?? null;
-            $data['license_expiry_date'] = $validated['license_expiry_date'] ?? null;
-            $data['professional_registration_number'] = $validated['professional_registration_number'] ?? null;
-            $data['university'] = $validated['university'] ?? null;
-            $data['degree'] = $validated['degree'] ?? null;
-            $data['years_of_experience'] = $validated['years_of_experience'] ?? null;
-            $data['national_id'] = $validated['national_id'] ?? null;
-            $data['qualification'] = $validated['qualification'] ?? null;
+        if ($request->role === 'pharmacist') {
+            $data['license_number'] = $request->license_number;
+            $data['license_expiry_date'] = $request->license_expiry_date;
+            $data['professional_registration_number'] = $request->professional_registration_number;
+            $data['university'] = $request->university;
+            $data['degree'] = $request->degree;
+            $data['years_of_experience'] = $request->years_of_experience;
+            $data['national_id'] = $request->national_id;
+            $data['qualification'] = $request->qualification;
 
             if ($request->hasFile('license_document')) {
                 $data['license_document'] = $request->file('license_document')->store('documents', 'public');
             }
+
             if ($request->hasFile('qualification_document')) {
                 $data['qualification_document'] = $request->file('qualification_document')->store('documents', 'public');
             }
+
             if ($request->hasFile('pharmacy_license')) {
                 $data['pharmacy_license'] = $request->file('pharmacy_license')->store('documents', 'public');
             }
+
             if ($request->hasFile('degree_certificate')) {
                 $data['degree_certificate'] = $request->file('degree_certificate')->store('documents', 'public');
             }
@@ -102,78 +149,113 @@ class UserController extends Controller
 
         $user = User::create($data);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User created successfully',
-            'data'    => $user,
-        ], 201);
+        return response()->json($user, 201);
     }
 
-    public function update(UpdateUserRequest $request, User $user)
+    /**
+     * Update an existing user (admin only).
+     */
+    public function update(Request $request, User $user)
     {
-        $validated = $request->validated();
-
-        $updateData = [
-            'name'          => $validated['first_name'] . ' ' . $validated['last_name'],
-            'first_name'    => $validated['first_name'],
-            'last_name'     => $validated['last_name'],
-            'email'         => $validated['email'],
-            'phone_number'  => $validated['phone_number'] ?? null,
-            'role'          => $validated['role'],
-            'role_id'       => Role::where('slug', $validated['role'])->value('id'),
-            'branch_id'     => in_array($validated['role'] ?? null, ['pharmacist', 'cashier']) ? $validated['branch_id'] ?? null : null,
-            'gender'        => $validated['gender'] ?? null,
-            'date_of_birth' => $validated['date_of_birth'] ?? null,
-            'address'       => $validated['address'] ?? null,
-        ];
-
-        if (isset($validated['status'])) {
-            $updateData['status'] = $validated['status'];
+        if ((!$request->filled('first_name') || !$request->filled('last_name')) && $request->filled('name')) {
+            $parts = explode(' ', trim($request->input('name')), 2);
+            $request->merge([
+                'first_name' => $request->input('first_name') ?: ($parts[0] ?? $request->input('name')),
+                'last_name'  => $request->input('last_name')  ?: ($parts[1] ?? $parts[0] ?? $request->input('name')),
+            ]);
         }
 
-        if (!empty($validated['password'])) {
-            $updateData['password'] = Hash::make($validated['password']);
+        $request->validate([
+            'first_name'                        => 'required|string|max:255',
+            'last_name'                         => 'required|string|max:255',
+            'email'                             => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone_number'                      => 'nullable|string|regex:/^\+251[0-9]{9,10}$/',
+            'password'                          => 'nullable|confirmed|min:8',
+            'role'                              => ['required', Rule::exists('roles', 'slug')],
+            'branch_id'                         => ['nullable', 'exists:branches,id'],
+            'status'                            => 'nullable|in:pending,approved,rejected',
+            'gender'                            => 'nullable|in:male,female',
+            'date_of_birth'                     => 'nullable|date|before_or_equal:-20 years',
+            'address'                           => 'nullable|string',
+            'profile_photo'                     => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'license_number'                    => 'nullable|string|max:255',
+            'license_expiry_date'               => 'nullable|date',
+            'professional_registration_number' => 'nullable|string|max:255',
+            'university'                        => 'nullable|string|max:255',
+            'degree'                            => 'nullable|string|max:255',
+            'years_of_experience'               => 'nullable|integer|min:0',
+            'national_id'                       => 'nullable|string|max:255',
+            'pharmacy_license'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'degree_certificate'                => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'qualification'                     => 'nullable|string|max:255',
+            'license_document'                  => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+            'qualification_document'            => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        ], [
+            'date_of_birth.before_or_equal' => 'You must be at least 20 years old.',
+            'gender.in' => 'Gender must be male or female.',
+        ]);
+
+        $user->update([
+            'name'          => $request->first_name . ' ' . $request->last_name,
+            'first_name'    => $request->first_name,
+            'last_name'     => $request->last_name,
+            'email'         => $request->email,
+            'phone_number'  => $request->phone_number,
+            'role'          => $request->role,
+            'role_id'       => Role::where('slug', $request->role)->value('id'),
+            'branch_id'     => in_array($request->role, ['pharmacist', 'cashier']) ? $request->branch_id : null,
+            'gender'        => $request->gender,
+            'date_of_birth' => $request->date_of_birth,
+            'address'       => $request->address,
+        ]);
+
+        if ($request->filled('status')) {
+            $user->update(['status' => $request->status]);
+        }
+
+        if ($request->filled('password')) {
+            $user->update(['password' => Hash::make($request->password)]);
         }
 
         if ($request->hasFile('profile_photo')) {
-            $updateData['profile_photo'] = $request->file('profile_photo')->store('profile-photos', 'public');
+            $user->update(['profile_photo' => $request->file('profile_photo')->store('profile-photos', 'public')]);
         }
 
-        $user->update($updateData);
-
-        if ($validated['role'] === 'pharmacist') {
+        if ($request->role === 'pharmacist') {
             $user->update([
-                'license_number'                 => $validated['license_number'] ?? null,
-                'license_expiry_date'            => $validated['license_expiry_date'] ?? null,
-                'professional_registration_number' => $validated['professional_registration_number'] ?? null,
-                'university'                     => $validated['university'] ?? null,
-                'degree'                         => $validated['degree'] ?? null,
-                'years_of_experience'            => $validated['years_of_experience'] ?? null,
-                'national_id'                    => $validated['national_id'] ?? null,
-                'qualification'                  => $validated['qualification'] ?? null,
+                'license_number' => $request->license_number,
+                'license_expiry_date' => $request->license_expiry_date,
+                'professional_registration_number' => $request->professional_registration_number,
+                'university' => $request->university,
+                'degree' => $request->degree,
+                'years_of_experience' => $request->years_of_experience,
+                'national_id' => $request->national_id,
+                'qualification' => $request->qualification,
             ]);
 
             if ($request->hasFile('license_document')) {
                 $user->update(['license_document' => $request->file('license_document')->store('documents', 'public')]);
             }
+
             if ($request->hasFile('qualification_document')) {
                 $user->update(['qualification_document' => $request->file('qualification_document')->store('documents', 'public')]);
             }
+
             if ($request->hasFile('pharmacy_license')) {
                 $user->update(['pharmacy_license' => $request->file('pharmacy_license')->store('documents', 'public')]);
             }
+
             if ($request->hasFile('degree_certificate')) {
                 $user->update(['degree_certificate' => $request->file('degree_certificate')->store('documents', 'public')]);
             }
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User updated successfully',
-            'data'    => $user,
-        ]);
+        return response()->json($user);
     }
 
+    /**
+     * Approve a pending user (admin only).
+     */
     public function approve(Request $request, User $user)
     {
         $user->update([
@@ -188,20 +270,24 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * Reject a pending user (admin only).
+     */
     public function reject(Request $request, User $user)
     {
-        if (isset($request->reason) && !is_string($request->reason)) {
-            return response()->json(['message' => 'Invalid reason format.'], 422);
-        }
+        $request->validate([
+            'reason' => 'nullable|string',
+        ]);
 
         $user->update([
-            'status'           => User::STATUS_REJECTED,
+            'status' => User::STATUS_REJECTED,
             'rejection_reason' => $request->input('reason'),
         ]);
 
+        // Optionally notify the user about rejection if notifications exist
         try {
             if (method_exists($user, 'notify')) {
-                // Notification logic would go here
+                // If a specific notification exists, you could send it here.
             }
         } catch (\Throwable $e) {
             // don't block the request on notification failures
@@ -213,8 +299,12 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * Remove a user (admin only).
+     */
     public function destroy(Request $request, User $user)
     {
+        // Prevent admin from deleting themselves
         if ($user->id === $request->user()->id) {
             return response()->json(['message' => 'You cannot delete your own account.'], 403);
         }

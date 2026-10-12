@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useLanguage } from "../context/LanguageContext";import React, { useState, useEffect } from 'react';
 import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StatCard from '../components/StatCard';
@@ -10,74 +10,74 @@ import LowStockAlert from '../components/LowStockAlert';
 import ExpiryAlert from '../components/ExpiryAlert';
 import QuickActions from '../components/QuickActions';
 
-export default function PharmacistDashboard() {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+export default function PharmacistDashboard() {const { t } = useLanguage();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-    useEffect(() => {
-        api.get('/dashboard')
-            .then((r) => {
-                setData(r.data);
-                setError('');
-            })
-            .catch((err) => {
-                setError('Failed to load dashboard data');
-                console.error(err);
-            })
-            .finally(() => setLoading(false));
-    }, []);
+  useEffect(() => {
+    api.get('/dashboard').
+    then((r) => {
+      setData(r.data);
+      setError('');
+    }).
+    catch((err) => {
+      setError(t("Failed to load dashboard data"));
+      console.error(err);
+    }).
+    finally(() => setLoading(false));
+  }, []);
 
-    if (loading) return <LoadingSpinner text="Loading dashboard..." />;
+  if (loading) return <LoadingSpinner text={t("Loading dashboard...")} />;
 
-    if (error)
-        return (
-            <div className="text-center py-12 text-red-500">{error}</div>
-        );
+  if (error)
+  return (
+    <div className="text-center py-12 text-red-500">{error}</div>);
 
-    return (
-        <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
             {/* ── Summary Cards ── */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 <StatCard
-                    value={data.totalMedicines}
-                    label="Total Medicines"
-                    icon="package"
-                    color="blue"
-                />
+          value={data.totalMedicines}
+          label={t("Total Medicines")}
+          icon="package"
+          color="blue" />
+        
                 <StatCard
-                    value={data.lowStockCount}
-                    label="Low Stock Medicines"
-                    icon="alert"
-                    color="orange"
-                />
+          value={data.lowStockCount}
+          label={t("Low Stock Medicines")}
+          icon="alert"
+          color="orange" />
+        
                 <StatCard
-                    value={data.expiredCount}
-                    label="Expired Medicines"
-                    icon="calendar"
-                    color="red"
-                />
+          value={data.expiredCount}
+          label={t("Expired Medicines")}
+          icon="calendar"
+          color="red" />
+        
                 <StatCard
-                    value={data.expiring90Count}
-                    label="Expiring Within 90 Days"
-                    icon="calendar"
-                    color="orange"
-                />
+          value={data.expiring90Count}
+          label={t("Expiring Within 90 Days")}
+          icon="calendar"
+          color="orange" />
+        
             </div>
 
             {/* ── Charts ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <ChartCard
-                    title="Sales Analytics"
-                    description="Daily, weekly, and monthly sales trends"
-                >
+          title={t("Sales Analytics")}
+          description={t("Daily, weekly, and monthly sales trends")}>
+          
                     <SalesChart data={data.salesAnalytics} />
                 </ChartCard>
 
                 <ChartCard
-                    title="Inventory Status"
-                    description="Stock health overview"
-                >
+          title={t("Inventory Status")}
+          description={t("Stock health overview")}>
+          
                     <div className="h-72">
                         <InventoryStatusChart data={data.inventoryStatus} />
                     </div>
@@ -91,12 +91,12 @@ export default function PharmacistDashboard() {
             </div>
 
             {/* ── Recent Activity ── */}
-            <ChartCard title="Recent Activity" description="Latest system events">
+            <ChartCard title={t("Recent Activity")} description={t("Latest system events")}>
                 <RecentActivity activities={data.recentActivities} />
             </ChartCard>
 
             {/* ── Quick Actions ── */}
             <QuickActions role="pharmacist" />
-        </div>
-    );
+        </div>);
+
 }
