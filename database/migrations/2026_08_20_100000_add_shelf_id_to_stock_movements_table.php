@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('stock_movements', function (Blueprint $table) {
             if (!Schema::hasColumn('stock_movements', 'shelf_id')) {
-                $table->unsignedBigInteger('shelf_id')->nullable()->after('batch_id');
+                $table->unsignedBigInteger('shelf_id')->nullable();
                 $table->foreign('shelf_id')->references('id')->on('shelves')->nullOnDelete();
             }
         });

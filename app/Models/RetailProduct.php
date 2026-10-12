@@ -39,6 +39,7 @@ class RetailProduct extends Model
         'description',
         'manufacturer',
         'shelf_location',
+        'shelf_id',
         'branch_id',
         'image',
     ];
