@@ -26,8 +26,8 @@ export default function Pagination({
     if (!onPageChange) return null;
     if (last_page <= 1) return null;
 
-  const start = (current_page - 1) * per_page + 1;
-  const end = Math.min(current_page * per_page, total);
+    const start = (current_page - 1) * per_page + 1;
+    const end = Math.min(current_page * per_page, total);
 
     const showSummary = total > 0 && per_page > 0;
 
@@ -82,7 +82,7 @@ export default function Pagination({
                     >
                         {p}
                     </button>
-        )}
+                ))}
 
                 {endPage < last_page - 1 && <span className={ellipsis}>…</span>}
 
@@ -102,6 +102,6 @@ export default function Pagination({
                     <ChevronRight size={16} />
                 </button>
             </div>
-        </div>);
-
+        </div>
+    );
 }

@@ -1,4 +1,4 @@
-import { useLanguage } from "../../context/LanguageContext"; // resources/js/components/pos/PosInfoModal.jsx
+// resources/js/components/pos/PosInfoModal.jsx
 //
 // Reusable modal dialog for capturing customer / patient information
 // before dispatching a draft to the Cashier Queue.
@@ -22,7 +22,6 @@ import { useLanguage } from "../../context/LanguageContext"; // resources/js/com
 
 import React, { useState } from 'react';
 import Modal from '../Modal';
-import PhoneInput from '../PhoneInput';
 
 // ── Ethiopian phone-number validation ──────────────────────────────
 // Accepts:
@@ -165,21 +164,12 @@ export default function PosInfoModal({
                             <label className="block text-xs font-medium text-gray-500 mb-1">
                                 {field.label}
                             </label>
-                            {field.phone ?
-              <PhoneInput
-                value={value}
-                onValueChange={(v) => handleFieldChange(field.name, v)}
-                icon={Icon}
-                iconSize={14}
-                placeholder={field.placeholder || ''}
-                className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-all duration-200 placeholder:text-gray-400" /> :
-
-              <div className="relative">
-                                {Icon &&
-                <span className="absolute left-3 top-2.5 text-gray-400">
+                            <div className="relative">
+                                {Icon && (
+                                    <span className="absolute left-3 top-2.5 text-gray-400">
                                         <Icon size={14} />
                                     </span>
-                }
+                                )}
                                 <input
                                     type={field.type || 'text'}
                                     value={value}
@@ -214,12 +204,12 @@ export default function PosInfoModal({
                 {/* Action buttons */}
                 <div className="flex gap-3 pt-2">
                     <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 btn-secondary px-4 py-2 text-sm">{t("Cancel")}
-
-
-          </button>
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 btn-secondary px-4 py-2 text-sm"
+                    >
+                        Cancel
+                    </button>
                     <button
                         type="button"
                         onClick={onConfirm}
@@ -235,6 +225,6 @@ export default function PosInfoModal({
                     </button>
                 </div>
             </div>
-        </Modal>);
-
+        </Modal>
+    );
 }
