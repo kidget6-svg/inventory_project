@@ -10,8 +10,8 @@ import {
 export default function LowStockAlert({
   medicines,
   loading = false
-}) {const { t } = useLanguage();
-  if (loading) {
+}) {
+  const { t } = useLanguage();if (loading) {
     return (
       <div className="space-y-4">
                 {[...Array(4)].map((_, i) =>
@@ -89,9 +89,7 @@ export default function LowStockAlert({
 
         <div className="space-y-4">
 
-                        {medicines.map((medicine) => {const { t } = useLanguage();
-
-            const percent = Math.min(
+                        {medicines.map((medicine) => {const percent = Math.min(
               100,
               Math.round(
                 medicine.quantity /

@@ -197,9 +197,8 @@ const colors = {
 
 export default function QuickActions({
   role = 'admin'
-}) {const { t } = useLanguage();
-
-
+}) {
+  const { t } = useLanguage();
   const actions =
   actionsByRole[role] || cashierActions;
 
@@ -282,9 +281,7 @@ export default function QuickActions({
 
         
 
-                {actions.map((action) => {const { t } = useLanguage();
-
-          const Icon = action.icon;
+                {actions.map((action) => {const Icon = action.icon;
 
           const style =
           colors[action.color];

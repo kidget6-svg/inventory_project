@@ -19,8 +19,8 @@ const TABS = [
 { id: 'movements', label: 'Stock Movements', icon: History }];
 
 
-export default function StockManagement() {const { t } = useLanguage();
-  const [loading, setLoading] = useState(true);
+export default function StockManagement() {const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [productTypeFilter, setProductTypeFilter] = useState('all'); // 'all' | 'medicine' | 'retail'
@@ -120,8 +120,7 @@ export default function StockManagement() {const { t } = useLanguage();
   const filteredExpiringSoon = filterByType(expiryItems.expiring_soon || []);
   const filteredDamaged = filterByType(damagedItems);
 
-  const getStatusBadge = (status) => {const { t } = useLanguage();
-    const config = {
+  const getStatusBadge = (status) => {const config = {
       active: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' },
       inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' },
       expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' },
@@ -133,8 +132,7 @@ export default function StockManagement() {const { t } = useLanguage();
     return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>{cfg.label}</span>;
   };
 
-  const getStockStatusBadge = (item) => {const { t } = useLanguage();
-    if (item.quantity <= 0) {
+  const getStockStatusBadge = (item) => {if (item.quantity <= 0) {
       return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">{t("Out of Stock")}</span>;
     }
     if (item.quantity <= (item.reorder_level ?? 10)) {
@@ -240,8 +238,7 @@ export default function StockManagement() {const { t } = useLanguage();
   const renderTabs = () =>
   <div className="border-b border-gray-200 mb-5">
             <nav className="flex overflow-x-auto gap-1">
-                {TABS.map((tab) => {const { t } = useLanguage();
-        const Icon = tab.icon;
+                {TABS.map((tab) => {const Icon = tab.icon;
         const isActive = activeTab === tab.id;
         return (
           <button
@@ -525,8 +522,7 @@ export default function StockManagement() {const { t } = useLanguage();
                         <div>
                             <h3 className="text-sm font-semibold text-gray-600 mb-3">{t("Expiring Soon (90 days)")}</h3>
                             <div className="space-y-2">
-                                {(expiryItems.expiring_soon || []).slice(0, 5).map((item) => {const { t } = useLanguage();
-                const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
+                                {(expiryItems.expiring_soon || []).slice(0, 5).map((item) => {const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
                 return (
                   <div key={`${item.product_type}-${item.id}`} className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
                                             <div>

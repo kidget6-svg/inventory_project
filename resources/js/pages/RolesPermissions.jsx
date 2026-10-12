@@ -14,8 +14,8 @@ import api from "../axios";
 import Modal from "../components/Modal";
 import LoadingSpinner from "../components/LoadingSpinner";
 
-export default function RolesPermissions() {const { t } = useLanguage();
-  const [roles, setRoles] = useState([]);
+export default function RolesPermissions() {const [roles, setRoles] = useState([]);
+  const { t } = useLanguage();
   const [permissions, setPermissions] = useState([]);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -266,8 +266,7 @@ export default function RolesPermissions() {const { t } = useLanguage();
                             <span className="text-xs text-gray-500">{form.permissions.length} selected</span>
                         </div>
 
-                        {groups.map((group) => {const { t } = useLanguage();
-              const groupSlugs = permissions.filter((p) => p.group === group).map((p) => p.slug);
+                        {groups.map((group) => {const groupSlugs = permissions.filter((p) => p.group === group).map((p) => p.slug);
               const selectedCount = groupSlugs.filter((s) => form.permissions.includes(s)).length;
               const allChecked = selectedCount === groupSlugs.length && groupSlugs.length > 0;
               const someChecked = selectedCount > 0 && !allChecked;

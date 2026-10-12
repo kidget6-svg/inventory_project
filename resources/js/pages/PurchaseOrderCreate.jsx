@@ -6,8 +6,8 @@ import {
   ArrowLeft, Save, X, Plus, Trash2, Search, Pill, Package } from
 'lucide-react';
 
-export default function PurchaseOrderCreate() {const { t } = useLanguage();
-  const navigate = useNavigate();
+export default function PurchaseOrderCreate() {const navigate = useNavigate();
+  const { t } = useLanguage();
   const [suppliers, setSuppliers] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [retailProducts, setRetailProducts] = useState([]);
@@ -187,8 +187,7 @@ export default function PurchaseOrderCreate() {const { t } = useLanguage();
                                 </div>
                                 {showMedDropdown &&
               <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                                        {filteredMedicines.slice(0, 50).map((m) => {const { t } = useLanguage();
-                  const added = isItemAdded('medicine', m.id);
+                                        {filteredMedicines.slice(0, 50).map((m) => {const added = isItemAdded('medicine', m.id);
                   return (
                     <button
                       key={m.id}
@@ -237,8 +236,7 @@ export default function PurchaseOrderCreate() {const { t } = useLanguage();
                                 </div>
                                 {showRetailDropdown &&
               <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                                        {filteredRetail.slice(0, 50).map((r) => {const { t } = useLanguage();
-                  const added = isItemAdded('retail', r.id);
+                                        {filteredRetail.slice(0, 50).map((r) => {const added = isItemAdded('retail', r.id);
                   return (
                     <button
                       key={r.id}

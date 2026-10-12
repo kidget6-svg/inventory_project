@@ -50,8 +50,7 @@ const DonutChart = ({
   percentage = 0,
   onClick,
   active = false
-}) => {const { t } = useLanguage();
-  const cx = size / 2;
+}) => {const cx = size / 2;
   const cy = size / 2;
   const r = size / 2 - 10;
   const circumference = 2 * Math.PI * r;
@@ -103,8 +102,8 @@ const DonutChart = ({
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-export default function LowStock() {const { t } = useLanguage();
-  const { hasPermission } = useAuth();
+export default function LowStock() {const { hasPermission } = useAuth();
+  const { t } = useLanguage();
   const canOrder = hasPermission('lowstock.order-now');
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -189,8 +188,7 @@ export default function LowStock() {const { t } = useLanguage();
     return { key: 'healthy', label: 'Healthy', color: COLORS.success };
   }, []);
 
-  const getStatusBadge = useCallback((medicine) => {const { t } = useLanguage();
-    const status = getStockStatus(medicine);
+  const getStatusBadge = useCallback((medicine) => {const status = getStockStatus(medicine);
     const colors = {
       [COLORS.danger]: 'bg-red-100 text-red-700 border-red-200',
       [COLORS.orange]: 'bg-orange-100 text-orange-700 border-orange-200',
@@ -556,8 +554,7 @@ export default function LowStock() {const { t } = useLanguage();
                                         <p className="text-sm text-gray-500 dark:text-gray-400">{t("No medicines match your current filters.")}</p>
                                     </td>
                                 </tr> :
-              filteredMedicines.map((medicine) => {const { t } = useLanguage();
-                const status = getStockStatus(medicine);
+              filteredMedicines.map((medicine) => {const status = getStockStatus(medicine);
                 return (
                   <tr key={medicine.id} className="hover:bg-sky-50/30 dark:hover:bg-gray-700/50 transition-colors cursor-pointer" onClick={() => {setSelectedMedicine(medicine);setShowModal(true);}}>
                                         <td className="px-4 py-3">

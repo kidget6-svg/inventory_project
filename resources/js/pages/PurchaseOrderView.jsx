@@ -4,8 +4,8 @@ import api from '../axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ArrowLeft, Edit, Trash2, Calendar, Package, Tag, Send, RefreshCw, CheckCircle, XCircle, Download, FileText, Pill } from 'lucide-react';
 
-export default function PurchaseOrderView() {const { t } = useLanguage();
-  const { id } = useParams();
+export default function PurchaseOrderView() {const { id } = useParams();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -135,8 +135,7 @@ export default function PurchaseOrderView() {const { t } = useLanguage();
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {(order.items || []).map((oi, i) => {const { t } = useLanguage();
-                    const isRetail = oi.itemable_type?.includes('RetailProduct');
+                                    {(order.items || []).map((oi, i) => {const isRetail = oi.itemable_type?.includes('RetailProduct');
                     const name = oi.itemable?.name || oi.medicine?.name || 'N/A';
                     return (
                       <tr key={i} className="border-t border-gray-100">

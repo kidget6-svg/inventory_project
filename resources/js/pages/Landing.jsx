@@ -41,12 +41,16 @@ export default function Landing() {
 
     return (
         <div className="min-h-screen relative overflow-hidden">
-            {/* Background */}
+            {/* Background: 100% Fullscreen */}
             <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: "url('/images/landing page.png')" }}
+                className="absolute inset-0 bg-no-repeat"
+                style={{
+                    backgroundImage: "url('/images/landing_fullscreen.png?v=4')",
+                    backgroundSize: "100% 100%",
+                    backgroundPosition: "center center"
+                }}
             />
-            <div className="absolute inset-0 bg-blue-100/70 backdrop-blur-[2px]" />
+            <div className="absolute inset-0 bg-sky-950/10" />
 
             <div className="relative z-10 flex flex-col min-h-screen">
 
@@ -82,26 +86,21 @@ export default function Landing() {
                 <div className="flex-1 flex items-center justify-center px-1">
                     <div className="text-center max-w-3xl">
                         <h2 className="text-2xl lg:text-3xl font-bold text-blue-900 leading-tight">
-                            {t("Manage Your Pharmacy")}
+                            {t("EthioPharmacy")}
                             <br />
-                            <span className="text-blue-600">{t("with Confidence")}</span>
+                            <span className="text-blue-600">{t("Smart Pharmacy Inventory System")}</span>
                         </h2>
 
-                        <p className="mt-6 text-lg text-gray-700 max-w-2xl mx-auto">
-                            {t("EthioPharmacy is a comprehensive smart pharmacy inventory management system designed to streamline medicine tracking, sales operations, and multi-branch oversight. From batch-level expiry monitoring to role-based access control, we empower pharmacists and administrators to run their pharmacies efficiently and confidently.")}
-                        </p>
-
                         {/* Feature Highlights */}
-                        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
+                        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
                             {features.map((feature, idx) => (
                                 <div
                                     key={idx}
                                     className="bg-white/60 backdrop-blur-sm rounded-xl p-5 shadow-md border border-white/50 hover:bg-white/80 transition-all duration-200 text-left">
-                                    <div className="flex items-center gap-3 mb-2">
+                                    <div className="flex items-center gap-3">
                                         {feature.icon}
                                         <h3 className="font-semibold text-blue-900">{feature.title}</h3>
                                     </div>
-                                    <p className="text-sm text-gray-600">{feature.description}</p>
                                 </div>
                             ))}
                         </div>

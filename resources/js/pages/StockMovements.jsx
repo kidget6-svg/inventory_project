@@ -43,8 +43,8 @@ const SkeletonTable = () =>
     </div>;
 
 
-export default function StockMovements() {const { t } = useLanguage();
-  const [movements, setMovements] = useState([]);
+export default function StockMovements() {const [movements, setMovements] = useState([]);
+  const { t } = useLanguage();
   const [meta, setMeta] = useState(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -614,8 +614,7 @@ export default function StockMovements() {const { t } = useLanguage();
                                         </div>
                                     </td>
                                 </tr> :
-              movements.map((m) => {const { t } = useLanguage();
-                const cfg = getMovementCfg(m.type);
+              movements.map((m) => {const cfg = getMovementCfg(m.type);
                 const Icon = cfg.icon;
                 const isSelf = m.source_type === 'self' || m.destination_type === 'self';
                 return (

@@ -78,7 +78,8 @@ const translations = {
     "User Management": "User Management",
     "Users": "Users",
     "View All": "View All",
-    "Warehouse": "Warehouse"
+    "Warehouse": "Warehouse",
+    "Smart Pharmacy Inventory System": "Smart Pharmacy Inventory System"
   },
   am: {
     "% Used": "% ጥቅም ላይ የዋለ",

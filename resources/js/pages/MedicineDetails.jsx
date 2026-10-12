@@ -21,8 +21,8 @@ const statusOptions = [
 
 const formSteps = ['Basic Info', 'Pricing & Stock', 'Expiry & Status'];
 
-export default function Medicines() {const { t } = useLanguage();
-  const { user, hasPermission } = useAuth();
+export default function Medicines() {const { user, hasPermission } = useAuth();
+  const { t } = useLanguage();
   const canCreate = hasPermission('medicines.create');
   const canEdit = hasPermission('medicines.edit');
   const canDelete = hasPermission('medicines.delete');
@@ -393,8 +393,7 @@ export default function Medicines() {const { t } = useLanguage();
 
   useEffect(() => {return () => stopBarcodeScan();}, []);
 
-  const getStatusBadge = (status) => {const { t } = useLanguage();
-    const config = {
+  const getStatusBadge = (status) => {const config = {
       active: { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Active' },
       inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive' },
       expired: { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' },
@@ -406,8 +405,7 @@ export default function Medicines() {const { t } = useLanguage();
 
   const isFiltered = filters.search || filters.category_id || filters.supplier_id || filters.status;
 
-  const renderStepContent = () => {const { t } = useLanguage();
-    switch (step) {
+  const renderStepContent = () => {switch (step) {
       case 0:
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

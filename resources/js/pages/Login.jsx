@@ -1,4 +1,4 @@
-import { useLanguage } from "../context/LanguageContext"; // resources/js/pages/Login.jsx
+import { useLanguage } from "../context/LanguageContext";
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff, Mail, Lock, Loader2, KeyRound, ArrowLeft } from 'lucide-react';
 import api from '../axios';
 
-export default function Login() {const { t } = useLanguage();
+export default function Login() {
+  const { t } = useLanguage();
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -153,10 +154,10 @@ export default function Login() {const { t } = useLanguage();
                 <div className="bg-white rounded-2xl shadow-xl p-8 login-form-container">
                     {!isResetMode ?
           <>
-                            {/* Logo */}
+                                                                                    {/* Photo inside the box above Welcome Back */}
                             <div className="text-center mb-8">
-                                <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4 shadow-2xl ring-2 ring-sky-400/70 transform hover:scale-105 transition-transform duration-200">
-                                    <img src="/images/sidebar.png" alt={t("EthioPharmacy")} className="w-16 h-16 object-contain" />
+                                <div className="w-36 h-36 rounded-3xl bg-blue-50 flex items-center justify-center mx-auto mb-5 shadow-xl ring-2 ring-sky-400/60">
+                                    <img src="/images/p1.png" alt={t("EthioPharmacy")} className="w-28 h-28 object-contain drop-shadow-md" />
                                 </div>
                                 <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{t("Welcome Back")}</h2>
                                 <p className="text-gray-500 mt-1.5 text-sm">{t("Sign in to your account")}</p>

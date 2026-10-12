@@ -25,7 +25,8 @@ const iconColors = {
 export default function RecentActivity({
   activities,
   loading = false
-}) {const { t } = useLanguage();
+}) {
+  const { t } = useLanguage();
   if (loading) {
     return (
       <div className="space-y-4">
@@ -97,9 +98,7 @@ export default function RecentActivity({
   return (
     <div className="space-y-3">
 
-            {activities.map((activity) => {const { t } = useLanguage();
-
-        const Icon =
+            {activities.map((activity) => {const Icon =
         iconMap[activity.icon] || Activity;
 
         const color =
