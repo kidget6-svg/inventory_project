@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\CategoryController;
@@ -37,8 +36,6 @@ Route::post('/login', [AuthController::class, 'login'])
     ->name('login');
 
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
-Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 
 
 /*
